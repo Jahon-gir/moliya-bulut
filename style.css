@@ -286,6 +286,10 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   --g-setka: #e6ece9;
   --g-baza: #b9c4bf;
   --g-yoritish: rgba(15, 139, 109, .10);
+  --g-boshqa: #8a97a1;      /* "Boshqalar" tilimi */
+  --b-sariq: #fab219;
+  --b-qizil: #d03b3b;
+  --b-qizil-matn: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -294,6 +298,9 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
     --g-setka: #26322d;
     --g-baza: #3a4842;
     --g-yoritish: rgba(255, 255, 255, .08);
+    --g-boshqa: #7b8892;
+    --b-qizil: #e5645f;
+    --b-qizil-matn: #1d2a26;
   }
 }
 .diagramma-karta h2 { margin-bottom: 10px; }
@@ -361,3 +368,31 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .g-m-qator { display: flex; align-items: center; gap: 6px; }
 .g-m-kalit { flex: none; width: 12px; height: 3px; border-radius: 2px; }
 .g-m-nom { color: var(--xira); }
+
+/* "Boshqalar" tilimi va guruhlangan ro'yxat */
+.dona-boshqalar { fill: var(--g-boshqa); }
+.dona-boshqalar-kalit { background: var(--g-boshqa); }
+.dona-guruh .dona-qator { font-weight: 700; }
+.dona-ichki .dona-qator { padding-left: 22px; }
+.dona-ichki .dona-nom { font-size: 14px; font-weight: 500; }
+.guruh-izohi { margin: 4px 0 0; }
+
+/* 7-bosqich: byudjet */
+.byudjet-karta { padding: 12px 14px; }
+.byudjet-qator { display: block; width: 100%; padding: 4px 0; font: inherit; color: var(--matn); text-align: left; background: none; border: 0; cursor: pointer; min-height: 48px; }
+.byudjet-bosh { display: flex; align-items: center; margin-bottom: 8px; font-size: 16px; font-weight: 700; }
+.byudjet-nom { min-width: 0; overflow-wrap: anywhere; }
+.byudjet-chiziq { height: 12px; border-radius: 6px; overflow: hidden; background: var(--chiziq); }
+.byudjet-tolgan { display: block; height: 100%; border-radius: 6px; background: var(--asosiy); }
+.byudjet-quti[data-daraja="sariq"] .byudjet-tolgan { background: var(--b-sariq); }
+.byudjet-quti[data-daraja="qizil"] .byudjet-tolgan { background: var(--b-qizil); }
+.byudjet-holat { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 14px; font-weight: 700; }
+.byudjet-belgi { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; line-height: 1; background: var(--asosiy); color: var(--asosiy-matn); }
+.byudjet-quti[data-daraja="sariq"] .byudjet-belgi { background: var(--b-sariq); color: #1d2a26; }
+.byudjet-quti[data-daraja="qizil"] .byudjet-belgi { background: var(--b-qizil); color: var(--b-qizil-matn); }
+.byudjet-raqamlar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin-top: 4px; font-size: 14px; color: var(--xira); }
+.byudjet-qoldiq { margin-top: 2px; font-size: 15px; font-weight: 700; }
+.byudjet-qoldiq.oshgan { color: var(--xarajat); }
+.byudjet-qator.qisqa .byudjet-bosh { font-size: 15px; margin-bottom: 6px; }
+.ogohlantirish-karta { border-left: 4px solid var(--b-sariq); }
+.ogohlantirish-karta h2 { margin: 8px 0 0; }

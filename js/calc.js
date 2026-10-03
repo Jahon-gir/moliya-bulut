@@ -301,6 +301,65 @@
     return Math.max(minimal === undefined ? 2 : minimal, Math.min(balandlik, qiymat / eng * balandlik));
   }
 
+  // ---- Doira: eng katta kategoriyalar alohida, qolganlari "Boshqalar" ----
+  var DONA_ENG_KATTA = 6;
+  // taqsimot — kattasidan kichigiga [{ kategoriya_id, summa, foiz }]. Eng katta `soni` (6) ta kategoriya alohida tilim,
+  // qolganlari bitta "Boshqalar" tilimiga birlashadi: summa — yig'indi, foiz — kategoriyalar foizlari yig'indisi
+  // (shunda ro'yxat va diagramma foizlari mos, jami 100 qoladi). Qolgani bitta kategoriya bo'lsa, birlashtirish ma'nosiz,
+  // u o'z tilimida qoladi (7 ta kategoriya = 7 tilim). Natija: { tilimlar, boshqalar | null, dum: [birlashganlar] }
+  function donaGuruhlash(taqsimot, soni) {
+    soni = soni || DONA_ENG_KATTA;
+    if (taqsimot.length < soni + 2) return { tilimlar: taqsimot.slice(), boshqalar: null, dum: [] };
+    var dum = taqsimot.slice(soni);
+    var guruh = {
+      kategoriya_id: 'boshqalar', soni: dum.length,
+      summa: dum.reduce(function (a, x) { return a + x.summa; }, 0), foiz: dum.reduce(function (a, x) { return a + x.foiz; }, 0),
+      idlar: dum.map(function (x) { return x.kategoriya_id; })
+    };
+    return { tilimlar: taqsimot.slice(0, soni).concat([guruh]), boshqalar: guruh, dum: dum };
+  }
+
+  // ---- Byudjet (TZ F7): joriy kalendar oyi xarajatlari bo'yicha oylik chegaralar ----
+  var BYUDJET_OGOHLANTIRISH = 80;   // foiz: shundan oshsa sariq, 100 dan oshsa qizil
+
+  // Chegara holati. sarflangan va limit — butun so'm. Chegaralar aniq (butun sonlarda) solishtiriladi:
+  // 80% dan oshsa (aynan 80% emas) — 'sariq', 100% dan oshsa (aynan 100% emas) — 'qizil', aks holda 'yaxshi'.
+  // foiz — ko'rsatish uchun butun son, u hech qachon rangga zid kelmaydi (sariqda kamida 81, qizilda kamida 101).
+  // chiziq — to'lish chizig'ining kengligi (0..100, aniq nisbat).
+  function byudjetHolati(sarflangan, limit) {
+    var daraja = sarflangan > limit ? 'qizil' : sarflangan * 5 > limit * 4 ? 'sariq' : 'yaxshi';
+    var foiz = limit > 0 ? Math.round(sarflangan * 100 / limit) : 0;
+    if (daraja === 'qizil' && foiz < 101) foiz = 101;
+    else if (daraja === 'sariq' && foiz < 81) foiz = 81;
+    return {
+      sarflangan: sarflangan, limit: limit, daraja: daraja, foiz: foiz,
+      qolgan: Math.max(0, limit - sarflangan), oshgan: Math.max(0, sarflangan - limit),
+      chiziq: limit > 0 ? Math.min(100, sarflangan * 100 / limit) : 0
+    };
+  }
+
+  // Joriy oy byudjet hisoboti. byudjetlar — [{ kategoriya_id | 'umumiy', oylik_limit }]; kategoriyalar — hamma kategoriyalar;
+  // bugunSana — bugungi sana (joriy kalendar oyi shundan olinadi). Sarflangan summalar hisobot() bilan bir xil (shu oy, barcha
+  // hisoblar, faqat xarajat; o'tkazma kirmaydi). Arxivlangan kategoriyalar ko'rsatilmaydi.
+  // Natija: { oy, umumiy | null, chegarali: [...], chegarasiz: [...], ogohlantirishlar: [...] } (ogohlantirishlar: sariq va qizil, ko'pi bilan to'lganlari birinchi)
+  function byudjetHisobi(byudjetlar, kategoriyalar, yozuvlar, bugunSana) {
+    var oy = davrChegarasi('oy', bugunSana), h = hisobot(yozuvlar, oy.dan, oy.gacha, ''), sarf = {}, limitlar = {};
+    h.xarajatTaqsimoti.forEach(function (x) { sarf[x.kategoriya_id] = x.summa; });
+    byudjetlar.forEach(function (b) { if (b.oylik_limit > 0) limitlar[b.kategoriya_id] = b.oylik_limit; });
+    function nisbat(a, b) { return b.holat.sarflangan * a.holat.limit - a.holat.sarflangan * b.holat.limit; }   // kattasi birinchi
+    var chegarali = [], chegarasiz = [];
+    kategoriyalar.forEach(function (k) {
+      if (k.tur !== 'xarajat' || k.arxivlangan) return;
+      var sarflangan = sarf[k.id] || 0;
+      if (limitlar[k.id]) chegarali.push({ kategoriya: k, holat: byudjetHolati(sarflangan, limitlar[k.id]) });
+      else chegarasiz.push({ kategoriya: k, sarflangan: sarflangan });
+    });
+    chegarali.sort(nisbat);
+    var umumiy = limitlar.umumiy ? { umumiy: true, holat: byudjetHolati(h.xarajat, limitlar.umumiy) } : null;
+    var ogoh = chegarali.concat(umumiy ? [umumiy] : []).filter(function (x) { return x.holat.daraja !== 'yaxshi'; }).sort(nisbat);
+    return { oy: oy, oyNomi: davrNomi('oy', bugunSana), umumiy: umumiy, chegarali: chegarali, chegarasiz: chegarasiz, ogohlantirishlar: ogoh, jami: h.xarajat };
+  }
+
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
   // Boshidagi minus saqlanadi (keyin tekshiruvda xato bo'lib chiqishi uchun), boshqa belgilar tashlanadi.
   function raqamFormat(matn) {
@@ -406,7 +465,7 @@
   }
 
   // Yozuvlarni filtr bo'yicha saralaydi (asl massivga tegmaydi). Filtr maydonlari (hammasi ixtiyoriy):
-  // tur, hisob (yozuvning hisobi yoki o'tkazmaning qabul hisobi), kategoriya,
+  // tur, hisob (yozuvning hisobi yoki o'tkazmaning qabul hisobi), kategoriya (bitta) yoki kategoriyalar (bir nechta: "Boshqalar"),
   // dan / gacha (sana oralig'i, chegaralari bilan), qidiruv (izoh ichidan, harf kattaligiga qaramay).
   function yozuvlarniSuz(yozuvlar, f) {
     f = f || {};
@@ -415,6 +474,7 @@
       if (f.tur && y.tur !== f.tur) return false;
       if (f.hisob && y.hisob_id !== f.hisob && y.qabul_hisob_id !== f.hisob) return false;
       if (f.kategoriya && y.kategoriya_id !== f.kategoriya) return false;
+      if (f.kategoriyalar && f.kategoriyalar.length && f.kategoriyalar.indexOf(y.kategoriya_id) === -1) return false;
       if (f.dan && y.sana < f.dan) return false;
       if (f.gacha && y.sana > f.gacha) return false;
       if (q && String(y.izoh || '').toLowerCase().indexOf(q) === -1) return false;
@@ -424,7 +484,7 @@
 
   // Filtrda biror shart (qidiruvdan tashqari) tanlanganmi
   function filtrFaolmi(f) {
-    return !!(f && (f.tur || f.hisob || f.kategoriya || f.dan || f.gacha));
+    return !!(f && (f.tur || f.hisob || f.kategoriya || (f.kategoriyalar && f.kategoriyalar.length) || f.dan || f.gacha));
   }
 
   // ---- Davrlar va hisobotlar (TZ 8-band) ----
@@ -598,7 +658,8 @@
     oxirgiKategoriyaId: oxirgiKategoriyaId, matnRangi: matnRangi,
     oyKunlari: oyKunlari, vaqtdanTanlov: vaqtdanTanlov, tanlovdanVaqt: tanlovdanVaqt,
     glidirakChegarasi: glidirakChegarasi, glidirakTuzat: glidirakTuzat, glidirakQiymatlari: glidirakQiymatlari,
-    OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
+    donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
+    BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,
     hozir: hozir, kelajakmi: kelajakmi, vaqtTekshir: vaqtTekshir, yozuvVaqti: yozuvVaqti,
     vaqtFormatiTogrimi: vaqtFormatiTogrimi, yozuvniYangilash: yozuvniYangilash,

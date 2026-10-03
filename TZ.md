@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 6 (03.10.2026)
+Hujjat versiyasi: 7 (03.10.2026)
 
 ## 1. Maqsad
 
@@ -91,7 +91,8 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Davrda yozuv bo'lmasa, "Bu davrda yozuvlar yo'q" degan xabar chiqadi.
 
 ### F6. Diagrammalar
-- **Doiraviy diagramma** (halqa): tanlangan davr uchun xarajatlarning kategoriyalar bo'yicha taqsimoti. Tilim rangi — kategoriyaning o'z rangi (F4). Tilimlar orasida 2 piksel bo'shliq. Markazda jami xarajat, tilim ustiga olib borilsa (yoki ro'yxat qatoriga) shu kategoriya va summasi ko'rinadi. Diagramma ostida ro'yxat: har kategoriyaning rangi, nomi, summasi va foizi. Nomlar so'z o'rtasidan sinmaydi (kerak bo'lsa so'zlar bo'yicha keyingi qatorga o'raladi). Bitta kategoriya bo'lsa to'liq halqa, 15 va undan ko'p kategoriya bo'lsa ham hamma tilim chiziladi.
+- **Doiraviy diagramma** (halqa): tanlangan davr uchun xarajatlarning kategoriyalar bo'yicha taqsimoti. Tilim rangi — kategoriyaning o'z rangi (F4). Tilimlar orasida 2 piksel bo'shliq. Markazda jami xarajat, tilim ustiga olib borilsa (yoki ro'yxat qatoriga) shu kategoriya va summasi ko'rinadi. Diagramma ostida ro'yxat: har kategoriyaning rangi, nomi, summasi va foizi. Nomlar so'z o'rtasidan sinmaydi (kerak bo'lsa so'zlar bo'yicha keyingi qatorga o'raladi). Bitta kategoriya bo'lsa to'liq halqa.
+- **"Boshqalar" tilimi:** eng katta 6 ta kategoriya alohida tilim, qolganlari bitta kulrang "Boshqalar" tilimiga birlashadi (summa va foiz yig'indisi; jami 100%). Qolgan bitta kategoriya bo'lsa birlashtirilmaydi (7 ta kategoriya = 7 tilim). Ro'yxatda hamma kategoriya to'liq turadi ("Boshqalar" qatori ostida o'z ichki qatorlari bilan). "Boshqalar" tilimi yoki qatori bosilsa, shu kategoriyalar bo'yicha filtrlangan yozuvlar ro'yxati ochiladi.
 - **Vaqt bo'yicha ustunli diagramma:** hafta va oyda kunlar bo'yicha, yilda oylar bo'yicha (kun davri uchun bu diagramma yo'q). Har ustunda daromad va xarajat yonma-yon (ko'k va to'q sariq: rang ko'rligi sinovidan o'tgan juft). O'qlarda sana va summa ko'rinadi; katta summalar qisqartiriladi (`1,2 mln`, `5 ming`, `2,5 mlrd`). Eng katta qiymatga bitta yozuv qo'yiladi, har ustunga raqam yozilmaydi. Juda kichik, lekin noldan katta qiymat ham ko'rinadi (kamida 2 piksel balandlikda).
 - **Diagramma bo'lagini bossa** (sichqoncha, barmoq yoki Enter), o'sha kategoriya (tanlangan davr va hisob bo'yicha) yoki kunning (yilda oyning) yozuvlari filtrlangan ro'yxat sifatida ochiladi; "Orqaga" hisobotga qaytaradi.
 - **Raqamlar hisobot bilan aynan mos:** diagrammadagi har tilim va ustun hisobot (F5) bilan bir xil hisob-kitobdan olinadi: tanlangan hisob filtri, o'tkazma va qarz kirmasligi, davr chegaralari bir xil.
@@ -99,11 +100,15 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Ekran o'quvchilari uchun:** har tilim va ustunda matnli muqobil (`aria-label`: nom yoki sana, summa, foiz). Ustunlar orasida strelka tugmalari bilan yurish, Enter bilan yozuvlarni ochish mumkin. "Jadval ko'rinishi" har ustun va jami qiymatlarni jadval sifatida beradi.
 
 ### F7. Byudjet
-- Har bir xarajat kategoriyasiga oylik chegara qo'yish mumkin. Chegara qo'yish majburiy emas.
-- Har bir chegara uchun ko'rsatiladi: sarflangan summa, qolgan summa, to'lish chizig'i.
-- 80 foizdan oshsa chiziq sariq, 100 foizdan oshsa qizil rangga o'tadi va oshgan summa ko'rsatiladi.
-- Bosh sahifada chegarasi 80 foizdan oshgan kategoriyalar haqida ogohlantirish chiqadi.
-- Ixtiyoriy umumiy oylik chegara (barcha xarajatlar uchun).
+- Har bir xarajat kategoriyasiga oylik chegara qo'yish mumkin (Byudjet bo'limi). Chegara qo'yish majburiy emas; chegarani o'zgartirish va olib tashlash mumkin (xarajatlar saqlanadi).
+- Har bir chegara uchun ko'rsatiladi: sarflangan summa, chegara, qolgan summa, foiz va to'lish chizig'i.
+- Faqat **joriy kalendar oyi** xarajatlari hisoblanadi (barcha hisoblar bo'yicha; daromad, o'tkazma va qarz kirmaydi). O'tgan oy xarajati hisobga kirmaydi.
+- Chegaralar aniq solishtiriladi: aynan 80% gacha — me'yorda; 80% dan oshsa chiziq sariq (⚠); aynan 100% sariq; 100% dan oshsa qizil (✕) va oshgan summa ko'rsatiladi. Rang bilan birga belgi va matn ham bor. Ko'rsatiladigan foiz rangga zid kelmaydi (sariqda kamida 81, qizilda kamida 101).
+- Bosh sahifada chegarasi 80 foizdan oshgan kategoriyalar (va umumiy chegara) haqida ogohlantirish chiqadi; to'lganlari birinchi. Bosilsa Byudjet bo'limi ochiladi.
+- Ixtiyoriy umumiy oylik chegara (barcha xarajatlar uchun) shu ekranda o'rnatiladi.
+- Arxivlangan kategoriyalar Byudjet ekranida ko'rinmaydi (ularning chegaralari saqlanib qoladi).
+- Ma'lumot: `Byudjet = { kategoriya_id (yoki "umumiy"), oylik_limit }`.
+- Misol: Oziq-ovqat chegarasi 500 000, sarflangan 450 000 = 90%, sariq, bosh sahifada ogohlantirish.
 
 ### F8. Qarzlar
 - Qarz qo'shish: yo'nalish (men berdim yoki men oldim), kimga yoki kimdan (ism), summa, hisob, sana va soat (`vaqt`), qaytarish muddati (ixtiyoriy), izoh.

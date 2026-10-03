@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 3 (03.10.2026)
+Hujjat versiyasi: 4 (03.10.2026)
 
 ## 1. Maqsad
 
@@ -45,12 +45,24 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 ### F2. Yozuv qo'shish
 - Maydonlar: tur (daromad, xarajat, o'tkazma), summa, hisob, kategoriya, sana, soat, izoh.
 - Standart qiymatlar: tur xarajat, sana va soat hozirgi vaqt (qurilmaning mahalliy vaqti, daqiqa aniqligida), hisob oxirgi ishlatilgani.
+- **Qadamlar (wizard).** Yangi yozuv 5 ta ketma-ket qadamda kiritiladi. Har qadamda "Orqaga" tugmasi va "2 / 5" kabi ko'rsatkich bor:
+  1. **Tur va summa.** Tur: Xarajat (standart), Daromad, O'tkazma. Katta summa maydoni: telefonda raqamli klaviatura ochiladi, mingliklar yozilganda ajraladi.
+  2. **Kategoriya.** Turga qarab ro'yxat almashadi, rangli kataklar ko'rinishida. Katak bosilishi bilan keyingi qadamga o'tiladi. Oxirgi ishlatilgan kategoriya ajralib turadi.
+  3. **Hisob.** Ro'yxatda hisob nomi va qoldig'i ko'rinadi. Oxirgi ishlatilgan hisob oldindan tanlangan turadi; bitta bosish bilan keyingi qadamga o'tiladi.
+  4. **Sana va vaqt.** Standart "Hozir" ko'rinadi. Bosilsa, g'ildirakli tanlagich ochiladi: yil, oy, kun, soat, daqiqa ustunlari va "Tasdiqlash" tugmasi.
+  5. **Izoh va saqlash.** Izoh ixtiyoriy. Tepada qisqa xulosa: tur, summa, kategoriya, hisob, sana va vaqt. "Saqlash" tugmasi.
+  - O'tkazmada 2 va 3-qadamlar o'rniga "Qayerdan" va "Qayerga" qadamlari bo'ladi ("Qayerga" ro'yxatida "Qayerdan" tanlangan hisob ko'rinmaydi). 4 va 5-qadamlar o'zgarmaydi.
+- **Tezkor saqlash.** 2-qadamdan boshlab pastda "Saqlash" tugmasi ko'rinib turadi. Bosilsa, shu paytgacha kiritilgan qiymatlar saqlanadi, kiritilmagan qadamlar standart qiymat oladi: hisob — oxirgi ishlatilgani (3-qadamda boshqasi tanlangan bo'lsa, o'sha), sana va vaqt — saqlash paytidagi hozirgi vaqt, izoh — bo'sh. Kategoriya majburiy: 2-qadamda tanlanmagan bo'lsa, xato xabari chiqadi.
+- **Orqaga qaytganda** oldin kiritilgan qiymatlar (summa, kategoriya, hisob, vaqt, izoh) saqlanib turadi. Shakl yopilsa (1-qadamda "Orqaga", boshqa bo'limga o'tish) yoki yozuv saqlansa, hamma narsa tozalanadi va yangi shakl 1-qadamdan boshlanadi.
+- **Sana va vaqt g'ildiragi** tashqi kutubxonasiz yoziladi (CSS scroll-snap). Kelajak qiymatlar (bugundan keyingi kun, bugun uchun hozirdan keyingi soat va daqiqa, joriy yil uchun kelgusi oylar) kulrang va tanlanmaydigan: tanlash faqat hozirgi vaqtgacha. Ustunlar bir-biriga mos tuzatiladi (masalan, oyning kunlari soni 28/29/30/31; bugunga o'tilganda soat va daqiqa hozirgidan oshmaydi).
+- **Yozuvni tahrirlash** wizard emas: hamma maydon (tur, summa, kategoriya yoki hisoblar, sana va vaqt, izoh) bitta ekranda turadi. Sana va vaqt uchun ham shu g'ildirakli tanlagich ishlatiladi.
 - **Vaqt qoidasi:** yozuv vaqti (sana va soat) hozirgi vaqtdan keyin bo'lmaydi, o'tmish mumkin. Bugundan keyingi sana va bugun uchun hozirdan keyingi soat tanlanmaydi. Tekshiruv daqiqa aniqligida: soat 21:00 bo'lsa, 21:00 mumkin, 21:01 mumkin emas.
-- Hozirgi vaqt har safar qayta tekshiriladi: yozuvni saqlashda ham, tahrirlab saqlashda ham. Kelajak vaqt rad etiladi va maydon yonida tushunarli xato xabari chiqadi.
+- Hozirgi vaqt har safar qayta tekshiriladi: yozuvni saqlashda ham, tahrirlab saqlashda ham. Kelajak vaqt rad etiladi va tushunarli xato xabari chiqadi. Bu tekshiruv g'ildirakdan keyingi ikkinchi himoya bo'lib qoladi (masalan, g'ildirakda tanlangandan keyin qurilma soati orqaga surilgan bo'lsa).
 - O'tkazmada kategoriya o'rniga ikkita hisob tanlanadi: qayerdan va qayerga.
 - Summa kiritilayotganda mingliklar avtomatik ajratiladi (`1 250 000`).
 - Summa bo'sh, nol yoki manfiy bo'lsa, yozuv saqlanmaydi va maydon yonida tushunarli xato xabari chiqadi.
-- Saqlangach shakl tozalanadi, balans, ro'yxat va hisobotlar darhol yangilanadi.
+- Saqlangach shakl tozalanadi (1-qadamdan boshlanadi) va "Saqlandi" xabari chiqadi; balans, ro'yxat va hisobotlar darhol yangilanadi.
+- Oxirgi ishlatilgan hisob va kategoriya eslab qolinadi: keyingi yozuvda hisob oldindan tanlangan, kategoriya ajralib turadi.
 
 ### F3. Yozuvlar ro'yxati
 - Yozuvlar kunlar bo'yicha guruhlangan, eng yangisi tepada. Har kun sarlavhasida o'sha kunning jami xarajati.
@@ -133,6 +145,7 @@ Claude Code bu ro'yxatdagi narsalarni so'ralmaguncha qo'shmasligi kerak.
   - `index.html`, `style.css`
   - `js/data.js` — ma'lumotni saqlash va o'qish
   - `js/calc.js` — barcha hisob-kitoblar (yig'indilar, davrlar, byudjet, qarz). Bu faylda ekran bilan ishlaydigan kod bo'lmaydi
+  - `js/glidirak.js` — g'ildirakli sana va vaqt tanlagich (ekran komponenti; qiymatlarni hisoblash `calc.js` da)
   - `js/ui.js` — ekranlar
   - `manifest.json`, `sw.js`, belgilar
   - `tests.html` — brauzerda ochilganda `calc.js` testlarini ishga tushiradi va natijani ko'rsatadi
@@ -182,7 +195,7 @@ Pastda beshta tugmali navigatsiya:
 
 1. **Bosh sahifa:** umumiy balans, hisoblar qoldig'i, joriy oy daromadi va xarajati, byudjet ogohlantirishlari, oxirgi 10 ta yozuv, zaxira eslatmasi.
 2. **Hisobot:** davr tanlash, ko'rsatkichlar, taqsimot, diagrammalar.
-3. **Qo'shish (+):** o'rtadagi katta tugma, yozuv qo'shish shaklini ochadi.
+3. **Qo'shish (+):** o'rtadagi katta tugma, yozuv qo'shishning 5 qadamli oynasini ochadi (F2).
 4. **Byudjet:** kategoriyalar bo'yicha chegaralar va ularning holati.
 5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar, hisoblar, kategoriyalar, zaxira va eksport, ilova haqida.
 
@@ -242,6 +255,10 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Yozuv shaklida sana va soat hozirgi vaqt bilan to'lib turadi. Soat 21:00 bo'lsa, 21:00 saqlanadi, 21:01 saqlanmaydi va xato xabari chiqadi. Ertangi sana tanlanmaydi. Tahrirlashda ham shunday.
 - Yarim tundan o'tganda: soat 00:05 da kechagi 23:59 mumkin, bugungi 00:06 mumkin emas.
 - Ro'yxatda har yozuvda soat ko'rinadi; kun ichida soati kattasi tepada.
+- Yozuv qo'shish 5 qadamda: tur va summa, kategoriya, hisob, sana va vaqt, izoh. Har qadamda "Orqaga" va "n / 5". O'tkazmada 2 va 3-qadam "Qayerdan" va "Qayerga". Orqaga qaytganda kiritilgan qiymatlar joyida; shakl yopilsa yoki saqlansa, tozalanadi.
+- Tezkor saqlash: 2-qadamdan boshlab pastdagi "Saqlash" yozuvni oxirgi ishlatilgan hisob (yoki tanlangani), hozirgi sana va vaqt bilan saqlaydi; kategoriya tanlanmagan bo'lsa, xato chiqadi.
+- G'ildirakda kelajak kun, soat va daqiqa kulrang va tanlanmaydi (barmoq bilan aylantirilsa ham hozirgi vaqtga qaytadi). 360 piksel kenglikda va yorug' hamda qorong'i rejimda to'g'ri ko'rinadi.
+- Yozuvni tahrirlash bitta ekranda, sana va vaqt shu g'ildirak bilan tanlanadi.
 - Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.
 - Bazada oldindan qolgan kelajak vaqtli yozuv o'chirilmaydi, "Kelajak" belgisi bilan ko'rinadi va tahrirlashda vaqtni o'tmishga to'g'rilashni talab qiladi.
 

@@ -185,11 +185,6 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .taqsimot-qator .taqsimot-summa { margin-left: auto; }
 
 /* --- Yozuv vaqti --- */
-.sana-vaqt { display: flex; gap: 10px; }
-.sana-vaqt > div { flex: 1; min-width: 0; }
-.sana-vaqt > div:first-child { flex: 1.1; }
-.sana-vaqt input { padding-left: 8px; padding-right: 6px; font-size: 15px; }
-.sana-vaqt label { display: block; font-size: 14px; color: var(--xira); margin-bottom: 6px; }
 .belgi-kelajak {
   display: inline-block; margin-left: 8px; padding: 1px 8px; font-size: 12px; font-weight: 700;
   color: #7a4a00; background: #ffd54f; border-radius: 10px; vertical-align: middle;
@@ -198,3 +193,88 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   background: var(--karta); border: 1px solid #ffb74d; border-left-width: 5px; border-radius: 12px;
   padding: 10px 14px; margin-bottom: 12px; font-weight: 600;
 }
+
+/* --- Yozuv qo'shish: qadamlar (wizard) --- */
+.qadam-bosh { display: flex; justify-content: space-between; align-items: center; }
+.qadam-korsatkich { font-weight: 700; color: var(--xira); padding-right: 4px; }
+.qadam-chiziq { display: flex; gap: 6px; margin: 2px 0 8px; }
+.qadam-chiziq span { flex: 1; height: 5px; border-radius: 3px; background: var(--chiziq); }
+.qadam-chiziq span.tugagan { background: var(--asosiy); }
+.summa-katta { font-size: 34px; min-height: 64px; }
+
+.katak-tur { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
+.katak {
+  min-height: 76px; padding: 10px 12px; border: 0; border-radius: 14px; cursor: pointer; font: inherit;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 6px; text-align: left;
+}
+.katak-nom { font-weight: 700; font-size: 16px; line-height: 1.2; overflow-wrap: break-word; max-width: 100%; }
+.katak-oxirgi { font-size: 11px; font-weight: 700; padding: 1px 7px; border: 1.5px solid currentColor; border-radius: 9px; }
+.katak.oxirgi { box-shadow: 0 0 0 2px var(--fon), 0 0 0 4px var(--asosiy); }
+.katak[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--fon), 0 0 0 5px var(--matn); }
+.katak[aria-pressed="true"] .katak-nom::after { content: " ✓"; }
+
+.hisob-qator {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 64px;
+  margin-bottom: 8px; padding: 10px 14px; font: inherit; color: inherit; text-align: left; cursor: pointer;
+  background: var(--karta); border: 1px solid var(--chiziq); border-radius: 14px;
+}
+.hisob-qator .yozuv-chap { display: flex; flex-direction: column; min-width: 0; }
+.hisob-qator[aria-pressed="true"] { border-color: var(--asosiy); box-shadow: 0 0 0 2px var(--asosiy) inset; }
+
+.vaqt-katta {
+  width: 100%; margin-bottom: 12px; padding: 18px 12px; font: inherit; color: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--karta); border: 2px solid var(--asosiy); border-radius: 16px;
+}
+.vaqt-katta-nom { font-size: 14px; font-weight: 600; color: var(--xira); }
+.vaqt-katta-qiymat { font-size: 26px; font-weight: 800; }
+.vaqt-tugma {
+  width: 100%; min-height: 48px; padding: 8px 12px; font: inherit; font-size: 17px; font-weight: 600; text-align: left; cursor: pointer;
+  color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 10px;
+}
+.vaqt-tugma.xatoli { border-color: var(--xarajat); }
+.xulosa { margin-bottom: 12px; }
+
+/* Tezkor yo'l: 2-qadamdan boshlab pastda "Saqlash" ko'rinib turadi (pastki menyu va + tugmasidan yuqorida) */
+.qadam-joy { height: 76px; }
+.qadam-pastki {
+  position: fixed; left: 0; right: 0; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 5;
+  max-width: 560px; margin: 0 auto; padding: 0 16px;
+}
+.qadam-pastki .asosiy-tugma { box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }
+
+/* G'ildirakli sana va vaqt tanlagichi (CSS scroll-snap) */
+.g-parda {
+  position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, .55);
+}
+.g-oyna {
+  width: 100%; max-width: 560px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); outline: none;
+  background: var(--karta); color: var(--matn); border-radius: 20px 20px 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, .35);
+}
+.g-sarlavha { font-weight: 700; font-size: 17px; }
+.g-korinish { text-align: center; font-size: 22px; font-weight: 800; margin: 6px 0 10px; }
+.g-nomlar, .g-ustunlar { display: flex; gap: 6px; }
+.g-nomlar span { flex: 1; text-align: center; font-size: 12px; color: var(--xira); padding-bottom: 4px; }
+.g-ustunlar { position: relative; height: 220px; }
+.g-ustun {
+  flex: 1; min-width: 0; height: 220px; padding: 88px 0; overflow-y: auto; outline: none;
+  scroll-snap-type: y mandatory; overscroll-behavior: contain; touch-action: pan-y;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+  mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+}
+.g-ustun::-webkit-scrollbar { display: none; }
+.g-ustun:focus-visible { outline: 2px solid var(--asosiy); outline-offset: -2px; border-radius: 8px; }
+.g-element {
+  height: 44px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center;
+  font-size: 18px; cursor: pointer; user-select: none; -webkit-user-select: none;
+}
+.g-element.tanlangan { font-weight: 800; font-size: 20px; }
+.g-element[aria-disabled="true"] { color: var(--xira); opacity: .35; cursor: default; }
+.g-chiziq {
+  position: absolute; left: 0; right: 0; top: 88px; height: 44px; pointer-events: none; border-radius: 10px;
+  border-top: 1px solid var(--chiziq); border-bottom: 1px solid var(--chiziq); background: rgba(15, 139, 109, .13);
+}
+.g-tugmalar { display: flex; gap: 10px; margin-top: 12px; }
+.g-tugmalar button { flex: 1; margin-top: 0; width: auto; min-height: 52px; }

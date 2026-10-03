@@ -15,8 +15,8 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/calc.js?v=0.5.1"></script>
-  <script src="js/data.js?v=0.5.1"></script>
+  <script src="js/calc.js?v=0.5.2"></script>
+  <script src="js/data.js?v=0.5.2"></script>
   <script>
     (function () {
       var testlar = [];
@@ -596,6 +596,210 @@
       test('migratsiya: mavjud to\'g\'ri vaqt saqlanadi, noto\'g\'ri vaqt qayta hisoblanadi', function () {
         teng(Calc.yozuvniYangilash({ sana: '2026-10-03', vaqt: '07:07', yaratilgan: mahalliyISO(2026, 10, 3, 14, 35) }).vaqt, '07:07');
         teng(Calc.yozuvniYangilash({ sana: '2026-10-03', vaqt: '99:99', yaratilgan: mahalliyISO(2026, 10, 3, 14, 35) }).vaqt, '14:35');
+      });
+
+      // --- Yozuv qo'shish qadamlari (wizard) ---
+      test('qadamlar tartibi: xarajat va daromad — summa, kategoriya, hisob, vaqt, izoh', function () {
+        teng(Calc.qadamlar('xarajat').join(), 'summa,kategoriya,hisob,vaqt,izoh'); teng(Calc.qadamlar('daromad').join(), 'summa,kategoriya,hisob,vaqt,izoh');
+      });
+      test('qadamlar tartibi: o\'tkazmada kategoriya va hisob o\'rniga "Qayerdan" va "Qayerga"; qadamlar soni doim 5', function () {
+        teng(Calc.qadamlar('otkazma').join(), 'summa,qayerdan,qayerga,vaqt,izoh');
+        ['xarajat', 'daromad', 'otkazma'].forEach(function (t) { teng(Calc.qadamlar(t).length, 5); });
+      });
+      test('wizard: boshlang\'ich holat — xarajat, 1-qadam, vaqt "Hozir" (null), oldindan tanlangan hisob', function () {
+        var h = Calc.wizardBoshlash('a', 'b');
+        teng(h.tur, 'xarajat'); teng(h.qadam, 0); teng(h.vaqt, null); teng(h.hisob, 'a'); teng(h.qabul, 'b'); teng(h.summa, ''); teng(h.kategoriya, null);
+      });
+      test('wizard: keyingi qadamlar 1 -> 5, oxirgisidan keyin o\'zgarmaydi; asl holat o\'zgarmaydi', function () {
+        var h = Calc.wizardBoshlash('a', 'b'), x = h, ketma = [];
+        for (var i = 0; i < 6; i++) { x = Calc.wizardKeyingi(x); ketma.push(x.qadam + 1); }
+        teng(ketma.join(), '2,3,4,5,5,5'); teng(h.qadam, 0);
+      });
+      test('wizard: orqaga qaytganda oldin kiritilgan qiymatlar saqlanadi', function () {
+        var h = Calc.wizardBoshlash('a', 'b');
+        h.summa = '50 000'; h = Calc.wizardKeyingi(h);
+        h.kategoriya = 'k1'; h = Calc.wizardKeyingi(h);
+        h.hisob = 'c'; h = Calc.wizardKeyingi(h);
+        h.vaqt = { sana: '2026-10-02', vaqt: '14:30' }; h = Calc.wizardKeyingi(h);
+        h.izoh = 'tushlik';
+        var orqa = h;
+        for (var i = 0; i < 4; i++) orqa = Calc.wizardOrqaga(orqa);
+        teng(orqa.qadam, 0); teng(orqa.summa, '50 000'); teng(orqa.kategoriya, 'k1'); teng(orqa.hisob, 'c'); teng(orqa.izoh, 'tushlik');
+        teng(JSON.stringify(orqa.vaqt), JSON.stringify({ sana: '2026-10-02', vaqt: '14:30' }));
+        var yana = Calc.wizardKeyingi(Calc.wizardKeyingi(orqa));
+        teng(yana.qadam, 2); teng(yana.kategoriya, 'k1'); teng(yana.hisob, 'c');
+      });
+      test('wizard: 1-qadamda "Orqaga" shaklni yopadi (null) — holat tozalanadi', function () {
+        teng(Calc.wizardOrqaga(Calc.wizardBoshlash('a', 'b')), null);
+      });
+      test('wizard: tur almashsa kategoriya tozalanadi, summa va hisob saqlanadi', function () {
+        var h = Calc.wizardBoshlash('a', 'b'); h.summa = '1 000'; h.kategoriya = 'k1';
+        var d = Calc.wizardTurAlmashtir(h, 'daromad', ['a', 'b']);
+        teng(d.tur, 'daromad'); teng(d.kategoriya, null); teng(d.summa, '1 000'); teng(d.hisob, 'a');
+        teng(Calc.wizardTurAlmashtir(h, 'xarajat', ['a', 'b']) === h, true);   // o'zgarmasa o'sha holat
+      });
+      test('wizard: o\'tkazmaga o\'tganda "Qayerga" "Qayerdan" dan farq qiladi', function () {
+        var h = Calc.wizardBoshlash('a', 'a');
+        teng(Calc.wizardTurAlmashtir(h, 'otkazma', ['a', 'b', 'c']).qabul, 'b');
+        teng(Calc.wizardTurAlmashtir(h, 'otkazma', ['a']).qabul, '');
+      });
+
+      // --- Tezkor saqlash va to'liq saqlash (yozuvniTayyorlash) ---
+      var HOZIR = { sana: '2026-10-03', vaqt: '21:00' };
+      function holatYasash(ozg) { var h = Calc.wizardBoshlash('naqd', 'karta'); h.summa = '50 000'; h.kategoriya = 'trans'; Object.keys(ozg || {}).forEach(function (k) { h[k] = ozg[k]; }); return h; }
+      test('tezkor saqlash: kiritilmagan qadamlar standart oladi — hisob oldindan tanlangani, sana va vaqt hozirgi, izoh bo\'sh', function () {
+        var r = Calc.yozuvniTayyorlash(holatYasash({ qadam: 1 }), HOZIR);   // 2-qadamda "Saqlash"
+        teng(r.xato, undefined);
+        teng(JSON.stringify(r.yozuv), JSON.stringify({ tur: 'xarajat', summa: 50000, sana: '2026-10-03', vaqt: '21:00', hisob_id: 'naqd', kategoriya_id: 'trans', izoh: '' }));
+      });
+      test('tezkor saqlash: 2-qadamda kategoriya tanlanmagan bo\'lsa — xato "Kategoriyani tanlang" (kategoriya majburiy)', function () {
+        var r = Calc.yozuvniTayyorlash(holatYasash({ kategoriya: null }), HOZIR);
+        teng(r.xato, 'Kategoriyani tanlang'); teng(r.qadam, 'kategoriya');
+      });
+      test('tezkor saqlash: tanlangan hisob (3-qadamda boshqasi tanlangan bo\'lsa) ishlatiladi', function () {
+        teng(Calc.yozuvniTayyorlash(holatYasash({ hisob: 'karta' }), HOZIR).yozuv.hisob_id, 'karta');
+      });
+      test('tezkor saqlash: "Hozir" bo\'lsa saqlash paytidagi vaqt olinadi (null vaqt)', function () {
+        teng(Calc.yozuvniTayyorlash(holatYasash(), { sana: '2026-10-04', vaqt: '00:05' }).yozuv.vaqt, '00:05');
+        teng(Calc.yozuvniTayyorlash(holatYasash(), { sana: '2026-10-04', vaqt: '00:05' }).yozuv.sana, '2026-10-04');
+      });
+      test('tezkor saqlash: daromad ham xuddi shunday, izoh kesiladi', function () {
+        var r = Calc.yozuvniTayyorlash(holatYasash({ tur: 'daromad', izoh: '  oylik  ' }), HOZIR);
+        teng(r.yozuv.tur, 'daromad'); teng(r.yozuv.izoh, 'oylik');
+      });
+      test('tezkor saqlash: o\'tkazma — kategoriya yo\'q, qayerdan va qayerga bor', function () {
+        var r = Calc.yozuvniTayyorlash(holatYasash({ tur: 'otkazma', kategoriya: null }), HOZIR);
+        teng(r.yozuv.kategoriya_id, null); teng(r.yozuv.hisob_id, 'naqd'); teng(r.yozuv.qabul_hisob_id, 'karta'); teng('kategoriya_id' in r.yozuv, true);
+      });
+      test('saqlash: o\'tkazmada bir xil hisob yoki "Qayerga" bo\'sh -> xato', function () {
+        teng(!!Calc.yozuvniTayyorlash(holatYasash({ tur: 'otkazma', qabul: 'naqd' }), HOZIR).xato, true);
+        var r = Calc.yozuvniTayyorlash(holatYasash({ tur: 'otkazma', qabul: '' }), HOZIR); teng(r.xato, 'Ikkala hisobni ham tanlang'); teng(r.qadam, 'qayerga');
+      });
+      test('saqlash: summa tekshiruvi avvalgidek — bo\'sh, nol, manfiy (xato xabarlari o\'zgarmagan)', function () {
+        teng(Calc.yozuvniTayyorlash(holatYasash({ summa: '' }), HOZIR).xato, 'Summani kiriting');
+        teng(Calc.yozuvniTayyorlash(holatYasash({ summa: '0' }), HOZIR).xato, 'Summa noldan katta bo\'lsin');
+        teng(Calc.yozuvniTayyorlash(holatYasash({ summa: '-5 000' }), HOZIR).xato, 'Summa manfiy bo\'lishi mumkin emas');
+        teng(Calc.yozuvniTayyorlash(holatYasash({ summa: '' }), HOZIR).qadam, 'summa');
+      });
+      test('saqlash: hisob yo\'q -> "Hisobni tanlang" (o\'tkazmada "Qayerdan" qadami)', function () {
+        teng(Calc.yozuvniTayyorlash(holatYasash({ hisob: '' }), HOZIR).qadam, 'hisob');
+        teng(Calc.yozuvniTayyorlash(holatYasash({ hisob: '', tur: 'otkazma' }), HOZIR).qadam, 'qayerdan');
+      });
+      test('ikkinchi himoya: tanlangan vaqt 21:00 bo\'lsa saqlash 21:00 da mumkin, 20:59 da mumkin emas (soat orqaga surilgan)', function () {
+        var h = holatYasash({ vaqt: { sana: '2026-10-03', vaqt: '21:00' } });
+        teng(Calc.yozuvniTayyorlash(h, { sana: '2026-10-03', vaqt: '21:00' }).xato, undefined);
+        var r = Calc.yozuvniTayyorlash(h, { sana: '2026-10-03', vaqt: '20:59' });
+        teng(r.xato, 'Yozuv vaqti hozirgi vaqtdan keyin bo\'lishi mumkin emas'); teng(r.qadam, 'vaqt');
+      });
+      test('ikkinchi himoya: 21:00 mumkin, 21:01 mumkin emas (tanlangan vaqt bo\'yicha)', function () {
+        teng(Calc.yozuvniTayyorlash(holatYasash({ vaqt: { sana: '2026-10-03', vaqt: '21:00' } }), HOZIR).xato, undefined);
+        teng(!!Calc.yozuvniTayyorlash(holatYasash({ vaqt: { sana: '2026-10-03', vaqt: '21:01' } }), HOZIR).xato, true);
+        teng(!!Calc.yozuvniTayyorlash(holatYasash({ vaqt: { sana: '2026-10-04', vaqt: '00:00' } }), HOZIR).xato, true);
+      });
+
+      // --- Oxirgi ishlatilgan kategoriya va rang ustidagi matn ---
+      var OK = [
+        { id: '1', tur: 'xarajat', kategoriya_id: 'oziq', sana: '2026-10-01', vaqt: '10:00', yaratilgan: '1' },
+        { id: '2', tur: 'xarajat', kategoriya_id: 'trans', sana: '2026-10-02', vaqt: '09:00', yaratilgan: '2' },
+        { id: '3', tur: 'daromad', kategoriya_id: 'maosh', sana: '2026-10-03', vaqt: '08:00', yaratilgan: '3' },
+        { id: '4', tur: 'otkazma', kategoriya_id: null, sana: '2026-10-04', vaqt: '08:00', yaratilgan: '4' }
+      ];
+      test('oxirgi kategoriya: shu turdagi eng yangi yozuvniki', function () {
+        teng(Calc.oxirgiKategoriyaId(OK, 'xarajat', ['oziq', 'trans']), 'trans'); teng(Calc.oxirgiKategoriyaId(OK, 'daromad', ['maosh']), 'maosh');
+      });
+      test('oxirgi kategoriya: arxivlangan (faol ro\'yxatda yo\'q) bo\'lsa keyingisi, yozuv yo\'q bo\'lsa undefined; o\'tkazmada yo\'q', function () {
+        teng(Calc.oxirgiKategoriyaId(OK, 'xarajat', ['oziq']), 'oziq'); teng(Calc.oxirgiKategoriyaId(OK, 'xarajat', []), undefined);
+        teng(Calc.oxirgiKategoriyaId([], 'xarajat', ['oziq']), undefined); teng(Calc.oxirgiKategoriyaId(OK, 'otkazma', ['oziq']), undefined);
+      });
+      test('rang ustidagi matn: och rangda qora, to\'q rangda oq', function () {
+        teng(Calc.matnRangi('#ffd54f'), '#000000'); teng(Calc.matnRangi('#aed581'), '#000000'); teng(Calc.matnRangi('#1b5e20'), '#ffffff');
+        teng(Calc.matnRangi('#000000'), '#ffffff'); teng(Calc.matnRangi('#ffffff'), '#000000'); teng(Calc.matnRangi('xato'), '#000000');
+      });
+      test('rang ustidagi matn: tayyor kategoriya ranglarining hammasida kontrast kamida 4.5:1', function () {
+        function nur(h) { var m = /^#(..)(..)(..)$/.exec(h).slice(1).map(function (x) { return parseInt(x, 16) / 255; }).map(function (v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; }
+        ['#e57373', '#64b5f6', '#ffb74d', '#a1887f', '#81c784', '#9575cd', '#f06292', '#4dd0e1', '#ba68c8', '#aed581', '#90a4ae', '#43a047', '#26a69a', '#ffd54f'].forEach(function (rang) {
+          var a = nur(rang), b = nur(Calc.matnRangi(rang)), k = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+          if (k < 4.5) throw new Error(rang + ' kontrasti ' + k.toFixed(2));
+        });
+      });
+
+      // --- G'ildirak: kelajak qiymatlar kulrang va tanlanmaydi (hozir 2026-10-03 21:00) ---
+      var GH = { sana: '2026-10-03', vaqt: '21:00' };
+      function gt(sana, vaqt) { return Calc.vaqtdanTanlov(sana, vaqt); }
+      function gv(t) { var v = Calc.tanlovdanVaqt(t); return v.sana + ' ' + v.vaqt; }
+      function ochiqlar(ustun, t, h) { return Calc.glidirakQiymatlari(ustun, t, h || GH).filter(function (x) { return x.ochiq; }).map(function (x) { return x.qiymat; }); }
+      test('g\'ildirak: vaqtdanTanlov va tanlovdanVaqt o\'zaro teskari', function () {
+        teng(gv(gt('2026-10-03', '21:00')), '2026-10-03 21:00'); teng(gv(gt('2000-01-05', '07:05')), '2000-01-05 07:05');
+      });
+      test('g\'ildirak: hozirgi vaqt (21:00) tanlanadi, 21:01 tanlanmaydi', function () {
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-03', '21:00'), GH)), '2026-10-03 21:00');
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-03', '21:01'), GH)), '2026-10-03 21:00');
+      });
+      test('g\'ildirak: bugundan keyingi kun kulrang (kun ustuni: 1..3 ochiq, 4..31 kulrang) va tanlanmaydi', function () {
+        var t = gt('2026-10-03', '10:00');
+        teng(ochiqlar('kun', t).join(), '1,2,3'); teng(Calc.glidirakQiymatlari('kun', t, GH).length, 31);
+        teng(Calc.glidirakQiymatlari('kun', t, GH).filter(function (x) { return !x.ochiq; }).length, 28);
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-04', '10:00'), GH)), '2026-10-03 10:00');
+      });
+      test('g\'ildirak: bugun uchun hozirdan keyingi soat kulrang (21 gacha ochiq, 22 va 23 kulrang)', function () {
+        var t = gt('2026-10-03', '10:00');
+        teng(ochiqlar('soat', t).length, 22); teng(ochiqlar('soat', t).slice(-1)[0], 21);
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-03', '22:00'), GH)), '2026-10-03 21:00');
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-03', '23:30'), GH)), '2026-10-03 21:00');
+      });
+      test('g\'ildirak: hozirgi soatda daqiqa 00 gacha ochiq (21:00), keyingi daqiqalar kulrang', function () {
+        var t = gt('2026-10-03', '21:00');
+        teng(ochiqlar('daqiqa', t).join(), '0'); teng(Calc.glidirakQiymatlari('daqiqa', t, GH).length, 60);
+        teng(ochiqlar('daqiqa', gt('2026-10-03', '20:00')).length, 60);     // oldingi soatda hamma daqiqa ochiq
+        teng(ochiqlar('daqiqa', gt('2026-10-02', '21:00')).length, 60);     // kechagi kunning 21 soatida ham
+        teng(ochiqlar('daqiqa', gt('2026-10-03', '21:00'), { sana: '2026-10-03', vaqt: '21:37' }).length, 38);
+      });
+      test('g\'ildirak: boshqa kunda soat va daqiqalar to\'liq ochiq, soatni o\'zgartirsa daqiqa bo\'yicha tuzatiladi', function () {
+        teng(ochiqlar('soat', gt('2026-10-02', '10:00')).length, 24);
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-03', '21:30'), GH)), '2026-10-03 21:00');
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-03', '20:59'), GH)), '2026-10-03 20:59');
+      });
+      test('g\'ildirak: joriy yilda kelajak oylar kulrang (1..10 ochiq), o\'tgan yilda hamma oy ochiq', function () {
+        teng(ochiqlar('oy', gt('2026-10-03', '10:00')).length, 10); teng(ochiqlar('oy', gt('2025-10-03', '10:00')).length, 12);
+        teng(gv(Calc.glidirakTuzat(gt('2026-12-31', '23:59'), GH)), '2026-10-03 21:00');
+        teng(gv(Calc.glidirakTuzat(gt('2026-11-01', '00:00'), GH)), '2026-10-01 00:00');   // oy qaytariladi, 1-kun joyida qoladi
+      });
+      test('g\'ildirak: kelajak yil yo\'q (oxirgi yil — joriy), eng erta yil 2000', function () {
+        var y = Calc.glidirakQiymatlari('yil', gt('2026-10-03', '10:00'), GH);
+        teng(y[0].qiymat, 2000); teng(y[y.length - 1].qiymat, 2026); teng(y.every(function (x) { return x.ochiq; }), true);
+        teng(gv(Calc.glidirakTuzat(gt('2030-05-05', '10:00'), GH)), '2026-05-05 10:00');
+      });
+      test('g\'ildirak: yilni o\'zgartirganda kun va soat chegaralari mos keladi (2025-12-31 23:59 -> 2026 ga o\'tganda hozirgi vaqtga)', function () {
+        teng(gv(Calc.glidirakTuzat(gt('2026-12-31', '23:59'), GH)), '2026-10-03 21:00');
+        teng(gv(Calc.glidirakTuzat(gt('2025-12-31', '23:59'), GH)), '2025-12-31 23:59');
+      });
+      test('g\'ildirak: oyning kunlari soni (28/29/30/31, kabisa yili) va kun tuzatilishi', function () {
+        teng(Calc.oyKunlari(2027, 2), 28); teng(Calc.oyKunlari(2028, 2), 29); teng(Calc.oyKunlari(2100, 2), 28); teng(Calc.oyKunlari(2000, 2), 29);
+        teng(Calc.oyKunlari(2026, 4), 30); teng(Calc.oyKunlari(2026, 12), 31);
+        teng(gv(Calc.glidirakTuzat(gt('2025-02-31', '10:00'), GH)), '2025-02-28 10:00');   // kabisa emas
+        teng(gv(Calc.glidirakTuzat(gt('2024-02-31', '10:00'), GH)), '2024-02-29 10:00');   // kabisa yili
+        teng(Calc.glidirakQiymatlari('kun', gt('2024-02-10', '10:00'), GH).length, 29);
+        teng(Calc.glidirakQiymatlari('kun', gt('2025-02-10', '10:00'), GH).length, 28);
+        teng(gv(Calc.glidirakTuzat(gt('2027-02-31', '10:00'), GH)), '2026-02-28 10:00');   // 2027 kelajak: yil hozirgisiga qaytariladi
+      });
+      test('g\'ildirak: yarim tundan keyin (00:05, 04.10) bugun uchun soat 00 gacha, daqiqa 05 gacha ochiq', function () {
+        var h = { sana: '2026-10-04', vaqt: '00:05' }, t = gt('2026-10-04', '00:00');
+        teng(ochiqlar('soat', t, h).join(), '0'); teng(ochiqlar('daqiqa', t, h).join(), '0,1,2,3,4,5');
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-04', '00:06'), h)), '2026-10-04 00:05');
+        teng(gv(Calc.glidirakTuzat(gt('2026-10-03', '23:59'), h)), '2026-10-03 23:59');   // kechagi 23:59 mumkin
+        teng(ochiqlar('soat', gt('2026-10-03', '10:00'), h).length, 24);
+      });
+      test('g\'ildirak: tuzatish takror chaqirilsa o\'zgarmaydi (idempotent), hamma tanlov natijasi vaqtTekshir dan o\'tadi', function () {
+        var holatlar = [gt('2030-01-01', '23:59'), gt('2026-10-03', '21:01'), gt('2026-02-31', '25:70'), gt('1990-01-01', '00:00'), gt('2026-10-03', '21:00')];
+        holatlar.forEach(function (t) {
+          var bir = Calc.glidirakTuzat(t, GH), ikki = Calc.glidirakTuzat(bir, GH), v = Calc.tanlovdanVaqt(bir);
+          teng(JSON.stringify(ikki), JSON.stringify(bir)); teng(Calc.vaqtTekshir(v.sana, v.vaqt, GH).xato, undefined);
+        });
+      });
+      test('g\'ildirak: ochiq qiymatlar hamma ustunda chegara (glidirakChegarasi) bilan mos', function () {
+        var t = gt('2026-10-03', '21:00'), c = Calc.glidirakChegarasi(t, GH);
+        teng(JSON.stringify(c), JSON.stringify({ yil: 2026, oy: 10, kun: 3, soat: 21, daqiqa: 0 }));
+        teng(Calc.glidirakChegarasi(gt('2026-09-15', '10:00'), GH).kun, 30); teng(Calc.glidirakChegarasi(gt('2026-09-15', '10:00'), GH).soat, 23);
       });
 
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---

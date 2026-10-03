@@ -6,7 +6,7 @@
   var tugmalar = document.querySelectorAll('[data-bolim]');
   var keyingiBosqich = 'Bu bo\'lim keyingi bosqichlarda quriladi.';
 
-  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [] };
+  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [] };
   var xabar = '';          // "Saqlandi" xabari, faqat qo'shish ekranida bir marta ko'rsatiladi
   var joriy = 'bosh';      // hozirgi bo'lim
   var stek = [];           // bo'lim ichidagi ochiq ekranlar: [{ yasash, forma }]; "Orqaga" oxirgisini yopadi
@@ -21,7 +21,7 @@
   var HISOB_TURI = [['naqd', 'Naqd'], ['karta', 'Karta'], ['boshqa', 'Boshqa']];
 
   function bosFiltr() {
-    return { tur: '', hisob: '', kategoriya: '', dan: '', gacha: '', qidiruv: '' };
+    return { tur: '', hisob: '', kategoriya: '', kategoriyalar: [], dan: '', gacha: '', qidiruv: '' };
   }
 
   function el(teg, matn, klass) {
@@ -970,9 +970,13 @@
     var son = el('p', undefined, 'xira');
     var sanaXabar = el('div', undefined, 'xato-matn');
     var kategoriyaTanlovi = null;
+    var guruhIzohi = el('p', undefined, 'xira guruh-izohi');
+    guruhIzohi.setAttribute('data-guruh', '1');
 
+    var GURUH = '__guruh';   // "Boshqalar" doirasidan kelgan bir nechta kategoriya
     function kategoriyaVariantlari() {
       var v = [['', 'Barchasi']];
+      if (filtr.kategoriyalar.length) v.push([GURUH, 'Boshqalar (' + filtr.kategoriyalar.length + ' ta kategoriya)']);
       malumot.kategoriyalar.filter(function (k) { return !filtr.tur || k.tur === filtr.tur; }).forEach(function (k) {
         v.push([k.id, k.nom + (filtr.tur ? '' : ' · ' + (k.tur === 'daromad' ? 'daromad' : 'xarajat')) + (k.arxivlangan ? ' (arxiv)' : '')]);
       });
@@ -982,8 +986,10 @@
       var s = kategoriyaTanlovi.select;
       s.textContent = '';
       kategoriyaVariantlari().forEach(function (v) { var o = el('option', v[1]); o.value = v[0]; s.appendChild(o); });
-      s.value = filtr.kategoriya;
+      s.value = filtr.kategoriyalar.length ? GURUH : filtr.kategoriya;
       s.disabled = filtr.tur === 'otkazma';
+      guruhIzohi.hidden = !filtr.kategoriyalar.length;
+      guruhIzohi.textContent = filtr.kategoriyalar.map(function (id) { var k = kategoriyaOl(id); return k ? k.nom : 'Kategoriyasiz'; }).join(', ');
     }
 
     var turT = tanlov('q-tur', 'Tur', [['', 'Barchasi'], ['xarajat', 'Xarajat'], ['daromad', 'Daromad'], ['otkazma', 'O\'tkazma']],
@@ -991,15 +997,23 @@
         filtr.tur = v;
         var k = kategoriyaOl(filtr.kategoriya);
         if (v === 'otkazma' || (k && v && k.tur !== v)) filtr.kategoriya = '';
+        if (v && v !== 'xarajat') filtr.kategoriyalar = [];   // "Boshqalar" guruhi faqat xarajat kategoriyalaridan iborat
         kategoriyaniYangila();
         chiz();
       });
     var hisobT = tanlov('q-hisob', 'Hisob',
       [['', 'Barchasi']].concat(malumot.hisoblar.map(function (h) { return [h.id, h.nom + (h.arxivlangan ? ' (arxiv)' : '')]; })),
       filtr.hisob, function (v) { filtr.hisob = v; chiz(); });
-    kategoriyaTanlovi = tanlov('q-kategoriya', 'Kategoriya', kategoriyaVariantlari(), filtr.kategoriya,
-      function (v) { filtr.kategoriya = v; chiz(); });
-    kategoriyaTanlovi.select.disabled = filtr.tur === 'otkazma';
+    kategoriyaTanlovi = tanlov('q-kategoriya', 'Kategoriya', kategoriyaVariantlari(), filtr.kategoriyalar.length ? GURUH : filtr.kategoriya,
+      function (v) {
+        if (v === GURUH) return;
+        filtr.kategoriyalar = [];   // bitta kategoriya tanlansa, "Boshqalar" guruhi o'chadi
+        filtr.kategoriya = v;
+        kategoriyaniYangila();
+        chiz();
+      });
+    kategoriyaTanlovi.quti.appendChild(guruhIzohi);
+    kategoriyaniYangila();
     tafsilot.appendChild(turT.quti);
     tafsilot.appendChild(hisobT.quti);
     tafsilot.appendChild(kategoriyaTanlovi.quti);
@@ -1111,7 +1125,9 @@
     }
     k.appendChild(Diagramma.dona({
       taqsimot: joriyH.xarajatTaqsimoti, jami: joriyH.xarajat, kategoriya: kategoriyaOl,
-      bosilganda: function (id) { yozuvlarniOchish({ tur: 'xarajat', kategoriya: id, dan: chegara.dan, gacha: chegara.gacha, hisob: hisob }); }
+      bosilganda: function (id) { yozuvlarniOchish({ tur: 'xarajat', kategoriya: id, dan: chegara.dan, gacha: chegara.gacha, hisob: hisob }); },
+      // "Boshqalar": birlashgan kategoriyalar filtrlangan ro'yxat sifatida ochiladi
+      guruhBosilganda: function (idlar) { yozuvlarniOchish({ tur: 'xarajat', kategoriyalar: idlar, dan: chegara.dan, gacha: chegara.gacha, hisob: hisob }); }
     }));
     return k;
   }
@@ -1209,6 +1225,147 @@
     return bloklar;
   }
 
+  // ---- Byudjet (F7): kategoriyalar bo'yicha oylik chegaralar va ularning holati (joriy kalendar oyi) ----
+  function byudjetHisobi() {
+    return Calc.byudjetHisobi(malumot.byudjetlar, malumot.kategoriyalar, malumot.yozuvlar, Calc.bugun());
+  }
+
+  // Chegara qatori: nomi va to'lish chizig'i. qisqa — bosh sahifadagi ixcham ko'rinish
+  function byudjetQatori(nom, rang, holat, bosilganda, qisqa) {
+    var b = tugma(undefined, 'byudjet-qator' + (qisqa ? ' qisqa' : ''), bosilganda);
+    var bosh = el('div', undefined, 'byudjet-bosh');
+    if (rang) {
+      var nuqta = el('span', undefined, 'nuqta');
+      nuqta.style.background = rang;
+      bosh.appendChild(nuqta);
+    }
+    bosh.appendChild(el('span', nom, 'byudjet-nom'));
+    b.appendChild(bosh);
+    b.appendChild(Diagramma.byudjetChizigi(holat, nom));
+    return b;
+  }
+
+  function byudjetEkrani() {
+    var h = byudjetHisobi();
+    var bloklar = [el('h1', 'Byudjet'), el('p', h.oyNomi + ' · joriy oy xarajatlari bo\'yicha', 'xira')];
+
+    var umumiyKarta = karta();
+    umumiyKarta.classList.add('byudjet-karta');
+    umumiyKarta.appendChild(el('h2', 'Umumiy oylik chegara'));
+    if (h.umumiy) {
+      umumiyKarta.appendChild(byudjetQatori('Umumiy oylik chegara', null, h.umumiy.holat, function () {
+        ochish(function () { return byudjetShakli('umumiy'); }, true);
+      }));
+    } else {
+      umumiyKarta.appendChild(el('p', 'Barcha xarajatlar uchun umumiy chegara qo\'yilmagan. Shu oy sarflangan: ' + Calc.sumFormat(h.jami) + '.', 'xira'));
+      umumiyKarta.appendChild(tugma('+ Umumiy chegara qo\'yish', 'ikkinchi-tugma', function () {
+        ochish(function () { return byudjetShakli('umumiy'); }, true);
+      }));
+    }
+    bloklar.push(umumiyKarta);
+
+    bloklar.push(el('h2', 'Kategoriyalar bo\'yicha chegaralar'));
+    if (!h.chegarali.length) {
+      var bos = karta();
+      bos.appendChild(el('p', 'Hozircha kategoriya chegaralari yo\'q. Quyidagi kategoriyani bosib, oylik chegara qo\'ying (majburiy emas).', 'xira'));
+      bloklar.push(bos);
+    }
+    h.chegarali.forEach(function (x) {
+      var k = karta();
+      k.classList.add('byudjet-karta');
+      k.appendChild(byudjetQatori(x.kategoriya.nom, x.kategoriya.rang, x.holat, function () {
+        ochish(function () { return byudjetShakli(x.kategoriya.id); }, true);
+      }));
+      bloklar.push(k);
+    });
+
+    if (h.chegarasiz.length) {
+      bloklar.push(el('h2', 'Chegarasiz kategoriyalar'));
+      var royxat = karta();
+      h.chegarasiz.forEach(function (x) {
+        var q = tugma(undefined, 'yozuv', function () { ochish(function () { return byudjetShakli(x.kategoriya.id); }, true); });
+        var chap = el('div', undefined, 'yozuv-chap');
+        var nom = el('div', undefined, 'yozuv-nom');
+        var nuqta = el('span', undefined, 'nuqta');
+        nuqta.style.background = x.kategoriya.rang;
+        nom.appendChild(nuqta);
+        nom.appendChild(document.createTextNode(x.kategoriya.nom));
+        chap.appendChild(nom);
+        chap.appendChild(el('div', 'Shu oy: ' + Calc.sumFormat(x.sarflangan), 'yozuv-izoh'));
+        q.appendChild(chap);
+        q.appendChild(el('div', 'Chegara qo\'yish ›', 'yozuv-izoh'));
+        royxat.appendChild(q);
+      });
+      bloklar.push(royxat);
+    }
+    return bloklar;
+  }
+
+  // Chegara qo'yish, o'zgartirish yoki olib tashlash (id — kategoriya id si yoki 'umumiy')
+  function byudjetShakli(id) {
+    var umumiy = id === 'umumiy', k = umumiy ? null : kategoriyaOl(id);
+    var mavjud = malumot.byudjetlar.filter(function (b) { return b.kategoriya_id === id; })[0];
+    var h = byudjetHisobi();
+    var sarflangan = umumiy ? h.jami : (h.chegarali.concat(h.chegarasiz).filter(function (x) { return x.kategoriya.id === id; })
+      .map(function (x) { return x.holat ? x.holat.sarflangan : x.sarflangan; })[0] || 0);
+    var nom = umumiy ? 'Umumiy oylik chegara' : (k ? k.nom : 'Kategoriya');
+    var bloklar = [orqagaTugmasi(), el('h1', nom)];
+
+    var forma = document.createElement('form');
+    forma.noValidate = true;
+    forma.className = 'karta';
+    forma.appendChild(el('p', h.oyNomi + ' uchun shu oy sarflangan: ' + Calc.sumFormat(sarflangan), 'xira'));
+    var limit = summaMaydoni('b-limit', 'Oylik chegara (so\'m)', mavjud ? Calc.raqamFormat(String(mavjud.oylik_limit)) : '');
+    limit.input.classList.add('summa-katta');
+    limit.input.setAttribute('data-fokus', '1');
+    forma.appendChild(limit.quti);
+    var saqla = el('button', 'Saqlash', 'asosiy-tugma');
+    saqla.type = 'submit';
+    forma.appendChild(saqla);
+    forma.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var t = Calc.summaTekshir(limit.input.value);
+      if (t.xato) { limit.xato.textContent = t.xato; limit.input.classList.add('xatoli'); limit.input.focus(); return; }
+      saqla.disabled = true;
+      var yozuv = { kategoriya_id: id, oylik_limit: t.summa };
+      Data.saqlash('byudjetlar', yozuv).then(function () {
+        malumot.byudjetlar = malumot.byudjetlar.filter(function (b) { return b.kategoriya_id !== id; }).concat([yozuv]);
+        qisqaXabar('Chegara saqlandi');
+        orqaga();
+      }).catch(function (xato) {
+        saqla.disabled = false;
+        limit.xato.textContent = 'Saqlab bo\'lmadi: ' + xato;
+      });
+    });
+    bloklar.push(forma);
+
+    if (mavjud) {
+      bloklar.push(tugma('Chegarani olib tashlash', 'xavfli-tugma', function () {
+        if (!window.confirm('"' + nom + '" uchun oylik chegara olib tashlansinmi? Xarajatlar saqlanadi.')) return;
+        Data.ochirish('byudjetlar', id).then(function () {
+          malumot.byudjetlar = malumot.byudjetlar.filter(function (b) { return b.kategoriya_id !== id; });
+          qisqaXabar('Chegara olib tashlandi');
+          orqaga();
+        }).catch(function (xato) { qisqaXabar('O\'chirib bo\'lmadi: ' + xato); });
+      }));
+    }
+    return bloklar;
+  }
+
+  // Bosh sahifa: chegarasi 80% dan oshgan kategoriyalar (va umumiy chegara) haqida ogohlantirish
+  function byudjetOgohlantirishi() {
+    var h = byudjetHisobi();
+    if (!h.ogohlantirishlar.length) return null;
+    var k = karta();
+    k.classList.add('byudjet-karta', 'ogohlantirish-karta');
+    k.appendChild(el('h2', 'Byudjet ogohlantirishi'));
+    h.ogohlantirishlar.forEach(function (x) {
+      k.appendChild(byudjetQatori(x.umumiy ? 'Umumiy oylik chegara' : x.kategoriya.nom, x.umumiy ? null : x.kategoriya.rang, x.holat,
+        function () { korsat('byudjet'); }, true));
+    });
+    return k;
+  }
+
   // ---- Bo'limlar ----
   var bolimlar = {
     bosh: function (m) {
@@ -1241,6 +1398,9 @@
       });
       bloklar.push(k);
 
+      var ogoh = byudjetOgohlantirishi();
+      if (ogoh) bloklar.push(ogoh);
+
       bloklar.push(el('h2', 'Oxirgi yozuvlar'));
       if (m.yozuvlar.length === 0) bloklar.push(bosYozuvlar());
       else bloklar.push(yozuvlarRoyxati(Calc.kunlarBoyicha(Calc.oxirgiYozuvlar(m.yozuvlar, 10))));
@@ -1248,7 +1408,7 @@
     },
     hisobot: hisobotEkrani,
     qoshish: wizardEkrani,
-    byudjet: function () { return tayyorBolim('Byudjet'); },
+    byudjet: byudjetEkrani,
     yana: yanaMenyusi
   };
 
@@ -1302,7 +1462,8 @@
   });
 
   function yuklash() {
-    return Promise.all([Data.hammasi('hisoblar'), Data.hammasi('kategoriyalar'), Data.hammasi('yozuvlar')]).then(function (r) {
+    return Promise.all([Data.hammasi('hisoblar'), Data.hammasi('kategoriyalar'), Data.hammasi('yozuvlar'), Data.hammasi('byudjetlar')]).then(function (r) {
+      malumot.byudjetlar = r[3];
       malumot.hisoblar = r[0].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
       malumot.yozuvlar = r[2];
       malumot.kategoriyalar = r[1].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });

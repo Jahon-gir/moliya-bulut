@@ -168,3 +168,18 @@ button.yozuv {
 .filtr-quti summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; cursor: pointer; }
 input[type="search"] { -webkit-appearance: none; appearance: none; }
 .versiya { text-align: center; color: var(--xira); font-size: 13px; margin: 20px 0 4px; }
+
+/* --- 5-bosqich: hisobot, bosh sahifadagi oylik ko'rsatkichlar --- */
+.juft { display: flex; gap: 12px; }
+.juft .karta { flex: 1; min-width: 0; }
+.oy-summa { font-size: 18px; font-weight: 700; word-break: break-word; }
+.davr-nav { display: flex; gap: 8px; margin-bottom: 8px; }
+.davr-nav .ikkinchi-tugma { margin-top: 0; flex: 1; padding: 0 4px; }
+.davr-nomi { text-align: center; font-size: 20px; font-weight: 700; margin: 4px 0 12px; }
+.taqsimot-qator { align-items: flex-start; }
+.taqsimot-summa { white-space: nowrap; font-weight: 600; }
+.qator strong.plus { color: var(--daromad); }
+.qator strong.minus { color: var(--xarajat); }
+.taqsimot-qator { flex-wrap: wrap; row-gap: 2px; }
+.taqsimot-qator .yozuv-nom { flex: 1 1 150px; min-width: 0; word-break: normal; overflow-wrap: break-word; }
+.taqsimot-qator .taqsimot-summa { margin-left: auto; }

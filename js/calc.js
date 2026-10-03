@@ -73,9 +73,12 @@
     return null;
   }
 
-  // Nomlarni solishtirish uchun kalit: harf kattaligi va barcha bo'sh joylar hisobga olinmaydi
+  // Nomlarni solishtirish uchun kalit: harf kattaligi, barcha bo'sh joylar va apostrof turlari
+  // (' ʻ ʼ ‘ ’ ` ´) hisobga olinmaydi: ularning hammasi bir xil sanaladi
   function nomKaliti(nom) {
-    return String(nom == null ? '' : nom).toLowerCase().replace(/\s+/g, '');
+    return String(nom == null ? '' : nom).toLowerCase()
+      .replace(/[\u02BB\u02BC\u2018\u2019\u0060\u00B4]/g, '\'')
+      .replace(/\s+/g, '');
   }
 
   // Shu nom ro'yxatda (istisnoId dan boshqa elementlar orasida) bormi
@@ -147,6 +150,129 @@
     return !!(f && (f.tur || f.hisob || f.kategoriya || f.dan || f.gacha));
   }
 
+  // ---- Davrlar va hisobotlar (TZ 8-band) ----
+  var OY_NOMLARI = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
+    'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+
+  function ikki(n) { return (n < 10 ? '0' : '') + n; }
+  function sanaQismlari(iso) {
+    var q = String(iso).split('-');
+    return { y: parseInt(q[0], 10), m: parseInt(q[1], 10), d: parseInt(q[2], 10) };
+  }
+  // Sanalar bilan hisob-kitob UTC da qilinadi: qurilmaning vaqt zonasi va yozgi vaqt natijaga ta'sir qilmasin
+  function sanaUTC(iso) {
+    var p = sanaQismlari(iso);
+    return new Date(Date.UTC(p.y, p.m - 1, p.d));
+  }
+  function isoSana(dt) {
+    return dt.getUTCFullYear() + '-' + ikki(dt.getUTCMonth() + 1) + '-' + ikki(dt.getUTCDate());
+  }
+  // Sanaga n kun qo'shadi (manfiy bo'lsa ayiradi)
+  function kunQosh(iso, n) {
+    var dt = sanaUTC(iso);
+    dt.setUTCDate(dt.getUTCDate() + n);
+    return isoSana(dt);
+  }
+
+  // Berilgan sana tushadigan davrning chegarasi: { dan, gacha } (ikkalasi ham kiradi).
+  // tur: 'kun' | 'hafta' (dushanbadan yakshanbagacha) | 'oy' | 'yil'
+  function davrChegarasi(tur, sana) {
+    var p = sanaQismlari(sana);
+    if (tur === 'kun') return { dan: sana, gacha: sana };
+    if (tur === 'hafta') {
+      var dushanbadan = (sanaUTC(sana).getUTCDay() + 6) % 7;   // dushanba = 0
+      var dan = kunQosh(sana, -dushanbadan);
+      return { dan: dan, gacha: kunQosh(dan, 6) };
+    }
+    if (tur === 'oy') {
+      var oxirgi = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate();   // oyning oxirgi kuni (kabisa yili ham to'g'ri)
+      return { dan: p.y + '-' + ikki(p.m) + '-01', gacha: p.y + '-' + ikki(p.m) + '-' + ikki(oxirgi) };
+    }
+    return { dan: p.y + '-01-01', gacha: p.y + '-12-31' };
+  }
+
+  // Davrni n ta oldinga (musbat) yoki orqaga (manfiy) suradi. Natija: yangi davr ichidagi sana
+  function davrniSur(tur, sana, n) {
+    var p = sanaQismlari(sana);
+    if (tur === 'kun') return kunQosh(sana, n);
+    if (tur === 'hafta') return kunQosh(sana, 7 * n);
+    if (tur === 'oy') {
+      var jami = p.y * 12 + (p.m - 1) + n;
+      return Math.floor(jami / 12) + '-' + ikki(jami % 12 + 1) + '-01';
+    }
+    return (p.y + n) + '-01-01';
+  }
+
+  // Davrning ko'rinadigan nomi: "03.10.2026", "28.09.2026 – 04.10.2026", "Oktabr 2026", "2026"
+  function davrNomi(tur, sana) {
+    var c = davrChegarasi(tur, sana), p = sanaQismlari(c.dan);
+    if (tur === 'kun') return sanaKorsat(c.dan);
+    if (tur === 'hafta') return sanaKorsat(c.dan) + ' – ' + sanaKorsat(c.gacha);
+    if (tur === 'oy') return OY_NOMLARI[p.m - 1] + ' ' + p.y;
+    return String(p.y);
+  }
+
+  // Foizlar butun songa yaxlitlanadi; yaxlitlash farqi eng katta qiymatga qo'shiladi,
+  // shunda yig'indi aniq 100 bo'ladi (TZ 8-band, 4-qoida). Jami 0 bo'lsa, hammasi 0.
+  function foizlar(summalar) {
+    var jami = summalar.reduce(function (a, b) { return a + b; }, 0);
+    if (!jami) return summalar.map(function () { return 0; });
+    var f = summalar.map(function (x) { return Math.round(x * 100 / jami); });
+    var farq = 100 - f.reduce(function (a, b) { return a + b; }, 0);
+    if (farq) {
+      var eng = 0;
+      summalar.forEach(function (x, i) { if (x > summalar[eng]) eng = i; });
+      f[eng] += farq;
+    }
+    return f;
+  }
+
+  // { kategoriya_id: summa } -> [{ kategoriya_id, summa, foiz }], kattasidan kichigiga
+  function taqsimot(xarita) {
+    var royxat = Object.keys(xarita).map(function (id) { return { kategoriya_id: id, summa: xarita[id] }; });
+    royxat.sort(function (a, b) {
+      return b.summa - a.summa || (a.kategoriya_id < b.kategoriya_id ? -1 : 1);
+    });
+    var f = foizlar(royxat.map(function (x) { return x.summa; }));
+    royxat.forEach(function (x, i) { x.foiz = f[i]; });
+    return royxat;
+  }
+
+  // Davr hisoboti: faqat daromad va xarajat yozuvlari (o'tkazma va qarz kirmaydi), sana chegaralari bilan.
+  // hisobId berilsa, faqat shu hisob bo'yicha. Kelajak sanali yozuv faqat o'z sanasi tushgan davrga kiradi.
+  function hisobot(yozuvlar, dan, gacha, hisobId) {
+    var daromad = 0, xarajat = 0, soni = 0, dKat = {}, xKat = {};
+    yozuvlar.forEach(function (y) {
+      if (y.tur !== 'daromad' && y.tur !== 'xarajat') return;
+      if (y.sana < dan || y.sana > gacha) return;
+      if (hisobId && y.hisob_id !== hisobId) return;
+      soni++;
+      var xarita = y.tur === 'daromad' ? dKat : xKat;
+      xarita[y.kategoriya_id] = (xarita[y.kategoriya_id] || 0) + y.summa;
+      if (y.tur === 'daromad') daromad += y.summa; else xarajat += y.summa;
+    });
+    return {
+      daromad: daromad, xarajat: xarajat, qoldiq: daromad - xarajat, soni: soni,
+      xarajatTaqsimoti: taqsimot(xKat), daromadTaqsimoti: taqsimot(dKat)
+    };
+  }
+
+  // Xarajatni oldingi davr bilan solishtirish: { farq, foiz }. Oldingi davrda xarajat 0 bo'lsa, foiz = null ("—")
+  function taqqoslash(joriy, oldingi) {
+    var farq = joriy - oldingi;
+    if (oldingi === 0) return { farq: farq, foiz: null };
+    var f = Math.round(Math.abs(farq) * 100 / oldingi);
+    return { farq: farq, foiz: farq < 0 ? -f : f };
+  }
+
+  // "+50 000 so'm" / "−50 000 so'm" / "0 so'm"
+  function belgiliSum(n) { return (n > 0 ? '+' : '') + sumFormat(n); }
+  // "+20%" / "−20%" / "0%" ; null -> "—"
+  function belgiliFoiz(f) {
+    if (f === null || f === undefined) return '—';
+    return (f > 0 ? '+' : f < 0 ? '−' : '') + Math.abs(f) + '%';
+  }
+
   // Yangisi tepada: avval sana, bir xil sanada yaratilgan vaqti bo'yicha
   function yangiTartib(a, b) {
     if (a.sana !== b.sana) return a.sana < b.sana ? 1 : -1;
@@ -186,6 +312,8 @@
     qoldiqTekshir: qoldiqTekshir, yangiBoshlangichQoldiq: yangiBoshlangichQoldiq, nomKaliti: nomKaliti, kategoriyaNomTekshir: kategoriyaNomTekshir,
     yozuvlarniSuz: yozuvlarniSuz, filtrFaolmi: filtrFaolmi, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
+    davrChegarasi: davrChegarasi, davrniSur: davrniSur, davrNomi: davrNomi, kunQosh: kunQosh,
+    foizlar: foizlar, hisobot: hisobot, taqqoslash: taqqoslash, belgiliSum: belgiliSum, belgiliFoiz: belgiliFoiz,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId
   };
 })(typeof window !== 'undefined' ? window : this);

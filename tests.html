@@ -15,8 +15,8 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/calc.js?v=0.4.1"></script>
-  <script src="js/data.js?v=0.4.1"></script>
+  <script src="js/calc.js?v=0.5.0"></script>
+  <script src="js/data.js?v=0.5.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -303,6 +303,202 @@
       test('xato xabarlari tushunarli', function () {
         teng(Calc.kategoriyaNomTekshir('transport', KM).xato, 'Bu nom bilan kategoriya allaqachon bor');
         teng(Calc.hisobNomTekshir('karta', HM).xato, 'Bu nom bilan hisob allaqachon bor');
+      });
+
+      // --- Apostrof turlari nom solishtirishda bir xil ---
+      test('apostrof: \' ʻ ʼ ‘ ’ ` ´ barchasi bir xil nomlanadi (kategoriya)', function () {
+        var mavjud = [{ id: 'a', nom: 'Sog\'liq' }];
+        ['Sogʻliq', 'Sogʼliq', 'Sog‘liq', 'Sog’liq', 'Sog`liq', 'Sog´liq', 'SOG’LIQ', ' sog ʻ liq '].forEach(function (n) {
+          teng(Calc.kategoriyaNomTekshir(n, mavjud).xato, 'Bu nom bilan kategoriya allaqachon bor');
+        });
+      });
+      test('apostrof: hisob nomida ham bir xil sanaladi', function () {
+        teng(!!Calc.hisobNomTekshir('Jahon’s karta', [{ id: 'h', nom: 'Jahon\'s karta' }]).xato, true);
+        teng(!!Calc.hisobNomTekshir('Jahon`s karta', [{ id: 'h', nom: 'Jahonʻs karta' }]).xato, true);
+      });
+      test('apostrof: apostrofsiz nom boshqa nom, o\'zini tahrirlash mumkin', function () {
+        teng(!!Calc.kategoriyaNomTekshir('Sogliq', [{ id: 'a', nom: 'Sog\'liq' }]).xato, false);
+        teng(!!Calc.kategoriyaNomTekshir('Sog’liq', [{ id: 'a', nom: 'Sog\'liq' }], 'a').xato, false);
+      });
+      test('apostrof: nomKaliti apostrof turlarini bir xil qiladi', function () {
+        teng(Calc.nomKaliti('Oʻzbek'), Calc.nomKaliti('O\'zbek')); teng(Calc.nomKaliti('Ta’lim'), 'ta\'lim');
+      });
+
+      // --- Davr chegaralari ---
+      function ch(tur, sana) { var c = Calc.davrChegarasi(tur, sana); return c.dan + '..' + c.gacha; }
+      test('davr: kun', function () { teng(ch('kun', '2026-10-03'), '2026-10-03..2026-10-03'); });
+      test('davr: hafta dushanbadan yakshanbagacha', function () {
+        teng(ch('hafta', '2026-10-05'), '2026-10-05..2026-10-11');   // dushanba
+        teng(ch('hafta', '2026-10-11'), '2026-10-05..2026-10-11');   // yakshanba
+        teng(ch('hafta', '2026-10-08'), '2026-10-05..2026-10-11');
+      });
+      test('davr: hafta ikki oyga to\'g\'ri kelsa ham to\'liq 7 kun', function () {
+        teng(ch('hafta', '2026-10-01'), '2026-09-28..2026-10-04'); teng(ch('hafta', '2026-09-30'), '2026-09-28..2026-10-04');
+      });
+      test('davr: hafta ikki yilga to\'g\'ri kelsa', function () {
+        teng(ch('hafta', '2026-12-31'), '2026-12-28..2027-01-03'); teng(ch('hafta', '2027-01-01'), '2026-12-28..2027-01-03');
+      });
+      test('davr: oy (31, 30 kunlik)', function () {
+        teng(ch('oy', '2026-10-17'), '2026-10-01..2026-10-31'); teng(ch('oy', '2026-11-30'), '2026-11-01..2026-11-30');
+      });
+      test('davr: fevral kabisa va kabisa bo\'lmagan yillarda', function () {
+        teng(ch('oy', '2028-02-10'), '2028-02-01..2028-02-29'); teng(ch('oy', '2027-02-10'), '2027-02-01..2027-02-28');
+        teng(ch('oy', '2000-02-10'), '2000-02-01..2000-02-29'); teng(ch('oy', '2100-02-10'), '2100-02-01..2100-02-28');
+      });
+      test('davr: yil', function () { teng(ch('yil', '2028-06-15'), '2028-01-01..2028-12-31'); });
+      test('davr: hafta kabisa kunini o\'z ichiga oladi (29.02.2028 — dushanba)', function () {
+        teng(ch('hafta', '2028-02-29'), '2028-02-28..2028-03-05');
+        teng(Calc.kunQosh('2028-02-28', 1), '2028-02-29'); teng(Calc.kunQosh('2028-02-28', 2), '2028-03-01');
+        teng(Calc.kunQosh('2027-02-28', 1), '2027-03-01');
+      });
+      test('davr surish: oldingi/keyingi kun, hafta, oy, yil (yil almashishi bilan)', function () {
+        teng(Calc.davrniSur('kun', '2027-01-01', -1), '2026-12-31');
+        teng(Calc.davrniSur('hafta', '2026-10-01', -1), '2026-09-24');
+        teng(ch('hafta', Calc.davrniSur('hafta', '2026-12-31', 1)), '2027-01-04..2027-01-10');
+        teng(Calc.davrniSur('oy', '2026-01-15', -1), '2025-12-01'); teng(Calc.davrniSur('oy', '2026-12-10', 1), '2027-01-01');
+        teng(Calc.davrniSur('oy', '2026-03-31', -1), '2026-02-01');   // 31-mart -> fevral (kun tashlab ketmaydi)
+        teng(Calc.davrniSur('yil', '2026-07-04', 1), '2027-01-01'); teng(Calc.davrniSur('yil', '2026-07-04', -1), '2025-01-01');
+      });
+      test('davr nomi', function () {
+        teng(Calc.davrNomi('kun', '2026-10-03'), '03.10.2026'); teng(Calc.davrNomi('oy', '2026-10-03'), 'Oktabr 2026');
+        teng(Calc.davrNomi('hafta', '2026-10-01'), '28.09.2026 – 04.10.2026'); teng(Calc.davrNomi('yil', '2026-10-03'), '2026');
+      });
+
+      // --- Foizlar va taqqoslash ---
+      test('foizlar: 450/50 -> 90/10', function () { teng(Calc.foizlar([450000, 50000]).join(), '90,10'); });
+      test('foizlar: yig\'indi har doim 100 (yaxlitlash farqi eng kattaga qo\'shiladi)', function () {
+        teng(Calc.foizlar([1, 1, 1]).join(), '34,33,33');
+        teng(Calc.foizlar([1, 1, 1, 1, 1, 1]).join(), '15,17,17,17,17,17');   // 17*6=102, farq -2 birinchi kattadan ayriladi
+        [[5, 3, 2], [7, 13, 29, 51], [1, 2], [33, 33, 34], [999, 1], [1, 1, 1, 1, 1, 1, 1]].forEach(function (a) {
+          teng(Calc.foizlar(a).reduce(function (x, y) { return x + y; }, 0), 100);
+        });
+      });
+      test('foizlar: jami 0 bo\'lsa hammasi 0, bitta kategoriya 100', function () {
+        teng(Calc.foizlar([0, 0]).join(), '0,0'); teng(Calc.foizlar([]).length, 0); teng(Calc.foizlar([777]).join(), '100');
+      });
+      test('taqqoslash: summa va foiz', function () {
+        var t = Calc.taqqoslash(500000, 400000); teng(t.farq, 100000); teng(t.foiz, 25);
+        t = Calc.taqqoslash(300000, 400000); teng(t.farq, -100000); teng(t.foiz, -25);
+        teng(Calc.taqqoslash(400000, 400000).foiz, 0);
+      });
+      test('taqqoslash: oldingi davrda xarajat 0 bo\'lsa foiz o\'rniga "—"', function () {
+        var t = Calc.taqqoslash(500000, 0); teng(t.farq, 500000); teng(t.foiz, null); teng(Calc.belgiliFoiz(t.foiz), '—');
+        teng(Calc.taqqoslash(0, 0).foiz, null);
+      });
+      test('taqqoslash: foiz simmetrik yaxlitlanadi (+12,5% -> 13, -12,5% -> -13)', function () {
+        teng(Calc.taqqoslash(900, 800).foiz, 13); teng(Calc.taqqoslash(700, 800).foiz, -13);
+      });
+      test('belgiliSum va belgiliFoiz', function () {
+        teng(Calc.belgiliSum(50000), '+50 000 so\'m'); teng(Calc.belgiliSum(-50000), '−50 000 so\'m'); teng(Calc.belgiliSum(0), '0 so\'m');
+        teng(Calc.belgiliFoiz(20), '+20%'); teng(Calc.belgiliFoiz(-20), '−20%'); teng(Calc.belgiliFoiz(0), '0%');
+      });
+
+      // --- Hisobot: TZ 11-band sinov ma'lumoti (2026-yil oktabr, boshlang'ich qoldiq 0, "Naqd pul") ---
+      var NAQD = { id: 'naqd', boshlangich_qoldiq: 0 }, KARTA = { id: 'karta', boshlangich_qoldiq: 0 };
+      var TZ = [
+        { id: 't1', tur: 'daromad', summa: 5000000, sana: '2026-10-01', yaratilgan: '1', hisob_id: 'naqd', kategoriya_id: 'maosh' },
+        { id: 't2', tur: 'xarajat', summa: 300000, sana: '2026-10-02', yaratilgan: '2', hisob_id: 'naqd', kategoriya_id: 'oziq' },
+        { id: 't3', tur: 'xarajat', summa: 50000, sana: '2026-10-02', yaratilgan: '3', hisob_id: 'naqd', kategoriya_id: 'trans' },
+        { id: 't4', tur: 'xarajat', summa: 150000, sana: '2026-10-03', yaratilgan: '4', hisob_id: 'naqd', kategoriya_id: 'oziq' },
+        { id: 't5', tur: 'otkazma', summa: 1000000, sana: '2026-10-03', yaratilgan: '5', hisob_id: 'naqd', qabul_hisob_id: 'karta', kategoriya_id: null }
+      ];
+      function oyH(yoz, sana, hisob) { var c = Calc.davrChegarasi('oy', sana || '2026-10-15'); return Calc.hisobot(yoz, c.dan, c.gacha, hisob || ''); }
+      test('TZ: oylik hisobot — daromad 5 000 000, xarajat 500 000, qoldiq 4 500 000', function () {
+        var h = oyH(TZ); teng(h.daromad, 5000000); teng(h.xarajat, 500000); teng(h.qoldiq, 4500000);
+      });
+      test('TZ: 2-kun uchun kunlik hisobot — xarajat 350 000', function () {
+        var h = Calc.hisobot(TZ, '2026-10-02', '2026-10-02', ''); teng(h.xarajat, 350000); teng(h.daromad, 0);
+      });
+      test('TZ: kategoriyalar bo\'yicha — Oziq-ovqat 450 000 (90%), Transport 50 000 (10%)', function () {
+        var t = oyH(TZ).xarajatTaqsimoti;
+        teng(t.map(function (x) { return x.kategoriya_id + ':' + x.summa + ':' + x.foiz; }).join(), 'oziq:450000:90,trans:50000:10');
+      });
+      test('TZ: daromad taqsimoti — Oylik maosh 100%', function () {
+        teng(oyH(TZ).daromadTaqsimoti.map(function (x) { return x.kategoriya_id + ':' + x.foiz; }).join(), 'maosh:100');
+      });
+      test('TZ: o\'tkazma hisobotga kirmaydi (daromad ham, xarajat ham emas)', function () {
+        var faqat = TZ.filter(function (y) { return y.tur === 'otkazma'; });
+        var h = oyH(faqat); teng(h.daromad + h.xarajat + h.soni, 0);
+      });
+      test('TZ: hisoblar qoldig\'i — Naqd pul 3 500 000, Karta 1 000 000, umumiy balans 4 500 000', function () {
+        teng(Calc.hisobQoldigi(NAQD, TZ), 3500000); teng(Calc.hisobQoldigi(KARTA, TZ), 1000000);
+        teng(Calc.umumiyBalans([NAQD, KARTA], TZ), 4500000);
+      });
+      test('hisobot: bitta hisob bo\'yicha va barcha hisoblar bo\'yicha', function () {
+        var Y = TZ.concat([{ id: 'k1', tur: 'xarajat', summa: 70000, sana: '2026-10-04', yaratilgan: '6', hisob_id: 'karta', kategoriya_id: 'trans' }]);
+        teng(oyH(Y, null, '').xarajat, 570000); teng(oyH(Y, null, 'naqd').xarajat, 500000); teng(oyH(Y, null, 'karta').xarajat, 70000);
+        teng(oyH(Y, null, 'karta').daromad, 0);
+      });
+      test('hisobot: davrda yozuv bo\'lmasa soni 0 (ekranda "Bu davrda yozuvlar yo\'q")', function () {
+        teng(oyH(TZ, '2026-09-10').soni, 0); teng(oyH(TZ, '2026-09-10').qoldiq, 0); teng(oyH(TZ, '2026-09-10').xarajatTaqsimoti.length, 0);
+      });
+      test('hisobot: qoldiq manfiy bo\'lishi mumkin', function () {
+        teng(oyH([{ tur: 'xarajat', summa: 800, sana: '2026-10-01', hisob_id: 'a', kategoriya_id: 'x' }, { tur: 'daromad', summa: 300, sana: '2026-10-02', hisob_id: 'a', kategoriya_id: 'y' }]).qoldiq, -500);
+      });
+      test('hisobot: chegara kunlari (dan va gacha) kiradi, undan tashqarisi kirmaydi', function () {
+        var Y = ['2026-09-30', '2026-10-01', '2026-10-31', '2026-11-01'].map(function (sana, i) {
+          return { id: 'c' + i, tur: 'xarajat', summa: 100, sana: sana, hisob_id: 'a', kategoriya_id: 'x' };
+        });
+        teng(oyH(Y).xarajat, 200);
+      });
+      test('hisobot: haftalik hisobot ikki oyga to\'g\'ri kelsa ham to\'liq 7 kun, oylik esa faqat o\'z sanalari', function () {
+        var Y = ['2026-09-27', '2026-09-28', '2026-09-30', '2026-10-01', '2026-10-04', '2026-10-05'].map(function (sana, i) {
+          return { id: 'w' + i, tur: 'xarajat', summa: 10, sana: sana, hisob_id: 'a', kategoriya_id: 'x' };
+        });
+        var hf = Calc.davrChegarasi('hafta', '2026-10-01');           // 28.09 – 04.10
+        teng(Calc.hisobot(Y, hf.dan, hf.gacha, '').xarajat, 40);      // 28.09, 30.09, 01.10, 04.10
+        teng(oyH(Y, '2026-10-01').xarajat, 30);                        // oktabr: 01.10, 04.10, 05.10
+        teng(oyH(Y, '2026-09-01').xarajat, 30);                        // sentabr: 27.09, 28.09, 30.09
+      });
+      test('hisobot: yilda yil almashishi', function () {
+        var Y = ['2025-12-31', '2026-01-01', '2026-12-31', '2027-01-01'].map(function (sana, i) {
+          return { id: 'y' + i, tur: 'daromad', summa: 5, sana: sana, hisob_id: 'a', kategoriya_id: 'x' };
+        });
+        var c = Calc.davrChegarasi('yil', '2026-06-01'); teng(Calc.hisobot(Y, c.dan, c.gacha, '').daromad, 10);
+      });
+      test('hisobot: taqsimot kattasidan kichigiga, teng bo\'lsa barqaror tartib', function () {
+        var Y = [['a', 100], ['b', 300], ['c', 300], ['d', 50]].map(function (x, i) {
+          return { id: 'o' + i, tur: 'xarajat', summa: x[1], sana: '2026-10-01', hisob_id: 'h', kategoriya_id: x[0] };
+        });
+        teng(oyH(Y).xarajatTaqsimoti.map(function (x) { return x.kategoriya_id; }).join(), 'b,c,a,d');
+        teng(oyH(Y).xarajatTaqsimoti.reduce(function (a, x) { return a + x.foiz; }, 0), 100);
+      });
+      test('hisobot: oldingi davr bilan taqqoslash (oktabr va sentabr)', function () {
+        var Y = TZ.concat([{ id: 's1', tur: 'xarajat', summa: 400000, sana: '2026-09-20', hisob_id: 'naqd', kategoriya_id: 'oziq' }]);
+        var jor = oyH(Y, '2026-10-15').xarajat, old = oyH(Y, Calc.davrniSur('oy', '2026-10-15', -1)).xarajat;
+        var t = Calc.taqqoslash(jor, old); teng(t.farq, 100000); teng(t.foiz, 25);
+        teng(Calc.taqqoslash(500000, oyH(TZ, '2026-09-15').xarajat).foiz, null);
+      });
+
+      // --- Kelajak sanali yozuv: balansga darhol ta'sir qiladi, hisobotga faqat o'z davrida kiradi ---
+      var BUGUN = '2026-10-03';
+      var KELAJAK = TZ.concat([
+        { id: 'f1', tur: 'xarajat', summa: 100000, sana: '2026-11-05', yaratilgan: '7', hisob_id: 'naqd', kategoriya_id: 'oziq' },
+        { id: 'f2', tur: 'daromad', summa: 2000000, sana: '2026-10-25', yaratilgan: '8', hisob_id: 'naqd', kategoriya_id: 'maosh' }
+      ]);
+      test('kelajak sanali yozuv: hisob qoldig\'i va umumiy balans darhol o\'zgaradi', function () {
+        teng(Calc.hisobQoldigi(NAQD, KELAJAK), 3500000 - 100000 + 2000000);
+        teng(Calc.umumiyBalans([NAQD, KARTA], KELAJAK), 4500000 - 100000 + 2000000);
+      });
+      test('kelajak sanali yozuv: faqat o\'z oyi hisobotiga kiradi', function () {
+        var okt = oyH(KELAJAK, BUGUN), noy = oyH(KELAJAK, '2026-11-20');
+        teng(okt.xarajat, 500000);                       // noyabrdagi 100 000 oktabrga kirmaydi
+        teng(noy.xarajat, 100000); teng(noy.daromad, 0); // noyabrda faqat o'sha yozuv
+        teng(Calc.hisobot(KELAJAK, '2026-12-01', '2026-12-31', '').soni, 0);
+      });
+      test('kelajak sanali yozuv: o\'z oyining ichidagi keyingi sana (25.10) joriy oy hisobotiga kiradi, bugungi kunlik hisobotga kirmaydi', function () {
+        teng(oyH(KELAJAK, BUGUN).daromad, 5000000 + 2000000);
+        teng(Calc.hisobot(KELAJAK, BUGUN, BUGUN, '').daromad, 0);
+        teng(Calc.hisobot(KELAJAK, '2026-10-25', '2026-10-25', '').daromad, 2000000);
+      });
+      test('kelajak sanali yozuv: yillik hisobotda ham, keyingi yilnikiga kirmaydi', function () {
+        var Y = KELAJAK.concat([{ id: 'f3', tur: 'xarajat', summa: 7, sana: '2027-03-01', hisob_id: 'naqd', kategoriya_id: 'oziq' }]);
+        var c26 = Calc.davrChegarasi('yil', BUGUN), c27 = Calc.davrChegarasi('yil', '2027-03-01');
+        teng(Calc.hisobot(Y, c26.dan, c26.gacha, '').xarajat, 600000); teng(Calc.hisobot(Y, c27.dan, c27.gacha, '').xarajat, 7);
+        teng(Calc.umumiyBalans([NAQD, KARTA], Y), 4500000 - 100000 + 2000000 - 7);
+      });
+      test('kelajak sanali yozuv: ro\'yxatda eng tepada ko\'rinadi', function () {
+        teng(Calc.kunlarBoyicha(KELAJAK)[0].sana, '2026-11-05');
       });
 
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---

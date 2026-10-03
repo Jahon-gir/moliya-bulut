@@ -10,6 +10,7 @@
   var xabar = '';          // "Saqlandi" xabari, faqat qo'shish ekranida bir marta ko'rsatiladi
   var joriy = 'bosh';      // hozirgi bo'lim
   var stek = [];           // bo'lim ichidagi ochiq ekranlar: [{ yasash, forma }]; "Orqaga" oxirgisini yopadi
+  var hisobotHolat = { tur: 'oy', sana: null, hisob: '' };   // Hisobot bo'limi: davr turi, davrdagi sana, hisob filtri
   var filtr = bosFiltr();  // "Barcha yozuvlar" filtri (ilova ochiq turguncha eslab qolinadi)
   var VERSIYA = (document.querySelector('meta[name="versiya"]') || {}).content || '?';
   var YOZUVLAR_SAHIFASI = 300;   // "Barcha yozuvlar" da bir vaqtda ko'rsatiladigan yozuvlar (butun kunlar bilan)
@@ -836,6 +837,108 @@
     return bloklar;
   }
 
+  // ---- Hisobot ----
+  var DAVR_TURLARI = [['kun', 'Kun'], ['hafta', 'Hafta'], ['oy', 'Oy'], ['yil', 'Yil']];
+
+  function taqsimotKartasi(sarlavha, royxat) {
+    var k = karta();
+    k.appendChild(el('h2', sarlavha));
+    if (!royxat.length) {
+      k.appendChild(el('p', 'Bu davrda yozuv yo\'q.', 'xira'));
+      return k;
+    }
+    royxat.forEach(function (x) {
+      var kat = kategoriyaOl(x.kategoriya_id);
+      var q = el('div', undefined, 'qator taqsimot-qator');
+      var chap = el('span', undefined, 'yozuv-nom');
+      var nuqta = el('span', undefined, 'nuqta');
+      nuqta.style.background = kat ? kat.rang : '#90a4ae';
+      chap.appendChild(nuqta);
+      chap.appendChild(document.createTextNode(kat ? kat.nom : 'Kategoriyasiz'));
+      q.appendChild(chap);
+      q.appendChild(el('span', Calc.sumFormat(x.summa) + ' · ' + x.foiz + '%', 'taqsimot-summa'));
+      k.appendChild(q);
+    });
+    return k;
+  }
+
+  function hisobotEkrani() {
+    var h = hisobotHolat;
+    if (!h.sana) h.sana = Calc.bugun();
+    var bloklar = [el('h1', 'Hisobot')];
+    function qayta() { chizish(hisobotEkrani(), true); }
+
+    // Davr turi
+    var turQator = el('div', undefined, 'tanlov');
+    DAVR_TURLARI.forEach(function (t) {
+      var b = tugma(t[1], undefined, function () { h.tur = t[0]; qayta(); });
+      b.setAttribute('aria-pressed', String(h.tur === t[0]));
+      turQator.appendChild(b);
+    });
+    var turMaydon = el('div', undefined, 'maydon');
+    turMaydon.appendChild(turQator);
+    bloklar.push(turMaydon);
+
+    // Oldingi / bugun / keyingi
+    var chegara = Calc.davrChegarasi(h.tur, h.sana);
+    var nav = el('div', undefined, 'davr-nav');
+    nav.appendChild(tugma('‹ Oldingi', 'ikkinchi-tugma', function () { h.sana = Calc.davrniSur(h.tur, h.sana, -1); qayta(); }));
+    nav.appendChild(tugma('Bugun', 'ikkinchi-tugma', function () { h.sana = Calc.bugun(); qayta(); }));
+    nav.appendChild(tugma('Keyingi ›', 'ikkinchi-tugma', function () { h.sana = Calc.davrniSur(h.tur, h.sana, 1); qayta(); }));
+    bloklar.push(nav);
+    var nom = el('div', Calc.davrNomi(h.tur, h.sana), 'davr-nomi');
+    nom.setAttribute('aria-live', 'polite');
+    bloklar.push(nom);
+
+    // Hisob filtri
+    var hisobT = tanlov('r-hisob', 'Hisob',
+      [['', 'Barcha hisoblar']].concat(malumot.hisoblar.map(function (x) { return [x.id, x.nom + (x.arxivlangan ? ' (arxiv)' : '')]; })),
+      h.hisob, function (v) { h.hisob = v; qayta(); });
+    bloklar.push(hisobT.quti);
+
+    var joriyH = Calc.hisobot(malumot.yozuvlar, chegara.dan, chegara.gacha, h.hisob);
+    if (joriyH.soni === 0) {
+      var bos = karta();
+      bos.appendChild(el('p', 'Bu davrda yozuvlar yo\'q', 'xira'));
+      bloklar.push(bos);
+      return bloklar;
+    }
+
+    // Jami ko'rsatkichlar
+    var jami = karta();
+    [['Daromad', joriyH.daromad, 'plus'], ['Xarajat', joriyH.xarajat, 'minus'],
+      ['Qoldiq', joriyH.qoldiq, joriyH.qoldiq < 0 ? 'minus' : '']].forEach(function (x) {
+      var q = el('div', undefined, 'qator');
+      q.appendChild(el('span', x[0]));
+      q.appendChild(el('strong', (x[0] === 'Qoldiq' && x[1] > 0 ? '+' : '') + Calc.sumFormat(x[1]), x[2]));
+      jami.appendChild(q);
+    });
+    bloklar.push(jami);
+
+    // Oldingi davr bilan taqqoslash (xarajat)
+    var oldingiSana = Calc.davrniSur(h.tur, h.sana, -1);
+    var oldingiC = Calc.davrChegarasi(h.tur, oldingiSana);
+    var oldingiH = Calc.hisobot(malumot.yozuvlar, oldingiC.dan, oldingiC.gacha, h.hisob);
+    var t = Calc.taqqoslash(joriyH.xarajat, oldingiH.xarajat);
+    var tk = karta();
+    tk.appendChild(el('h2', 'Oldingi davr bilan (' + Calc.davrNomi(h.tur, oldingiSana) + ')'));
+    var q1 = el('div', undefined, 'qator');
+    q1.appendChild(el('span', 'Oldingi davr xarajati'));
+    q1.appendChild(el('strong', Calc.sumFormat(oldingiH.xarajat)));
+    tk.appendChild(q1);
+    var q2 = el('div', undefined, 'qator');
+    q2.appendChild(el('span', 'Xarajat o\'zgarishi'));
+    // xarajat ko'paysa qizil, kamaysa yashil
+    q2.appendChild(el('strong', Calc.belgiliSum(t.farq) + ' (' + Calc.belgiliFoiz(t.foiz) + ')',
+      t.farq > 0 ? 'minus' : t.farq < 0 ? 'plus' : ''));
+    tk.appendChild(q2);
+    bloklar.push(tk);
+
+    bloklar.push(taqsimotKartasi('Xarajatlar kategoriyalar bo\'yicha', joriyH.xarajatTaqsimoti));
+    bloklar.push(taqsimotKartasi('Daromadlar kategoriyalar bo\'yicha', joriyH.daromadTaqsimoti));
+    return bloklar;
+  }
+
   // ---- Bo'limlar ----
   var bolimlar = {
     bosh: function (m) {
@@ -845,6 +948,18 @@
       jami.appendChild(el('div', 'Umumiy balans', 'xira'));
       jami.appendChild(el('div', Calc.sumFormat(Calc.umumiyBalans(m.hisoblar, m.yozuvlar)), 'balans-katta'));
       bloklar.push(jami);
+
+      // Joriy oy (bugungi sana tushgan oy): faqat daromad va xarajat, o'tkazma kirmaydi
+      var oy = Calc.davrChegarasi('oy', Calc.bugun());
+      var oyHisoboti = Calc.hisobot(m.yozuvlar, oy.dan, oy.gacha, '');
+      var juft = el('div', undefined, 'juft');
+      [['Shu oy daromadi', oyHisoboti.daromad, 'plus'], ['Shu oy xarajati', oyHisoboti.xarajat, 'minus']].forEach(function (x) {
+        var c = karta();
+        c.appendChild(el('div', x[0], 'xira'));
+        c.appendChild(el('div', Calc.sumFormat(x[1]), 'oy-summa ' + x[2]));
+        juft.appendChild(c);
+      });
+      bloklar.push(juft);
 
       var k = karta();
       k.appendChild(el('h2', 'Hisoblar'));
@@ -861,16 +976,17 @@
       else bloklar.push(yozuvlarRoyxati(Calc.kunlarBoyicha(Calc.oxirgiYozuvlar(m.yozuvlar, 10))));
       return bloklar;
     },
-    hisobot: function () { return tayyorBolim('Hisobot'); },
+    hisobot: hisobotEkrani,
     qoshish: function () { return yozuvShakli(null); },
     byudjet: function () { return tayyorBolim('Byudjet'); },
     yana: yanaMenyusi
   };
 
-  function chizish(bloklar) {
+  function chizish(bloklar, scrollniSaqla) {
+    var y = window.pageYOffset;
     ekran.textContent = '';
     bloklar.forEach(function (b) { ekran.appendChild(b); });
-    window.scrollTo(0, 0);
+    window.scrollTo(0, scrollniSaqla ? y : 0);
   }
 
   function korsat(nom) {

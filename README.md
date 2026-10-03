@@ -21,9 +21,9 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, shuning uchun
 versiya o'zgarsa, brauzer eski fayllarni emas, yangilarini yuklaydi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.5.2 → 0.6.0), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.6.0 → 0.7.0), `index.html` va `tests.html` da hammasini birdaniga:
 
-    sed -i 's/0\.5\.2/0.6.0/g' index.html tests.html
+    sed -i 's/0\.6\.0/0.7.0/g' index.html tests.html
 
 `tests.html` dagi versiya testlari havolalar bir xil versiyada ekanini tekshiradi.
 

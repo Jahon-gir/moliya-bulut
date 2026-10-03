@@ -206,6 +206,101 @@
     return r;
   }
 
+  // ---- Diagrammalar uchun hisob-kitoblar (ekran bilan ishlamaydi) ----
+  var OY_QISQA = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
+  var HAFTA_KUNI_QISQA = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];   // dushanbadan yakshanbagacha
+
+  // Katta summalarni qisqartiradi (o'qlar uchun): 1200000 -> "1,2 mln", 5000 -> "5 ming", 2500000000 -> "2,5 mlrd"
+  function qisqaSum(n) {
+    var manfiy = n < 0, a = Math.abs(Math.round(n)), birliklar = [[1e12, 'trln'], [1e9, 'mlrd'], [1e6, 'mln'], [1e3, 'ming']];
+    function yoz(v, nom) { return String(v).replace('.', ',') + ' ' + nom; }
+    var natija = String(a);
+    for (var i = 0; i < birliklar.length; i++) {
+      if (a < birliklar[i][0]) continue;
+      var r = Math.round(a / birliklar[i][0] * 10) / 10;
+      if (r >= 1000 && i > 0) {   // 999 950 -> "1000 ming" emas, "1 mln"
+        natija = yoz(Math.round(a / birliklar[i - 1][0] * 10) / 10, birliklar[i - 1][1]);
+      } else natija = yoz(r, birliklar[i][1]);
+      break;
+    }
+    return (manfiy && a ? '−' : '') + natija;
+  }
+
+  // O'q uchun "chiroyli" qadamlar: eng katta qiymatni qoplaydigan 0, q, 2q, ... (q = 1, 2, 2.5, 5 × 10^k, butun so'm).
+  // Natija: { tiklar: [0, ...], eng: oxirgi tik }
+  function chiroyliTiklar(eng, soni) {
+    soni = soni || 4;
+    if (!(eng > 0)) return { tiklar: [0, 1], eng: 1 };
+    var xom = eng / soni, daraja = Math.pow(10, Math.floor(Math.log10(xom))), qadam = daraja * 10;
+    [1, 2, 2.5, 5, 10].some(function (m) { if (m * daraja >= xom) { qadam = m * daraja; return true; } return false; });
+    qadam = Math.max(1, Math.round(qadam));
+    var n = Math.ceil(eng / qadam - 1e-9), tiklar = [];
+    for (var i = 0; i <= n; i++) tiklar.push(i * qadam);
+    return { tiklar: tiklar, eng: tiklar[n] };
+  }
+
+  // Vaqt bo'yicha ustunli diagramma ma'lumoti: hafta va oyda kunlar, yilda oylar (kun davri uchun null).
+  // Har ustunda daromad va xarajat. Yig'indilar hisobot (hisobot()) bilan bir xil qoidada: faqat daromad va xarajat,
+  // o'tkazma kirmaydi, hisobId berilsa shu hisob bo'yicha. Natija: { bucketlar, jami, eng, davrNomi }
+  function diagrammaVaqt(yozuvlar, tur, sana, hisobId) {
+    if (tur === 'kun') return null;
+    var c = davrChegarasi(tur, sana), bucketlar = [], indeks = {};
+    function qosh(kalit, dan, gacha, qisqa, qisqa2, toliq) {
+      indeks[kalit] = bucketlar.length;
+      bucketlar.push({ kalit: kalit, dan: dan, gacha: gacha, qisqa: qisqa, qisqa2: qisqa2, toliq: toliq, daromad: 0, xarajat: 0, soni: 0 });
+    }
+    if (tur === 'yil') {
+      var yil = sanaQismlari(c.dan).y;
+      for (var m = 1; m <= 12; m++) {
+        var oyChegara = davrChegarasi('oy', yil + '-' + ikki(m) + '-01');
+        qosh(yil + '-' + ikki(m), oyChegara.dan, oyChegara.gacha, OY_QISQA[m - 1], '', OY_NOMLARI[m - 1] + ' ' + yil);
+      }
+    } else {
+      for (var kun = c.dan; kun <= c.gacha; kun = kunQosh(kun, 1)) {
+        var q = sanaQismlari(kun);
+        qosh(kun, kun, kun, tur === 'hafta' ? HAFTA_KUNI_QISQA[(sanaUTC(kun).getUTCDay() + 6) % 7] : String(q.d),
+          tur === 'hafta' ? ikki(q.d) + '.' + ikki(q.m) : '', sanaKorsat(kun));
+      }
+    }
+    var jami = { daromad: 0, xarajat: 0 }, eng = 0;
+    yozuvlar.forEach(function (y) {
+      if (y.tur !== 'daromad' && y.tur !== 'xarajat') return;
+      if (y.sana < c.dan || y.sana > c.gacha) return;
+      if (hisobId && y.hisob_id !== hisobId) return;
+      var b = bucketlar[indeks[tur === 'yil' ? y.sana.slice(0, 7) : y.sana]];
+      if (!b) return;
+      b[y.tur] += y.summa; b.soni++; jami[y.tur] += y.summa;
+    });
+    bucketlar.forEach(function (b) { eng = Math.max(eng, b.daromad, b.xarajat); });
+    return { tur: tur, dan: c.dan, gacha: c.gacha, bucketlar: bucketlar, jami: jami, eng: eng, davrNomi: davrNomi(tur, sana) };
+  }
+
+  // Doira tilimlari burchaklari: taqsimot [{ kategoriya_id, summa, foiz }] -> har tilimga a0, a1 (radian), ulush.
+  // Burchak summaga aniq mutanosib (foiz yaxlitlanadi, burchak yaxlitlanmaydi). Boshlanish — tepada (−90°), soat mili bo'yicha.
+  function tilimBurchaklari(taqsimot, boshBurchak) {
+    var jami = taqsimot.reduce(function (a, x) { return a + x.summa; }, 0), a = boshBurchak === undefined ? -Math.PI / 2 : boshBurchak;
+    if (!jami) return [];
+    return taqsimot.map(function (x) {
+      var burchak = 2 * Math.PI * x.summa / jami, r = { kategoriya_id: x.kategoriya_id, summa: x.summa, foiz: x.foiz, ulush: x.summa / jami, a0: a, a1: a + burchak };
+      a += burchak;
+      return r;
+    });
+  }
+
+  // Halqa (donut) tilimining SVG yo'li: tashqi radius r2, ichki r1, a0 dan a1 gacha (radian, soat mili bo'yicha)
+  function yoyYoli(cx, cy, r1, r2, a0, a1) {
+    var katta = (a1 - a0) > Math.PI ? 1 : 0;
+    function n(r, a) { return (Math.round((cx + r * Math.cos(a)) * 100) / 100) + ' ' + (Math.round((cy + r * Math.sin(a)) * 100) / 100); }
+    return 'M' + n(r2, a0) + ' A' + r2 + ' ' + r2 + ' 0 ' + katta + ' 1 ' + n(r2, a1) + ' L' + n(r1, a1) +
+      ' A' + r1 + ' ' + r1 + ' 0 ' + katta + ' 0 ' + n(r1, a0) + ' Z';
+  }
+
+  // Ustun balandligi: qiymatga mutanosib, lekin 0 dan katta qiymat ko'rinmay qolmasligi uchun kamida `minimal` piksel
+  function ustunBalandligi(qiymat, eng, balandlik, minimal) {
+    if (!(qiymat > 0) || !(eng > 0)) return 0;
+    return Math.max(minimal === undefined ? 2 : minimal, Math.min(balandlik, qiymat / eng * balandlik));
+  }
+
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
   // Boshidagi minus saqlanadi (keyin tekshiruvda xato bo'lib chiqishi uchun), boshqa belgilar tashlanadi.
   function raqamFormat(matn) {
@@ -503,6 +598,8 @@
     oxirgiKategoriyaId: oxirgiKategoriyaId, matnRangi: matnRangi,
     oyKunlari: oyKunlari, vaqtdanTanlov: vaqtdanTanlov, tanlovdanVaqt: tanlovdanVaqt,
     glidirakChegarasi: glidirakChegarasi, glidirakTuzat: glidirakTuzat, glidirakQiymatlari: glidirakQiymatlari,
+    OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
+    diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,
     hozir: hozir, kelajakmi: kelajakmi, vaqtTekshir: vaqtTekshir, yozuvVaqti: yozuvVaqti,
     vaqtFormatiTogrimi: vaqtFormatiTogrimi, yozuvniYangilash: yozuvniYangilash,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId

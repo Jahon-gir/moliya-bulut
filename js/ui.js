@@ -9,10 +9,19 @@
   var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [] };
   var xabar = '';          // "Saqlandi" xabari, faqat qo'shish ekranida bir marta ko'rsatiladi
   var joriy = 'bosh';      // hozirgi bo'lim
-  var ichkiFaol = false;   // bo'lim ichidagi ekran (tahrirlash va h.k.) ochiqmi
+  var stek = [];           // bo'lim ichidagi ochiq ekranlar: [{ yasash, forma }]; "Orqaga" oxirgisini yopadi
+  var filtr = bosFiltr();  // "Barcha yozuvlar" filtri (ilova ochiq turguncha eslab qolinadi)
+  var VERSIYA = (document.querySelector('meta[name="versiya"]') || {}).content || '?';
+  var YOZUVLAR_SAHIFASI = 300;   // "Barcha yozuvlar" da bir vaqtda ko'rsatiladigan yozuvlar (butun kunlar bilan)
+  var RANGLAR = ['#e57373', '#f06292', '#ba68c8', '#9575cd', '#64b5f6', '#4dd0e1', '#26a69a',
+    '#81c784', '#aed581', '#ffd54f', '#ffb74d', '#a1887f', '#90a4ae'];
 
   var TUR_NOMI = { xarajat: 'Xarajat', daromad: 'Daromad', otkazma: 'O\'tkazma' };
   var HISOB_TURI = [['naqd', 'Naqd'], ['karta', 'Karta'], ['boshqa', 'Boshqa']];
+
+  function bosFiltr() {
+    return { tur: '', hisob: '', kategoriya: '', dan: '', gacha: '', qidiruv: '' };
+  }
 
   function el(teg, matn, klass) {
     var e = document.createElement(teg);
@@ -125,14 +134,14 @@
   }
 
   function orqagaTugmasi() {
-    return tugma('← Orqaga', 'orqaga-tugma', function () { korsat(joriy); });
+    return tugma('← Orqaga', 'orqaga-tugma', orqaga);
   }
 
   // ---- Yozuv qatori va ro'yxatlar ----
   function yozuvQatori(y) {
     var otkazma = y.tur === 'otkazma';
     var k = kategoriyaOl(y.kategoriya_id);
-    var q = tugma(undefined, 'yozuv', function () { ichkiEkran(function () { return yozuvShakli(y); }); });
+    var q = tugma(undefined, 'yozuv', function () { ochish(function () { return yozuvShakli(y); }, true); });
     var chap = el('div', undefined, 'yozuv-chap');
     var nom = el('div', undefined, 'yozuv-nom');
     var nuqta = el('span', undefined, 'nuqta');
@@ -370,7 +379,7 @@
         if (tahrir) {
           malumot.yozuvlar = malumot.yozuvlar.map(function (x) { return x.id === yozuv.id ? yozuv : x; });
           qisqaXabar('Yozuv yangilandi');
-          korsat(joriy);
+          orqaga();
         } else {
           malumot.yozuvlar.push(yozuv);
           xabar = 'Saqlandi: ' + (yozuv.tur === 'daromad' ? '+' : yozuv.tur === 'xarajat' ? '−' : '') +
@@ -394,7 +403,7 @@
   function yozuvniOchirish(yozuv) {
     Data.ochirish('yozuvlar', yozuv.id).then(function () {
       malumot.yozuvlar = malumot.yozuvlar.filter(function (x) { return x.id !== yozuv.id; });
-      korsat(joriy);
+      orqaga();
       qisqaXabar('Yozuv o\'chirildi', { nom: 'Bekor qilish', fn: function () { yozuvniQaytarish(yozuv); } }, 10000);
     }).catch(function (xato) {
       qisqaXabar('O\'chirib bo\'lmadi: ' + xato);
@@ -405,8 +414,7 @@
     Data.saqlash('yozuvlar', yozuv).then(function () {
       malumot.yozuvlar.push(yozuv);
       qisqaXabar('Yozuv qaytarildi');
-      // yozilayotgan shaklni buzmaslik uchun faqat ro'yxat ko'rinib turgan bo'limni yangilaymiz
-      if (!ichkiFaol && (joriy === 'bosh' || joriy === 'yana')) korsat(joriy);
+      yangilash();
     });
   }
 
@@ -416,11 +424,11 @@
     return t ? t[1] : tur;
   }
 
-  function hisoblarKartasi() {
+  function hisoblarEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Hisoblar')];
     var k = karta();
-    k.appendChild(el('h2', 'Hisoblar'));
     faolHisoblar().forEach(function (h) {
-      var q = tugma(undefined, 'yozuv', function () { ichkiEkran(function () { return hisobShakli(h); }); });
+      var q = tugma(undefined, 'yozuv', function () { ochish(function () { return hisobShakli(h); }, true); });
       var chap = el('div', undefined, 'yozuv-chap');
       chap.appendChild(el('div', h.nom, 'yozuv-nom'));
       chap.appendChild(el('div', hisobTuriNomi(h.tur), 'yozuv-izoh'));
@@ -428,10 +436,11 @@
       q.appendChild(el('div', Calc.sumFormat(Calc.hisobQoldigi(h, malumot.yozuvlar)), 'yozuv-summa'));
       k.appendChild(q);
     });
-    k.appendChild(tugma('+ Hisob qo\'shish', 'ikkinchi-tugma', function () {
-      ichkiEkran(function () { return hisobShakli(null); });
+    bloklar.push(k);
+    bloklar.push(tugma('+ Hisob qo\'shish', 'ikkinchi-tugma', function () {
+      ochish(function () { return hisobShakli(null); }, true);
     }));
-    return k;
+    return bloklar;
   }
 
   // Yangi hisob qo'shish yoki mavjudining nomini o'zgartirish / arxivlash
@@ -460,9 +469,11 @@
     var qoldiq = null;
     if (h) {
       var q = el('div', undefined, 'maydon');
-      q.appendChild(el('span', 'Turi: ' + hisobTuriNomi(h.tur) + ' · Boshlang\'ich qoldiq: ' +
-        Calc.sumFormat(h.boshlangich_qoldiq), 'xira'));
+      q.appendChild(el('span', 'Turi: ' + hisobTuriNomi(h.tur), 'xira'));
       forma.appendChild(q);
+      qoldiq = summaMaydoni('h-qoldiq', 'Boshlang\'ich qoldiq (so\'m)', Calc.raqamFormat(String(h.boshlangich_qoldiq)));
+      forma.appendChild(qoldiq.quti);
+      forma.appendChild(el('p', 'O\'zgartirsangiz, hisobning joriy qoldig\'i ham shunga qarab o\'zgaradi.', 'xira'));
     } else {
       var turMaydon = el('div', undefined, 'maydon');
       turMaydon.appendChild(el('span', 'Turi', 'belgi'));
@@ -489,13 +500,13 @@
     forma.addEventListener('submit', function (e) {
       e.preventDefault();
       var n = Calc.hisobNomTekshir(nom.value);
-      var b = qoldiq ? Calc.qoldiqTekshir(qoldiq.input.value) : { summa: 0 };
+      var b = Calc.qoldiqTekshir(qoldiq.input.value);
       if (n.xato) { nomXato.textContent = n.xato; nom.classList.add('xatoli'); }
       if (b.xato) { qoldiq.xato.textContent = b.xato; qoldiq.input.classList.add('xatoli'); }
       if (n.xato || b.xato) { (n.xato ? nom : qoldiq.input).focus(); return; }
       var yangi = h
         ? { id: h.id, yaratilgan: h.yaratilgan, nom: n.nom, tur: h.tur,
-            boshlangich_qoldiq: h.boshlangich_qoldiq, arxivlangan: h.arxivlangan }
+            boshlangich_qoldiq: b.summa, arxivlangan: h.arxivlangan }
         : { id: Data.yangiId(), yaratilgan: new Date().toISOString(), nom: n.nom, tur: tur,
             boshlangich_qoldiq: b.summa, arxivlangan: false };
       saqla.disabled = true;
@@ -528,10 +539,298 @@
         ? malumot.hisoblar.map(function (x) { return x.id === hisob.id ? hisob : x; })
         : malumot.hisoblar.concat([hisob]);
       qisqaXabar(xabarMatni);
-      korsat(joriy);
+      orqaga();
     }).catch(function (xato) {
       qisqaXabar('Saqlab bo\'lmadi: ' + xato);
     });
+  }
+
+  // ---- Kategoriyalar ----
+  function kategoriyalarEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Kategoriyalar')];
+    [['xarajat', 'Xarajat kategoriyalari'], ['daromad', 'Daromad kategoriyalari']].forEach(function (t) {
+      var k = karta();
+      k.appendChild(el('h2', t[1]));
+      malumot.kategoriyalar.filter(function (x) { return x.tur === t[0] && !x.arxivlangan; }).forEach(function (x) {
+        var q = tugma(undefined, 'yozuv', function () { ochish(function () { return kategoriyaShakli(x); }, true); });
+        var nom = el('div', undefined, 'yozuv-nom');
+        var n = el('span', undefined, 'nuqta');
+        n.style.background = x.rang;
+        nom.appendChild(n);
+        nom.appendChild(document.createTextNode(x.nom));
+        q.appendChild(nom);
+        k.appendChild(q);
+      });
+      bloklar.push(k);
+    });
+    bloklar.push(tugma('+ Kategoriya qo\'shish', 'ikkinchi-tugma', function () {
+      ochish(function () { return kategoriyaShakli(null); }, true);
+    }));
+    return bloklar;
+  }
+
+  // Yangi kategoriya qo'shish yoki mavjudining nomi/rangini o'zgartirish yoki arxivlash
+  function kategoriyaShakli(k) {
+    var holat = { tur: k ? k.tur : 'xarajat', rang: k ? k.rang : RANGLAR[0] };
+    var bloklar = [orqagaTugmasi(), el('h1', k ? 'Kategoriyani tahrirlash' : 'Yangi kategoriya')];
+    var forma = document.createElement('form');
+    forma.noValidate = true;
+    forma.className = 'karta';
+
+    if (k) {
+      var t = el('div', undefined, 'maydon');
+      t.appendChild(el('span', 'Turi: ' + (k.tur === 'daromad' ? 'daromad' : 'xarajat'), 'xira'));
+      forma.appendChild(t);
+    } else {
+      var turMaydon = el('div', undefined, 'maydon');
+      turMaydon.appendChild(el('span', 'Turi', 'belgi'));
+      var turQator = el('div', undefined, 'tanlov');
+      var turTugmalari = {};
+      [['xarajat', 'Xarajat'], ['daromad', 'Daromad']].forEach(function (x) {
+        turTugmalari[x[0]] = tugma(x[1], undefined, function () {
+          holat.tur = x[0];
+          Object.keys(turTugmalari).forEach(function (y) { turTugmalari[y].setAttribute('aria-pressed', String(y === holat.tur)); });
+        });
+        turTugmalari[x[0]].setAttribute('aria-pressed', String(x[0] === holat.tur));
+        turQator.appendChild(turTugmalari[x[0]]);
+      });
+      turMaydon.appendChild(turQator);
+      forma.appendChild(turMaydon);
+    }
+
+    var nomMaydon = el('div', undefined, 'maydon');
+    var nomBelgi = el('label', 'Nomi');
+    nomBelgi.setAttribute('for', 'k-nom');
+    var nom = document.createElement('input');
+    nom.id = 'k-nom';
+    nom.type = 'text';
+    nom.autocomplete = 'off';
+    nom.value = k ? k.nom : '';
+    var nomXato = el('div', undefined, 'xato-matn');
+    nomMaydon.appendChild(nomBelgi);
+    nomMaydon.appendChild(nom);
+    nomMaydon.appendChild(nomXato);
+    forma.appendChild(nomMaydon);
+    nom.addEventListener('input', function () { nomXato.textContent = ''; nom.classList.remove('xatoli'); });
+
+    // Rang: tayyor ranglardan tanlanadi (kategoriyaning hozirgi rangi ro'yxatda bo'lmasa, u ham qo'shiladi)
+    var rangMaydon = el('div', undefined, 'maydon');
+    rangMaydon.appendChild(el('span', 'Rang', 'belgi'));
+    var ranglar = el('div', undefined, 'ranglar');
+    var royxat = RANGLAR.indexOf(holat.rang) === -1 ? [holat.rang].concat(RANGLAR) : RANGLAR;
+    royxat.forEach(function (r, i) {
+      var b = tugma(undefined, 'rang-tugma', function () {
+        holat.rang = r;
+        Array.prototype.forEach.call(ranglar.children, function (x) { x.setAttribute('aria-pressed', 'false'); });
+        b.setAttribute('aria-pressed', 'true');
+      });
+      b.style.background = r;
+      b.setAttribute('aria-label', 'Rang ' + (i + 1));
+      b.setAttribute('aria-pressed', String(r === holat.rang));
+      ranglar.appendChild(b);
+    });
+    rangMaydon.appendChild(ranglar);
+    forma.appendChild(rangMaydon);
+
+    var saqla = el('button', 'Saqlash', 'asosiy-tugma');
+    saqla.type = 'submit';
+    forma.appendChild(saqla);
+
+    forma.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var n = Calc.kategoriyaNomTekshir(nom.value);
+      if (n.xato) { nomXato.textContent = n.xato; nom.classList.add('xatoli'); nom.focus(); return; }
+      saqla.disabled = true;
+      kategoriyaniSaqlash({
+        id: k ? k.id : Data.yangiId(), yaratilgan: k ? k.yaratilgan : new Date().toISOString(),
+        nom: n.nom, tur: holat.tur, rang: holat.rang, arxivlangan: k ? k.arxivlangan : false
+      }, k ? 'Kategoriya yangilandi' : 'Kategoriya qo\'shildi');
+    });
+    bloklar.push(forma);
+
+    if (k) {
+      bloklar.push(tugma('Arxivlash', 'xavfli-tugma', function () {
+        var shuTurda = malumot.kategoriyalar.filter(function (x) { return x.tur === k.tur && !x.arxivlangan; });
+        if (shuTurda.length < 2) {
+          qisqaXabar('Bu turdagi oxirgi kategoriyani arxivlab bo\'lmaydi');
+          return;
+        }
+        if (!window.confirm('"' + k.nom + '" kategoriyasi yangi yozuv shaklida ko\'rinmaydi, eski yozuvlari va hisobotlarda saqlanadi.\n\nArxivlansinmi?')) return;
+        kategoriyaniSaqlash({ id: k.id, yaratilgan: k.yaratilgan, nom: k.nom, tur: k.tur, rang: k.rang, arxivlangan: true },
+          'Kategoriya arxivlandi');
+      }));
+    }
+    return bloklar;
+  }
+
+  function kategoriyaniSaqlash(kat, xabarMatni) {
+    Data.saqlash('kategoriyalar', kat).then(function () {
+      var bor = malumot.kategoriyalar.some(function (x) { return x.id === kat.id; });
+      malumot.kategoriyalar = bor
+        ? malumot.kategoriyalar.map(function (x) { return x.id === kat.id ? kat : x; })
+        : malumot.kategoriyalar.concat([kat]);
+      qisqaXabar(xabarMatni);
+      orqaga();
+    }).catch(function (xato) {
+      qisqaXabar('Saqlab bo\'lmadi: ' + xato);
+    });
+  }
+
+  // ---- Barcha yozuvlar: filtr va qidiruv ----
+  function tanlov(id, belgiMatn, variantlar, qiymat, ozgarganda) {
+    var quti = el('div', undefined, 'maydon');
+    var belgi = el('label', belgiMatn);
+    belgi.setAttribute('for', id);
+    var s = document.createElement('select');
+    s.id = id;
+    variantlar.forEach(function (v) {
+      var o = el('option', v[1]);
+      o.value = v[0];
+      s.appendChild(o);
+    });
+    s.value = qiymat;
+    s.addEventListener('change', function () { ozgarganda(s.value); });
+    quti.appendChild(belgi);
+    quti.appendChild(s);
+    return { quti: quti, select: s };
+  }
+
+  function sanaTanlovi(id, belgiMatn, qiymat, ozgarganda) {
+    var quti = el('div', undefined, 'maydon');
+    var belgi = el('label', belgiMatn);
+    belgi.setAttribute('for', id);
+    var i = document.createElement('input');
+    i.id = id;
+    i.type = 'date';
+    i.value = qiymat;
+    i.addEventListener('change', function () { ozgarganda(i.value); });
+    quti.appendChild(belgi);
+    quti.appendChild(i);
+    return quti;
+  }
+
+  function yozuvlarEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Barcha yozuvlar')];
+    var chegara = YOZUVLAR_SAHIFASI;
+
+    var qidiruv = document.createElement('input');
+    qidiruv.type = 'search';
+    qidiruv.id = 'q-izoh';
+    qidiruv.placeholder = 'Izoh bo\'yicha qidirish';
+    qidiruv.setAttribute('aria-label', 'Izoh bo\'yicha qidirish');
+    qidiruv.autocomplete = 'off';
+    qidiruv.value = filtr.qidiruv;
+    var qidiruvQuti = el('div', undefined, 'maydon');
+    qidiruvQuti.appendChild(qidiruv);
+    bloklar.push(qidiruvQuti);
+
+    var tafsilot = document.createElement('details');
+    tafsilot.className = 'karta filtr-quti';
+    tafsilot.open = Calc.filtrFaolmi(filtr);
+    tafsilot.appendChild(el('summary', 'Filtr'));
+
+    var natija = el('div');
+    var son = el('p', undefined, 'xira');
+    var sanaXabar = el('div', undefined, 'xato-matn');
+    var kategoriyaTanlovi = null;
+
+    function kategoriyaVariantlari() {
+      var v = [['', 'Barchasi']];
+      malumot.kategoriyalar.filter(function (k) { return !filtr.tur || k.tur === filtr.tur; }).forEach(function (k) {
+        v.push([k.id, k.nom + (filtr.tur ? '' : ' · ' + (k.tur === 'daromad' ? 'daromad' : 'xarajat')) + (k.arxivlangan ? ' (arxiv)' : '')]);
+      });
+      return v;
+    }
+    function kategoriyaniYangila() {
+      var s = kategoriyaTanlovi.select;
+      s.textContent = '';
+      kategoriyaVariantlari().forEach(function (v) { var o = el('option', v[1]); o.value = v[0]; s.appendChild(o); });
+      s.value = filtr.kategoriya;
+      s.disabled = filtr.tur === 'otkazma';
+    }
+
+    var turT = tanlov('q-tur', 'Tur', [['', 'Barchasi'], ['xarajat', 'Xarajat'], ['daromad', 'Daromad'], ['otkazma', 'O\'tkazma']],
+      filtr.tur, function (v) {
+        filtr.tur = v;
+        var k = kategoriyaOl(filtr.kategoriya);
+        if (v === 'otkazma' || (k && v && k.tur !== v)) filtr.kategoriya = '';
+        kategoriyaniYangila();
+        chiz();
+      });
+    var hisobT = tanlov('q-hisob', 'Hisob',
+      [['', 'Barchasi']].concat(malumot.hisoblar.map(function (h) { return [h.id, h.nom + (h.arxivlangan ? ' (arxiv)' : '')]; })),
+      filtr.hisob, function (v) { filtr.hisob = v; chiz(); });
+    kategoriyaTanlovi = tanlov('q-kategoriya', 'Kategoriya', kategoriyaVariantlari(), filtr.kategoriya,
+      function (v) { filtr.kategoriya = v; chiz(); });
+    kategoriyaTanlovi.select.disabled = filtr.tur === 'otkazma';
+    tafsilot.appendChild(turT.quti);
+    tafsilot.appendChild(hisobT.quti);
+    tafsilot.appendChild(kategoriyaTanlovi.quti);
+    tafsilot.appendChild(sanaTanlovi('q-dan', 'Sanadan', filtr.dan, function (v) { filtr.dan = v; chiz(); }));
+    tafsilot.appendChild(sanaTanlovi('q-gacha', 'Sanagacha', filtr.gacha, function (v) { filtr.gacha = v; chiz(); }));
+    tafsilot.appendChild(sanaXabar);
+    tafsilot.appendChild(tugma('Filtrni tozalash', 'ikkinchi-tugma', function () {
+      filtr = bosFiltr();
+      chizish(yozuvlarEkrani());
+    }));
+    bloklar.push(tafsilot);
+    bloklar.push(son);
+    bloklar.push(natija);
+
+    function chiz() {
+      filtr.qidiruv = qidiruv.value;
+      sanaXabar.textContent = filtr.dan && filtr.gacha && filtr.dan > filtr.gacha
+        ? 'Boshlanish sanasi tugash sanasidan keyin bo\'lishi mumkin emas' : '';
+      var r = Calc.yozuvlarniSuz(malumot.yozuvlar, filtr);
+      natija.textContent = '';
+      son.textContent = r.length + ' ta yozuv topildi';
+      if (r.length === 0) {
+        var bos = karta();
+        bos.appendChild(el('p', malumot.yozuvlar.length ? 'Shartlarga mos yozuv topilmadi.' : 'Hozircha yozuvlar yo\'q.', 'xira'));
+        natija.appendChild(bos);
+        return;
+      }
+      // butun kunlar bilan kesamiz, shunda kun sarlavhasidagi jami xarajat to'liq bo'ladi
+      var guruhlar = Calc.kunlarBoyicha(r), korsatiladi = [], sana = 0;
+      for (var i = 0; i < guruhlar.length && sana < chegara; i++) {
+        korsatiladi.push(guruhlar[i]);
+        sana += guruhlar[i].yozuvlar.length;
+      }
+      natija.appendChild(yozuvlarRoyxati(korsatiladi));
+      if (sana < r.length) {
+        natija.appendChild(tugma('Yana ko\'rsatish (' + (r.length - sana) + ' ta qoldi)', 'ikkinchi-tugma', function () {
+          chegara += YOZUVLAR_SAHIFASI;
+          chiz();
+        }));
+      }
+    }
+
+    var kechikish = null;
+    qidiruv.addEventListener('input', function () {
+      clearTimeout(kechikish);
+      kechikish = setTimeout(chiz, 200);
+    });
+    chiz();
+    return bloklar;
+  }
+
+  // ---- "Yana" bo'limi: ichki ekranlarga menyu ----
+  function yanaMenyusi() {
+    var bloklar = [el('h1', 'Yana')];
+    var k = karta();
+    [
+      ['Barcha yozuvlar', malumot.yozuvlar.length + ' ta', yozuvlarEkrani],
+      ['Hisoblar', faolHisoblar().length + ' ta', hisoblarEkrani],
+      ['Kategoriyalar', malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }).length + ' ta', kategoriyalarEkrani]
+    ].forEach(function (m) {
+      var q = tugma(undefined, 'yozuv', function () { ochish(m[2], false); });
+      q.appendChild(el('div', m[0], 'yozuv-nom'));
+      q.appendChild(el('div', m[1] + ' ›', 'yozuv-izoh'));
+      k.appendChild(q);
+    });
+    bloklar.push(k);
+    bloklar.push(el('p', 'Moliya · versiya ' + VERSIYA, 'versiya'));
+    return bloklar;
   }
 
   // ---- Bo'limlar ----
@@ -562,24 +861,7 @@
     hisobot: function () { return tayyorBolim('Hisobot'); },
     qoshish: function () { return yozuvShakli(null); },
     byudjet: function () { return tayyorBolim('Byudjet'); },
-    yana: function (m) {
-      var bloklar = [el('h1', 'Yana')];
-      bloklar.push(hisoblarKartasi());
-      bloklar.push(el('h2', 'Barcha yozuvlar'));
-      if (m.yozuvlar.length === 0) bloklar.push(bosYozuvlar());
-      else bloklar.push(yozuvlarRoyxati(Calc.kunlarBoyicha(m.yozuvlar)));
-
-      var xar = m.kategoriyalar.filter(function (k) { return k.tur === 'xarajat'; });
-      var dar = m.kategoriyalar.filter(function (k) { return k.tur === 'daromad'; });
-      var k1 = karta();
-      k1.appendChild(el('h2', 'Xarajat kategoriyalari (' + xar.length + ')'));
-      k1.appendChild(kategoriyaRoyxati(xar));
-      var k2 = karta();
-      k2.appendChild(el('h2', 'Daromad kategoriyalari (' + dar.length + ')'));
-      k2.appendChild(kategoriyaRoyxati(dar));
-      bloklar.push(k1, k2);
-      return bloklar;
-    }
+    yana: yanaMenyusi
   };
 
   function chizish(bloklar) {
@@ -592,7 +874,7 @@
     if (!bolimlar[nom]) nom = 'bosh';
     if (nom !== 'qoshish') xabar = '';
     joriy = nom;
-    ichkiFaol = false;
+    stek = [];
     tugmalar.forEach(function (t) {
       var faol = t.getAttribute('data-bolim') === nom;
       t.classList.toggle('faol', faol);
@@ -602,10 +884,24 @@
     chizish(bolimlar[nom](malumot));
   }
 
-  // Bo'lim ichidagi ekran (tahrirlash va h.k.); "Orqaga" joriy bo'limga qaytaradi
-  function ichkiEkran(yasash) {
-    ichkiFaol = true;
+  // Bo'lim ichidagi ekranni ochadi. forma=true bo'lsa, ro'yxatlar yangilanganda u buzilmaydi.
+  function ochish(yasash, forma) {
+    stek.push({ yasash: yasash, forma: !!forma });
     chizish(yasash());
+  }
+
+  // Bitta ekran orqaga: oldingi ichki ekranga (yangi ma'lumot bilan), yo'q bo'lsa bo'limning o'ziga
+  function orqaga() {
+    stek.pop();
+    if (stek.length) chizish(stek[stek.length - 1].yasash());
+    else korsat(joriy);
+  }
+
+  // Ko'rinib turgan ro'yxatni yangilaydi (yozilayotgan shaklga tegmaydi)
+  function yangilash() {
+    var oxirgi = stek[stek.length - 1];
+    if (oxirgi) { if (!oxirgi.forma) chizish(oxirgi.yasash()); }
+    else if (joriy === 'bosh' || joriy === 'yana') korsat(joriy);
   }
 
   tugmalar.forEach(function (t) {

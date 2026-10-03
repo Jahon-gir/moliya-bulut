@@ -102,29 +102,6 @@
     return r;
   }
 
-  // Oldingi versiyadagi xato tufayli paydo bo'lgan ortiqcha nusxalarni o'chiradi
-  // (faqat bo'sh va hech qayerda ishlatilmagan tayyor hisob/kategoriyalar). Ortiqcha nusxa bo'lmasa, hech narsa qilmaydi.
-  function nusxalarniTozalash() {
-    return new Promise(function (resolve, reject) {
-      var nomlar = ['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar'];
-      var tx = db.transaction(nomlar, 'readwrite');
-      tx.oncomplete = resolve;
-      tx.onerror = function () { reject(tx.error); };
-      tx.onabort = function () { reject(tx.error); };
-      var topildi = {}, qoldi = nomlar.length;
-      nomlar.forEach(function (n) {
-        tx.objectStore(n).getAll().onsuccess = function (e) {
-          topildi[n] = e.target.result;
-          if (--qoldi) return;
-          var r = Calc.ortiqchaNusxalar(topildi.hisoblar, topildi.kategoriyalar, topildi.yozuvlar,
-            topildi.qarzlar, tayyorKategoriyalar());
-          r.hisoblar.forEach(function (id) { tx.objectStore('hisoblar').delete(id); });
-          r.kategoriyalar.forEach(function (id) { tx.objectStore('kategoriyalar').delete(id); });
-        };
-      });
-    });
-  }
-
   // Doimiy saqlashga ruxsat so'raydi (brauzer ma'lumotni o'zi tozalab yubormasligi uchun)
   function doimiySaqlash() {
     if (global.navigator && navigator.storage && navigator.storage.persist) {
@@ -138,7 +115,7 @@
     return ochish(nom).then(function (d) {
       db = d;
       return boshlangichMalumot();
-    }).then(nusxalarniTozalash).then(function () { return doimiySaqlash(); });
+    }).then(function () { return doimiySaqlash(); });
   }
 
   function yopish() { if (db) { db.close(); db = null; } }
@@ -146,6 +123,6 @@
   global.Data = {
     SXEMA_VERSIYASI: SXEMA_VERSIYASI,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
-    nusxalarniTozalash: nusxalarniTozalash, hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish
+    hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish
   };
 })(typeof window !== 'undefined' ? window : this);

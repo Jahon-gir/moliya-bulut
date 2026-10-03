@@ -89,43 +89,32 @@
     return { summa: parseInt(s, 10) };
   }
 
-  // Ortiqcha nusxalarni topadi: bir xil tayyor hisob ("Naqd pul", qoldig'i 0) yoki tayyor kategoriya
-  // (nomi, turi va rangi tayyor ro'yxatdagidek) bir necha marta bo'lsa, ishlatilmaganlarini qaytaradi.
-  // Yozuv yoki qarzda ishlatilgani hech qachon o'chirilmaydi. Natija: { hisoblar: [id], kategoriyalar: [id] }
-  function ortiqchaNusxalar(hisoblar, kategoriyalar, yozuvlar, qarzlar, tayyorKat) {
-    var ishlatilgan = {};
-    function belgila(id) { if (id) ishlatilgan[id] = true; }
-    yozuvlar.forEach(function (y) { belgila(y.hisob_id); belgila(y.qabul_hisob_id); belgila(y.kategoriya_id); });
-    (qarzlar || []).forEach(function (q) {
-      belgila(q.hisob_id);
-      (q.tolovlar || []).forEach(function (t) { belgila(t.hisob_id); });
+  // Kategoriya nomi bo'sh bo'lmasligi kerak. Natija: { nom } yoki { xato }
+  function kategoriyaNomTekshir(matn) {
+    var nom = String(matn == null ? '' : matn).trim();
+    return nom ? { nom: nom } : { xato: 'Kategoriya nomini kiriting' };
+  }
+
+  // Yozuvlarni filtr bo'yicha saralaydi (asl massivga tegmaydi). Filtr maydonlari (hammasi ixtiyoriy):
+  // tur, hisob (yozuvning hisobi yoki o'tkazmaning qabul hisobi), kategoriya,
+  // dan / gacha (sana oralig'i, chegaralari bilan), qidiruv (izoh ichidan, harf kattaligiga qaramay).
+  function yozuvlarniSuz(yozuvlar, f) {
+    f = f || {};
+    var q = String(f.qidiruv || '').trim().toLowerCase();
+    return yozuvlar.filter(function (y) {
+      if (f.tur && y.tur !== f.tur) return false;
+      if (f.hisob && y.hisob_id !== f.hisob && y.qabul_hisob_id !== f.hisob) return false;
+      if (f.kategoriya && y.kategoriya_id !== f.kategoriya) return false;
+      if (f.dan && y.sana < f.dan) return false;
+      if (f.gacha && y.sana > f.gacha) return false;
+      if (q && String(y.izoh || '').toLowerCase().indexOf(q) === -1) return false;
+      return true;
     });
+  }
 
-    function ortiqchasi(royxat, tegishli, kalit) {
-      var guruhlar = {}, natija = [];
-      royxat.filter(tegishli).forEach(function (x) {
-        (guruhlar[kalit(x)] = guruhlar[kalit(x)] || []).push(x);
-      });
-      Object.keys(guruhlar).forEach(function (k) {
-        var g = guruhlar[k].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
-        if (g.length < 2) return;
-        var ishlatilganlar = g.filter(function (x) { return ishlatilgan[x.id]; });
-        var qoladi = ishlatilganlar.length ? ishlatilganlar : [g[0]];
-        g.forEach(function (x) { if (qoladi.indexOf(x) === -1) natija.push(x.id); });
-      });
-      return natija;
-    }
-
-    var tayyor = {};
-    (tayyorKat || []).forEach(function (k) { tayyor[k.tur + '|' + k.nom + '|' + k.rang] = true; });
-    return {
-      hisoblar: ortiqchasi(hisoblar, function (h) {
-        return h.nom === 'Naqd pul' && h.tur === 'naqd' && h.boshlangich_qoldiq === 0 && !h.arxivlangan;
-      }, function () { return 'naqd'; }),
-      kategoriyalar: ortiqchasi(kategoriyalar, function (k) {
-        return !k.arxivlangan && tayyor[k.tur + '|' + k.nom + '|' + k.rang];
-      }, function (k) { return k.tur + '|' + k.nom; })
-    };
+  // Filtrda biror shart (qidiruvdan tashqari) tanlanganmi
+  function filtrFaolmi(f) {
+    return !!(f && (f.tur || f.hisob || f.kategoriya || f.dan || f.gacha));
   }
 
   // Yangisi tepada: avval sana, bir xil sanada yaratilgan vaqti bo'yicha
@@ -163,8 +152,9 @@
 
   global.Calc = {
     sumFormat: sumFormat, sanaKorsat: sanaKorsat, bugun: bugun,
-    ortiqchaNusxalar: ortiqchaNusxalar, raqamFormat: raqamFormat, summaTekshir: summaTekshir,
-    qoldiqTekshir: qoldiqTekshir, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
+    raqamFormat: raqamFormat, summaTekshir: summaTekshir,
+    qoldiqTekshir: qoldiqTekshir, kategoriyaNomTekshir: kategoriyaNomTekshir,
+    yozuvlarniSuz: yozuvlarniSuz, filtrFaolmi: filtrFaolmi, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId
   };

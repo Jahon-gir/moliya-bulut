@@ -34,6 +34,59 @@
       test('sana "2026-10-03" -> "03.10.2026"', function () { teng(Calc.sanaKorsat('2026-10-03'), '03.10.2026'); });
       test('bugun() YYYY-MM-DD ko\'rinishida', function () { teng(Calc.bugun(new Date(2026, 0, 5)), '2026-01-05'); });
 
+      // --- Calc: summani kiritish va tekshirish ---
+      test('raqamFormat: "1250000" -> "1 250 000"', function () { teng(Calc.raqamFormat('1250000'), '1 250 000'); });
+      test('raqamFormat: harflar tashlanadi, bo\'sh joylar qayta quriladi', function () { teng(Calc.raqamFormat('1 2a50 000'), '1 250 000'); });
+      test('raqamFormat: boshidagi minus saqlanadi', function () { teng(Calc.raqamFormat('-5000'), '-5 000'); });
+      test('summaTekshir: "1 250 000" -> 1250000', function () { teng(Calc.summaTekshir('1 250 000').summa, 1250000); });
+      test('summaTekshir: bo\'sh -> xato', function () { teng(!!Calc.summaTekshir('').xato, true); });
+      test('summaTekshir: faqat bo\'sh joy -> xato', function () { teng(!!Calc.summaTekshir('   ').xato, true); });
+      test('summaTekshir: nol -> xato', function () { teng(!!Calc.summaTekshir('0').xato, true); });
+      test('summaTekshir: "000" -> xato', function () { teng(!!Calc.summaTekshir('000').xato, true); });
+      test('summaTekshir: manfiy -> xato', function () { teng(!!Calc.summaTekshir('-5 000').xato, true); });
+      test('summaTekshir: harf -> xato', function () { teng(!!Calc.summaTekshir('12a').xato, true); });
+      test('summaTekshir: juda katta -> xato', function () { teng(!!Calc.summaTekshir('1' + '0000000000000000').xato, true); });
+
+      // --- Calc: hisob qoldig'i va balans ---
+      var H1 = { id: 'h1', boshlangich_qoldiq: 100000 }, H2 = { id: 'h2', boshlangich_qoldiq: 0 };
+      var Y = [
+        { id: 'a', tur: 'daromad', summa: 5000000, sana: '2026-10-01', yaratilgan: '2026-10-01T08:00:00Z', hisob_id: 'h1' },
+        { id: 'b', tur: 'xarajat', summa: 300000, sana: '2026-10-02', yaratilgan: '2026-10-02T08:00:00Z', hisob_id: 'h1' },
+        { id: 'c', tur: 'xarajat', summa: 50000, sana: '2026-10-02', yaratilgan: '2026-10-02T09:00:00Z', hisob_id: 'h1' },
+        { id: 'd', tur: 'xarajat', summa: 150000, sana: '2026-10-03', yaratilgan: '2026-10-03T08:00:00Z', hisob_id: 'h1' },
+        { id: 'e', tur: 'daromad', summa: 70000, sana: '2026-10-03', yaratilgan: '2026-10-03T09:00:00Z', hisob_id: 'h2' }
+      ];
+      test('hisobQoldigi: boshlang\'ich + daromad - xarajat', function () { teng(Calc.hisobQoldigi(H1, Y), 100000 + 5000000 - 300000 - 50000 - 150000); });
+      test('hisobQoldigi: boshqa hisob yozuvlari kirmaydi', function () { teng(Calc.hisobQoldigi(H2, Y), 70000); });
+      test('hisobQoldigi: yozuvsiz hisob = boshlang\'ich qoldiq', function () { teng(Calc.hisobQoldigi(H1, []), 100000); });
+      test('hisobQoldigi: manfiy bo\'lishi mumkin', function () { teng(Calc.hisobQoldigi(H2, [{ hisob_id: 'h2', tur: 'xarajat', summa: 5 }]), -5); });
+      test('umumiyBalans: hisoblar yig\'indisi', function () { teng(Calc.umumiyBalans([H1, H2], Y), 4600000 + 70000); });
+
+      // --- Calc: yozuvlar ro'yxati ---
+      test('kunlarBoyicha: eng yangi kun tepada', function () {
+        var g = Calc.kunlarBoyicha(Y);
+        teng(g.map(function (x) { return x.sana; }).join(), '2026-10-03,2026-10-02,2026-10-01');
+      });
+      test('kunlarBoyicha: kun xarajati jami (daromad kirmaydi)', function () {
+        var g = Calc.kunlarBoyicha(Y);
+        teng(g[0].xarajat, 150000); teng(g[1].xarajat, 350000); teng(g[2].xarajat, 0);
+      });
+      test('kunlarBoyicha: bir kunda oxirgi yaratilgani birinchi', function () {
+        teng(Calc.kunlarBoyicha(Y)[1].yozuvlar.map(function (x) { return x.id; }).join(), 'c,b');
+      });
+      test('kunlarBoyicha: kelajak sanali yozuv eng tepada', function () {
+        var g = Calc.kunlarBoyicha(Y.concat([{ id: 'f', tur: 'xarajat', summa: 1, sana: '2027-01-01', yaratilgan: '2026-10-03T10:00:00Z', hisob_id: 'h1' }]));
+        teng(g[0].sana, '2027-01-01');
+      });
+      test('oxirgiYozuvlar: faqat n ta, yangisi birinchi', function () {
+        teng(Calc.oxirgiYozuvlar(Y, 2).map(function (x) { return x.id; }).join(), 'e,d');
+      });
+      test('oxirgiYozuvlar: asl massivni o\'zgartirmaydi', function () {
+        Calc.oxirgiYozuvlar(Y, 2); teng(Y[0].id, 'a');
+      });
+      test('oxirgiHisobId: oxirgi yozuvdagi hisob', function () { teng(Calc.oxirgiHisobId(Y), 'h2'); });
+      test('oxirgiHisobId: yozuv yo\'q -> undefined', function () { teng(Calc.oxirgiHisobId([]), undefined); });
+
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
       var SINOV_BAZA = 'moliya-sinov';
       test('Data: "Naqd pul" hisobi va tayyor kategoriyalar bir marta yoziladi', function () {

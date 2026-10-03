@@ -81,3 +81,53 @@ h2 { font-size: 16px; margin: 0 0 8px; color: var(--xira); font-weight: 600; }
 .nav-qoshish svg { width: 28px; height: 28px; stroke-width: 2.5; }
 .nav-qoshish.faol { outline: 3px solid var(--chiziq); }
 button:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+
+/* --- 2-bosqich: shakl va yozuvlar ro'yxati --- */
+:root { --daromad: #1b7f3b; --xarajat: #c62828; }
+@media (prefers-color-scheme: dark) { :root { --daromad: #5fd08a; --xarajat: #ff8a80; } }
+
+.plus { color: var(--daromad); }
+.minus { color: var(--xarajat); }
+
+.maydon { margin-bottom: 14px; }
+.maydon label, .maydon .belgi { display: block; font-size: 14px; color: var(--xira); margin-bottom: 6px; }
+input, select {
+  width: 100%; min-height: 48px; padding: 8px 12px;
+  font: inherit; color: var(--matn); background: var(--karta);
+  border: 1px solid var(--chiziq); border-radius: 10px;
+}
+input.xatoli, select.xatoli { border-color: var(--xarajat); }
+.xato-matn { color: var(--xarajat); font-size: 14px; margin-top: 4px; min-height: 0; }
+.summa-kiritish { font-size: 24px; font-weight: 700; }
+
+.tanlov { display: flex; gap: 8px; }
+.tanlov button, .chip {
+  min-height: 44px; padding: 8px 14px; font: inherit; cursor: pointer;
+  color: var(--matn); background: var(--karta);
+  border: 1px solid var(--chiziq); border-radius: 22px;
+}
+.tanlov button { flex: 1; }
+.tanlov button[aria-pressed="true"], .chip[aria-pressed="true"] {
+  background: var(--asosiy); color: var(--asosiy-matn); border-color: var(--asosiy); font-weight: 600;
+}
+.chiplar { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip .nuqta { margin-right: 6px; }
+
+.asosiy-tugma {
+  width: 100%; min-height: 52px; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+  color: var(--asosiy-matn); background: var(--asosiy); border: 0; border-radius: 12px;
+}
+.xabar {
+  background: var(--karta); border: 1px solid var(--asosiy); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 12px; font-weight: 600;
+}
+
+.kun { margin-bottom: 14px; }
+.kun-sarlavha { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--xira); padding: 4px 2px; }
+.yozuv { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--chiziq); }
+.yozuv:first-child { border-top: 0; }
+.yozuv-chap { min-width: 0; }
+.yozuv-nom { font-weight: 600; word-break: break-word; }
+.yozuv-izoh { font-size: 14px; color: var(--xira); word-break: break-word; }
+.yozuv-summa { font-weight: 700; white-space: nowrap; }
+.balans-katta { font-size: 30px; font-weight: 800; }

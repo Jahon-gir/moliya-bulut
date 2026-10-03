@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Moliya</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="ekran" aria-live="polite"></main>
+
+  <nav class="pastki" aria-label="Asosiy menyu">
+    <button data-bolim="bosh" class="nav-tugma">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>
+      <span>Bosh sahifa</span>
+    </button>
+    <button data-bolim="hisobot" class="nav-tugma">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      <span>Hisobot</span>
+    </button>
+    <button data-bolim="qoshish" class="nav-qoshish" aria-label="Yozuv qo'shish">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button data-bolim="byudjet" class="nav-tugma">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span>Byudjet</span>
+    </button>
+    <button data-bolim="yana" class="nav-tugma">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <span>Yana</span>
+    </button>
+  </nav>
+
+  <script src="js/calc.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>

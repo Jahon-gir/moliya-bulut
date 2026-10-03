@@ -3,7 +3,8 @@
   'use strict';
 
   var DB_NOMI = 'moliya';
-  var SXEMA_VERSIYASI = 1;
+  var DB_VERSIYASI = 1;      // IndexedDB tuzilishi (to'plamlar ro'yxati)
+  var SXEMA_VERSIYASI = 2;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM) qo'shilgan
   // To'plamlar (TZ 7-band). Byudjetning kaliti kategoriya_id, qolganlariniki id.
   var TOPLAMLAR = {
     hisoblar: 'id',
@@ -35,7 +36,7 @@
 
   function ochish(nom) {
     return new Promise(function (resolve, reject) {
-      var so = indexedDB.open(nom || DB_NOMI, SXEMA_VERSIYASI);
+      var so = indexedDB.open(nom || DB_NOMI, DB_VERSIYASI);
       so.onupgradeneeded = function () {
         var d = so.result;
         Object.keys(TOPLAMLAR).forEach(function (t) {
@@ -102,6 +103,33 @@
     return r;
   }
 
+  // Ma'lumot tuzilishini yangi versiyaga o'tkazadi (hozircha 1 -> 2: yozuvlarga `vaqt` qo'shiladi).
+  // Hammasi BITTA tranzaksiyada: xato bo'lsa, hech narsa o'zgarmaydi. Hech narsa o'chirilmaydi.
+  // Versiya Sozlamalar ichida tekshiriladi, shuning uchun ikkinchi marta ishlasa yoki ilova ikki joyda
+  // bir vaqtda ochilsa ham ma'lumot buzilmaydi.
+  function sxemaniYangilash() {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['yozuvlar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error); };
+      var sozlamaSorovi = tx.objectStore('sozlamalar').get('asosiy');
+      sozlamaSorovi.onsuccess = function () {
+        var sozlama = sozlamaSorovi.result;
+        if (!sozlama || (sozlama.sxema_versiyasi || 1) >= SXEMA_VERSIYASI) return;
+        var yozuvSorovi = tx.objectStore('yozuvlar').getAll();
+        yozuvSorovi.onsuccess = function () {
+          yozuvSorovi.result.forEach(function (y) {
+            var yangi = Calc.yozuvniYangilash(y);
+            if (yangi !== y) tx.objectStore('yozuvlar').put(yangi);
+          });
+          sozlama.sxema_versiyasi = SXEMA_VERSIYASI;
+          tx.objectStore('sozlamalar').put(sozlama);
+        };
+      };
+    });
+  }
+
   // Doimiy saqlashga ruxsat so'raydi (brauzer ma'lumotni o'zi tozalab yubormasligi uchun)
   function doimiySaqlash() {
     if (global.navigator && navigator.storage && navigator.storage.persist) {
@@ -115,13 +143,13 @@
     return ochish(nom).then(function (d) {
       db = d;
       return boshlangichMalumot();
-    }).then(function () { return doimiySaqlash(); });
+    }).then(sxemaniYangilash).then(function () { return doimiySaqlash(); });
   }
 
   function yopish() { if (db) { db.close(); db = null; } }
 
   global.Data = {
-    SXEMA_VERSIYASI: SXEMA_VERSIYASI,
+    SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish
   };

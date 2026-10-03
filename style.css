@@ -183,3 +183,18 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .taqsimot-qator { flex-wrap: wrap; row-gap: 2px; }
 .taqsimot-qator .yozuv-nom { flex: 1 1 150px; min-width: 0; word-break: normal; overflow-wrap: break-word; }
 .taqsimot-qator .taqsimot-summa { margin-left: auto; }
+
+/* --- Yozuv vaqti --- */
+.sana-vaqt { display: flex; gap: 10px; }
+.sana-vaqt > div { flex: 1; min-width: 0; }
+.sana-vaqt > div:first-child { flex: 1.1; }
+.sana-vaqt input { padding-left: 8px; padding-right: 6px; font-size: 15px; }
+.sana-vaqt label { display: block; font-size: 14px; color: var(--xira); margin-bottom: 6px; }
+.belgi-kelajak {
+  display: inline-block; margin-left: 8px; padding: 1px 8px; font-size: 12px; font-weight: 700;
+  color: #7a4a00; background: #ffd54f; border-radius: 10px; vertical-align: middle;
+}
+.ogohlantirish {
+  background: var(--karta); border: 1px solid #ffb74d; border-left-width: 5px; border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 12px; font-weight: 600;
+}

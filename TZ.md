@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 2 (03.10.2026)
+Hujjat versiyasi: 3 (03.10.2026)
 
 ## 1. Maqsad
 
@@ -25,6 +25,7 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 |---|---|
 | Hisob | Pul turgan joy: naqd pul, bank kartasi, jamg'arma |
 | Yozuv | Bitta daromad, xarajat yoki o'tkazma |
+| Vaqt | Yozuvning soat:daqiqasi (`HH:MM`, qurilmaning mahalliy vaqti). Yozuvning sanasi bilan birga uning aniq vaqtini beradi |
 | O'tkazma | Pulni bir hisobdan boshqasiga ko'chirish (masalan, kartadan naqd yechish). Daromad ham, xarajat ham emas |
 | Kategoriya | Daromad yoki xarajatlar guruhi |
 | Byudjet | Xarajat kategoriyasiga qo'yilgan oylik chegara |
@@ -42,8 +43,10 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Hisob nomini o'zgartirish mumkin. Yozuvlari bor hisob o'chirilmaydi, arxivlanadi (ro'yxatdan yashiriladi, eski yozuvlar saqlanadi).
 
 ### F2. Yozuv qo'shish
-- Maydonlar: tur (daromad, xarajat, o'tkazma), summa, hisob, kategoriya, sana, izoh.
-- Standart qiymatlar: tur xarajat, sana bugun, hisob oxirgi ishlatilgani.
+- Maydonlar: tur (daromad, xarajat, o'tkazma), summa, hisob, kategoriya, sana, soat, izoh.
+- Standart qiymatlar: tur xarajat, sana va soat hozirgi vaqt (qurilmaning mahalliy vaqti, daqiqa aniqligida), hisob oxirgi ishlatilgani.
+- **Vaqt qoidasi:** yozuv vaqti (sana va soat) hozirgi vaqtdan keyin bo'lmaydi, o'tmish mumkin. Bugundan keyingi sana va bugun uchun hozirdan keyingi soat tanlanmaydi. Tekshiruv daqiqa aniqligida: soat 21:00 bo'lsa, 21:00 mumkin, 21:01 mumkin emas.
+- Hozirgi vaqt har safar qayta tekshiriladi: yozuvni saqlashda ham, tahrirlab saqlashda ham. Kelajak vaqt rad etiladi va maydon yonida tushunarli xato xabari chiqadi.
 - O'tkazmada kategoriya o'rniga ikkita hisob tanlanadi: qayerdan va qayerga.
 - Summa kiritilayotganda mingliklar avtomatik ajratiladi (`1 250 000`).
 - Summa bo'sh, nol yoki manfiy bo'lsa, yozuv saqlanmaydi va maydon yonida tushunarli xato xabari chiqadi.
@@ -51,7 +54,9 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 
 ### F3. Yozuvlar ro'yxati
 - Yozuvlar kunlar bo'yicha guruhlangan, eng yangisi tepada. Har kun sarlavhasida o'sha kunning jami xarajati.
-- Yozuvni tahrirlash mumkin.
+- Har yozuvda soat ko'rinadi. Kun ichida soati kattasi tepada, soat teng bo'lsa `yaratilgan` bo'yicha (yangisi tepada).
+- Bazada allaqachon bor, vaqti hozirdan keyingi yozuvlar o'chirilmaydi va yashirilmaydi: ular ro'yxatda "Kelajak" belgisi bilan ko'rinadi. Ularni tahrirlashda vaqtni o'tmishga to'g'rilash talab qilinadi (o'chirish esa to'g'rilashsiz mumkin).
+- Yozuvni tahrirlash mumkin. Tahrirlashda vaqt F2 dagi qoida bo'yicha qayta tekshiriladi.
 - Yozuvni o'chirish mumkin. O'chirilgach 10 soniya davomida "Bekor qilish" tugmasi ko'rinadi.
 - Filtrlar: tur, hisob, kategoriya, sana oralig'i. Izoh bo'yicha qidiruv.
 
@@ -87,7 +92,7 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 
 ### F8. Qarzlar
 - Qarz qo'shish: yo'nalish (men berdim yoki men oldim), kimga yoki kimdan (ism), summa, hisob, sana, qaytarish muddati (ixtiyoriy), izoh.
-- Qarzni qisman yoki to'liq qaytarilgan deb belgilash. Har bir to'lov sanasi va summasi bilan saqlanadi.
+- Qarzni qisman yoki to'liq qaytarilgan deb belgilash. Har bir to'lov sanasi, soati (`vaqt`) va summasi bilan saqlanadi. To'lov vaqti ham F2 dagi vaqt qoidasiga bo'ysunadi: hozirgi vaqtdan keyin bo'lmaydi.
 - Ko'rsatiladi: menga qaytarilishi kerak bo'lgan jami summa, men qaytarishim kerak bo'lgan jami summa.
 - Muddati o'tgan qarzlar alohida belgilanadi.
 - To'liq yopilgan qarzlar "Yopilganlar" ro'yxatiga o'tadi.
@@ -97,7 +102,8 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi.
 - "Zaxira nusxa olish": barcha ma'lumot bitta JSON faylga saqlanadi. Fayl nomida sana bo'ladi.
 - "Zaxiradan tiklash": JSON fayldan ma'lumot yuklanadi. Mavjud ma'lumot almashtirilishi haqida ogohlantiriladi va tiklashdan oldin joriy holatning zaxirasi avtomatik yuklab beriladi.
-- "Excel uchun eksport": yozuvlar CSV faylga chiqariladi (UTF-8 BOM bilan, ajratuvchi nuqtali vergul), o'zbekcha harflar Excel'da to'g'ri ko'rinishi kerak.
+- Eski sxema versiyasidagi zaxira (masalan, `vaqt` maydoni yo'q 1-versiya) tiklanganda 7-bandagi ko'chirish qoidasi qo'llanadi: yozuvlarga `vaqt` qo'shiladi, hech narsa o'chirilmaydi. Zaxirada vaqti hozirdan keyin bo'lgan yozuv bo'lsa, u rad etilmaydi va o'chirilmaydi: F3 dagidek "Kelajak" belgisi bilan ko'rinadi. Zaxira fayliga `vaqt` ham yoziladi.
+- "Excel uchun eksport": yozuvlar CSV faylga chiqariladi (UTF-8 BOM bilan, ajratuvchi nuqtali vergul), o'zbekcha harflar Excel'da to'g'ri ko'rinishi kerak. Sana ustunidan keyin alohida `vaqt` ustuni bo'ladi (`HH:MM`).
 - Bosh sahifada oxirgi zaxira sanasi ko'rsatiladi. 14 kundan oshgan bo'lsa, eslatma chiqadi.
 
 ### F10. Telefonga o'rnatish va internetsiz ishlash
@@ -135,6 +141,7 @@ Claude Code bu ro'yxatdagi narsalarni so'ralmaguncha qo'shmasligi kerak.
 - **Til:** interfeys to'liq o'zbek tilida, lotin yozuvida.
 - **Valyuta:** so'm. Summalar butun son sifatida saqlanadi (tiyinsiz). Ko'rsatish: `1 250 000 so'm`.
 - **Sana:** saqlashda `YYYY-MM-DD`, ko'rsatishda `KK.OO.YYYY`. Qurilmaning mahalliy vaqti ishlatiladi.
+- **Vaqt (soat):** saqlashda `HH:MM` (24 soatlik, masalan `07:05`, `21:00`), qurilmaning mahalliy vaqti. Tekshiruv daqiqa aniqligida.
 - **Ekran:** avvalo telefon uchun chiziladi (kengligi 360 pikseldan). Kompyuterda ham to'g'ri ko'rinadi. Tugmalar barmoq bilan bosishga qulay (kamida 44 piksel).
 - **Ko'rinish:** yorug' va qorong'i rejim, qurilma sozlamasiga qarab.
 - **Brauzerlar:** Chrome (Android), Safari (iPhone), Chrome va Edge (kompyuter).
@@ -147,24 +154,27 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 | To'plam | Maydonlar |
 |---|---|
 | Hisob | id, nom, tur (naqd / karta / boshqa), boshlangich_qoldiq, arxivlangan |
-| Yozuv | id, tur (daromad / xarajat / otkazma), summa, sana, hisob_id, qabul_hisob_id (faqat o'tkazmada), kategoriya_id, izoh |
+| Yozuv | id, tur (daromad / xarajat / otkazma), summa, sana, vaqt, hisob_id, qabul_hisob_id (faqat o'tkazmada), kategoriya_id, izoh |
 | Kategoriya | id, nom, tur (daromad / xarajat), rang, arxivlangan |
 | Byudjet | kategoriya_id (yoki "umumiy"), oylik_limit |
-| Qarz | id, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, muddat, izoh, tolovlar [{sana, summa, hisob_id}], yopilgan |
-| Sozlamalar | sxema_versiyasi, oxirgi_zaxira_sanasi |
+| Qarz | id, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, muddat, izoh, tolovlar [{sana, vaqt, summa, hisob_id}], yopilgan |
+| Sozlamalar | sxema_versiyasi (hozir 2), oxirgi_zaxira_sanasi |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
+- **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi.
+- **Ko'chirish (1 → 2):** eski yozuvlarga faqat `vaqt` qo'shiladi, boshqa hech narsa o'zgarmaydi va hech narsa o'chirilmaydi. Yozuvning `yaratilgan` vaqtidagi (mahalliy) sana yozuvning `sana` si bilan bir xil bo'lsa, `vaqt` o'sha yaratilgan soat:daqiqa bo'ladi, aks holda `00:00`. Ko'chirish bitta amal sifatida bajariladi (yarim yo'lda to'xtamaydi) va ikkinchi marta ishlasa ham ma'lumot buzilmaydi. Shu qoida eski zaxira fayllarini tiklashda ham qo'llanadi.
 
 ## 8. Hisob-kitob qoidalari
 
-1. **Hisob qoldig'i** = boshlang'ich qoldiq + daromadlar − xarajatlar + kirgan o'tkazmalar − chiqqan o'tkazmalar − bergan qarzlarim + menga qaytarilganlar + olgan qarzlarim − men qaytarganlarim.
+1. **Hisob qoldig'i** = boshlang'ich qoldiq + daromadlar − xarajatlar + kirgan o'tkazmalar − chiqqan o'tkazmalar − bergan qarzlarim + menga qaytarilganlar + olgan qarzlarim − men qaytarganlarim. Balans doim barcha yozuvlarni hisobga oladi.
 2. **Hafta** dushanbadan yakshanbagacha. Hafta ikki oyga yoki ikki yilga to'g'ri kelsa ham, haftalik hisobot to'liq yetti kunni ko'rsatadi. Oylik hisobotga esa faqat o'sha oy sanalari kiradi.
 3. **Oldingi davr bilan taqqoslash:** oldingi davrda xarajat nol bo'lsa, foiz o'rniga "—" ko'rsatiladi.
 4. **Foizlar** butun songa yaxlitlanadi. Taqsimotdagi foizlar yig'indisi 100 bo'lishi uchun yaxlitlash farqi eng katta kategoriyaga qo'shiladi.
 5. **Byudjet** faqat joriy kalendar oyi xarajatlari bo'yicha hisoblanadi.
 6. **Arxivlangan** hisob va kategoriyalar yangi yozuv shaklida ko'rinmaydi, lekin eski yozuvlar va hisobotlarda saqlanadi.
-7. **Kelajak sanali** yozuv qo'shish mumkin, u o'z sanasi kelgan davr hisobotida ko'rinadi.
+7. **Yozuv vaqti** hozirgi vaqtdan keyin bo'lmaydi, o'tmish mumkin (F2).
+8. **Hisobotlar** yozuvni uning sanasi bo'yicha davrga kiritadi.
 
 ## 9. Ekranlar
 
@@ -208,6 +218,8 @@ Har bir bosqich alohida bajariladi, sinab ko'riladi va saqlanadi (git commit). K
 
 Byudjet: Oziq-ovqat uchun oylik chegara 500 000 so'm.
 
+Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4-kunidan keyin kiriting (yoki oldingi oyni oling).
+
 **Kutilgan natija:**
 
 - Oylik hisobot: daromad 5 000 000, xarajat 500 000, qoldiq 4 500 000 so'm.
@@ -227,6 +239,11 @@ Byudjet: Oziq-ovqat uchun oylik chegara 500 000 so'm.
 - O'chirilgan yozuv "Bekor qilish" bilan qaytadi.
 - Telefonda bosh ekranga o'rnatiladi va samolyot rejimida to'liq ishlaydi.
 - 360 piksel kenglikda gorizontal aylantirish yo'q.
+- Yozuv shaklida sana va soat hozirgi vaqt bilan to'lib turadi. Soat 21:00 bo'lsa, 21:00 saqlanadi, 21:01 saqlanmaydi va xato xabari chiqadi. Ertangi sana tanlanmaydi. Tahrirlashda ham shunday.
+- Yarim tundan o'tganda: soat 00:05 da kechagi 23:59 mumkin, bugungi 00:06 mumkin emas.
+- Ro'yxatda har yozuvda soat ko'rinadi; kun ichida soati kattasi tepada.
+- Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.
+- Bazada oldindan qolgan kelajak vaqtli yozuv o'chirilmaydi, "Kelajak" belgisi bilan ko'rinadi va tahrirlashda vaqtni o'tmishga to'g'rilashni talab qiladi.
 
 ## 12. Keyingi versiyalar (qisqa reja)
 
@@ -268,3 +285,4 @@ Quyidagilar taxmin asosida yozilgan. Boshqacha bo'lishi kerak bo'lsa, qurishdan 
 2. Ilova nomi tanlanmagan. 10-bosqichgacha nom va belgi kerak bo'ladi.
 3. Kategoriyalar ro'yxati taxminiy.
 4. Zaxira eslatmasi muddati 14 kun deb olingan.
+5. Qarzning o'zining sanasi (F8) ham hozirdan keyin bo'lmasligi va unga ham soat kerakligi hal qilinmagan: hozircha faqat qarz to'lovlari uchun yozilgan. 8-bosqichdan oldin hal qilinadi.

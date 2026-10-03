@@ -471,9 +471,10 @@
       var q = el('div', undefined, 'maydon');
       q.appendChild(el('span', 'Turi: ' + hisobTuriNomi(h.tur), 'xira'));
       forma.appendChild(q);
-      qoldiq = summaMaydoni('h-qoldiq', 'Boshlang\'ich qoldiq (so\'m)', Calc.raqamFormat(String(h.boshlangich_qoldiq)));
+      // Joriy qoldiq ko'rsatiladi va tahrirlanadi; yozuvlar o'zgarmaydi (farq boshlang'ich qoldiqqa qo'shiladi)
+      qoldiq = summaMaydoni('h-qoldiq', 'Hozirgi qoldiq (so\'m)', Calc.raqamFormat(String(Calc.hisobQoldigi(h, malumot.yozuvlar))));
       forma.appendChild(qoldiq.quti);
-      forma.appendChild(el('p', 'O\'zgartirsangiz, hisobning joriy qoldig\'i ham shunga qarab o\'zgaradi.', 'xira'));
+      forma.appendChild(el('p', 'Qoldiqni to\'g\'rilasangiz, yozuvlar va hisobotlar o\'zgarmaydi.', 'xira'));
     } else {
       var turMaydon = el('div', undefined, 'maydon');
       turMaydon.appendChild(el('span', 'Turi', 'belgi'));
@@ -489,7 +490,7 @@
       });
       turMaydon.appendChild(turQator);
       forma.appendChild(turMaydon);
-      qoldiq = summaMaydoni('h-qoldiq', 'Boshlang\'ich qoldiq (so\'m)', '');
+      qoldiq = summaMaydoni('h-qoldiq', 'Hozirgi qoldiq (so\'m)', '');
       forma.appendChild(qoldiq.quti);
     }
 
@@ -499,14 +500,14 @@
 
     forma.addEventListener('submit', function (e) {
       e.preventDefault();
-      var n = Calc.hisobNomTekshir(nom.value);
-      var b = Calc.qoldiqTekshir(qoldiq.input.value);
+      var n = Calc.hisobNomTekshir(nom.value, faolHisoblar(), h ? h.id : undefined);
+      var b = Calc.qoldiqTekshir(qoldiq.input.value, !!h);   // tahrirda manfiy mumkin, bo'sh qoldirib bo'lmaydi
       if (n.xato) { nomXato.textContent = n.xato; nom.classList.add('xatoli'); }
       if (b.xato) { qoldiq.xato.textContent = b.xato; qoldiq.input.classList.add('xatoli'); }
       if (n.xato || b.xato) { (n.xato ? nom : qoldiq.input).focus(); return; }
       var yangi = h
         ? { id: h.id, yaratilgan: h.yaratilgan, nom: n.nom, tur: h.tur,
-            boshlangich_qoldiq: b.summa, arxivlangan: h.arxivlangan }
+            boshlangich_qoldiq: Calc.yangiBoshlangichQoldiq(h, malumot.yozuvlar, b.summa), arxivlangan: h.arxivlangan }
         : { id: Data.yangiId(), yaratilgan: new Date().toISOString(), nom: n.nom, tur: tur,
             boshlangich_qoldiq: b.summa, arxivlangan: false };
       saqla.disabled = true;
@@ -638,7 +639,9 @@
 
     forma.addEventListener('submit', function (e) {
       e.preventDefault();
-      var n = Calc.kategoriyaNomTekshir(nom.value);
+      var n = Calc.kategoriyaNomTekshir(nom.value, malumot.kategoriyalar.filter(function (x) {
+        return x.tur === holat.tur && !x.arxivlangan;
+      }), k ? k.id : undefined);
       if (n.xato) { nomXato.textContent = n.xato; nom.classList.add('xatoli'); nom.focus(); return; }
       saqla.disabled = true;
       kategoriyaniSaqlash({

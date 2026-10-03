@@ -73,26 +73,56 @@
     return null;
   }
 
-  // Hisob nomi bo'sh bo'lmasligi kerak. Natija: { nom } yoki { xato }
-  function hisobNomTekshir(matn) {
-    var nom = String(matn == null ? '' : matn).trim();
-    return nom ? { nom: nom } : { xato: 'Hisob nomini kiriting' };
+  // Nomlarni solishtirish uchun kalit: harf kattaligi va barcha bo'sh joylar hisobga olinmaydi
+  function nomKaliti(nom) {
+    return String(nom == null ? '' : nom).toLowerCase().replace(/\s+/g, '');
   }
 
-  // Boshlang'ich qoldiq: bo'sh yoki 0 mumkin, manfiy mumkin emas. Natija: { summa } yoki { xato }
-  function qoldiqTekshir(matn) {
+  // Shu nom ro'yxatda (istisnoId dan boshqa elementlar orasida) bormi
+  function nomBandmi(nom, mavjud, istisnoId) {
+    var kalit = nomKaliti(nom);
+    return (mavjud || []).some(function (x) { return x.id !== istisnoId && nomKaliti(x.nom) === kalit; });
+  }
+
+  // Hisob nomi: bo'sh bo'lmasin va faol hisoblar orasida takrorlanmasin.
+  // mavjud — faol hisoblar, istisnoId — tahrirlanayotgan hisobning o'zi. Natija: { nom } yoki { xato }
+  function hisobNomTekshir(matn, mavjud, istisnoId) {
+    var nom = String(matn == null ? '' : matn).trim();
+    if (!nom) return { xato: 'Hisob nomini kiriting' };
+    if (nomBandmi(nom, mavjud, istisnoId)) return { xato: 'Bu nom bilan hisob allaqachon bor' };
+    return { nom: nom };
+  }
+
+  // Hisob qoldig'i. Yangi hisobda bo'sh = 0 va manfiy mumkin emas. Mavjud hisobni tahrirlashda (tahrir=true)
+  // joriy qoldiq manfiy bo'lishi mumkin, bo'sh qoldirish esa xato: tasodifan nolga tushib ketmasligi uchun.
+  // Natija: { summa } yoki { xato }
+  function qoldiqTekshir(matn, tahrir) {
     var s = String(matn == null ? '' : matn).replace(/\s/g, '');
-    if (s === '') return { summa: 0 };
-    if (s.charAt(0) === '-') return { xato: 'Qoldiq manfiy bo\'lishi mumkin emas' };
+    if (s === '') return tahrir ? { xato: 'Qoldiqni kiriting (nol bo\'lsa, 0 yozing)' } : { summa: 0 };
+    var minus = s.charAt(0) === '-';
+    if (minus) {
+      if (!tahrir) return { xato: 'Qoldiq manfiy bo\'lishi mumkin emas' };
+      s = s.slice(1);
+    }
     if (!/^\d+$/.test(s)) return { xato: 'Qoldiq faqat raqamlardan iborat bo\'lsin' };
     if (s.replace(/^0+/, '').length > 15) return { xato: 'Qoldiq juda katta' };
-    return { summa: parseInt(s, 10) };
+    var n = parseInt(s, 10);
+    return { summa: minus && n ? -n : n };
   }
 
-  // Kategoriya nomi bo'sh bo'lmasligi kerak. Natija: { nom } yoki { xato }
-  function kategoriyaNomTekshir(matn) {
+  // Foydalanuvchi hisobning HOZIRGI qoldig'ini o'zgartirsa, yozuvlarga tegmaymiz: farqni boshlang'ich qoldiqqa
+  // qo'shamiz. yangi boshlang'ich = eski boshlang'ich + (yangi joriy - eski joriy)
+  function yangiBoshlangichQoldiq(hisob, yozuvlar, yangiJoriy) {
+    return hisob.boshlangich_qoldiq + (yangiJoriy - hisobQoldigi(hisob, yozuvlar));
+  }
+
+  // Kategoriya nomi: bo'sh bo'lmasin va bir turdagi faol kategoriyalar orasida takrorlanmasin.
+  // mavjud — shu turdagi faol kategoriyalar, istisnoId — tahrirlanayotgan kategoriyaning o'zi.
+  function kategoriyaNomTekshir(matn, mavjud, istisnoId) {
     var nom = String(matn == null ? '' : matn).trim();
-    return nom ? { nom: nom } : { xato: 'Kategoriya nomini kiriting' };
+    if (!nom) return { xato: 'Kategoriya nomini kiriting' };
+    if (nomBandmi(nom, mavjud, istisnoId)) return { xato: 'Bu nom bilan kategoriya allaqachon bor' };
+    return { nom: nom };
   }
 
   // Yozuvlarni filtr bo'yicha saralaydi (asl massivga tegmaydi). Filtr maydonlari (hammasi ixtiyoriy):
@@ -153,7 +183,7 @@
   global.Calc = {
     sumFormat: sumFormat, sanaKorsat: sanaKorsat, bugun: bugun,
     raqamFormat: raqamFormat, summaTekshir: summaTekshir,
-    qoldiqTekshir: qoldiqTekshir, kategoriyaNomTekshir: kategoriyaNomTekshir,
+    qoldiqTekshir: qoldiqTekshir, yangiBoshlangichQoldiq: yangiBoshlangichQoldiq, nomKaliti: nomKaliti, kategoriyaNomTekshir: kategoriyaNomTekshir,
     yozuvlarniSuz: yozuvlarniSuz, filtrFaolmi: filtrFaolmi, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId

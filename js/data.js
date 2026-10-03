@@ -63,34 +63,64 @@
   function saqlash(toplam, qiymat) { return amal(toplam, 'readwrite', function (s) { s.put(qiymat); }); }
   function ochirish(toplam, kalit) { return amal(toplam, 'readwrite', function (s) { s.delete(kalit); }); }
 
-  // Birinchi ochilishda tayyor ma'lumotni bir marta yozadi
+  // Birinchi ochilishda tayyor ma'lumotni bir marta yozadi.
+  // Tekshirish va yozish BITTA tranzaksiyada: ilova ikki joyda bir vaqtda ochilsa ham, ikkinchisi
+  // birinchisi tugashini kutadi va ma'lumot allaqachon borligini ko'radi (nusxa paydo bo'lmaydi).
   function boshlangichMalumot() {
-    return olish('sozlamalar', 'asosiy').then(function (s) {
-      if (s) return;
-      var hozir = new Date().toISOString();
-      var vaqt = Date.now();
+    return new Promise(function (resolve, reject) {
       var tx = db.transaction(['hisoblar', 'kategoriyalar', 'sozlamalar'], 'readwrite');
-      tx.objectStore('hisoblar').put({
-        id: yangiId(), yaratilgan: hozir, nom: 'Naqd pul', tur: 'naqd',
-        boshlangich_qoldiq: 0, arxivlangan: false
-      });
-      function kategoriyalar(royxat, tur) {
-        royxat.forEach(function (k) {
+      tx.oncomplete = resolve;
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error); };
+      tx.objectStore('sozlamalar').get('asosiy').onsuccess = function (e) {
+        if (e.target.result) return;
+        var hozir = new Date().toISOString();
+        var vaqt = Date.now();
+        tx.objectStore('hisoblar').put({
+          id: yangiId(), yaratilgan: hozir, nom: 'Naqd pul', tur: 'naqd',
+          boshlangich_qoldiq: 0, arxivlangan: false
+        });
+        tayyorKategoriyalar().forEach(function (k) {
           // yaratilgan har biriga 1 ms farq bilan yoziladi: ro'yxat tayyor tartibda chiqishi uchun
           tx.objectStore('kategoriyalar').put({
-            id: yangiId(), yaratilgan: new Date(vaqt++).toISOString(), nom: k[0], tur: tur, rang: k[1], arxivlangan: false
+            id: yangiId(), yaratilgan: new Date(vaqt++).toISOString(),
+            nom: k.nom, tur: k.tur, rang: k.rang, arxivlangan: false
           });
         });
-      }
-      kategoriyalar(XARAJAT_KATEGORIYALARI, 'xarajat');
-      kategoriyalar(DAROMAD_KATEGORIYALARI, 'daromad');
-      tx.objectStore('sozlamalar').put({
-        kalit: 'asosiy', sxema_versiyasi: SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null
-      });
-      return new Promise(function (resolve, reject) {
-        tx.oncomplete = resolve;
-        tx.onerror = function () { reject(tx.error); };
-        tx.onabort = function () { reject(tx.error); };
+        tx.objectStore('sozlamalar').put({
+          kalit: 'asosiy', sxema_versiyasi: SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null
+        });
+      };
+    });
+  }
+
+  // Tayyor kategoriyalar ro'yxati: [{ nom, tur, rang }]
+  function tayyorKategoriyalar() {
+    var r = [];
+    XARAJAT_KATEGORIYALARI.forEach(function (k) { r.push({ nom: k[0], tur: 'xarajat', rang: k[1] }); });
+    DAROMAD_KATEGORIYALARI.forEach(function (k) { r.push({ nom: k[0], tur: 'daromad', rang: k[1] }); });
+    return r;
+  }
+
+  // Oldingi versiyadagi xato tufayli paydo bo'lgan ortiqcha nusxalarni o'chiradi
+  // (faqat bo'sh va hech qayerda ishlatilmagan tayyor hisob/kategoriyalar). Ortiqcha nusxa bo'lmasa, hech narsa qilmaydi.
+  function nusxalarniTozalash() {
+    return new Promise(function (resolve, reject) {
+      var nomlar = ['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar'];
+      var tx = db.transaction(nomlar, 'readwrite');
+      tx.oncomplete = resolve;
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error); };
+      var topildi = {}, qoldi = nomlar.length;
+      nomlar.forEach(function (n) {
+        tx.objectStore(n).getAll().onsuccess = function (e) {
+          topildi[n] = e.target.result;
+          if (--qoldi) return;
+          var r = Calc.ortiqchaNusxalar(topildi.hisoblar, topildi.kategoriyalar, topildi.yozuvlar,
+            topildi.qarzlar, tayyorKategoriyalar());
+          r.hisoblar.forEach(function (id) { tx.objectStore('hisoblar').delete(id); });
+          r.kategoriyalar.forEach(function (id) { tx.objectStore('kategoriyalar').delete(id); });
+        };
       });
     });
   }
@@ -108,7 +138,7 @@
     return ochish(nom).then(function (d) {
       db = d;
       return boshlangichMalumot();
-    }).then(function () { return doimiySaqlash(); });
+    }).then(nusxalarniTozalash).then(function () { return doimiySaqlash(); });
   }
 
   function yopish() { if (db) { db.close(); db = null; } }
@@ -116,6 +146,6 @@
   global.Data = {
     SXEMA_VERSIYASI: SXEMA_VERSIYASI,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
-    hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish
+    nusxalarniTozalash: nusxalarniTozalash, hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish
   };
 })(typeof window !== 'undefined' ? window : this);

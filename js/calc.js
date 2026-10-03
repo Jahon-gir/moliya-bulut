@@ -89,6 +89,45 @@
     return { summa: parseInt(s, 10) };
   }
 
+  // Ortiqcha nusxalarni topadi: bir xil tayyor hisob ("Naqd pul", qoldig'i 0) yoki tayyor kategoriya
+  // (nomi, turi va rangi tayyor ro'yxatdagidek) bir necha marta bo'lsa, ishlatilmaganlarini qaytaradi.
+  // Yozuv yoki qarzda ishlatilgani hech qachon o'chirilmaydi. Natija: { hisoblar: [id], kategoriyalar: [id] }
+  function ortiqchaNusxalar(hisoblar, kategoriyalar, yozuvlar, qarzlar, tayyorKat) {
+    var ishlatilgan = {};
+    function belgila(id) { if (id) ishlatilgan[id] = true; }
+    yozuvlar.forEach(function (y) { belgila(y.hisob_id); belgila(y.qabul_hisob_id); belgila(y.kategoriya_id); });
+    (qarzlar || []).forEach(function (q) {
+      belgila(q.hisob_id);
+      (q.tolovlar || []).forEach(function (t) { belgila(t.hisob_id); });
+    });
+
+    function ortiqchasi(royxat, tegishli, kalit) {
+      var guruhlar = {}, natija = [];
+      royxat.filter(tegishli).forEach(function (x) {
+        (guruhlar[kalit(x)] = guruhlar[kalit(x)] || []).push(x);
+      });
+      Object.keys(guruhlar).forEach(function (k) {
+        var g = guruhlar[k].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
+        if (g.length < 2) return;
+        var ishlatilganlar = g.filter(function (x) { return ishlatilgan[x.id]; });
+        var qoladi = ishlatilganlar.length ? ishlatilganlar : [g[0]];
+        g.forEach(function (x) { if (qoladi.indexOf(x) === -1) natija.push(x.id); });
+      });
+      return natija;
+    }
+
+    var tayyor = {};
+    (tayyorKat || []).forEach(function (k) { tayyor[k.tur + '|' + k.nom + '|' + k.rang] = true; });
+    return {
+      hisoblar: ortiqchasi(hisoblar, function (h) {
+        return h.nom === 'Naqd pul' && h.tur === 'naqd' && h.boshlangich_qoldiq === 0 && !h.arxivlangan;
+      }, function () { return 'naqd'; }),
+      kategoriyalar: ortiqchasi(kategoriyalar, function (k) {
+        return !k.arxivlangan && tayyor[k.tur + '|' + k.nom + '|' + k.rang];
+      }, function (k) { return k.tur + '|' + k.nom; })
+    };
+  }
+
   // Yangisi tepada: avval sana, bir xil sanada yaratilgan vaqti bo'yicha
   function yangiTartib(a, b) {
     if (a.sana !== b.sana) return a.sana < b.sana ? 1 : -1;
@@ -124,7 +163,7 @@
 
   global.Calc = {
     sumFormat: sumFormat, sanaKorsat: sanaKorsat, bugun: bugun,
-    raqamFormat: raqamFormat, summaTekshir: summaTekshir,
+    ortiqchaNusxalar: ortiqchaNusxalar, raqamFormat: raqamFormat, summaTekshir: summaTekshir,
     qoldiqTekshir: qoldiqTekshir, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId

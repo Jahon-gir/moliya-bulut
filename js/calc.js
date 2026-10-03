@@ -24,6 +24,55 @@
     return d.getFullYear() + '-' + oy + '-' + kun;
   }
 
+  // ---- Yozuv vaqti (soat:daqiqa, qurilmaning mahalliy vaqti) ----
+  function vaqtFormatiTogrimi(v) {
+    return typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+  }
+
+  // Hozirgi mahalliy sana va soat, daqiqa aniqligida: { sana: "YYYY-MM-DD", vaqt: "HH:MM" }
+  function hozir(d) {
+    d = d || new Date();
+    return { sana: bugun(d), vaqt: ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) };
+  }
+
+  // Yozuvning soati; yozuvda yo'q yoki noto'g'ri bo'lsa "00:00"
+  function yozuvVaqti(y) {
+    return vaqtFormatiTogrimi(y && y.vaqt) ? y.vaqt : '00:00';
+  }
+
+  // Sana va soat hozirgi vaqtdan keyinmi (daqiqa aniqligida: hozir 21:00 bo'lsa, 21:00 mumkin, 21:01 mumkin emas)
+  function kelajakmi(sana, vaqt, h) {
+    h = h || hozir();
+    return sana > h.sana || (sana === h.sana && vaqt > h.vaqt);
+  }
+
+  // Yozuvning sanasi va soatini tekshiradi. h — hozirgi vaqt (hozir()), har safar yangidan olinadi.
+  // Natija: { xato: "xabar" } yoki {}
+  function vaqtTekshir(sana, vaqt, h) {
+    if (!sana) return { xato: 'Sanani kiriting' };
+    if (!vaqt) return { xato: 'Soatni kiriting' };
+    if (!vaqtFormatiTogrimi(vaqt)) return { xato: 'Soatni SS:DD ko\'rinishida kiriting' };
+    if (kelajakmi(sana, vaqt, h)) return { xato: 'Yozuv vaqti hozirgi vaqtdan keyin bo\'lishi mumkin emas' };
+    return {};
+  }
+
+  // Sxema 1 -> 2: yozuvga `vaqt` qo'shadi, boshqa hech narsaga tegmaydi.
+  // Yaratilgan sanasi (mahalliy vaqtda) yozuv sanasi bilan bir xil bo'lsa, yaratilgan soati olinadi, aks holda "00:00".
+  // Yozuvda to'g'ri `vaqt` allaqachon bo'lsa, o'sha obyektning o'zi qaytadi (ikkinchi marta ishlasa ham buzilmaydi).
+  function yozuvniYangilash(y) {
+    if (vaqtFormatiTogrimi(y.vaqt)) return y;
+    var vaqt = '00:00';
+    var d = new Date(y.yaratilgan);
+    if (y.yaratilgan && !isNaN(d.getTime())) {
+      var h = hozir(d);
+      if (h.sana === y.sana) vaqt = h.vaqt;
+    }
+    var yangi = {};
+    Object.keys(y).forEach(function (k) { yangi[k] = y[k]; });
+    yangi.vaqt = vaqt;
+    return yangi;
+  }
+
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
   // Boshidagi minus saqlanadi (keyin tekshiruvda xato bo'lib chiqishi uchun), boshqa belgilar tashlanadi.
   function raqamFormat(matn) {
@@ -239,7 +288,7 @@
   }
 
   // Davr hisoboti: faqat daromad va xarajat yozuvlari (o'tkazma va qarz kirmaydi), sana chegaralari bilan.
-  // hisobId berilsa, faqat shu hisob bo'yicha. Kelajak sanali yozuv faqat o'z sanasi tushgan davrga kiradi.
+  // hisobId berilsa, faqat shu hisob bo'yicha. Yozuv o'z sanasi tushgan davrga kiradi.
   function hisobot(yozuvlar, dan, gacha, hisobId) {
     var daromad = 0, xarajat = 0, soni = 0, dKat = {}, xKat = {};
     yozuvlar.forEach(function (y) {
@@ -273,9 +322,11 @@
     return (f > 0 ? '+' : f < 0 ? '−' : '') + Math.abs(f) + '%';
   }
 
-  // Yangisi tepada: avval sana, bir xil sanada yaratilgan vaqti bo'yicha
+  // Yangisi tepada: avval sana, keyin shu kundagi soat, soat ham teng bo'lsa yaratilgan vaqti bo'yicha
   function yangiTartib(a, b) {
     if (a.sana !== b.sana) return a.sana < b.sana ? 1 : -1;
+    var va = yozuvVaqti(a), vb = yozuvVaqti(b);
+    if (va !== vb) return va < vb ? 1 : -1;
     if (a.yaratilgan !== b.yaratilgan) return a.yaratilgan < b.yaratilgan ? 1 : -1;
     return 0;
   }
@@ -314,6 +365,8 @@
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     davrChegarasi: davrChegarasi, davrniSur: davrniSur, davrNomi: davrNomi, kunQosh: kunQosh,
     foizlar: foizlar, hisobot: hisobot, taqqoslash: taqqoslash, belgiliSum: belgiliSum, belgiliFoiz: belgiliFoiz,
+    hozir: hozir, kelajakmi: kelajakmi, vaqtTekshir: vaqtTekshir, yozuvVaqti: yozuvVaqti,
+    vaqtFormatiTogrimi: vaqtFormatiTogrimi, yozuvniYangilash: yozuvniYangilash,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId
   };
 })(typeof window !== 'undefined' ? window : this);

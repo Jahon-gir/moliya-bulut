@@ -139,7 +139,7 @@
   }
 
   // ---- Yozuv qatori va ro'yxatlar ----
-  function yozuvQatori(y) {
+  function yozuvQatori(y, hozirgi) {
     var otkazma = y.tur === 'otkazma';
     var k = kategoriyaOl(y.kategoriya_id);
     var q = tugma(undefined, 'yozuv', function () { ochish(function () { return yozuvShakli(y); }, true); });
@@ -149,12 +149,14 @@
     nuqta.style.background = otkazma ? '#90a4ae' : (k ? k.rang : '#90a4ae');
     nom.appendChild(nuqta);
     nom.appendChild(document.createTextNode(otkazma ? 'O\'tkazma' : (k ? k.nom : 'Kategoriyasiz')));
+    // Bazada oldindan qolgan, vaqti hozirdan keyingi yozuvlar belgilab ko'rsatiladi
+    if (hozirgi && Calc.kelajakmi(y.sana, Calc.yozuvVaqti(y), hozirgi)) nom.appendChild(el('span', 'Kelajak', 'belgi-kelajak'));
     chap.appendChild(nom);
-    var tafsilot = otkazma
+    var tafsilot = Calc.yozuvVaqti(y) + ' · ' + (otkazma
       ? hisobNomi(y.hisob_id) + ' → ' + hisobNomi(y.qabul_hisob_id)
-      : hisobNomi(y.hisob_id);
+      : hisobNomi(y.hisob_id));
     if (y.izoh) tafsilot += ' · ' + y.izoh;
-    if (tafsilot) chap.appendChild(el('div', tafsilot, 'yozuv-izoh'));
+    chap.appendChild(el('div', tafsilot, 'yozuv-izoh'));
     q.appendChild(chap);
     if (otkazma) {
       q.appendChild(el('div', Calc.sumFormat(y.summa), 'yozuv-summa'));
@@ -169,6 +171,7 @@
   // Kunlar bo'yicha guruhlangan ro'yxat; har kun sarlavhasida o'sha kunning jami xarajati
   function yozuvlarRoyxati(guruhlar) {
     var quti = document.createElement('div');
+    var hozirgi = Calc.hozir();
     guruhlar.forEach(function (g) {
       var kun = karta();
       kun.classList.add('kun');
@@ -176,7 +179,7 @@
       sarlavha.appendChild(el('strong', Calc.sanaKorsat(g.sana)));
       sarlavha.appendChild(el('span', 'Xarajat: ' + Calc.sumFormat(g.xarajat)));
       kun.appendChild(sarlavha);
-      g.yozuvlar.forEach(function (y) { kun.appendChild(yozuvQatori(y)); });
+      g.yozuvlar.forEach(function (y) { kun.appendChild(yozuvQatori(y, hozirgi)); });
       quti.appendChild(kun);
     });
     return quti;
@@ -280,19 +283,58 @@
       if (boshqa) qabul.value = boshqa.id;
     }
 
-    // Sana (standart: bugun; kelajak sanasi ham mumkin)
-    var sanaMaydon = el('div', undefined, 'maydon');
+    // Sana va soat (standart: hozirgi vaqt). Bugundan keyingi sana va hozirdan keyingi soat tanlanmaydi.
+    var sanaVaqtMaydon = el('div', undefined, 'maydon');
+    var sanaVaqtQator = el('div', undefined, 'sana-vaqt');
+    var sanaQuti = el('div');
     var sanaBelgi = el('label', 'Sana');
     sanaBelgi.setAttribute('for', 'f-sana');
     var sana = document.createElement('input');
     sana.id = 'f-sana';
     sana.type = 'date';
-    sana.value = tahrir ? tahrir.sana : Calc.bugun();
-    var sanaXato = el('div', undefined, 'xato-matn');
-    sanaMaydon.appendChild(sanaBelgi);
-    sanaMaydon.appendChild(sana);
-    sanaMaydon.appendChild(sanaXato);
-    forma.appendChild(sanaMaydon);
+    sanaQuti.appendChild(sanaBelgi);
+    sanaQuti.appendChild(sana);
+    var vaqtQuti = el('div');
+    var vaqtBelgi = el('label', 'Soat');
+    vaqtBelgi.setAttribute('for', 'f-vaqt');
+    var vaqt = document.createElement('input');
+    vaqt.id = 'f-vaqt';
+    vaqt.type = 'time';
+    vaqt.step = 60;
+    vaqtQuti.appendChild(vaqtBelgi);
+    vaqtQuti.appendChild(vaqt);
+    sanaVaqtQator.appendChild(sanaQuti);
+    sanaVaqtQator.appendChild(vaqtQuti);
+    var vaqtXato = el('div', undefined, 'xato-matn');
+    sanaVaqtMaydon.appendChild(sanaVaqtQator);
+    sanaVaqtMaydon.appendChild(vaqtXato);
+    forma.appendChild(sanaVaqtMaydon);
+    var boshVaqt = tahrir ? { sana: tahrir.sana, vaqt: Calc.yozuvVaqti(tahrir) } : Calc.hozir();
+    sana.value = boshVaqt.sana;
+    vaqt.value = boshVaqt.vaqt;
+
+    // Tanlash oynasidagi chegaralar: sana bugundan keyin emas, bugun uchun soat hozirdan keyin emas
+    function chegaralarniYangila() {
+      var h = Calc.hozir();
+      sana.max = h.sana;
+      if (sana.value === h.sana) vaqt.max = h.vaqt; else vaqt.removeAttribute('max');
+    }
+    function vaqtniKorsat() {
+      chegaralarniYangila();
+      var r = Calc.vaqtTekshir(sana.value, vaqt.value, Calc.hozir());   // hozirgi vaqt har safar yangidan olinadi
+      vaqtXato.textContent = r.xato || '';
+      sana.classList.toggle('xatoli', !!r.xato);
+      vaqt.classList.toggle('xatoli', !!r.xato);
+      return r;
+    }
+    sana.addEventListener('change', vaqtniKorsat);
+    vaqt.addEventListener('change', vaqtniKorsat);
+    chegaralarniYangila();
+    if (tahrir && Calc.kelajakmi(tahrir.sana, boshVaqt.vaqt, Calc.hozir())) {
+      // shakl (forma) keyinroq qo'shiladi, shuning uchun bu ogohlantirish uning tepasida chiqadi
+      bloklar.push(el('div', 'Bu yozuvning vaqti kelajakda. Saqlash uchun sana va soatni o\'tmishga to\'g\'rilang.', 'ogohlantirish'));
+      vaqtniKorsat();
+    }
 
     // Izoh (ixtiyoriy)
     var izohMaydon = el('div', undefined, 'maydon');
@@ -352,7 +394,7 @@
         summa.xato.textContent = t.xato; summa.input.classList.add('xatoli'); xatolik = true;
       }
       if (!otkazma && !holat.kategoriya) { katXato.textContent = 'Kategoriyani tanlang'; xatolik = true; }
-      if (!sana.value) { sanaXato.textContent = 'Sanani kiriting'; xatolik = true; }
+      if (vaqtniKorsat().xato) xatolik = true;   // saqlash paytida ham hozirgi vaqt qayta tekshiriladi
       if (!hisob.value) { hisobXato.textContent = 'Hisobni tanlang'; xatolik = true; }
       if (otkazma) {
         var ox = variantlar.length < 2
@@ -369,7 +411,7 @@
       var yozuv = {
         id: tahrir ? tahrir.id : Data.yangiId(),
         yaratilgan: tahrir ? tahrir.yaratilgan : new Date().toISOString(),
-        tur: holat.tur, summa: t.summa, sana: sana.value,
+        tur: holat.tur, summa: t.summa, sana: sana.value, vaqt: vaqt.value,
         hisob_id: hisob.value,
         kategoriya_id: otkazma ? null : holat.kategoriya,
         izoh: izoh.value.trim()

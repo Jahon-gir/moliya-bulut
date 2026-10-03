@@ -1,5 +1,5 @@
 // Hisob-kitoblar. Bu faylda ekran bilan ishlaydigan kod bo'lmaydi.
-// Summa va sana yordamchilari, summani tekshirish, hisob qoldig'i, yozuvlarni kunlar bo'yicha guruhlash.
+// Summa va sana yordamchilari, kiritilgan ma'lumotni tekshirish, hisob qoldig'i, yozuvlarni kunlar bo'yicha guruhlash.
 (function (global) {
   'use strict';
 
@@ -44,21 +44,49 @@
     return { summa: n };
   }
 
-  // Hisob qoldig'i = boshlang'ich qoldiq + daromadlar - xarajatlar (TZ 8-band, 1-qoida).
-  // O'tkazma va qarz qismlari 3- va 8-bosqichlarda qo'shiladi.
+  // Hisob qoldig'i = boshlang'ich qoldiq + daromadlar - xarajatlar + kirgan o'tkazmalar - chiqqan o'tkazmalar
+  // (TZ 8-band, 1-qoida). Qarz qismi 8-bosqichda qo'shiladi.
   function hisobQoldigi(hisob, yozuvlar) {
     var q = hisob.boshlangich_qoldiq;
     yozuvlar.forEach(function (y) {
-      if (y.hisob_id !== hisob.id) return;
-      if (y.tur === 'daromad') q += y.summa;
-      else if (y.tur === 'xarajat') q -= y.summa;
+      if (y.tur === 'daromad' && y.hisob_id === hisob.id) q += y.summa;
+      else if (y.tur === 'xarajat' && y.hisob_id === hisob.id) q -= y.summa;
+      else if (y.tur === 'otkazma') {
+        if (y.hisob_id === hisob.id) q -= y.summa;          // chiqqan o'tkazma
+        if (y.qabul_hisob_id === hisob.id) q += y.summa;    // kirgan o'tkazma
+      }
     });
     return q;
   }
 
-  // Barcha berilgan hisoblardagi pulning yig'indisi
+  // Arxivlanmagan hisoblardagi pulning yig'indisi
   function umumiyBalans(hisoblar, yozuvlar) {
-    return hisoblar.reduce(function (j, h) { return j + hisobQoldigi(h, yozuvlar); }, 0);
+    return hisoblar.reduce(function (j, h) {
+      return h.arxivlangan ? j : j + hisobQoldigi(h, yozuvlar);
+    }, 0);
+  }
+
+  // O'tkazmada ikki hisob tanlangan va ular har xil bo'lishi kerak. Xato bo'lsa matn, bo'lmasa null.
+  function otkazmaTekshir(hisobId, qabulId) {
+    if (!hisobId || !qabulId) return 'Ikkala hisobni ham tanlang';
+    if (hisobId === qabulId) return 'Qayerdan va qayerga hisoblari har xil bo\'lsin';
+    return null;
+  }
+
+  // Hisob nomi bo'sh bo'lmasligi kerak. Natija: { nom } yoki { xato }
+  function hisobNomTekshir(matn) {
+    var nom = String(matn == null ? '' : matn).trim();
+    return nom ? { nom: nom } : { xato: 'Hisob nomini kiriting' };
+  }
+
+  // Boshlang'ich qoldiq: bo'sh yoki 0 mumkin, manfiy mumkin emas. Natija: { summa } yoki { xato }
+  function qoldiqTekshir(matn) {
+    var s = String(matn == null ? '' : matn).replace(/\s/g, '');
+    if (s === '') return { summa: 0 };
+    if (s.charAt(0) === '-') return { xato: 'Qoldiq manfiy bo\'lishi mumkin emas' };
+    if (!/^\d+$/.test(s)) return { xato: 'Qoldiq faqat raqamlardan iborat bo\'lsin' };
+    if (s.replace(/^0+/, '').length > 15) return { xato: 'Qoldiq juda katta' };
+    return { summa: parseInt(s, 10) };
   }
 
   // Yangisi tepada: avval sana, bir xil sanada yaratilgan vaqti bo'yicha
@@ -97,6 +125,7 @@
   global.Calc = {
     sumFormat: sumFormat, sanaKorsat: sanaKorsat, bugun: bugun,
     raqamFormat: raqamFormat, summaTekshir: summaTekshir,
+    qoldiqTekshir: qoldiqTekshir, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId
   };

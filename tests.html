@@ -87,6 +87,43 @@
       test('oxirgiHisobId: oxirgi yozuvdagi hisob', function () { teng(Calc.oxirgiHisobId(Y), 'h2'); });
       test('oxirgiHisobId: yozuv yo\'q -> undefined', function () { teng(Calc.oxirgiHisobId([]), undefined); });
 
+      // --- Calc: o'tkazma, hisoblar ---
+      var K = { id: 'k', boshlangich_qoldiq: 0 };
+      var N = { id: 'n', boshlangich_qoldiq: 0 };
+      var OT = [
+        { tur: 'daromad', summa: 5000000, hisob_id: 'n' },
+        { tur: 'xarajat', summa: 500000, hisob_id: 'n' },
+        { tur: 'otkazma', summa: 1000000, hisob_id: 'n', qabul_hisob_id: 'k' }
+      ];
+      test('o\'tkazma: chiqqan hisob qoldig\'i kamayadi', function () { teng(Calc.hisobQoldigi(N, OT), 3500000); });
+      test('o\'tkazma: kirgan hisob qoldig\'i ko\'payadi', function () { teng(Calc.hisobQoldigi(K, OT), 1000000); });
+      test('o\'tkazma: umumiy balansni o\'zgartirmaydi', function () {
+        teng(Calc.umumiyBalans([N, K], OT), Calc.umumiyBalans([N, K], OT.slice(0, 2)));
+        teng(Calc.umumiyBalans([N, K], OT), 4500000);
+      });
+      test('o\'tkazma: bir hisobga ikki marta tegmaydi (o\'ziga o\'tkazma holati)', function () {
+        teng(Calc.hisobQoldigi(N, [{ tur: 'otkazma', summa: 10, hisob_id: 'n', qabul_hisob_id: 'n' }]), 0);
+      });
+      test('arxivlangan hisob umumiy balansga kirmaydi', function () {
+        teng(Calc.umumiyBalans([N, { id: 'k', boshlangich_qoldiq: 0, arxivlangan: true }], OT), 3500000);
+      });
+      test('arxivlangan hisob qoldig\'i hisoblanaveradi', function () {
+        teng(Calc.hisobQoldigi({ id: 'k', boshlangich_qoldiq: 5, arxivlangan: true }, OT), 1000005);
+      });
+      test('otkazmaTekshir: bir xil hisob -> xato', function () { teng(!!Calc.otkazmaTekshir('a', 'a'), true); });
+      test('otkazmaTekshir: bo\'sh hisob -> xato', function () { teng(!!Calc.otkazmaTekshir('a', ''), true); });
+      test('otkazmaTekshir: har xil hisob -> xato yo\'q', function () { teng(Calc.otkazmaTekshir('a', 'b'), null); });
+      test('hisobNomTekshir: bo\'sh -> xato, bo\'sh joylar kesiladi', function () {
+        teng(!!Calc.hisobNomTekshir('  ').xato, true); teng(Calc.hisobNomTekshir('  Karta ').nom, 'Karta');
+      });
+      test('qoldiqTekshir: bo\'sh va 0 -> 0 (ruxsat)', function () {
+        teng(Calc.qoldiqTekshir('').summa, 0); teng(Calc.qoldiqTekshir('0').summa, 0);
+      });
+      test('qoldiqTekshir: "2 500 000" -> 2500000', function () { teng(Calc.qoldiqTekshir('2 500 000').summa, 2500000); });
+      test('qoldiqTekshir: manfiy va harf -> xato', function () {
+        teng(!!Calc.qoldiqTekshir('-1').xato, true); teng(!!Calc.qoldiqTekshir('1a').xato, true);
+      });
+
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
       var SINOV_BAZA = 'moliya-sinov';
       test('Data: "Naqd pul" hisobi va tayyor kategoriyalar bir marta yoziladi', function () {

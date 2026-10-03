@@ -131,3 +131,30 @@ input.xatoli, select.xatoli { border-color: var(--xarajat); }
 .yozuv-izoh { font-size: 14px; color: var(--xira); word-break: break-word; }
 .yozuv-summa { font-weight: 700; white-space: nowrap; }
 .balans-katta { font-size: 30px; font-weight: 800; }
+
+/* --- 3-bosqich: tahrirlash, o'chirish, hisoblar, qisqa xabar --- */
+[hidden] { display: none !important; }
+button.yozuv {
+  width: 100%; min-height: 56px; text-align: left; font: inherit; color: inherit;
+  background: none; border: 0; border-top: 1px solid var(--chiziq); cursor: pointer;
+}
+.orqaga-tugma {
+  min-height: 44px; padding: 0 4px; margin-bottom: 4px; font: inherit; cursor: pointer;
+  color: var(--asosiy); background: none; border: 0;
+}
+.ikkinchi-tugma, .xavfli-tugma {
+  width: 100%; min-height: 48px; margin-top: 8px; font: inherit; font-weight: 600; cursor: pointer;
+  background: none; border-radius: 12px;
+}
+.ikkinchi-tugma { color: var(--asosiy); border: 1px solid var(--asosiy); }
+.xavfli-tugma { color: var(--xarajat); border: 1px solid var(--xarajat); margin-bottom: 12px; }
+.toast {
+  position: fixed; left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom));
+  max-width: 536px; margin: 0 auto; padding: 8px 8px 8px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--matn); color: var(--fon); border-radius: 12px; z-index: 10;
+}
+.toast-tugma {
+  min-height: 44px; padding: 0 12px; font: inherit; font-weight: 700; cursor: pointer;
+  color: var(--fon); background: none; border: 0; text-decoration: underline;
+}

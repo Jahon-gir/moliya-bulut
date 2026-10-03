@@ -15,8 +15,8 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/calc.js?v=0.4.0"></script>
-  <script src="js/data.js?v=0.4.0"></script>
+  <script src="js/calc.js?v=0.4.1"></script>
+  <script src="js/data.js?v=0.4.1"></script>
   <script>
     (function () {
       var testlar = [];
@@ -211,6 +211,100 @@
         teng(g.map(function (x) { return x.sana + ':' + x.xarajat; }).join(), '2026-10-03:150000,2026-10-02:300000');
       });
 
+      // --- "Hozirgi qoldiq" tahriri: farq boshlang'ich qoldiqqa qo'shiladi, yozuvlar o'zgarmaydi ---
+      var HQ = { id: 'q', boshlangich_qoldiq: 500 };
+      var HQY = [
+        { id: 'y1', tur: 'daromad', summa: 1000, sana: '2026-10-01', hisob_id: 'q' },
+        { id: 'y2', tur: 'xarajat', summa: 300, sana: '2026-10-02', hisob_id: 'q' },
+        { id: 'y3', tur: 'otkazma', summa: 200, sana: '2026-10-03', hisob_id: 'q', qabul_hisob_id: 'w' }
+      ];   // joriy qoldiq: 500 + 1000 - 300 - 200 = 1000
+      test('yangiBoshlangich: formula eski + (yangi joriy - eski joriy)', function () {
+        teng(Calc.hisobQoldigi(HQ, HQY), 1000);
+        teng(Calc.yangiBoshlangichQoldiq(HQ, HQY, 1700), 500 + (1700 - 1000));
+        teng(Calc.yangiBoshlangichQoldiq(HQ, HQY, 400), 500 + (400 - 1000));
+      });
+      test('yangiBoshlangich: joriy qoldiq o\'zgarmasa, boshlang\'ich ham o\'zgarmaydi', function () {
+        teng(Calc.yangiBoshlangichQoldiq(HQ, HQY, 1000), 500);
+      });
+      test('yangiBoshlangich: yangi hisobning joriy qoldig\'i aynan kiritilgan summa bo\'ladi', function () {
+        [1700, 0, 400, 123456789, -250].forEach(function (yangi) {
+          var h = { id: 'q', boshlangich_qoldiq: Calc.yangiBoshlangichQoldiq(HQ, HQY, yangi) };
+          teng(Calc.hisobQoldigi(h, HQY), yangi);
+        });
+      });
+      test('yangiBoshlangich: umumiy balans aynan farqqa o\'zgaradi', function () {
+        var yangi = { id: 'q', boshlangich_qoldiq: Calc.yangiBoshlangichQoldiq(HQ, HQY, 1700) };
+        teng(Calc.umumiyBalans([yangi], HQY) - Calc.umumiyBalans([HQ], HQY), 700);
+      });
+      test('yangiBoshlangich: yozuvlar o\'zgarmaydi (kunlik jami, kategoriya yig\'indisi ham)', function () {
+        var oldin = JSON.stringify(HQY), g0 = JSON.stringify(Calc.kunlarBoyicha(HQY));
+        Calc.yangiBoshlangichQoldiq(HQ, HQY, 5000);
+        teng(JSON.stringify(HQY), oldin); teng(JSON.stringify(Calc.kunlarBoyicha(HQY)), g0);
+      });
+      test('yangiBoshlangich: manfiy joriy qoldiq ham bo\'ladi', function () {
+        teng(Calc.yangiBoshlangichQoldiq({ id: 'z', boshlangich_qoldiq: 0 }, [{ tur: 'xarajat', summa: 50, hisob_id: 'z' }], -50), 0);
+      });
+      test('qoldiqTekshir: tahrirda (manfiyMumkin) minus ruxsat, yangi hisobda yo\'q', function () {
+        teng(Calc.qoldiqTekshir('-50 000', true).summa, -50000);
+        teng(!!Calc.qoldiqTekshir('-50 000').xato, true);
+        teng(!!Calc.qoldiqTekshir('-50 000', false).xato, true);
+      });
+      test('qoldiqTekshir: tahrirda bo\'sh -> xato (tasodifan 0 bo\'lib qolmasin), "0" -> 0; yangi hisobda bo\'sh -> 0', function () {
+        teng(!!Calc.qoldiqTekshir('', true).xato, true); teng(!!Calc.qoldiqTekshir('   ', true).xato, true);
+        teng(Calc.qoldiqTekshir('0', true).summa, 0); teng(Calc.qoldiqTekshir('', false).summa, 0); teng(Calc.qoldiqTekshir('').summa, 0);
+      });
+      test('qoldiqTekshir: "-0" -> 0, yolg\'iz "-" va harflar xato', function () {
+        teng(Calc.qoldiqTekshir('-0', true).summa, 0); teng(Object.is(Calc.qoldiqTekshir('-0', true).summa, -0), false);
+        teng(!!Calc.qoldiqTekshir('-', true).xato, true); teng(!!Calc.qoldiqTekshir('-1a', true).xato, true);
+      });
+      test('raqamFormat -> qoldiqTekshir: manfiy qoldiq prefill aylanishi o\'zgarmaydi', function () {
+        teng(Calc.qoldiqTekshir(Calc.raqamFormat(String(-1250000)), true).summa, -1250000);
+      });
+
+      // --- Nom takrorlanmasligi (faol kategoriyalar va hisoblar) ---
+      var KM = [{ id: 'a', nom: 'Transport' }, { id: 'b', nom: 'Oziq-ovqat' }];
+      test('kategoriya nomi: aynan bir xil nom -> xato', function () {
+        teng(!!Calc.kategoriyaNomTekshir('Transport', KM).xato, true);
+      });
+      test('kategoriya nomi: katta-kichik harf farqi hisobga olinmaydi', function () {
+        teng(!!Calc.kategoriyaNomTekshir('transport', KM).xato, true); teng(!!Calc.kategoriyaNomTekshir('TRANSPORT', KM).xato, true);
+      });
+      test('kategoriya nomi: chetdagi va ichidagi bo\'sh joylar hisobga olinmaydi', function () {
+        teng(!!Calc.kategoriyaNomTekshir('  Transport  ', KM).xato, true);
+        teng(!!Calc.kategoriyaNomTekshir('Tran sport', KM).xato, true);
+        teng(!!Calc.kategoriyaNomTekshir('Oziq - ovqat', KM).xato, true);
+        teng(!!Calc.kategoriyaNomTekshir(' o z i q-ovqat', KM).xato, true);
+      });
+      test('kategoriya nomi: boshqa nom o\'tadi va kesilgan holda qaytadi', function () {
+        teng(Calc.kategoriyaNomTekshir('  Sport ', KM).nom, 'Sport');
+      });
+      test('kategoriya nomi: o\'zini tahrirlashda (istisnoId) o\'zi bilan to\'qnashmaydi', function () {
+        teng(!!Calc.kategoriyaNomTekshir('transport', KM, 'a').xato, false);
+        teng(!!Calc.kategoriyaNomTekshir('Oziq-ovqat', KM, 'a').xato, true);   // boshqasining nomi baribir band
+      });
+      test('kategoriya nomi: ro\'yxat bo\'sh bo\'lsa (arxivlangan yoki boshqa tur) takror hisoblanmaydi', function () {
+        teng(!!Calc.kategoriyaNomTekshir('Transport', []).xato, false); teng(!!Calc.kategoriyaNomTekshir('Transport').xato, false);
+      });
+      test('kategoriya nomi: bo\'sh nom hamon xato', function () { teng(!!Calc.kategoriyaNomTekshir('  ', KM).xato, true); });
+      var HM = [{ id: 'h1', nom: 'Naqd pul' }, { id: 'h2', nom: 'Karta' }];
+      test('hisob nomi: takror (katta-kichik harf va bo\'sh joylarsiz) -> xato', function () {
+        teng(!!Calc.hisobNomTekshir('karta', HM).xato, true);
+        teng(!!Calc.hisobNomTekshir(' NAQDPUL ', HM).xato, true);
+        teng(!!Calc.hisobNomTekshir('Naqd  pul', HM).xato, true);
+      });
+      test('hisob nomi: yangi nom o\'tadi, o\'zini tahrirlash mumkin', function () {
+        teng(Calc.hisobNomTekshir(' Uzcard ', HM).nom, 'Uzcard');
+        teng(!!Calc.hisobNomTekshir('KARTA', HM, 'h2').xato, false);
+        teng(!!Calc.hisobNomTekshir('karta', HM, 'h1').xato, true);
+      });
+      test('hisob nomi: bo\'sh nom xato; arxivlangan hisob ro\'yxatga berilmasa to\'qnashmaydi', function () {
+        teng(!!Calc.hisobNomTekshir('', HM).xato, true); teng(!!Calc.hisobNomTekshir('Karta', [HM[0]]).xato, false);
+      });
+      test('xato xabarlari tushunarli', function () {
+        teng(Calc.kategoriyaNomTekshir('transport', KM).xato, 'Bu nom bilan kategoriya allaqachon bor');
+        teng(Calc.hisobNomTekshir('karta', HM).xato, 'Bu nom bilan hisob allaqachon bor');
+      });
+
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
       var SINOV_BAZA = 'moliya-sinov';
       test('Data: "Naqd pul" hisobi va tayyor kategoriyalar bir marta yoziladi', function () {
@@ -237,6 +331,26 @@
           .then(function (h) { h.boshlangich_qoldiq = 2500000; return Data.saqlash('hisoblar', h); })
           .then(function () { return Data.olish('hisoblar', id); })
           .then(function (h) { teng(h.boshlangich_qoldiq, 2500000); teng(h.nom, 'Karta'); return Data.ochirish('hisoblar', id); });
+      });
+      test('Data: "Hozirgi qoldiq" tahriri saqlanadi, yozuvlar o\'zgarmaydi, joriy qoldiq kiritilgan summa bo\'ladi', function () {
+        var id = Data.yangiId(), yid = Data.yangiId();
+        var yoz = { id: yid, tur: 'xarajat', summa: 300, sana: '2026-10-02', hisob_id: id, kategoriya_id: 'k' };
+        return Data.saqlash('hisoblar', { id: id, yaratilgan: 'x', nom: 'Qoldiq', tur: 'karta', boshlangich_qoldiq: 1000, arxivlangan: false })
+          .then(function () { return Data.saqlash('yozuvlar', yoz); })
+          .then(function () { return Promise.all([Data.olish('hisoblar', id), Data.hammasi('yozuvlar')]); })
+          .then(function (r) {
+            var h = r[0], yozuvlar = r[1].filter(function (x) { return x.hisob_id === id; });
+            teng(Calc.hisobQoldigi(h, yozuvlar), 700);
+            h.boshlangich_qoldiq = Calc.yangiBoshlangichQoldiq(h, yozuvlar, 2000);
+            return Data.saqlash('hisoblar', h);
+          })
+          .then(function () { return Promise.all([Data.olish('hisoblar', id), Data.olish('yozuvlar', yid)]); })
+          .then(function (r) {
+            teng(Calc.hisobQoldigi(r[0], [r[1]]), 2000);
+            teng(r[0].boshlangich_qoldiq, 2300);
+            teng(JSON.stringify(r[1]), JSON.stringify(yoz));
+            return Data.ochirish('yozuvlar', yid).then(function () { return Data.ochirish('hisoblar', id); });
+          });
       });
       test('Data: kategoriya nomi o\'zgarsa, yozuv o\'sha id bo\'yicha yangi nomni ko\'radi', function () {
         var kid = Data.yangiId(), yid = Data.yangiId();

@@ -15,8 +15,8 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/calc.js"></script>
-  <script src="js/data.js"></script>
+  <script src="js/calc.js?v=0.4.0"></script>
+  <script src="js/data.js?v=0.4.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -124,45 +124,91 @@
         teng(!!Calc.qoldiqTekshir('-1').xato, true); teng(!!Calc.qoldiqTekshir('1a').xato, true);
       });
 
-      // --- Ortiqcha nusxalarni tozalash ---
-      var TK = [{ nom: 'Oziq-ovqat', tur: 'xarajat', rang: '#e57373' }];
-      function H(id, vaqt, nom, q) { return { id: id, yaratilgan: vaqt, nom: nom || 'Naqd pul', tur: 'naqd', boshlangich_qoldiq: q || 0, arxivlangan: false }; }
-      function KT(id, vaqt, nom) { return { id: id, yaratilgan: vaqt, nom: nom || 'Oziq-ovqat', tur: 'xarajat', rang: '#e57373', arxivlangan: false }; }
-      test('nusxalar: nusxa yo\'q bo\'lsa hech narsa o\'chmaydi', function () {
-        var r = Calc.ortiqchaNusxalar([H('a', '1')], [KT('k1', '1')], [], [], TK);
-        teng(r.hisoblar.length + r.kategoriyalar.length, 0);
+      // --- Versiya belgisi: brauzer har yangilanishda yangi fayllarni yuklashi uchun ---
+      function versiyaMatnidan(html) {
+        var m = html.match(/<meta name="versiya" content="([^"]+)"/);
+        return m ? m[1] : null;
+      }
+      test('Versiya: index.html dagi barcha style/js havolalari meta versiyasi bilan bir xil ?v= belgisiga ega', function () {
+        return fetch('index.html', { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (html) {
+          var v = versiyaMatnidan(html);
+          if (!v) throw new Error('index.html da <meta name="versiya"> yo\'q');
+          var havolalar = html.match(/(?:src|href)="(?:style\.css|js\/[^"?]+\.js)[^"]*"/g) || [];
+          teng(havolalar.length >= 4, true);   // style.css + calc, data, ui
+          havolalar.forEach(function (h) {
+            if (h.indexOf('?v=' + v + '"') === -1) throw new Error(h + ' — kutilgan ?v=' + v);
+          });
+        });
       });
-      test('nusxalar: ishlatilmagan ikkinchi "Naqd pul" o\'chiriladi, birinchisi qoladi', function () {
-        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [], [], TK);
-        teng(r.hisoblar.join(), 'b');
+      test('Versiya: tests.html ham index.html bilan bir xil versiyadagi fayllarni yuklaydi', function () {
+        return fetch('index.html', { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (html) {
+          var v = versiyaMatnidan(html);
+          var srcs = Array.prototype.map.call(document.scripts, function (s) { return s.getAttribute('src'); })
+            .filter(function (s) { return s && s.indexOf('js/') === 0; });
+          teng(srcs.length >= 2, true);
+          srcs.forEach(function (s) { if (s.indexOf('?v=' + v) === -1) throw new Error(s + ' — kutilgan ?v=' + v); });
+        });
       });
-      test('nusxalar: yozuvda ishlatilgani qoladi (hatto ikkinchisi bo\'lsa ham)', function () {
-        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [{ hisob_id: 'b' }], [], TK);
-        teng(r.hisoblar.join(), 'a');
+
+      // --- Hisobning boshlang'ich qoldig'ini tahrirlash ---
+      test('boshlang\'ich qoldiq o\'zgarsa, hisob qoldig\'i va umumiy balans shu farqqa o\'zgaradi', function () {
+        var yoz = [{ tur: 'daromad', summa: 1000, hisob_id: 'x' }, { tur: 'xarajat', summa: 300, hisob_id: 'x' }];
+        var eski = { id: 'x', boshlangich_qoldiq: 500 }, yangi = { id: 'x', boshlangich_qoldiq: 2500 };
+        teng(Calc.hisobQoldigi(eski, yoz), 1200);
+        teng(Calc.hisobQoldigi(yangi, yoz), 3200);
+        teng(Calc.umumiyBalans([yangi], yoz) - Calc.umumiyBalans([eski], yoz), 2000);
       });
-      test('nusxalar: o\'tkazmaning qabul hisobi ham ishlatilgan hisoblanadi', function () {
-        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [{ hisob_id: 'x', qabul_hisob_id: 'a' }], [], TK);
-        teng(r.hisoblar.join(), 'b');
+      test('boshlang\'ich qoldiqni 0 ga tushirish mumkin (qoldiqTekshir "0" va bo\'sh)', function () {
+        teng(Calc.qoldiqTekshir('0').summa, 0); teng(Calc.qoldiqTekshir('').summa, 0);
       });
-      test('nusxalar: ikkalasi ishlatilgan bo\'lsa, hech biri o\'chmaydi', function () {
-        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [{ hisob_id: 'a' }, { hisob_id: 'b' }], [], TK);
-        teng(r.hisoblar.length, 0);
+      test('boshlang\'ich qoldiqni tahrirlash: raqamFormat -> qoldiqTekshir aylanishi o\'zgarmaydi', function () {
+        teng(Calc.qoldiqTekshir(Calc.raqamFormat(String(2500000))).summa, 2500000);
       });
-      test('nusxalar: qarzda ishlatilgani qoladi', function () {
-        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [], [{ hisob_id: 'x', tolovlar: [{ hisob_id: 'a' }] }], TK);
-        teng(r.hisoblar.join(), 'b');
+
+      // --- Kategoriya nomi ---
+      test('kategoriyaNomTekshir: bo\'sh -> xato, bo\'sh joylar kesiladi', function () {
+        teng(!!Calc.kategoriyaNomTekshir('   ').xato, true);
+        teng(Calc.kategoriyaNomTekshir('  Bozor ').nom, 'Bozor');
       });
-      test('nusxalar: boshqa nomli yoki qoldig\'i bor hisobga tegmaydi', function () {
-        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2', 'Karta'), H('c', '3', 'Karta'), H('d', '4', 'Naqd pul', 500)], [], [], [], TK);
-        teng(r.hisoblar.length, 0);
+
+      // --- Filtr va qidiruv ---
+      var F = [
+        { id: '1', tur: 'daromad', summa: 5000000, sana: '2026-10-01', hisob_id: 'n', kategoriya_id: 'maosh', izoh: 'Oylik' },
+        { id: '2', tur: 'xarajat', summa: 300000, sana: '2026-10-02', hisob_id: 'n', kategoriya_id: 'oziq', izoh: 'Bozor: Go\'sht' },
+        { id: '3', tur: 'xarajat', summa: 50000, sana: '2026-10-02', hisob_id: 'k', kategoriya_id: 'trans', izoh: '' },
+        { id: '4', tur: 'xarajat', summa: 150000, sana: '2026-10-03', hisob_id: 'k', kategoriya_id: 'oziq', izoh: 'bozor' },
+        { id: '5', tur: 'otkazma', summa: 1000000, sana: '2026-10-03', hisob_id: 'n', qabul_hisob_id: 'k', kategoriya_id: null, izoh: '' }
+      ];
+      function idlar(f) { return Calc.yozuvlarniSuz(F, f).map(function (y) { return y.id; }).join(); }
+      test('filtr: bo\'sh filtr hamma yozuvni qaytaradi', function () { teng(idlar({}), '1,2,3,4,5'); teng(idlar(), '1,2,3,4,5'); });
+      test('filtr: tur', function () { teng(idlar({ tur: 'xarajat' }), '2,3,4'); teng(idlar({ tur: 'otkazma' }), '5'); });
+      test('filtr: hisob (o\'tkazmaning qabul hisobi ham kiradi)', function () {
+        teng(idlar({ hisob: 'k' }), '3,4,5'); teng(idlar({ hisob: 'n' }), '1,2,5');
       });
-      test('nusxalar: ortiqcha tayyor kategoriya o\'chadi, o\'zgartirilgani (boshqa nom) qoladi', function () {
-        var r = Calc.ortiqchaNusxalar([], [KT('k1', '1'), KT('k2', '2'), KT('k3', '3', 'Bozor')], [], [], TK);
-        teng(r.kategoriyalar.join(), 'k2');
+      test('filtr: kategoriya', function () { teng(idlar({ kategoriya: 'oziq' }), '2,4'); });
+      test('filtr: sana oralig\'i chegaralari bilan', function () {
+        teng(idlar({ dan: '2026-10-02', gacha: '2026-10-02' }), '2,3');
+        teng(idlar({ dan: '2026-10-03' }), '4,5'); teng(idlar({ gacha: '2026-10-01' }), '1');
       });
-      test('nusxalar: kategoriya yozuvda ishlatilgan bo\'lsa qoladi', function () {
-        var r = Calc.ortiqchaNusxalar([], [KT('k1', '1'), KT('k2', '2')], [{ kategoriya_id: 'k2' }], [], TK);
-        teng(r.kategoriyalar.join(), 'k1');
+      test('filtr: dan > gacha -> hech narsa', function () { teng(idlar({ dan: '2026-10-03', gacha: '2026-10-01' }), ''); });
+      test('filtr: izoh bo\'yicha qidiruv harf kattaligiga qaramaydi', function () {
+        teng(idlar({ qidiruv: 'BOZOR' }), '2,4'); teng(idlar({ qidiruv: 'go\'sht' }), '2');
+      });
+      test('filtr: qidiruvdagi bo\'sh joylar kesiladi, izohsiz yozuv topilmaydi', function () {
+        teng(idlar({ qidiruv: '  oylik ' }), '1'); teng(idlar({ qidiruv: 'x' }), '');
+      });
+      test('filtr: shartlar birgalikda ishlaydi', function () {
+        teng(idlar({ tur: 'xarajat', hisob: 'k', kategoriya: 'oziq', qidiruv: 'bozor' }), '4');
+      });
+      test('filtr: asl massiv o\'zgarmaydi', function () { Calc.yozuvlarniSuz(F, { tur: 'daromad' }); teng(F.length, 5); });
+      test('filtrFaolmi: qidiruvdan tashqari shartlar', function () {
+        teng(Calc.filtrFaolmi({ qidiruv: 'a' }), false); teng(Calc.filtrFaolmi({ dan: '2026-01-01' }), true);
+        teng(Calc.filtrFaolmi(bosh()), false);
+        function bosh() { return { tur: '', hisob: '', kategoriya: '', dan: '', gacha: '', qidiruv: '' }; }
+      });
+      test('filtr natijasida kun sarlavhasidagi xarajat faqat ko\'rsatilgan yozuvlardan', function () {
+        var g = Calc.kunlarBoyicha(Calc.yozuvlarniSuz(F, { kategoriya: 'oziq' }));
+        teng(g.map(function (x) { return x.sana + ':' + x.xarajat; }).join(), '2026-10-03:150000,2026-10-02:300000');
       });
 
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
@@ -184,17 +230,26 @@
           return Data.hammasi('hisoblar');
         }).then(function (h) { teng(h.length, 1); });
       });
-      test('Data: nusxalarniTozalash bazadagi ortiqcha nusxani o\'chiradi, ishlatilganini saqlaydi', function () {
-        var ortiqcha = { id: 'ort', yaratilgan: '2999-01-01T00:00:00.000Z', nom: 'Naqd pul', tur: 'naqd', boshlangich_qoldiq: 0, arxivlangan: false };
-        var ortiqchaKat = { id: 'ortk', yaratilgan: '2999-01-01T00:00:00.000Z', nom: 'Oziq-ovqat', tur: 'xarajat', rang: '#e57373', arxivlangan: false };
-        return Data.saqlash('hisoblar', ortiqcha).then(function () {
-          return Data.saqlash('kategoriyalar', ortiqchaKat);
-        }).then(function () { return Data.nusxalarniTozalash(); }).then(function () {
-          return Promise.all([Data.hammasi('hisoblar'), Data.hammasi('kategoriyalar')]);
-        }).then(function (r) {
-          teng(r[0].length, 1); teng(r[0][0].id === 'ort', false);
-          teng(r[1].filter(function (k) { return k.nom === 'Oziq-ovqat'; }).length, 1);
-        });
+      test('Data: hisobning boshlang\'ich qoldig\'i o\'zgartirilib saqlanadi', function () {
+        var id = Data.yangiId();
+        return Data.saqlash('hisoblar', { id: id, yaratilgan: 'x', nom: 'Karta', tur: 'karta', boshlangich_qoldiq: 1000, arxivlangan: false })
+          .then(function () { return Data.olish('hisoblar', id); })
+          .then(function (h) { h.boshlangich_qoldiq = 2500000; return Data.saqlash('hisoblar', h); })
+          .then(function () { return Data.olish('hisoblar', id); })
+          .then(function (h) { teng(h.boshlangich_qoldiq, 2500000); teng(h.nom, 'Karta'); return Data.ochirish('hisoblar', id); });
+      });
+      test('Data: kategoriya nomi o\'zgarsa, yozuv o\'sha id bo\'yicha yangi nomni ko\'radi', function () {
+        var kid = Data.yangiId(), yid = Data.yangiId();
+        return Data.saqlash('kategoriyalar', { id: kid, yaratilgan: 'x', nom: 'Eski', tur: 'xarajat', rang: '#e57373', arxivlangan: false })
+          .then(function () { return Data.saqlash('yozuvlar', { id: yid, tur: 'xarajat', summa: 1, kategoriya_id: kid }); })
+          .then(function () { return Data.olish('kategoriyalar', kid); })
+          .then(function (k) { k.nom = 'Yangi'; return Data.saqlash('kategoriyalar', k); })
+          .then(function () { return Promise.all([Data.olish('yozuvlar', yid), Data.hammasi('kategoriyalar')]); })
+          .then(function (r) {
+            var k = r[1].filter(function (x) { return x.id === r[0].kategoriya_id; })[0];
+            teng(k.nom, 'Yangi');
+            return Data.ochirish('yozuvlar', yid).then(function () { return Data.ochirish('kategoriyalar', kid); });
+          });
       });
       test('Data: yozuv saqlanadi, o\'qiladi va o\'chiriladi', function () {
         var id = Data.yangiId();

@@ -1095,6 +1095,41 @@
     return k;
   }
 
+  // Diagramma bo'lagi bosilganda: shu kategoriya yoki kunning yozuvlari filtrlangan ro'yxat sifatida ochiladi ("Orqaga" hisobotga qaytaradi)
+  function yozuvlarniOchish(f) {
+    filtr = Object.assign(bosFiltr(), f);
+    ochish(yozuvlarEkrani, false);
+  }
+
+  function xarajatDonasi(joriyH, chegara, hisob) {
+    var k = karta();
+    k.classList.add('diagramma-karta');
+    k.appendChild(el('h2', 'Xarajatlar kategoriyalar bo\'yicha'));
+    if (!joriyH.xarajatTaqsimoti.length) {
+      k.appendChild(el('p', 'Bu davrda xarajat yo\'q.', 'xira'));
+      return k;
+    }
+    k.appendChild(Diagramma.dona({
+      taqsimot: joriyH.xarajatTaqsimoti, jami: joriyH.xarajat, kategoriya: kategoriyaOl,
+      bosilganda: function (id) { yozuvlarniOchish({ tur: 'xarajat', kategoriya: id, dan: chegara.dan, gacha: chegara.gacha, hisob: hisob }); }
+    }));
+    return k;
+  }
+
+  // Vaqt bo'yicha ustunlar: hafta va oyda kunlar, yilda oylar (kun davrida yo'q)
+  function vaqtDiagrammasi(h) {
+    var v = Calc.diagrammaVaqt(malumot.yozuvlar, h.tur, h.sana, h.hisob);
+    if (!v) return null;
+    var k = karta();
+    k.classList.add('diagramma-karta');
+    k.appendChild(el('h2', 'Daromad va xarajat: ' + (h.tur === 'yil' ? 'oylar' : 'kunlar') + ' bo\'yicha'));
+    k.appendChild(Diagramma.ustunli({
+      vaqt: v,
+      bosilganda: function (b) { yozuvlarniOchish({ dan: b.dan, gacha: b.gacha, hisob: h.hisob }); }
+    }));
+    return k;
+  }
+
   function hisobotEkrani() {
     var h = hisobotHolat;
     if (!h.sana) h.sana = Calc.bugun();
@@ -1167,7 +1202,9 @@
     tk.appendChild(q2);
     bloklar.push(tk);
 
-    bloklar.push(taqsimotKartasi('Xarajatlar kategoriyalar bo\'yicha', joriyH.xarajatTaqsimoti));
+    bloklar.push(xarajatDonasi(joriyH, chegara, h.hisob));
+    var ustunlar = vaqtDiagrammasi(h);
+    if (ustunlar) bloklar.push(ustunlar);
     bloklar.push(taqsimotKartasi('Daromadlar kategoriyalar bo\'yicha', joriyH.daromadTaqsimoti));
     return bloklar;
   }
@@ -1217,6 +1254,7 @@
 
   function chizish(bloklar, scrollniSaqla) {
     var y = window.pageYOffset;
+    Diagramma.maslahatYashir();
     ekran.textContent = '';
     bloklar.forEach(function (b) { ekran.appendChild(b); });
     window.scrollTo(0, scrollniSaqla ? y : 0);

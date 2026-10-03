@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 4 (03.10.2026)
+Hujjat versiyasi: 6 (03.10.2026)
 
 ## 1. Maqsad
 
@@ -91,9 +91,12 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Davrda yozuv bo'lmasa, "Bu davrda yozuvlar yo'q" degan xabar chiqadi.
 
 ### F6. Diagrammalar
-- Xarajatlarning kategoriyalar bo'yicha doiraviy diagrammasi.
-- Vaqt bo'yicha ustunli diagramma: hafta va oyda kunlar bo'yicha, yilda oylar bo'yicha. Daromad va xarajat yonma-yon.
-- Diagramma bo'lagini bossa, o'sha kategoriya yoki kunning yozuvlari ochiladi.
+- **Doiraviy diagramma** (halqa): tanlangan davr uchun xarajatlarning kategoriyalar bo'yicha taqsimoti. Tilim rangi — kategoriyaning o'z rangi (F4). Tilimlar orasida 2 piksel bo'shliq. Markazda jami xarajat, tilim ustiga olib borilsa (yoki ro'yxat qatoriga) shu kategoriya va summasi ko'rinadi. Diagramma ostida ro'yxat: har kategoriyaning rangi, nomi, summasi va foizi. Nomlar so'z o'rtasidan sinmaydi (kerak bo'lsa so'zlar bo'yicha keyingi qatorga o'raladi). Bitta kategoriya bo'lsa to'liq halqa, 15 va undan ko'p kategoriya bo'lsa ham hamma tilim chiziladi.
+- **Vaqt bo'yicha ustunli diagramma:** hafta va oyda kunlar bo'yicha, yilda oylar bo'yicha (kun davri uchun bu diagramma yo'q). Har ustunda daromad va xarajat yonma-yon (ko'k va to'q sariq: rang ko'rligi sinovidan o'tgan juft). O'qlarda sana va summa ko'rinadi; katta summalar qisqartiriladi (`1,2 mln`, `5 ming`, `2,5 mlrd`). Eng katta qiymatga bitta yozuv qo'yiladi, har ustunga raqam yozilmaydi. Juda kichik, lekin noldan katta qiymat ham ko'rinadi (kamida 2 piksel balandlikda).
+- **Diagramma bo'lagini bossa** (sichqoncha, barmoq yoki Enter), o'sha kategoriya (tanlangan davr va hisob bo'yicha) yoki kunning (yilda oyning) yozuvlari filtrlangan ro'yxat sifatida ochiladi; "Orqaga" hisobotga qaytaradi.
+- **Raqamlar hisobot bilan aynan mos:** diagrammadagi har tilim va ustun hisobot (F5) bilan bir xil hisob-kitobdan olinadi: tanlangan hisob filtri, o'tkazma va qarz kirmasligi, davr chegaralari bir xil.
+- **Tashqi kutubxonasiz**, SVG bilan chiziladi; yorug' va qorong'i rejimda ranglar mos (ustun ranglari har rejim uchun alohida tanlangan). Tooltip (hover va klaviatura fokusida) faqat qo'shimcha: har qiymat diagramma ostidagi ro'yxatda yoki "Jadval ko'rinishi"da ham bor.
+- **Ekran o'quvchilari uchun:** har tilim va ustunda matnli muqobil (`aria-label`: nom yoki sana, summa, foiz). Ustunlar orasida strelka tugmalari bilan yurish, Enter bilan yozuvlarni ochish mumkin. "Jadval ko'rinishi" har ustun va jami qiymatlarni jadval sifatida beradi.
 
 ### F7. Byudjet
 - Har bir xarajat kategoriyasiga oylik chegara qo'yish mumkin. Chegara qo'yish majburiy emas.
@@ -103,7 +106,8 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Ixtiyoriy umumiy oylik chegara (barcha xarajatlar uchun).
 
 ### F8. Qarzlar
-- Qarz qo'shish: yo'nalish (men berdim yoki men oldim), kimga yoki kimdan (ism), summa, hisob, sana, qaytarish muddati (ixtiyoriy), izoh.
+- Qarz qo'shish: yo'nalish (men berdim yoki men oldim), kimga yoki kimdan (ism), summa, hisob, sana va soat (`vaqt`), qaytarish muddati (ixtiyoriy), izoh.
+- **Vaqt qoidasi qarzga ham tegishli:** qarzning sanasi va soati hozirgi vaqtdan keyin bo'lmaydi (F2 dagi qoida: daqiqa aniqligida, standart qiymat — hozirgi vaqt, sana va soat uchun F2 dagi g'ildirakli tanlagich; saqlashda hozirgi vaqt qayta tekshiriladi). Faqat **qaytarish muddati** bundan mustasno: u tabiatan kelajakda bo'ladi.
 - Qarzni qisman yoki to'liq qaytarilgan deb belgilash. Har bir to'lov sanasi, soati (`vaqt`) va summasi bilan saqlanadi. To'lov vaqti ham F2 dagi vaqt qoidasiga bo'ysunadi: hozirgi vaqtdan keyin bo'lmaydi.
 - Ko'rsatiladi: menga qaytarilishi kerak bo'lgan jami summa, men qaytarishim kerak bo'lgan jami summa.
 - Muddati o'tgan qarzlar alohida belgilanadi.
@@ -146,6 +150,7 @@ Claude Code bu ro'yxatdagi narsalarni so'ralmaguncha qo'shmasligi kerak.
   - `js/data.js` — ma'lumotni saqlash va o'qish
   - `js/calc.js` — barcha hisob-kitoblar (yig'indilar, davrlar, byudjet, qarz). Bu faylda ekran bilan ishlaydigan kod bo'lmaydi
   - `js/glidirak.js` — g'ildirakli sana va vaqt tanlagich (ekran komponenti; qiymatlarni hisoblash `calc.js` da)
+  - `js/diagramma.js` — SVG diagrammalar: doira va ustunli (ekran komponenti; barcha raqamlar `calc.js` dan)
   - `js/ui.js` — ekranlar
   - `manifest.json`, `sw.js`, belgilar
   - `tests.html` — brauzerda ochilganda `calc.js` testlarini ishga tushiradi va natijani ko'rsatadi
@@ -170,12 +175,12 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 | Yozuv | id, tur (daromad / xarajat / otkazma), summa, sana, vaqt, hisob_id, qabul_hisob_id (faqat o'tkazmada), kategoriya_id, izoh |
 | Kategoriya | id, nom, tur (daromad / xarajat), rang, arxivlangan |
 | Byudjet | kategoriya_id (yoki "umumiy"), oylik_limit |
-| Qarz | id, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, muddat, izoh, tolovlar [{sana, vaqt, summa, hisob_id}], yopilgan |
+| Qarz | id, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, vaqt, muddat, izoh, tolovlar [{sana, vaqt, summa, hisob_id}], yopilgan |
 | Sozlamalar | sxema_versiyasi (hozir 2), oxirgi_zaxira_sanasi |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
-- **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi.
+- **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi. Qarz to'plami 8-bosqichda quriladi va hozir bo'sh, shuning uchun qarzdagi `vaqt` uchun alohida ko'chirish kerak emas: qarzlar boshidanoq `vaqt` bilan yoziladi.
 - **Ko'chirish (1 → 2):** eski yozuvlarga faqat `vaqt` qo'shiladi, boshqa hech narsa o'zgarmaydi va hech narsa o'chirilmaydi. Yozuvning `yaratilgan` vaqtidagi (mahalliy) sana yozuvning `sana` si bilan bir xil bo'lsa, `vaqt` o'sha yaratilgan soat:daqiqa bo'ladi, aks holda `00:00`. Ko'chirish bitta amal sifatida bajariladi (yarim yo'lda to'xtamaydi) va ikkinchi marta ishlasa ham ma'lumot buzilmaydi. Shu qoida eski zaxira fayllarini tiklashda ham qo'llanadi.
 
 ## 8. Hisob-kitob qoidalari
@@ -259,6 +264,9 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Tezkor saqlash: 2-qadamdan boshlab pastdagi "Saqlash" yozuvni oxirgi ishlatilgan hisob (yoki tanlangani), hozirgi sana va vaqt bilan saqlaydi; kategoriya tanlanmagan bo'lsa, xato chiqadi.
 - G'ildirakda kelajak kun, soat va daqiqa kulrang va tanlanmaydi (barmoq bilan aylantirilsa ham hozirgi vaqtga qaytadi). 360 piksel kenglikda va yorug' hamda qorong'i rejimda to'g'ri ko'rinadi.
 - Yozuvni tahrirlash bitta ekranda, sana va vaqt shu g'ildirak bilan tanlanadi.
+- Diagrammalar: doiradagi tilimlar va ustunlardagi raqamlar hisobotdagi raqamlarga aynan teng (sinov ma'lumoti bilan: oylik daromad 5 000 000, xarajat 500 000; Oziq-ovqat 450 000 (90%), Transport 50 000 (10%); 2-kun ustunida xarajat 350 000). Doira tilimi yoki ustun bosilsa, tegishli yozuvlar ochiladi.
+- Diagrammalar chegara holatlarida to'g'ri: davrda yozuv yo'q, faqat bitta kategoriya, 15 ta kategoriya, juda katta va juda kichik summalar, manfiy qoldiq; 5 000 yozuv bilan 1 soniyadan tez; 360 piksel kenglikda gorizontal aylantirishsiz, yorug' va qorong'i rejimda.
+- Qarzning sanasi va soati hozirdan keyin bo'lsa, qarz saqlanmaydi (21:00 mumkin, 21:01 mumkin emas); to'lov sanasi va soati ham shunday. Qaytarish muddati kelajakda bo'lishi mumkin.
 - Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.
 - Bazada oldindan qolgan kelajak vaqtli yozuv o'chirilmaydi, "Kelajak" belgisi bilan ko'rinadi va tahrirlashda vaqtni o'tmishga to'g'rilashni talab qiladi.
 
@@ -302,4 +310,3 @@ Quyidagilar taxmin asosida yozilgan. Boshqacha bo'lishi kerak bo'lsa, qurishdan 
 2. Ilova nomi tanlanmagan. 10-bosqichgacha nom va belgi kerak bo'ladi.
 3. Kategoriyalar ro'yxati taxminiy.
 4. Zaxira eslatmasi muddati 14 kun deb olingan.
-5. Qarzning o'zining sanasi (F8) ham hozirdan keyin bo'lmasligi va unga ham soat kerakligi hal qilinmagan: hozircha faqat qarz to'lovlari uchun yozilgan. 8-bosqichdan oldin hal qilinadi.

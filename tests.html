@@ -124,6 +124,47 @@
         teng(!!Calc.qoldiqTekshir('-1').xato, true); teng(!!Calc.qoldiqTekshir('1a').xato, true);
       });
 
+      // --- Ortiqcha nusxalarni tozalash ---
+      var TK = [{ nom: 'Oziq-ovqat', tur: 'xarajat', rang: '#e57373' }];
+      function H(id, vaqt, nom, q) { return { id: id, yaratilgan: vaqt, nom: nom || 'Naqd pul', tur: 'naqd', boshlangich_qoldiq: q || 0, arxivlangan: false }; }
+      function KT(id, vaqt, nom) { return { id: id, yaratilgan: vaqt, nom: nom || 'Oziq-ovqat', tur: 'xarajat', rang: '#e57373', arxivlangan: false }; }
+      test('nusxalar: nusxa yo\'q bo\'lsa hech narsa o\'chmaydi', function () {
+        var r = Calc.ortiqchaNusxalar([H('a', '1')], [KT('k1', '1')], [], [], TK);
+        teng(r.hisoblar.length + r.kategoriyalar.length, 0);
+      });
+      test('nusxalar: ishlatilmagan ikkinchi "Naqd pul" o\'chiriladi, birinchisi qoladi', function () {
+        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [], [], TK);
+        teng(r.hisoblar.join(), 'b');
+      });
+      test('nusxalar: yozuvda ishlatilgani qoladi (hatto ikkinchisi bo\'lsa ham)', function () {
+        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [{ hisob_id: 'b' }], [], TK);
+        teng(r.hisoblar.join(), 'a');
+      });
+      test('nusxalar: o\'tkazmaning qabul hisobi ham ishlatilgan hisoblanadi', function () {
+        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [{ hisob_id: 'x', qabul_hisob_id: 'a' }], [], TK);
+        teng(r.hisoblar.join(), 'b');
+      });
+      test('nusxalar: ikkalasi ishlatilgan bo\'lsa, hech biri o\'chmaydi', function () {
+        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [{ hisob_id: 'a' }, { hisob_id: 'b' }], [], TK);
+        teng(r.hisoblar.length, 0);
+      });
+      test('nusxalar: qarzda ishlatilgani qoladi', function () {
+        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2')], [], [], [{ hisob_id: 'x', tolovlar: [{ hisob_id: 'a' }] }], TK);
+        teng(r.hisoblar.join(), 'b');
+      });
+      test('nusxalar: boshqa nomli yoki qoldig\'i bor hisobga tegmaydi', function () {
+        var r = Calc.ortiqchaNusxalar([H('a', '1'), H('b', '2', 'Karta'), H('c', '3', 'Karta'), H('d', '4', 'Naqd pul', 500)], [], [], [], TK);
+        teng(r.hisoblar.length, 0);
+      });
+      test('nusxalar: ortiqcha tayyor kategoriya o\'chadi, o\'zgartirilgani (boshqa nom) qoladi', function () {
+        var r = Calc.ortiqchaNusxalar([], [KT('k1', '1'), KT('k2', '2'), KT('k3', '3', 'Bozor')], [], [], TK);
+        teng(r.kategoriyalar.join(), 'k2');
+      });
+      test('nusxalar: kategoriya yozuvda ishlatilgan bo\'lsa qoladi', function () {
+        var r = Calc.ortiqchaNusxalar([], [KT('k1', '1'), KT('k2', '2')], [{ kategoriya_id: 'k2' }], [], TK);
+        teng(r.kategoriyalar.join(), 'k1');
+      });
+
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
       var SINOV_BAZA = 'moliya-sinov';
       test('Data: "Naqd pul" hisobi va tayyor kategoriyalar bir marta yoziladi', function () {
@@ -142,6 +183,18 @@
         }).then(function () {
           return Data.hammasi('hisoblar');
         }).then(function (h) { teng(h.length, 1); });
+      });
+      test('Data: nusxalarniTozalash bazadagi ortiqcha nusxani o\'chiradi, ishlatilganini saqlaydi', function () {
+        var ortiqcha = { id: 'ort', yaratilgan: '2999-01-01T00:00:00.000Z', nom: 'Naqd pul', tur: 'naqd', boshlangich_qoldiq: 0, arxivlangan: false };
+        var ortiqchaKat = { id: 'ortk', yaratilgan: '2999-01-01T00:00:00.000Z', nom: 'Oziq-ovqat', tur: 'xarajat', rang: '#e57373', arxivlangan: false };
+        return Data.saqlash('hisoblar', ortiqcha).then(function () {
+          return Data.saqlash('kategoriyalar', ortiqchaKat);
+        }).then(function () { return Data.nusxalarniTozalash(); }).then(function () {
+          return Promise.all([Data.hammasi('hisoblar'), Data.hammasi('kategoriyalar')]);
+        }).then(function (r) {
+          teng(r[0].length, 1); teng(r[0][0].id === 'ort', false);
+          teng(r[1].filter(function (k) { return k.nom === 'Oziq-ovqat'; }).length, 1);
+        });
       });
       test('Data: yozuv saqlanadi, o\'qiladi va o\'chiriladi', function () {
         var id = Data.yangiId();

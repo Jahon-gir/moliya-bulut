@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testlar</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px; }
+    .ok { color: #1b7f3b; } .xato { color: #c62828; font-weight: 600; }
+    #jami { font-size: 20px; font-weight: 700; margin: 12px 0; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Testlar</h1>
+  <div id="jami">Ishlayapti…</div>
+  <ul id="natija"></ul>
+  <script src="js/calc.js"></script>
+  <script src="js/data.js"></script>
+  <script>
+    (function () {
+      var testlar = [];
+      function test(nom, fn) { testlar.push({ nom: nom, fn: fn }); }
+      function teng(haqiqiy, kutilgan) {
+        if (haqiqiy !== kutilgan) throw new Error('kutilgan: ' + JSON.stringify(kutilgan) + ', chiqdi: ' + JSON.stringify(haqiqiy));
+      }
+
+      // --- Calc: summa va sana ---
+      test('1250000 -> "1 250 000 so\'m"', function () { teng(Calc.sumFormat(1250000), '1 250 000 so\'m'); });
+      test('0 -> "0 so\'m"', function () { teng(Calc.sumFormat(0), '0 so\'m'); });
+      test('999 -> "999 so\'m" (ajratuvchisiz)', function () { teng(Calc.sumFormat(999), '999 so\'m'); });
+      test('1000 -> "1 000 so\'m"', function () { teng(Calc.sumFormat(1000), '1 000 so\'m'); });
+      test('manfiy summa', function () { teng(Calc.sumFormat(-4500), '−4 500 so\'m'); });
+      test('sana "2026-10-03" -> "03.10.2026"', function () { teng(Calc.sanaKorsat('2026-10-03'), '03.10.2026'); });
+      test('bugun() YYYY-MM-DD ko\'rinishida', function () { teng(Calc.bugun(new Date(2026, 0, 5)), '2026-01-05'); });
+
+      // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
+      var SINOV_BAZA = 'moliya-sinov';
+      test('Data: "Naqd pul" hisobi va tayyor kategoriyalar bir marta yoziladi', function () {
+        return Data.boshlash(SINOV_BAZA).then(function () {
+          return Promise.all([Data.hammasi('hisoblar'), Data.hammasi('kategoriyalar'), Data.olish('sozlamalar', 'asosiy')]);
+        }).then(function (r) {
+          teng(r[0].length, 1);
+          teng(r[0][0].nom, 'Naqd pul');
+          teng(r[0][0].boshlangich_qoldiq, 0);
+          teng(r[1].filter(function (k) { return k.tur === 'xarajat'; }).length, 11);
+          teng(r[1].filter(function (k) { return k.tur === 'daromad'; }).length, 4);
+          teng(r[2].sxema_versiyasi, 1);
+          // qayta ochilganda takrorlanmasligi kerak
+          Data.yopish();
+          return Data.boshlash(SINOV_BAZA);
+        }).then(function () {
+          return Data.hammasi('hisoblar');
+        }).then(function (h) { teng(h.length, 1); });
+      });
+      test('Data: yozuv saqlanadi, o\'qiladi va o\'chiriladi', function () {
+        var id = Data.yangiId();
+        return Data.saqlash('yozuvlar', { id: id, tur: 'xarajat', summa: 1000 }).then(function () {
+          return Data.olish('yozuvlar', id);
+        }).then(function (y) {
+          teng(y.summa, 1000);
+          return Data.ochirish('yozuvlar', id);
+        }).then(function () { return Data.olish('yozuvlar', id); })
+          .then(function (y) { teng(y, undefined); });
+      });
+      test('Data: yangiId() noyob', function () { if (Data.yangiId() === Data.yangiId()) throw new Error('bir xil id'); });
+
+      // Sinov bazasini oxirida o'chiramiz, asosiy ma'lumotga tegmaymiz
+      function tozalash() {
+        Data.yopish();
+        return new Promise(function (res) {
+          var s = indexedDB.deleteDatabase(SINOV_BAZA);
+          s.onsuccess = s.onerror = s.onblocked = function () { res(); };
+        });
+      }
+
+      var ul = document.getElementById('natija');
+      var otdi = 0;
+      function qosh(nom, xato) {
+        var li = document.createElement('li');
+        li.className = xato ? 'xato' : 'ok';
+        li.textContent = (xato ? '✗ ' : '✓ ') + nom + (xato ? ' — ' + xato.message : '');
+        ul.appendChild(li);
+      }
+      testlar.reduce(function (zanjir, t) {
+        return zanjir.then(function () {
+          return Promise.resolve().then(t.fn).then(function () { otdi++; qosh(t.nom); }, function (e) { qosh(t.nom, e); });
+        });
+      }, Promise.resolve()).then(tozalash).then(function () {
+        var j = document.getElementById('jami');
+        var hammasi = otdi === testlar.length;
+        j.className = hammasi ? 'ok' : 'xato';
+        j.textContent = hammasi ? 'Hammasi o\'tdi: ' + otdi + ' / ' + testlar.length
+                                : 'Xato bor: ' + otdi + ' / ' + testlar.length + ' o\'tdi';
+      });
+    })();
+  </script>
+</body>
+</html>

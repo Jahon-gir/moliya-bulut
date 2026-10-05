@@ -6,7 +6,7 @@
   var tugmalar = document.querySelectorAll('[data-bolim]');
   var keyingiBosqich = 'Bu bo\'lim keyingi bosqichlarda quriladi.';
 
-  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [], qarzlar: [] };
+  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [], qarzlar: [], zaxiraSanasi: null };
   var xabar = '';          // "Saqlandi" xabari, faqat qo'shish ekranida bir marta ko'rsatiladi
   var joriy = 'bosh';      // hozirgi bo'lim
   var stek = [];           // bo'lim ichidagi ochiq ekranlar: [{ yasash, forma }]; "Orqaga" oxirgisini yopadi
@@ -1079,7 +1079,8 @@
       ['Barcha yozuvlar', malumot.yozuvlar.length + ' ta', yozuvlarEkrani],
       ['Qarzlar', qarzlarMenyuMatni(), qarzlarEkrani],
       ['Hisoblar', faolHisoblar().length + ' ta', hisoblarEkrani],
-      ['Kategoriyalar', malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }).length + ' ta', kategoriyalarEkrani]
+      ['Kategoriyalar', malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }).length + ' ta', kategoriyalarEkrani],
+      ['Zaxira va eksport', malumot.zaxiraSanasi ? 'oxirgi: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) : 'zaxira yo\'q', zaxiraEkrani]
     ].forEach(function (m) {
       var q = tugma(undefined, 'yozuv', function () { ochish(m[2], false); });
       q.appendChild(el('div', m[0], 'yozuv-nom'));
@@ -2094,6 +2095,177 @@
     yangiYozuvOynasi();
   }
 
+  // ---- Zaxira va eksport (F9) ----
+  var eksportHolat = { tur: 'hammasi', yil: null, oy: null };   // CSV davri
+
+  // Faylni yuklab berish (Blob). Hech qayerga yuborilmaydi: hammasi qurilmada
+  function faylYuklash(nom, matn, tur) {
+    var url = URL.createObjectURL(new Blob([matn], { type: tur }));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = nom;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  }
+
+  // Joriy holatning to'liq zaxirasi (JSON). Muvaffaqiyatli bo'lsa va oldin=false bo'lsa, oxirgi zaxira sanasi yangilanadi.
+  function zaxiraniOlish(oldinTiklash) {
+    return Data.hammasiniOqish().then(function (m) {
+      var bugun = Calc.bugun();
+      if (!oldinTiklash) {
+        // fayl ichidagi sozlamalarda ham yangi sana bo'ladi: tiklangach "oxirgi zaxira" shu faylning sanasi
+        var bor = m.sozlamalar.some(function (x) { return x.kalit === 'asosiy'; });
+        m.sozlamalar = bor ? m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { oxirgi_zaxira_sanasi: bugun }) : x; })
+          : m.sozlamalar.concat([{ kalit: 'asosiy', sxema_versiyasi: Data.SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: bugun }]);
+      }
+      var fayl = Calc.zaxiraYasash(m, Data.SXEMA_VERSIYASI, new Date());
+      faylYuklash(Calc.zaxiraNomi(new Date(), oldinTiklash ? 'zaxira-tiklashdan-oldin' : 'zaxira'), JSON.stringify(fayl), 'application/json');
+      if (oldinTiklash) return fayl;
+      var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
+      return Data.saqlash('sozlamalar', asosiy).then(function () { malumot.zaxiraSanasi = bugun; return fayl; });
+    });
+  }
+
+  // Tiklash: tekshirish (hech narsaga tegmasdan) -> tasdiq -> joriy holat zaxirasi yuklanadi -> bitta tranzaksiyada almashtirish
+  function zaxiradanTiklash(fayl, xatoChiqar) {
+    if (fayl.size > 200 * 1024 * 1024) { xatoChiqar('Fayl juda katta (200 MB dan oshmasin)'); return; }
+    var oqish = fayl.text ? fayl.text() : new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; r.readAsText(fayl); });
+    oqish.then(function (matn) {
+      var t = Calc.zaxiraniTekshir(matn, Data.SXEMA_VERSIYASI, Calc.hozir());
+      if (t.xato) { xatoChiqar(t.xato + '. Mavjud ma\'lumotga tegilmadi.'); return; }
+      var s = t.soni, kj = t.kelajak;
+      var matnTasdiq = 'Zaxiradan tiklash\n\nFaylda: ' + s.yozuvlar + ' ta yozuv, ' + s.hisoblar + ' ta hisob, ' + s.kategoriyalar + ' ta kategoriya, ' + s.qarzlar + ' ta qarz.\n\n' +
+        'Mavjud ma\'lumot (' + malumot.yozuvlar.length + ' ta yozuv, ' + malumot.qarzlar.length + ' ta qarz) shu fayldagi bilan ALMASHTIRILADI. Avval joriy holatning zaxirasi avtomatik yuklab beriladi.' +
+        (t.eskiSxema ? '\n\nBu eski versiya zaxirasi: yangi tuzilishga o\'tkaziladi, hech narsa o\'chmaydi.' : '') +
+        (kj.yozuv + kj.qarz + kj.tolov ? '\n\n⚠ Vaqti hozirdan keyin bo\'lgan: ' + kj.yozuv + ' ta yozuv, ' + kj.qarz + ' ta qarz, ' + kj.tolov + ' ta to\'lov. Ular o\'chirilmaydi, "Kelajak" belgisi bilan ko\'rinadi; tahrirlashda vaqtni o\'tmishga to\'g\'rilang.' : '') +
+        '\n\nDavom etilsinmi?';
+      if (!window.confirm(matnTasdiq)) return;
+      return zaxiraniOlish(true).then(function () { return Data.almashtirish(t.malumot); })
+        .then(yuklash).then(function () {
+          korsat('bosh');
+          qisqaXabar('Zaxiradan tiklandi: ' + s.yozuvlar + ' ta yozuv, ' + s.qarzlar + ' ta qarz', undefined, 6000);
+        });
+    }).catch(function (xato) { xatoChiqar('Tiklab bo\'lmadi: ' + (xato && xato.message ? xato.message : xato) + '. Mavjud ma\'lumot o\'zgarmadi.'); });
+  }
+
+  function zaxiraEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Zaxira va eksport')];
+    var xatoQutisi = el('div', undefined, 'xato-karta');
+    xatoQutisi.setAttribute('role', 'alert');
+    xatoQutisi.hidden = true;
+    function xatoChiqar(m) { xatoQutisi.textContent = m; xatoQutisi.hidden = false; xatoQutisi.scrollIntoView({ block: 'center' }); }
+
+    var k = karta();
+    k.appendChild(el('h2', 'Zaxira nusxa'));
+    var z = Calc.zaxiraHolati(malumot.zaxiraSanasi, Calc.bugun());
+    k.appendChild(el('p', z.holat === 'yoq' ? 'Zaxira hali olinmagan.' : 'Oxirgi zaxira: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) + (z.kun === 0 ? ' (bugun)' : ' (' + z.kun + ' kun oldin)'), 'xira zaxira-sana'));
+    k.appendChild(el('p', 'Ma\'lumotlar faqat shu qurilmada saqlanadi, hech qayerga yuborilmaydi. Zaxira — barcha yozuv, hisob, kategoriya, byudjet va qarzlar bitta JSON faylda.', 'xira'));
+    var olish = tugma('Zaxira nusxa olish', 'asosiy-tugma', function () {
+      olish.disabled = true;
+      zaxiraniOlish(false).then(function () { qisqaXabar('Zaxira yuklab olindi'); chizish(zaxiraEkrani(), true); })
+        .catch(function (x) { olish.disabled = false; xatoChiqar('Zaxira olib bo\'lmadi: ' + x); });
+    });
+    olish.id = 'zaxira-olish';
+    k.appendChild(olish);
+    var kiritish = document.createElement('input');
+    kiritish.type = 'file';
+    kiritish.id = 'zaxira-fayl';
+    kiritish.accept = '.json,application/json';
+    kiritish.hidden = true;
+    kiritish.addEventListener('change', function () {
+      var f = kiritish.files && kiritish.files[0];
+      kiritish.value = '';
+      xatoQutisi.hidden = true;
+      if (f) zaxiradanTiklash(f, xatoChiqar);
+    });
+    var tikla = tugma('Zaxiradan tiklash', 'ikkinchi-tugma', function () { kiritish.click(); });
+    tikla.id = 'zaxira-tikla';
+    k.appendChild(tikla);
+    k.appendChild(kiritish);
+    k.appendChild(el('p', 'Tiklashdan oldin joriy holatning zaxirasi avtomatik yuklab beriladi. Buzuq yoki yarim fayl rad etiladi, mavjud ma\'lumotga tegilmaydi.', 'xira'));
+    bloklar.push(k);
+    bloklar.push(xatoQutisi);
+
+    // Excel uchun eksport (CSV)
+    var e = karta();
+    e.appendChild(el('h2', 'Excel uchun eksport (CSV)'));
+    var buYil = parseInt(Calc.bugun().slice(0, 4), 10), buOy = parseInt(Calc.bugun().slice(5, 7), 10);
+    var birinchi = malumot.yozuvlar.concat(malumot.qarzlar).reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
+    var yillar = Calc.filtrYillari(birinchi, Calc.bugun());
+    if (!eksportHolat.yil) { eksportHolat.yil = buYil; eksportHolat.oy = buOy; }
+    var davrMaydon = el('div', undefined, 'maydon');
+    davrMaydon.appendChild(el('span', 'Davr', 'belgi'));
+    var turQator = el('div', undefined, 'tanlov');
+    [['hammasi', 'Hammasi'], ['oy', 'Oy'], ['yil', 'Yil']].forEach(function (t) {
+      var b = tugma(t[1], undefined, function () { eksportHolat.tur = t[0]; chizish(zaxiraEkrani(), true); });
+      b.setAttribute('aria-pressed', String(eksportHolat.tur === t[0]));
+      b.setAttribute('data-davr', t[0]);
+      turQator.appendChild(b);
+    });
+    davrMaydon.appendChild(turQator);
+    e.appendChild(davrMaydon);
+    if (eksportHolat.tur !== 'hammasi') {
+      var tanlar = el('div', undefined, 'juft');
+      var yilT = tanlov('e-yil', 'Yil', yillar.map(function (y) { return [String(y), String(y)]; }), String(eksportHolat.yil), function (v) { eksportHolat.yil = parseInt(v, 10); chizish(zaxiraEkrani(), true); });
+      yilT.quti.style.flex = '1';
+      tanlar.appendChild(yilT.quti);
+      if (eksportHolat.tur === 'oy') {
+        var oyT = tanlov('e-oy', 'Oy', OY_NOMLARI_UI.map(function (n, i) { return [String(i + 1), n]; }), String(eksportHolat.oy), function (v) { eksportHolat.oy = parseInt(v, 10); chizish(zaxiraEkrani(), true); });
+        oyT.quti.style.flex = '1';
+        tanlar.appendChild(oyT.quti);
+      }
+      e.appendChild(tanlar);
+    }
+    var davr = { tur: eksportHolat.tur, yil: eksportHolat.yil, oy: eksportHolat.oy };
+    var davrNomi = eksportHolat.tur === 'hammasi' ? 'hammasi' : eksportHolat.tur === 'yil' ? String(eksportHolat.yil) : eksportHolat.yil + '-' + (eksportHolat.oy < 10 ? '0' : '') + eksportHolat.oy;
+    var yz = Calc.yozuvlarCSV(malumot.yozuvlar, malumot.hisoblar, malumot.kategoriyalar, davr), qz = Calc.qarzlarCSV(malumot.qarzlar, malumot.hisoblar, davr);
+    e.appendChild(el('p', 'Fayl: UTF-8, ustunlar ";" bilan ajratilgan (Excel to\'g\'ri ochadi).', 'xira'));
+    var yTugma = tugma('Yozuvlarni yuklab olish (' + yz.soni + ' ta)', 'ikkinchi-tugma', function () {
+      if (!yz.soni) { qisqaXabar('Tanlangan davrda yozuv yo\'q'); return; }
+      faylYuklash('moliya-yozuvlar-' + davrNomi + '.csv', yz.matn, 'text/csv;charset=utf-8');
+      qisqaXabar('Yozuvlar yuklab olindi');
+    });
+    yTugma.id = 'eksport-yozuvlar';
+    e.appendChild(yTugma);
+    var qTugma = tugma('Qarzlar va to\'lovlarni yuklab olish (' + qz.soni + ' ta qator)', 'ikkinchi-tugma', function () {
+      if (!qz.soni) { qisqaXabar('Tanlangan davrda qarz yoki to\'lov yo\'q'); return; }
+      faylYuklash('moliya-qarzlar-' + davrNomi + '.csv', qz.matn, 'text/csv;charset=utf-8');
+      qisqaXabar('Qarzlar yuklab olindi');
+    });
+    qTugma.id = 'eksport-qarzlar';
+    e.appendChild(qTugma);
+    bloklar.push(e);
+    return bloklar;
+  }
+  var OY_NOMLARI_UI = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+
+  // Bosh sahifa: oxirgi zaxira sanasi; 14 kundan oshsa (yoki hali olinmagan, lekin yozuv bor) eslatma
+  function zaxiraKartasi() {
+    var z = Calc.zaxiraHolati(malumot.zaxiraSanasi, Calc.bugun());
+    var bor = malumot.yozuvlar.length + malumot.qarzlar.length > 0;
+    var eslatma = z.holat === 'eski' || (z.holat === 'yoq' && bor);
+    var k = karta();
+    k.classList.add('zaxira-karta');
+    if (eslatma) k.classList.add('ogohlantirish-karta');
+    k.appendChild(el('h2', 'Zaxira nusxa'));
+    k.appendChild(el('div', z.holat === 'yoq' ? 'Zaxira hali olinmagan' : 'Oxirgi zaxira: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) + (z.kun === 0 ? ' (bugun)' : ' (' + z.kun + ' kun oldin)'), 'zaxira-sana'));
+    if (eslatma) {
+      var m = el('div', undefined, 'zaxira-eslatma');
+      m.appendChild(el('strong', '⚠ ' + (z.holat === 'yoq' ? 'Zaxira olinmagan. ' : 'Oxirgi zaxiradan ' + z.kun + ' kun o\'tdi. ')));
+      m.appendChild(document.createTextNode('Ma\'lumotlar faqat shu qurilmada saqlanadi: yo\'qolib qolmasligi uchun zaxira nusxa oling.'));
+      k.appendChild(m);
+      var t = tugma('Hozir zaxira olish', 'ikkinchi-tugma', function () {
+        t.disabled = true;
+        zaxiraniOlish(false).then(function () { qisqaXabar('Zaxira yuklab olindi'); korsat('bosh'); }).catch(function (x) { t.disabled = false; qisqaXabar('Zaxira olib bo\'lmadi: ' + x); });
+      });
+      t.id = 'bosh-zaxira';
+      k.appendChild(t);
+    }
+    return k;
+  }
+
   // ---- Bo'limlar ----
   var bolimlar = {
     bosh: function (m) {
@@ -2128,6 +2300,7 @@
 
       var ogoh = byudjetOgohlantirishi();
       if (ogoh) bloklar.push(ogoh);
+      bloklar.push(zaxiraKartasi());
 
       bloklar.push(el('h2', 'Oxirgi yozuvlar'));
       if (m.yozuvlar.length === 0) bloklar.push(bosYozuvlar());
@@ -2203,6 +2376,9 @@
       malumot.hisoblar = r[0].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
       malumot.yozuvlar = r[2];
       malumot.kategoriyalar = r[1].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
+      return Data.olish('sozlamalar', 'asosiy');
+    }).then(function (sozlama) {
+      malumot.zaxiraSanasi = sozlama ? sozlama.oxirgi_zaxira_sanasi || null : null;
     });
   }
 

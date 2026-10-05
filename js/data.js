@@ -163,11 +163,42 @@
     }).then(sxemaniYangilash).then(function () { return doimiySaqlash(); });
   }
 
+  // Hamma to'plamni o'qiydi (zaxira uchun): { hisoblar, yozuvlar, kategoriyalar, byudjetlar, qarzlar, sozlamalar }.
+  // Bitta tranzaksiyada o'qiladi, shuning uchun nusxa bir paytdagi yaxlit holat.
+  function hammasiniOqish() {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(Object.keys(TOPLAMLAR), 'readonly'), natija = {};
+      Object.keys(TOPLAMLAR).forEach(function (t) { tx.objectStore(t).getAll().onsuccess = function (e) { natija[t] = e.target.result; }; });
+      tx.oncomplete = function () { resolve(natija); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error); };
+    });
+  }
+
+  // Hamma to'plamni zaxiradagi ma'lumot bilan ALMASHTIRADI. Hammasi BITTA tranzaksiyada: biror joyda xato bo'lsa,
+  // tranzaksiya bekor qilinadi va mavjud ma'lumot aynan avvalgidek qoladi (yarim holat bo'lmaydi).
+  function almashtirish(malumot) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(Object.keys(TOPLAMLAR), 'readwrite');
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      try {
+        Object.keys(TOPLAMLAR).forEach(function (t) {
+          var s = tx.objectStore(t);
+          s.clear();
+          (malumot[t] || []).forEach(function (x) { s.put(x); });
+        });
+      } catch (e) { try { tx.abort(); } catch (e2) { /* allaqachon bekor */ } reject(e); }
+    });
+  }
+
   function yopish() { if (db) { db.close(); db = null; } }
 
   global.Data = {
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
-    hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish
+    hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
+    hammasiniOqish: hammasiniOqish, almashtirish: almashtirish
   };
 })(typeof window !== 'undefined' ? window : this);

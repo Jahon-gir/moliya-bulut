@@ -605,6 +605,223 @@
     });
   }
 
+  // ---- Zaxira va eksport (TZ F9) ----
+  var ZAXIRA_TOPLAMLARI = ['hisoblar', 'yozuvlar', 'kategoriyalar', 'byudjetlar', 'qarzlar', 'sozlamalar'];
+  var ZAXIRA_ESLATMA_KUNI = 14;   // oxirgi zaxiradan shuncha kundan oshsa, eslatma chiqadi
+
+  function sanaYaroqli(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    var p = s.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    return d.getUTCFullYear() === +p[0] && d.getUTCMonth() === +p[1] - 1 && d.getUTCDate() === +p[2];
+  }
+
+  // Zaxira fayli obyekti: hamma to'plam, sxema versiyasi va har to'plam soni (fayl butunligini tekshirish uchun).
+  // malumot: { hisoblar, yozuvlar, kategoriyalar, byudjetlar, qarzlar, sozlamalar }; sxema — joriy sxema versiyasi
+  function zaxiraYasash(malumot, sxema, hozirgi) {
+    var f = { ilova: 'moliya', sxema_versiyasi: sxema, zaxira_vaqti: (hozirgi || new Date()).toISOString(), soni: {} };
+    ZAXIRA_TOPLAMLARI.forEach(function (t) { f[t] = malumot[t] || []; f.soni[t] = f[t].length; });
+    return f;
+  }
+
+  // Fayl nomi: moliya-zaxira-2026-10-05-2130.json (mahalliy sana va vaqt)
+  function zaxiraNomi(d, old) {
+    var h = hozir(d);
+    return 'moliya-' + (old || 'zaxira') + '-' + h.sana + '-' + h.vaqt.replace(':', '') + '.json';
+  }
+
+  // Zaxira matnini tekshiradi va joriy sxemaga o'tkazadi. HECH NARSAGA TEGMAYDI (faqat yangi obyekt qaytaradi).
+  // Rad etiladi: JSON emas / yarim, boshqa ilovaniki, noma'lum yoki yangi sxema, to'plam yetishmaydi, sonlar mos emas, buzuq yozuvlar,
+  // yo'q hisob/kategoriyaga havolalar, takroriy id, ortiqcha to'lov. Vaqti hozirdan keyin bo'lgan yozuv rad etilmaydi (TZ F9): sanaladi,
+  // ro'yxatda "Kelajak" belgisi bilan ko'rinadi. Natija: { malumot, soni, kelajak: { yozuv, qarz, tolov }, eskiSxema } yoki { xato }
+  function zaxiraniTekshir(matn, sxema, hozirgi) {
+    try { return zaxiraniTekshirIch(matn, sxema, hozirgi || hozir()); } catch (e) {
+      return { xato: e && e.zaxira ? e.message : 'Zaxira fayli buzuq: ' + (e && e.message ? e.message : e) };
+    }
+  }
+  function rad(xabar) { var e = new Error(xabar); e.zaxira = true; throw e; }
+  function zaxiraniTekshirIch(matn, sxema, h) {
+    if (typeof matn !== 'string' || !matn.trim()) rad('Fayl bo\'sh');
+    var f;
+    try { f = JSON.parse(matn.charCodeAt(0) === 0xFEFF ? matn.slice(1) : matn); } catch (e) { rad('Fayl buzuq yoki yarim (JSON o\'qilmadi)'); }
+    if (!f || typeof f !== 'object' || Array.isArray(f)) rad('Bu Moliya zaxira fayli emas');
+    if (f.ilova !== 'moliya') rad('Bu Moliya zaxira fayli emas');
+    var v = f.sxema_versiyasi;
+    if (typeof v !== 'number' || v !== Math.floor(v) || v < 1) rad('Zaxira faylida sxema versiyasi yo\'q yoki noto\'g\'ri');
+    if (v > sxema) rad('Zaxira yangiroq versiyadagi ilovadan olingan (sxema ' + v + '). Avval ilovani yangilang');
+    ZAXIRA_TOPLAMLARI.forEach(function (t) {
+      if (!Array.isArray(f[t])) rad('Zaxira to\'liq emas: "' + t + '" bo\'limi yo\'q');
+      f[t].forEach(function (x, i) { if (!x || typeof x !== 'object' || Array.isArray(x)) rad('"' + t + '" ' + (i + 1) + '-qatori buzuq'); });
+    });
+    if (f.soni) ZAXIRA_TOPLAMLARI.forEach(function (t) { if (f.soni[t] !== undefined && f.soni[t] !== f[t].length) rad('Zaxira to\'liq emas: "' + t + '" da ' + f.soni[t] + ' ta bo\'lishi kerak edi, ' + f[t].length + ' ta bor'); });
+
+    function butun(x) { return typeof x === 'number' && isFinite(x) && x === Math.floor(x); }
+    function musbat(x) { return butun(x) && x > 0 && x <= 999999999999999; }
+    function matnli(x) { return typeof x === 'string' && x.trim() !== ''; }
+    var ids = {};
+    ZAXIRA_TOPLAMLARI.forEach(function (t) {
+      if (t === 'sozlamalar' || t === 'byudjetlar') return;
+      ids[t] = {};
+      f[t].forEach(function (x, i) {
+        if (!matnli(x.id)) rad('"' + t + '" ' + (i + 1) + '-qatorida id yo\'q');
+        if (ids[t][x.id]) rad('"' + t + '" da takroriy id: ' + x.id);
+        ids[t][x.id] = x;
+      });
+    });
+    f.hisoblar.forEach(function (x, i) {
+      var n = (i + 1) + '-hisobda ';
+      if (!matnli(x.nom)) rad(n + 'nom yo\'q');
+      if (['naqd', 'karta', 'boshqa'].indexOf(x.tur) === -1) rad(n + 'tur noto\'g\'ri');
+      if (!butun(x.boshlangich_qoldiq)) rad(n + 'boshlang\'ich qoldiq noto\'g\'ri');
+      if (x.arxivlangan !== undefined && typeof x.arxivlangan !== 'boolean') rad(n + 'arxiv belgisi noto\'g\'ri');
+    });
+    if (!f.hisoblar.some(function (x) { return !x.arxivlangan; })) rad('Zaxirada bitta ham faol hisob yo\'q');
+    f.kategoriyalar.forEach(function (x, i) {
+      var n = (i + 1) + '-kategoriyada ';
+      if (!matnli(x.nom)) rad(n + 'nom yo\'q');
+      if (x.tur !== 'daromad' && x.tur !== 'xarajat') rad(n + 'tur noto\'g\'ri');
+    });
+    var kelajak = { yozuv: 0, qarz: 0, tolov: 0 };
+    f.yozuvlar.forEach(function (x, i) {
+      var n = (i + 1) + '-yozuvda ';
+      if (['daromad', 'xarajat', 'otkazma'].indexOf(x.tur) === -1) rad(n + 'tur noto\'g\'ri');
+      if (!musbat(x.summa)) rad(n + 'summa noto\'g\'ri');
+      if (!sanaYaroqli(x.sana)) rad(n + 'sana noto\'g\'ri');
+      if (x.vaqt !== undefined && !vaqtFormatiTogrimi(x.vaqt)) rad(n + 'vaqt noto\'g\'ri');
+      if (!ids.hisoblar[x.hisob_id]) rad(n + 'hisob topilmadi');
+      if (x.tur === 'otkazma') {
+        if (!ids.hisoblar[x.qabul_hisob_id]) rad(n + 'qabul qiluvchi hisob topilmadi');
+        if (x.qabul_hisob_id === x.hisob_id) rad(n + 'o\'tkazma bir hisobning o\'zida');
+      } else {
+        var k = ids.kategoriyalar[x.kategoriya_id];
+        if (!k) rad(n + 'kategoriya topilmadi');
+        if (k.tur !== x.tur) rad(n + 'kategoriya turi yozuv turiga mos emas');
+      }
+      if (x.izoh !== undefined && typeof x.izoh !== 'string') rad(n + 'izoh noto\'g\'ri');
+    });
+    var kalitlar = {};
+    f.byudjetlar.forEach(function (x, i) {
+      var n = (i + 1) + '-byudjetda ';
+      if (x.kategoriya_id !== 'umumiy' && !(ids.kategoriyalar[x.kategoriya_id] && ids.kategoriyalar[x.kategoriya_id].tur === 'xarajat')) rad(n + 'kategoriya topilmadi');
+      if (!musbat(x.oylik_limit)) rad(n + 'limit noto\'g\'ri');
+      if (kalitlar[x.kategoriya_id]) rad('Byudjetda takroriy kategoriya');
+      kalitlar[x.kategoriya_id] = 1;
+    });
+    f.qarzlar.forEach(function (x, i) {
+      var n = (i + 1) + '-qarzda ';
+      if (x.yonalish !== 'berdim' && x.yonalish !== 'oldim') rad(n + 'yo\'nalish noto\'g\'ri');
+      if (!matnli(x.shaxs)) rad(n + 'shaxs yo\'q');
+      if (!musbat(x.summa)) rad(n + 'summa noto\'g\'ri');
+      if (!sanaYaroqli(x.sana)) rad(n + 'sana noto\'g\'ri');
+      if (x.vaqt !== undefined && !vaqtFormatiTogrimi(x.vaqt)) rad(n + 'vaqt noto\'g\'ri');
+      if (x.muddat && !sanaYaroqli(x.muddat)) rad(n + 'muddat noto\'g\'ri');
+      if (!ids.hisoblar[x.hisob_id]) rad(n + 'hisob topilmadi');
+      if (x.tolovlar !== undefined && !Array.isArray(x.tolovlar)) rad(n + 'to\'lovlar noto\'g\'ri');
+      var jami = 0, tid = {};
+      (x.tolovlar || []).forEach(function (t, j) {
+        var m = (i + 1) + '-qarzning ' + (j + 1) + '-to\'lovida ';
+        if (!t || typeof t !== 'object') rad(m + 'xato');
+        if (!musbat(t.summa)) rad(m + 'summa noto\'g\'ri');
+        if (!sanaYaroqli(t.sana)) rad(m + 'sana noto\'g\'ri');
+        if (t.vaqt !== undefined && !vaqtFormatiTogrimi(t.vaqt)) rad(m + 'vaqt noto\'g\'ri');
+        if (!ids.hisoblar[t.hisob_id]) rad(m + 'hisob topilmadi');
+        if (t.id !== undefined) { if (tid[t.id]) rad(m + 'takroriy id'); tid[t.id] = 1; }
+        jami += t.summa;
+        if (kelajakmi(t.sana, t.vaqt || '00:00', h)) kelajak.tolov++;
+      });
+      if (jami > x.summa) rad(n + 'to\'lovlar yig\'indisi qarz summasidan oshib ketgan');
+      if (kelajakmi(x.sana, x.vaqt || '00:00', h)) kelajak.qarz++;
+    });
+    f.yozuvlar.forEach(function (x) { if (kelajakmi(x.sana, yozuvVaqti(x), h)) kelajak.yozuv++; });
+    f.sozlamalar.forEach(function (x, i) { if (!matnli(x.kalit)) rad((i + 1) + '-sozlamada kalit yo\'q'); });
+
+    // Joriy sxemaga o'tkazish (hech narsa o'chirilmaydi): yozuvlarga vaqt (1 -> 2), qarzlarda tushib qolgan maydonlar (2 -> 3)
+    var m = {
+      hisoblar: f.hisoblar.map(function (x) { return x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x; }),
+      kategoriyalar: f.kategoriyalar.map(function (x) { return x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x; }),
+      yozuvlar: f.yozuvlar.map(yozuvniYangilash), byudjetlar: f.byudjetlar.slice(), qarzlar: f.qarzlar.map(qarzniYangilash),
+      sozlamalar: f.sozlamalar.slice()
+    };
+    var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
+    if (!asosiy) { asosiy = { kalit: 'asosiy', oxirgi_zaxira_sanasi: null }; m.sozlamalar.push(asosiy); }
+    else if (asosiy.oxirgi_zaxira_sanasi && !sanaYaroqli(asosiy.oxirgi_zaxira_sanasi)) rad('Oxirgi zaxira sanasi noto\'g\'ri');
+    m.sozlamalar = m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { sxema_versiyasi: sxema }) : x; });
+    var soni = {}; ZAXIRA_TOPLAMLARI.forEach(function (t) { soni[t] = m[t].length; });
+    return { malumot: m, soni: soni, kelajak: kelajak, eskiSxema: v < sxema, fayldagiSxema: v };
+  }
+
+  // Oxirgi zaxira holati bosh sahifa uchun: { holat: 'yoq' | 'yaqinda' | 'eski', kun }.
+  // Hech qachon olinmagan bo'lsa 'yoq'. 14 kundan OSHSA 'eski' (aynan 14 kun hali eslatmasiz).
+  function zaxiraHolati(oxirgiSana, bugunSana) {
+    if (!oxirgiSana || !sanaYaroqli(oxirgiSana)) return { holat: 'yoq', kun: null };
+    var kun = Math.round((sanaUTC(bugunSana) - sanaUTC(oxirgiSana)) / 86400000);
+    return { holat: kun > ZAXIRA_ESLATMA_KUNI ? 'eski' : 'yaqinda', kun: kun };
+  }
+
+  // CSV: ajratuvchi nuqtali vergul, qatorlar CRLF, boshida UTF-8 BOM (Excel o'zbekcha harflarni to'g'ri ochishi uchun).
+  // Maydon ; " yoki qator oxiri belgisi bo'lsa, qo'sh tirnoqqa o'raladi (ichidagi " ikkilanadi).
+  // Formula in'ektsiyasidan saqlanish: matn = + - @ yoki tab/CR bilan boshlansa, oldiga bitta tirnoq (') qo'yiladi.
+  function csvMatn(x) {
+    var s = x === undefined || x === null ? '' : String(x);
+    if (/^[=+\-@\t\r]/.test(s)) s = '\'' + s;
+    return csvMaydon(s);
+  }
+  function csvMaydon(s) {
+    return /[;"\r\n,]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function csvQator(maydonlar) { return maydonlar.join(';'); }
+  function csvFayl(sarlavha, qatorlar) {
+    return '﻿' + [csvQator(sarlavha)].concat(qatorlar.map(csvQator)).join('\r\n') + '\r\n';
+  }
+  function sanaDMY(iso) { var p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; }
+
+  // Eksport davri: { tur: 'hammasi' } | { tur: 'oy', yil, oy } | { tur: 'yil', yil } -> { dan, gacha } yoki null (hammasi)
+  function eksportDavri(d) {
+    if (!d || d.tur === 'hammasi') return null;
+    if (d.tur === 'yil') return { dan: d.yil + '-01-01', gacha: d.yil + '-12-31' };
+    return davrChegarasi('oy', d.yil + '-' + ikki(d.oy) + '-01');
+  }
+  function davrdami(sana, c) { return !c || (sana >= c.dan && sana <= c.gacha); }
+
+  var TUR_CSV = { daromad: 'Daromad', xarajat: 'Xarajat', otkazma: 'O\'tkazma' };
+  // Yozuvlar CSV: Sana (KK.OO.YYYY); Vaqt; Tur; Summa (butun son, mingliksiz); Kategoriya; Hisob; Qayerga (faqat o'tkazmada); Izoh.
+  // Sana va vaqt bo'yicha o'sish tartibida. Natija: { matn, soni }
+  function yozuvlarCSV(yozuvlar, hisoblar, kategoriyalar, davr) {
+    var c = eksportDavri(davr), hn = {}, kn = {};
+    hisoblar.forEach(function (x) { hn[x.id] = x.nom; });
+    kategoriyalar.forEach(function (x) { kn[x.id] = x.nom; });
+    var r = yozuvlar.filter(function (y) { return davrdami(y.sana, c); }).sort(function (a, b) {
+      var x = a.sana + ' ' + yozuvVaqti(a), y = b.sana + ' ' + yozuvVaqti(b);
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+    var q = r.map(function (y) {
+      var o = y.tur === 'otkazma';
+      return [sanaDMY(y.sana), yozuvVaqti(y), TUR_CSV[y.tur] || y.tur, String(y.summa), o ? '' : csvMatn(kn[y.kategoriya_id] || ''),
+        csvMatn(hn[y.hisob_id] || ''), o ? csvMatn(hn[y.qabul_hisob_id] || '') : '', csvMatn(y.izoh)];
+    });
+    return { matn: csvFayl(['Sana', 'Vaqt', 'Tur', 'Summa', 'Kategoriya', 'Hisob', 'Qayerga', 'Izoh'], q), soni: q.length };
+  }
+
+  // Qarzlar va to'lovlar bitta alohida CSV: qarz qatori, undan keyin uning to'lovlari. Sana qatorning o'z sanasi bo'yicha davrga kiradi.
+  // Ustunlar: Sana; Vaqt; Turi (Qarz / To'lov); Yo'nalish; Shaxs; Summa; Hisob; Muddat; Izoh; Holat (qarzda: Ochiq / Yopilgan)
+  function qarzlarCSV(qarzlar, hisoblar, davr) {
+    var c = eksportDavri(davr), hn = {};
+    hisoblar.forEach(function (x) { hn[x.id] = x.nom; });
+    var q = [], soni = 0;
+    qarzlar.slice().sort(function (a, b) { var x = a.sana + ' ' + (a.vaqt || ''), y = b.sana + ' ' + (b.vaqt || ''); return x < y ? -1 : x > y ? 1 : 0; }).forEach(function (z) {
+      var yo = z.yonalish === 'berdim' ? 'Men berdim' : 'Men oldim';
+      if (davrdami(z.sana, c)) {
+        q.push([sanaDMY(z.sana), z.vaqt || '00:00', 'Qarz', yo, csvMatn(z.shaxs), String(z.summa), csvMatn(hn[z.hisob_id] || ''), z.muddat ? sanaDMY(z.muddat) : '', csvMatn(z.izoh), qarzYopilganmi(z) ? 'Yopilgan' : 'Ochiq']);
+        soni++;
+      }
+      (z.tolovlar || []).slice().sort(function (a, b) { var x = a.sana + ' ' + (a.vaqt || ''), y = b.sana + ' ' + (b.vaqt || ''); return x < y ? -1 : x > y ? 1 : 0; }).forEach(function (t) {
+        if (!davrdami(t.sana, c)) return;
+        q.push([sanaDMY(t.sana), t.vaqt || '00:00', 'To\'lov', yo, csvMatn(z.shaxs), String(t.summa), csvMatn(hn[t.hisob_id] || ''), '', '', '']);
+        soni++;
+      });
+    });
+    return { matn: csvFayl(['Sana', 'Vaqt', 'Turi', 'Yo\'nalish', 'Shaxs', 'Summa', 'Hisob', 'Muddat', 'Izoh', 'Holat'], q), soni: soni };
+  }
+
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
   // Boshidagi minus saqlanadi (keyin tekshiruvda xato bo'lib chiqishi uchun), boshqa belgilar tashlanadi.
   function raqamFormat(matn) {
@@ -916,6 +1133,8 @@
     glidirakChegarasi: glidirakChegarasi, glidirakTuzat: glidirakTuzat, glidirakQiymatlari: glidirakQiymatlari,
     kunlarSoni: kunlarSoni, oraliqNomi: oraliqNomi, oraliqTekshir: oraliqTekshir, oraliqSur: oraliqSur, hisobotDavri: hisobotDavri,
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
+    ZAXIRA_ESLATMA_KUNI: ZAXIRA_ESLATMA_KUNI, sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraNomi: zaxiraNomi, zaxiraniTekshir: zaxiraniTekshir, zaxiraHolati: zaxiraHolati,
+    csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, yozuvlarCSV: yozuvlarCSV, qarzlarCSV: qarzlarCSV,
     donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
     BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,

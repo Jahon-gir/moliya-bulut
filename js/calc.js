@@ -482,6 +482,129 @@
       bucketlar: bucketlar, jami: jami, eng: eng, davrNomi: oraliqNomi(dan, gacha) };
   }
 
+  // ---- Qarzlar (TZ F8) ----
+  // Qarz: { id, yonalish: 'berdim' | 'oldim', shaxs, summa, hisob_id, sana, vaqt, muddat ('' yoki sana), izoh,
+  //         tolovlar: [{ id, sana, vaqt, summa, hisob_id }], yopilgan }. Qolgan summa va "yopilgan" holati to'lovlardan hisoblanadi.
+  function tolanganSumma(q) {
+    return (q.tolovlar || []).reduce(function (a, t) { return a + t.summa; }, 0);
+  }
+  function qarzQolgan(q) { return Math.max(0, q.summa - tolanganSumma(q)); }
+  function qarzYopilganmi(q) { return tolanganSumma(q) >= q.summa; }
+  // Muddati o'tgan: muddat bor, qarz yopilmagan va muddat sanasi bugundan oldin (muddat kuni o'zi hali o'tmagan)
+  function qarzMuddatiOtdimi(q, bugunSana) { return !!q.muddat && !qarzYopilganmi(q) && q.muddat < bugunSana; }
+
+  // Sxema 2 -> 3 va saqlashdan oldin: qarzda tushib qolgan maydonlarni to'ldiradi, hech narsani o'chirmaydi.
+  // Hamma narsa joyida bo'lsa, o'sha obyektning o'zi qaytadi (ikkinchi marta ishlasa ham buzilmaydi).
+  function qarzniYangilash(q) {
+    var yangi = {}, ozgardi = false;
+    Object.keys(q).forEach(function (k) { yangi[k] = q[k]; });
+    if (!Array.isArray(q.tolovlar)) { yangi.tolovlar = []; ozgardi = true; }
+    else if (q.tolovlar.some(function (t) { return !t.id; })) {   // to'lovni tahrirlash/o'chirish uchun har to'lovda id bo'lsin
+      yangi.tolovlar = q.tolovlar.map(function (t, i) { return t.id ? t : Object.assign({}, t, { id: (q.id || 'q') + '-t' + (i + 1) }); });
+      ozgardi = true;
+    }
+    if (!vaqtFormatiTogrimi(q.vaqt)) { yangi.vaqt = '00:00'; ozgardi = true; }
+    if (q.muddat === undefined || q.muddat === null) { yangi.muddat = ''; ozgardi = true; }
+    if (q.izoh === undefined || q.izoh === null) { yangi.izoh = ''; ozgardi = true; }
+    var yopilgan = qarzYopilganmi(yangi);
+    if (q.yopilgan !== yopilgan) { yangi.yopilgan = yopilgan; ozgardi = true; }
+    return ozgardi ? yangi : q;
+  }
+
+  function sanaVaqtKaliti(sana, vaqt) { return sana + ' ' + (vaqt || '00:00'); }
+
+  // Qarz shaklini tekshiradi. h: { yonalish, shaxs, summa (matn), hisob, sana, vaqt, muddat, izoh }.
+  // mavjud — tahrirlanayotgan qarz (summa to'langandan kam bo'lmasin, vaqt to'lovlardan keyin bo'lmasin).
+  // Natija: { qarz: {yonalish, shaxs, summa, hisob_id, sana, vaqt, muddat, izoh} } yoki { xato, maydon }
+  function qarzniTekshir(h, hozirgi, mavjud) {
+    if (h.yonalish !== 'berdim' && h.yonalish !== 'oldim') return { xato: 'Yo\'nalishni tanlang', maydon: 'yonalish' };
+    var shaxs = String(h.shaxs == null ? '' : h.shaxs).replace(/\s+/g, ' ').trim();
+    if (!shaxs) return { xato: 'Shaxs ismini kiriting', maydon: 'shaxs' };
+    var t = summaTekshir(h.summa);
+    if (t.xato) return { xato: t.xato, maydon: 'summa' };
+    if (mavjud && t.summa < tolanganSumma(mavjud)) {
+      return { xato: 'Summa to\'langan ' + sumFormat(tolanganSumma(mavjud)) + 'dan kam bo\'lmasin', maydon: 'summa' };
+    }
+    if (!h.hisob) return { xato: 'Hisobni tanlang', maydon: 'hisob' };
+    var v = vaqtTekshir(h.sana, h.vaqt, hozirgi);
+    if (v.xato) return { xato: v.xato.replace('Yozuv vaqti', 'Qarz vaqti'), maydon: 'vaqt' };
+    var muddat = h.muddat ? String(h.muddat) : '';
+    // Qaytarish muddati kelajakda bo'lishi mumkin (vaqt qoidasi unga tegmaydi), lekin qarz sanasidan oldin bo'lmaydi
+    if (muddat && (!/^\d{4}-\d{2}-\d{2}$/.test(muddat))) return { xato: 'Qaytarish muddatini to\'g\'ri kiriting', maydon: 'muddat' };
+    if (muddat && muddat < h.sana) return { xato: 'Qaytarish muddati qarz sanasidan oldin bo\'lmasin', maydon: 'muddat' };
+    if (mavjud) {
+      var kalit = sanaVaqtKaliti(h.sana, h.vaqt), oldin = (mavjud.tolovlar || []).filter(function (x) { return sanaVaqtKaliti(x.sana, x.vaqt) < kalit; })[0];
+      if (oldin) return { xato: 'Qarz vaqti to\'lovlardan (' + sanaKorsat(oldin.sana) + ' ' + oldin.vaqt + ') keyin bo\'lmasin', maydon: 'vaqt' };
+    }
+    return { qarz: { yonalish: h.yonalish, shaxs: shaxs, summa: t.summa, hisob_id: h.hisob, sana: h.sana, vaqt: h.vaqt,
+      muddat: muddat, izoh: String(h.izoh || '').trim() } };
+  }
+
+  // To'lovni tekshiradi. h: { summa (matn), hisob, sana, vaqt }. istisnoId — tahrirlanayotgan to'lovning o'zi.
+  // Summa qolgan qarzdan oshmasin; vaqt qarz vaqtidan oldin ham, hozirdan keyin ham bo'lmasin.
+  // Natija: { tolov: {summa, hisob_id, sana, vaqt} } yoki { xato, maydon }
+  function tolovniTekshir(q, h, hozirgi, istisnoId) {
+    var t = summaTekshir(h.summa);
+    if (t.xato) return { xato: t.xato, maydon: 'summa' };
+    var boshqa = (q.tolovlar || []).filter(function (x) { return x.id !== istisnoId; }).reduce(function (a, x) { return a + x.summa; }, 0);
+    var qolgan = Math.max(0, q.summa - boshqa);
+    if (t.summa > qolgan) return { xato: 'To\'lov summasi qolgan qarzdan oshmasin (qolgan: ' + sumFormat(qolgan) + ')', maydon: 'summa' };
+    if (!h.hisob) return { xato: 'Hisobni tanlang', maydon: 'hisob' };
+    var v = vaqtTekshir(h.sana, h.vaqt, hozirgi);
+    if (v.xato) return { xato: v.xato.replace('Yozuv vaqti', 'To\'lov vaqti'), maydon: 'vaqt' };
+    if (sanaVaqtKaliti(h.sana, h.vaqt) < sanaVaqtKaliti(q.sana, q.vaqt)) {
+      return { xato: 'To\'lov vaqti qarz vaqtidan (' + sanaKorsat(q.sana) + ' ' + (q.vaqt || '00:00') + ') oldin bo\'lmasin', maydon: 'vaqt' };
+    }
+    return { tolov: { summa: t.summa, hisob_id: h.hisob, sana: h.sana, vaqt: h.vaqt } };
+  }
+
+  // Qarz va to'lov yig'indilari: { olishKerak: menga qaytarilishi kerak, qaytarishKerak: men qaytarishim kerak }
+  function qarzlarJami(qarzlar) {
+    var j = { olishKerak: 0, qaytarishKerak: 0 };
+    qarzlar.forEach(function (q) { j[q.yonalish === 'berdim' ? 'olishKerak' : 'qaytarishKerak'] += qarzQolgan(q); });
+    return j;
+  }
+
+  // Ko'rsatiladigan foiz rangga o'xshab ziddiyatsiz: 0 dan katta to'langan 1% dan kam ko'rinmaydi, to'liq bo'lmaganda 100% ko'rinmaydi
+  function tolashFoizi(tolangan, summa) {
+    if (!summa) return 0;
+    var f = Math.round(tolangan * 100 / summa);
+    if (tolangan > 0 && f < 1) f = 1;
+    if (tolangan < summa && f > 99) f = 99;
+    return f;
+  }
+
+  // Ro'yxat uchun: ochiq qarzlar shaxs va yo'nalish bo'yicha guruhlanadi (nom katta-kichik harf va apostrofga e'tiborsiz),
+  // yopilganlar alohida. Guruh: { kalit, shaxs, yonalish, summa, tolangan, qolgan, foiz, chiziq, muddatiOtgan, qarzlar }.
+  // Guruhlar: muddati o'tganlar birinchi, keyin qolgan summasi kattasi.
+  function qarzlarShaxsBoyicha(qarzlar, bugunSana) {
+    var xarita = {}, tartib = [], yopilgan = [];
+    qarzlar.slice().sort(function (a, b) {
+      return sanaVaqtKaliti(b.sana, b.vaqt) < sanaVaqtKaliti(a.sana, a.vaqt) ? -1 : sanaVaqtKaliti(b.sana, b.vaqt) > sanaVaqtKaliti(a.sana, a.vaqt) ? 1 : 0;
+    }).forEach(function (q) {
+      if (qarzYopilganmi(q)) { yopilgan.push(q); return; }
+      var kalit = nomKaliti(q.shaxs) + '|' + q.yonalish, g = xarita[kalit];
+      if (!g) {
+        g = xarita[kalit] = { kalit: kalit, shaxs: q.shaxs, yonalish: q.yonalish, summa: 0, tolangan: 0, qolgan: 0, muddatiOtgan: false, qarzlar: [] };
+        tartib.push(g);
+      }
+      g.summa += q.summa; g.tolangan += tolanganSumma(q); g.qolgan += qarzQolgan(q);
+      if (qarzMuddatiOtdimi(q, bugunSana)) g.muddatiOtgan = true;
+      g.qarzlar.push(q);
+    });
+    tartib.forEach(function (g) { g.foiz = tolashFoizi(g.tolangan, g.summa); g.chiziq = g.summa ? g.tolangan * 100 / g.summa : 0; });
+    tartib.sort(function (a, b) { return (b.muddatiOtgan ? 1 : 0) - (a.muddatiOtgan ? 1 : 0) || b.qolgan - a.qolgan; });
+    return { ochiq: tartib, yopilgan: yopilgan };
+  }
+
+  // Hisobga bog'langan ochiq qarzlar (hisobni arxivlashdan oldin ogohlantirish uchun): shu hisobdan berilgan/olingan
+  // yoki shu hisobga to'lov qilingan, hali yopilmagan qarzlar
+  function hisobgaBogliqQarzlar(qarzlar, hisobId) {
+    return qarzlar.filter(function (q) {
+      return !qarzYopilganmi(q) && (q.hisob_id === hisobId || (q.tolovlar || []).some(function (t) { return t.hisob_id === hisobId; }));
+    });
+  }
+
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
   // Boshidagi minus saqlanadi (keyin tekshiruvda xato bo'lib chiqishi uchun), boshqa belgilar tashlanadi.
   function raqamFormat(matn) {
@@ -503,8 +626,9 @@
   }
 
   // Hisob qoldig'i = boshlang'ich qoldiq + daromadlar - xarajatlar + kirgan o'tkazmalar - chiqqan o'tkazmalar
-  // (TZ 8-band, 1-qoida). Qarz qismi 8-bosqichda qo'shiladi.
-  function hisobQoldigi(hisob, yozuvlar) {
+  // - bergan qarzlarim + menga qaytarilganlar + olgan qarzlarim - men qaytarganlarim (TZ 8-band, 1-qoida).
+  // qarzlar ixtiyoriy. Qarz amallari faqat qoldiqqa ta'sir qiladi: hisobot(), byudjet va diagrammalar ularni ko'rmaydi.
+  function hisobQoldigi(hisob, yozuvlar, qarzlar) {
     var q = hisob.boshlangich_qoldiq;
     yozuvlar.forEach(function (y) {
       if (y.tur === 'daromad' && y.hisob_id === hisob.id) q += y.summa;
@@ -514,13 +638,20 @@
         if (y.qabul_hisob_id === hisob.id) q += y.summa;    // kirgan o'tkazma
       }
     });
+    (qarzlar || []).forEach(function (z) {
+      var berdim = z.yonalish === 'berdim';
+      if (z.hisob_id === hisob.id) q += berdim ? -z.summa : z.summa;   // bergan qarz hisobdan chiqadi, olgani kiradi
+      (z.tolovlar || []).forEach(function (t) {
+        if (t.hisob_id === hisob.id) q += berdim ? t.summa : -t.summa;   // qaytarilgani teskari yo'nalishda
+      });
+    });
     return q;
   }
 
   // Arxivlanmagan hisoblardagi pulning yig'indisi
-  function umumiyBalans(hisoblar, yozuvlar) {
+  function umumiyBalans(hisoblar, yozuvlar, qarzlar) {
     return hisoblar.reduce(function (j, h) {
-      return h.arxivlangan ? j : j + hisobQoldigi(h, yozuvlar);
+      return h.arxivlangan ? j : j + hisobQoldigi(h, yozuvlar, qarzlar);
     }, 0);
   }
 
@@ -573,8 +704,8 @@
 
   // Foydalanuvchi hisobning HOZIRGI qoldig'ini o'zgartirsa, yozuvlarga tegmaymiz: farqni boshlang'ich qoldiqqa
   // qo'shamiz. yangi boshlang'ich = eski boshlang'ich + (yangi joriy - eski joriy)
-  function yangiBoshlangichQoldiq(hisob, yozuvlar, yangiJoriy) {
-    return hisob.boshlangich_qoldiq + (yangiJoriy - hisobQoldigi(hisob, yozuvlar));
+  function yangiBoshlangichQoldiq(hisob, yozuvlar, yangiJoriy, qarzlar) {
+    return hisob.boshlangich_qoldiq + (yangiJoriy - hisobQoldigi(hisob, yozuvlar, qarzlar));
   }
 
   // Kategoriya nomi: bo'sh bo'lmasin va bir turdagi faol kategoriyalar orasida takrorlanmasin.
@@ -773,6 +904,9 @@
     qoldiqTekshir: qoldiqTekshir, yangiBoshlangichQoldiq: yangiBoshlangichQoldiq, nomKaliti: nomKaliti, kategoriyaNomTekshir: kategoriyaNomTekshir,
     yozuvlarniSuz: yozuvlarniSuz, filtrFaolmi: filtrFaolmi, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
+    tolanganSumma: tolanganSumma, qarzQolgan: qarzQolgan, qarzYopilganmi: qarzYopilganmi, qarzMuddatiOtdimi: qarzMuddatiOtdimi,
+    qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
+    tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,
     davrChegarasi: davrChegarasi, davrniSur: davrniSur, davrNomi: davrNomi, kunQosh: kunQosh,
     foizlar: foizlar, hisobot: hisobot, taqqoslash: taqqoslash, belgiliSum: belgiliSum, belgiliFoiz: belgiliFoiz,
     qadamlar: qadamlar, wizardBoshlash: wizardBoshlash, wizardKeyingi: wizardKeyingi, wizardOrqaga: wizardOrqaga,

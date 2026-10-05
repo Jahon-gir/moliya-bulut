@@ -15,9 +15,9 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/calc.js?v=0.7.1"></script>
-  <script src="js/data.js?v=0.7.1"></script>
-  <script src="js/diagramma.js?v=0.7.1"></script>
+  <script src="js/calc.js?v=0.8.0"></script>
+  <script src="js/data.js?v=0.8.0"></script>
+  <script src="js/diagramma.js?v=0.8.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1254,6 +1254,137 @@
         teng(Number(quti.querySelector('[data-jami-xarajat]').getAttribute('data-jami-xarajat')), v.jami.xarajat);
       });
 
+
+      // --- 8-bosqich: qarzlar (F8) ---
+      var QH = [{ id: 'naqd', nom: 'Naqd pul', tur: 'naqd', boshlangich_qoldiq: 0, arxivlangan: false }, { id: 'karta', nom: 'Karta', tur: 'karta', boshlangich_qoldiq: 0, arxivlangan: false }];
+      var QY = [   // TZ 11-band sinov ma'lumoti (oktabr 2026)
+        { id: 'q1', tur: 'daromad', summa: 5000000, sana: '2026-10-01', vaqt: '09:00', hisob_id: 'naqd', kategoriya_id: 'maosh' },
+        { id: 'q2', tur: 'xarajat', summa: 300000, sana: '2026-10-02', vaqt: '09:00', hisob_id: 'naqd', kategoriya_id: 'oziq' },
+        { id: 'q3', tur: 'xarajat', summa: 50000, sana: '2026-10-02', vaqt: '10:00', hisob_id: 'naqd', kategoriya_id: 'yol' },
+        { id: 'q4', tur: 'xarajat', summa: 150000, sana: '2026-10-03', vaqt: '09:00', hisob_id: 'naqd', kategoriya_id: 'oziq' },
+        { id: 'q5', tur: 'otkazma', summa: 1000000, sana: '2026-10-03', vaqt: '10:00', hisob_id: 'naqd', qabul_hisob_id: 'karta', kategoriya_id: null }];
+      var ALI = { id: 'z1', yonalish: 'berdim', shaxs: 'Ali', summa: 200000, hisob_id: 'naqd', sana: '2026-10-04', vaqt: '12:00', muddat: '', izoh: '', tolovlar: [], yopilgan: false };
+      function qoldiq(id, qz) { return Calc.hisobQoldigi(QH.filter(function (h) { return h.id === id; })[0], QY, qz); }
+      function oyHisobotiQ(qz) { var c = Calc.davrChegarasi('oy', '2026-10-15'); return Calc.hisobot(QY, c.dan, c.gacha, ''); }
+      var HOZIR_Q = { sana: '2026-10-10', vaqt: '21:00' };
+      test('TZ 11-band: Ali 200 000 berdim — Naqd 3 300 000, Karta 1 000 000, umumiy 4 300 000', function () {
+        teng(qoldiq('naqd', []), 3500000); teng(qoldiq('naqd', [ALI]), 3300000); teng(qoldiq('karta', [ALI]), 1000000); teng(Calc.umumiyBalans(QH, QY, [ALI]), 4300000);
+        teng(Calc.qarzlarJami([ALI]).olishKerak, 200000); teng(Calc.qarzlarJami([ALI]).qaytarishKerak, 0);
+      });
+      test('TZ 11-band: Ali qaytarsa — Naqd 3 500 000, umumiy 4 500 000, qarz yopilgan, hisobot o\'zgarmagan', function () {
+        var A2 = Object.assign({}, ALI, { tolovlar: [{ id: 't1', sana: '2026-10-05', vaqt: '10:00', summa: 200000, hisob_id: 'naqd' }] });
+        teng(qoldiq('naqd', [A2]), 3500000); teng(Calc.umumiyBalans(QH, QY, [A2]), 4500000); teng(Calc.qarzYopilganmi(A2), true); teng(Calc.qarzQolgan(A2), 0);
+        teng(Calc.qarzlarJami([A2]).olishKerak, 0);
+        teng(Calc.qarzniYangilash(A2).yopilgan, true);
+        var h = oyHisobotiQ([A2]); teng(h.daromad, 5000000); teng(h.xarajat, 500000); teng(h.qoldiq, 4500000);
+      });
+      test('qarz hisobotga, byudjetga va diagrammalarga kirmaydi', function () {
+        var Z = [Object.assign({}, ALI, { tolovlar: [{ id: 't1', sana: '2026-10-05', vaqt: '10:00', summa: 50000, hisob_id: 'naqd' }] }), { id: 'z2', yonalish: 'oldim', shaxs: 'Vali', summa: 900000, hisob_id: 'karta', sana: '2026-10-04', vaqt: '13:00', muddat: '', izoh: '', tolovlar: [], yopilgan: false }];
+        var h = oyHisobotiQ(Z), c = Calc.davrChegarasi('oy', '2026-10-15'); teng(h.soni, 4); teng(h.xarajat, 500000); teng(h.daromad, 5000000);
+        teng(h.xarajatTaqsimoti.length, 2); teng(Calc.hisobot(QY.concat(Z), c.dan, c.gacha, '').xarajat, 500000);   // qarz obyektlari yozuvlar ro'yxatiga aralashsa ham kirmaydi
+        var KATS = [{ id: 'oziq', nom: 'Oziq', tur: 'xarajat', arxivlangan: false }, { id: 'yol', nom: 'Yo\'l', tur: 'xarajat', arxivlangan: false }];
+        var b1 = Calc.byudjetHisobi([{ kategoriya_id: 'umumiy', oylik_limit: 1000000 }], KATS, QY, '2026-10-15'); teng(b1.umumiy.holat.sarflangan, 500000);
+        var d = Calc.diagrammaVaqt(QY, 'oy', '2026-10-15', ''); teng(d.jami.xarajat, 500000); teng(d.jami.daromad, 5000000);
+      });
+      test('oldim: olgan qarz hisobga kiradi, qaytarilgani chiqadi; qisman va to\'liq qaytarish', function () {
+        var Q = { id: 'z3', yonalish: 'oldim', shaxs: 'Vali', summa: 1000000, hisob_id: 'karta', sana: '2026-10-04', vaqt: '13:00', muddat: '', izoh: '', tolovlar: [], yopilgan: false };
+        teng(qoldiq('karta', [Q]), 2000000); teng(Calc.umumiyBalans(QH, QY, [Q]), 5500000); teng(Calc.qarzlarJami([Q]).qaytarishKerak, 1000000);
+        var Q1 = Object.assign({}, Q, { tolovlar: [{ id: 'a', sana: '2026-10-06', vaqt: '10:00', summa: 400000, hisob_id: 'karta' }] });
+        teng(qoldiq('karta', [Q1]), 1600000); teng(Calc.qarzQolgan(Q1), 600000); teng(Calc.qarzYopilganmi(Q1), false);
+        var Q2 = Object.assign({}, Q, { tolovlar: Q1.tolovlar.concat([{ id: 'b', sana: '2026-10-07', vaqt: '10:00', summa: 600000, hisob_id: 'naqd' }]) });   // qolgani boshqa hisobdan
+        teng(Calc.qarzYopilganmi(Q2), true); teng(qoldiq('karta', [Q2]), 1600000); teng(qoldiq('naqd', [Q2]), 3500000 - 600000); teng(Calc.umumiyBalans(QH, QY, [Q2]), 4500000);
+      });
+      test('qisman qaytarish: berdim — to\'lovdan keyin qolgan, to\'lish foizi, yopilmagan', function () {
+        var A = Object.assign({}, ALI, { tolovlar: [{ id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 50000, hisob_id: 'karta' }] });
+        teng(qoldiq('naqd', [A]), 3300000); teng(qoldiq('karta', [A]), 1050000); teng(Calc.qarzQolgan(A), 150000); teng(Calc.qarzYopilganmi(A), false); teng(Calc.qarzlarJami([A]).olishKerak, 150000);
+        teng(Calc.tolashFoizi(50000, 200000), 25);
+      });
+      test('to\'lovni o\'chirish: qoldiq va qolgan qarz avvalgi holatga qaytadi', function () {
+        var T = { id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 200000, hisob_id: 'naqd' }, A = Object.assign({}, ALI, { tolovlar: [T] });
+        teng(qoldiq('naqd', [A]), 3500000); var B = Object.assign({}, A, { tolovlar: [] }); teng(qoldiq('naqd', [B]), 3300000); teng(Calc.qarzniYangilash(B).yopilgan, false);
+        teng(qoldiq('naqd', []), 3500000);   // qarzning o'zi o'chirilsa — pul qaytib keladi
+      });
+      test('yangiBoshlangichQoldiq qarzni hisobga oladi (qoldiqni tahrirlash qarzni buzmaydi)', function () {
+        var naqd = QH[0], joriy = Calc.hisobQoldigi(naqd, QY, [ALI]); teng(joriy, 3300000);
+        var yb = Calc.yangiBoshlangichQoldiq(naqd, QY, 3400000, [ALI]); teng(Calc.hisobQoldigi(Object.assign({}, naqd, { boshlangich_qoldiq: yb }), QY, [ALI]), 3400000);
+      });
+      function qh(o) { return Object.assign({ yonalish: 'berdim', shaxs: 'Ali', summa: '200 000', hisob: 'naqd', sana: '2026-10-10', vaqt: '21:00', muddat: '', izoh: '' }, o || {}); }
+      test('qarzniTekshir: to\'g\'ri qarz saqlanadi, kerakli maydonlar tekshiriladi', function () {
+        var r = Calc.qarzniTekshir(qh({ shaxs: '  Ali   Valiyev ', izoh: ' bozor ' }), HOZIR_Q); teng(r.qarz.shaxs, 'Ali Valiyev'); teng(r.qarz.summa, 200000); teng(r.qarz.izoh, 'bozor'); teng(r.qarz.muddat, '');
+        teng(Calc.qarzniTekshir(qh({ yonalish: '' }), HOZIR_Q).maydon, 'yonalish'); teng(Calc.qarzniTekshir(qh({ shaxs: '   ' }), HOZIR_Q).maydon, 'shaxs');
+        teng(Calc.qarzniTekshir(qh({ summa: '' }), HOZIR_Q).maydon, 'summa'); teng(Calc.qarzniTekshir(qh({ summa: '0' }), HOZIR_Q).maydon, 'summa'); teng(Calc.qarzniTekshir(qh({ hisob: '' }), HOZIR_Q).maydon, 'hisob');
+      });
+      test('qarz vaqti hozirdan keyin bo\'lmaydi: 21:00 mumkin, 21:01 mumkin emas, ertangi sana mumkin emas', function () {
+        teng(Calc.qarzniTekshir(qh({ vaqt: '21:00' }), HOZIR_Q).qarz !== undefined, true);
+        var r = Calc.qarzniTekshir(qh({ vaqt: '21:01' }), HOZIR_Q); teng(r.maydon, 'vaqt'); teng(/Qarz vaqti hozirgi vaqtdan keyin/.test(r.xato), true);
+        teng(Calc.qarzniTekshir(qh({ sana: '2026-10-11', vaqt: '00:00' }), HOZIR_Q).maydon, 'vaqt'); teng(Calc.qarzniTekshir(qh({ sana: '2026-10-09', vaqt: '23:59' }), HOZIR_Q).qarz !== undefined, true);
+      });
+      test('qaytarish muddati kelajakda bo\'lishi mumkin, lekin qarz sanasidan oldin bo\'lmaydi', function () {
+        teng(Calc.qarzniTekshir(qh({ muddat: '2027-01-01' }), HOZIR_Q).qarz.muddat, '2027-01-01'); teng(Calc.qarzniTekshir(qh({ muddat: '2026-10-10' }), HOZIR_Q).qarz !== undefined, true);
+        teng(Calc.qarzniTekshir(qh({ muddat: '2026-10-09' }), HOZIR_Q).maydon, 'muddat'); teng(Calc.qarzniTekshir(qh({ muddat: 'abc' }), HOZIR_Q).maydon, 'muddat');
+      });
+      test('qarzni tahrirlash: summa to\'langandan kam bo\'lmaydi, vaqt to\'lovdan keyin bo\'lmaydi', function () {
+        var A = Object.assign({}, ALI, { sana: '2026-10-04', vaqt: '12:00', tolovlar: [{ id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 150000, hisob_id: 'naqd' }] });
+        var r = Calc.qarzniTekshir(qh({ summa: '149 999', sana: '2026-10-04', vaqt: '12:00' }), HOZIR_Q, A); teng(r.maydon, 'summa'); teng(/150 000 so'mdan kam/.test(r.xato), true);
+        teng(Calc.qarzniTekshir(qh({ summa: '150 000', sana: '2026-10-04', vaqt: '12:00' }), HOZIR_Q, A).qarz.summa, 150000);   // aynan to'langan summa mumkin (qarz yopiladi)
+        teng(Calc.qarzniTekshir(qh({ summa: '300 000', sana: '2026-10-05', vaqt: '10:01' }), HOZIR_Q, A).maydon, 'vaqt'); teng(Calc.qarzniTekshir(qh({ summa: '300 000', sana: '2026-10-05', vaqt: '10:00' }), HOZIR_Q, A).qarz !== undefined, true);
+      });
+      function th(o) { return Object.assign({ summa: '50 000', hisob: 'naqd', sana: '2026-10-10', vaqt: '20:00' }, o || {}); }
+      test('tolovniTekshir: ortiqcha to\'lov rad etiladi (qolgan qarzdan oshmasin)', function () {
+        teng(Calc.tolovniTekshir(ALI, th({ summa: '200 000' }), HOZIR_Q).tolov.summa, 200000);
+        var r = Calc.tolovniTekshir(ALI, th({ summa: '200 001' }), HOZIR_Q); teng(r.maydon, 'summa'); teng(/qolgan qarzdan oshmasin \(qolgan: 200 000 so'm\)/.test(r.xato), true);
+        var A = Object.assign({}, ALI, { tolovlar: [{ id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 150000, hisob_id: 'naqd' }] });
+        teng(Calc.tolovniTekshir(A, th({ summa: '50 001' }), HOZIR_Q).maydon, 'summa'); teng(Calc.tolovniTekshir(A, th({ summa: '50 000' }), HOZIR_Q).tolov.summa, 50000);
+        teng(Calc.tolovniTekshir(ALI, th({ summa: '0' }), HOZIR_Q).maydon, 'summa'); teng(Calc.tolovniTekshir(ALI, th({ summa: '' }), HOZIR_Q).maydon, 'summa'); teng(Calc.tolovniTekshir(ALI, th({ hisob: '' }), HOZIR_Q).maydon, 'hisob');
+      });
+      test('to\'lovni tahrirlashda shu to\'lovning o\'zi qolgan summaga qo\'shiladi', function () {
+        var A = Object.assign({}, ALI, { tolovlar: [{ id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 150000, hisob_id: 'naqd' }] });
+        teng(Calc.tolovniTekshir(A, th({ summa: '200 000' }), HOZIR_Q, 'a').tolov.summa, 200000); teng(Calc.tolovniTekshir(A, th({ summa: '200 001' }), HOZIR_Q, 'a').maydon, 'summa');
+        teng(Calc.tolovniTekshir(A, th({ summa: '60 000' }), HOZIR_Q).maydon, 'summa');
+      });
+      test('to\'lov vaqti: qarz vaqtidan oldin ham, hozirdan keyin ham bo\'lmaydi (21:00 mumkin, 21:01 mumkin emas)', function () {
+        teng(Calc.tolovniTekshir(ALI, th({ sana: '2026-10-04', vaqt: '11:59' }), HOZIR_Q).maydon, 'vaqt'); teng(/qarz vaqtidan/.test(Calc.tolovniTekshir(ALI, th({ sana: '2026-10-03', vaqt: '23:00' }), HOZIR_Q).xato), true);
+        teng(Calc.tolovniTekshir(ALI, th({ sana: '2026-10-04', vaqt: '12:00' }), HOZIR_Q).tolov !== undefined, true);   // qarz bilan bir vaqtda mumkin
+        teng(Calc.tolovniTekshir(ALI, th({ sana: '2026-10-10', vaqt: '21:00' }), HOZIR_Q).tolov !== undefined, true);
+        var r = Calc.tolovniTekshir(ALI, th({ sana: '2026-10-10', vaqt: '21:01' }), HOZIR_Q); teng(r.maydon, 'vaqt'); teng(/To'lov vaqti hozirgi vaqtdan keyin/.test(r.xato), true);
+        teng(Calc.tolovniTekshir(ALI, th({ sana: '2026-10-11', vaqt: '08:00' }), HOZIR_Q).maydon, 'vaqt');
+      });
+      test('muddati o\'tgan qarz: muddat bugundan oldin va qarz yopilmagan', function () {
+        var Q = Object.assign({}, ALI, { muddat: '2026-10-09' });
+        teng(Calc.qarzMuddatiOtdimi(Q, '2026-10-10'), true); teng(Calc.qarzMuddatiOtdimi(Q, '2026-10-09'), false);   // muddat kuni o'zi hali o'tmagan
+        teng(Calc.qarzMuddatiOtdimi(Object.assign({}, Q, { muddat: '' }), '2026-10-10'), false);
+        teng(Calc.qarzMuddatiOtdimi(Object.assign({}, Q, { tolovlar: [{ id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 200000, hisob_id: 'naqd' }] }), '2026-10-10'), false);   // yopilgan
+        teng(Calc.qarzMuddatiOtdimi(Object.assign({}, Q, { tolovlar: [{ id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 199999, hisob_id: 'naqd' }] }), '2026-10-10'), true);
+      });
+      test('qarzlarShaxsBoyicha: shaxs va yo\'nalish bo\'yicha guruh, yopilganlar alohida, muddati o\'tgan birinchi', function () {
+        function Z(id, yo, sh, sum, to, muddat) { return { id: id, yonalish: yo, shaxs: sh, summa: sum, hisob_id: 'naqd', sana: '2026-10-0' + id.slice(-1), vaqt: '10:00', muddat: muddat || '', izoh: '', tolovlar: to ? [{ id: id + 't', sana: '2026-10-09', vaqt: '10:00', summa: to, hisob_id: 'naqd' }] : [] }; }
+        var L = [Z('a1', 'berdim', 'Ali', 100000, 40000), Z('a2', 'berdim', ' ALI ', 50000, 0), Z('a3', 'oldim', 'Ali', 70000, 0), Z('a4', 'berdim', 'Vali', 300000, 0), Z('a5', 'berdim', 'Sardor', 80000, 80000), Z('a6', 'berdim', 'Bek', 10000, 0, '2026-10-01')];
+        var g = Calc.qarzlarShaxsBoyicha(L, '2026-10-10');
+        teng(g.ochiq.length, 4); teng(g.yopilgan.length, 1); teng(g.yopilgan[0].shaxs, 'Sardor');
+        teng(g.ochiq[0].shaxs, 'Bek'); teng(g.ochiq[0].muddatiOtgan, true); teng(g.ochiq[1].shaxs, 'Vali');   // muddati o'tgan birinchi, keyin qolgan kattasi
+        var ali = g.ochiq.filter(function (x) { return x.yonalish === 'berdim' && x.shaxs.trim().toLowerCase() === 'ali'; })[0];
+        teng(ali.qarzlar.length, 2); teng(ali.summa, 150000); teng(ali.tolangan, 40000); teng(ali.qolgan, 110000); teng(ali.foiz, 27); teng(ali.muddatiOtgan, false);
+        teng(g.ochiq.filter(function (x) { return x.yonalish === 'oldim'; }).length, 1);
+      });
+      test('tolashFoizi: ko\'rsatiladigan foiz hech qachon holatga zid kelmaydi', function () {
+        teng(Calc.tolashFoizi(1, 1000000), 1); teng(Calc.tolashFoizi(0, 1000), 0); teng(Calc.tolashFoizi(999999, 1000000), 99); teng(Calc.tolashFoizi(1000000, 1000000), 100); teng(Calc.tolashFoizi(0, 0), 0);
+      });
+      test('hisobgaBogliqQarzlar: arxivlashdan oldin ogohlantirish uchun ochiq qarzlar', function () {
+        var A = Object.assign({}, ALI), B = Object.assign({}, ALI, { id: 'z9', hisob_id: 'karta', tolovlar: [{ id: 'a', sana: '2026-10-05', vaqt: '10:00', summa: 200000, hisob_id: 'karta' }] });
+        var C = Object.assign({}, ALI, { id: 'z8', hisob_id: 'karta', tolovlar: [{ id: 'b', sana: '2026-10-05', vaqt: '10:00', summa: 10000, hisob_id: 'naqd' }] });
+        teng(Calc.hisobgaBogliqQarzlar([A, B, C], 'naqd').map(function (x) { return x.id; }).join(), 'z1,z8'); teng(Calc.hisobgaBogliqQarzlar([A, B, C], 'karta').map(function (x) { return x.id; }).join(), 'z8');   // yopilgan B hisobga olinmaydi
+      });
+      test('qarzniYangilash (migratsiya 2 -> 3): tushib qolgan maydonlar to\'ldiriladi, hech narsa o\'chmaydi, takror ishlasa o\'zgarmaydi', function () {
+        var eski = { id: 'x', yonalish: 'berdim', shaxs: 'Ali', summa: 1000, hisob_id: 'naqd', sana: '2026-10-04', qoshimcha: 'saqlanadi' };
+        var y = Calc.qarzniYangilash(eski); teng(y.tolovlar.length, 0); teng(y.vaqt, '00:00'); teng(y.muddat, ''); teng(y.izoh, ''); teng(y.yopilgan, false); teng(y.qoshimcha, 'saqlanadi'); teng(y.shaxs, 'Ali'); teng(y.summa, 1000);
+        teng(Calc.qarzniYangilash(y), y);   // o'sha obyektning o'zi
+        var tolgan = Calc.qarzniYangilash({ id: 'y', yonalish: 'oldim', shaxs: 'B', summa: 500, hisob_id: 'a', sana: '2026-10-04', vaqt: '08:30', tolovlar: [{ id: 't', sana: '2026-10-05', vaqt: '09:00', summa: 500, hisob_id: 'a' }], yopilgan: false });
+        teng(tolgan.yopilgan, true); teng(tolgan.vaqt, '08:30');
+        var idsiz = Calc.qarzniYangilash({ id: 'w', yonalish: 'berdim', shaxs: 'C', summa: 900, hisob_id: 'a', sana: '2026-10-04', vaqt: '08:00', muddat: '', izoh: '', tolovlar: [{ sana: '2026-10-05', vaqt: '09:00', summa: 100, hisob_id: 'a' }, { id: 'bor', sana: '2026-10-05', vaqt: '09:30', summa: 200, hisob_id: 'a' }], yopilgan: false });
+        teng(idsiz.tolovlar[0].id, 'w-t1'); teng(idsiz.tolovlar[1].id, 'bor'); teng(idsiz.tolovlar[0].summa, 100); teng(Calc.qarzniYangilash(idsiz), idsiz);   // id yo'q to'lovga id beriladi, qolgani o'zgarmaydi
+      });
+      test('Data: sxema versiyasi 3, qarzlar to\'plami bor', function () { teng(Data.SXEMA_VERSIYASI, 3); });
+
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
       var SINOV_BAZA = 'moliya-sinov';
       test('Data: "Naqd pul" hisobi va tayyor kategoriyalar bir marta yoziladi', function () {
@@ -1265,7 +1396,7 @@
           teng(r[0][0].boshlangich_qoldiq, 0);
           teng(r[1].filter(function (k) { return k.tur === 'xarajat'; }).length, 11);
           teng(r[1].filter(function (k) { return k.tur === 'daromad'; }).length, 4);
-          teng(r[2].sxema_versiyasi, 2); teng(Data.SXEMA_VERSIYASI, 2);   // yangi baza darhol yangi sxemada yoziladi
+          teng(r[2].sxema_versiyasi, 3); teng(Data.SXEMA_VERSIYASI, 3);   // yangi baza darhol yangi sxemada yoziladi
           // qayta ochilganda takrorlanmasligi kerak
           Data.yopish();
           return Data.boshlash(SINOV_BAZA);
@@ -1317,7 +1448,7 @@
       // Eski (sxema 1) bazani qo'lda yasab, Data.boshlash() bilan ochamiz va nusxa bilan solishtiramiz
       var ESKI_BAZA = 'moliya-sinov-eski';
       var STORELAR = { hisoblar: 'id', yozuvlar: 'id', kategoriyalar: 'id', byudjetlar: 'kategoriya_id', qarzlar: 'id', sozlamalar: 'kalit' };
-      function eskiBazaYasash(yozuvlar) {
+      function eskiBazaYasash(yozuvlar, sxema, qarzlar) {
         return new Promise(function (resolve, reject) {
           var so = indexedDB.open(ESKI_BAZA, 1);
           so.onupgradeneeded = function () {
@@ -1330,8 +1461,8 @@
             tx.objectStore('hisoblar').put({ id: 'h2', yaratilgan: 'x', nom: 'Karta', tur: 'karta', boshlangich_qoldiq: 0, arxivlangan: false });
             tx.objectStore('kategoriyalar').put({ id: 'k1', yaratilgan: 'x', nom: 'Oziq-ovqat', tur: 'xarajat', rang: '#e57373', arxivlangan: false });
             tx.objectStore('byudjetlar').put({ kategoriya_id: 'k1', oylik_limit: 500000 });
-            tx.objectStore('qarzlar').put({ id: 'q1', yonalish: 'berdim', shaxs: 'Ali', summa: 200000, hisob_id: 'h1', sana: '2026-10-04', tolovlar: [], yopilgan: false });
-            tx.objectStore('sozlamalar').put({ kalit: 'asosiy', sxema_versiyasi: 1, oxirgi_zaxira_sanasi: '2026-09-30' });
+            (qarzlar || [{ id: 'q1', yonalish: 'berdim', shaxs: 'Ali', summa: 200000, hisob_id: 'h1', sana: '2026-10-04', tolovlar: [], yopilgan: false }]).forEach(function (q) { tx.objectStore('qarzlar').put(q); });
+            tx.objectStore('sozlamalar').put({ kalit: 'asosiy', sxema_versiyasi: sxema || 1, oxirgi_zaxira_sanasi: '2026-09-30' });
             yozuvlar.forEach(function (y) { tx.objectStore('yozuvlar').put(y); });
             tx.oncomplete = function () { d.close(); resolve(); };
             tx.onerror = function () { reject(tx.error); };
@@ -1375,7 +1506,11 @@
             // hech narsa o'chmadi, hech narsa qo'shilmadi
             Object.keys(STORELAR).forEach(function (n) { teng(hozirgi[n].length, oldin[n].length); });
             // yozuvlardan tashqari hamma to'plam aynan o'sha-o'sha
-            ['hisoblar', 'kategoriyalar', 'byudjetlar', 'qarzlar'].forEach(function (n) { teng(JSON.stringify(hozirgi[n]), JSON.stringify(oldin[n])); });
+            ['hisoblar', 'kategoriyalar', 'byudjetlar'].forEach(function (n) { teng(JSON.stringify(hozirgi[n]), JSON.stringify(oldin[n])); });
+            // qarz: eski maydonlar aynan o'sha-o'sha, faqat tushib qolgani (vaqt, muddat, izoh) to'ldirilgan
+            var q0 = oldin.qarzlar[0], q1 = hozirgi.qarzlar[0];
+            Object.keys(q0).forEach(function (k) { teng(JSON.stringify(q1[k]), JSON.stringify(q0[k])); });
+            teng(q1.vaqt, '00:00'); teng(q1.muddat, ''); teng(q1.izoh, '');
             // yozuvlar: faqat vaqt qo'shilgan
             var eskiMap = idBoyicha(oldin.yozuvlar), yangiMap = idBoyicha(hozirgi.yozuvlar);
             Object.keys(kutilgan).forEach(function (id) {
@@ -1385,7 +1520,7 @@
               teng(JSON.stringify(o, Object.keys(o).sort()), JSON.stringify(e, Object.keys(e).sort()));
             });
             // sozlamalar: faqat versiya o'zgargan
-            teng(hozirgi.sozlamalar[0].sxema_versiyasi, 2); teng(hozirgi.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
+            teng(hozirgi.sozlamalar[0].sxema_versiyasi, 3); teng(hozirgi.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
             // ikkinchi marta: versiyani qaytadan 1 qilib, majburan qayta ishga tushiramiz — hech narsa o'zgarmasligi kerak
             return Data.boshlash(ESKI_BAZA).then(function () { return Data.olish('sozlamalar', 'asosiy'); }).then(function (s) {
               s.sxema_versiyasi = 1; return Data.saqlash('sozlamalar', s);
@@ -1395,10 +1530,38 @@
           .then(function (ikkinchi) {
             teng(JSON.stringify(ikkinchi.yozuvlar.sort(function (a, b) { return a.id < b.id ? -1 : 1; })),
                  JSON.stringify(birinchi.yozuvlar.sort(function (a, b) { return a.id < b.id ? -1 : 1; })));
-            teng(ikkinchi.sozlamalar[0].sxema_versiyasi, 2);
+            teng(ikkinchi.sozlamalar[0].sxema_versiyasi, 3);
             return bazaniOchirish(ESKI_BAZA);
           })
           .then(function () { return Data.boshlash(SINOV_BAZA); });   // keyingi testlar uchun asosiy sinov bazasiga qaytamiz
+      });
+      test('Migratsiya 2 -> 3 (butun baza): qarzlar saqlanadi, to\'lovlar va yopilgan holat to\'g\'ri, hech narsa o\'chmaydi, takror ishlasa buzilmaydi', function () {
+        var qarzlar = [
+          { id: 'q1', yonalish: 'berdim', shaxs: 'Ali', summa: 200000, hisob_id: 'h1', sana: '2026-10-04', vaqt: '12:00', muddat: '2026-12-01', izoh: 'bozor', tolovlar: [{ id: 't1', sana: '2026-10-05', vaqt: '10:00', summa: 50000, hisob_id: 'h2' }], yopilgan: false },
+          { id: 'q2', yonalish: 'oldim', shaxs: 'Vali', summa: 1000, hisob_id: 'h1', sana: '2026-10-04', tolovlar: [{ id: 't2', sana: '2026-10-05', vaqt: '10:00', summa: 1000, hisob_id: 'h1' }] },   // maydonlari tushib qolgan, to'liq to'langan
+          { id: 'q3', yonalish: 'oldim', shaxs: 'Bek', summa: 500, hisob_id: 'h2', sana: '2026-10-04', vaqt: '08:00', muddat: '', izoh: '', tolovlar: [], yopilgan: false }];
+        var yoz = [{ id: 'a', tur: 'xarajat', summa: 50000, sana: '2026-10-03', vaqt: '13:20', hisob_id: 'h1', kategoriya_id: 'k1', izoh: '', yaratilgan: 'x' }];
+        var oldin;
+        Data.yopish();
+        return bazaniOchirish(ESKI_BAZA).then(function () { return eskiBazaYasash(yoz, 2, qarzlar); })
+          .then(function () { return xomOqish(ESKI_BAZA); })
+          .then(function (x) { oldin = x; return Data.boshlash(ESKI_BAZA); })
+          .then(function () { Data.yopish(); return xomOqish(ESKI_BAZA); })
+          .then(function (h) {
+            Object.keys(STORELAR).forEach(function (n) { teng(h[n].length, oldin[n].length); });
+            ['hisoblar', 'kategoriyalar', 'byudjetlar', 'yozuvlar'].forEach(function (n) { teng(JSON.stringify(h[n]), JSON.stringify(oldin[n])); });
+            var m = idBoyicha(h.qarzlar), e = idBoyicha(oldin.qarzlar);
+            Object.keys(e).forEach(function (id) { Object.keys(e[id]).forEach(function (k) { teng(JSON.stringify(m[id][k]), JSON.stringify(e[id][k])); }); });   // eski maydonlar o'zgarmagan
+            teng(m.q1.yopilgan, false); teng(m.q1.tolovlar.length, 1); teng(m.q2.yopilgan, true); teng(m.q2.vaqt, '00:00'); teng(m.q2.muddat, ''); teng(m.q2.tolovlar[0].summa, 1000);
+            teng(JSON.stringify(m.q3), JSON.stringify(e.q3)); teng(JSON.stringify(m.q1), JSON.stringify(e.q1));   // to'liq qarzlarga tegilmagan
+            teng(h.sozlamalar[0].sxema_versiyasi, 3); teng(h.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
+            // balans: migratsiyadan keyin ham o'sha raqamlar
+            var hisob = h.hisoblar.filter(function (x) { return x.id === 'h1'; })[0];
+            teng(Calc.hisobQoldigi(hisob, h.yozuvlar, h.qarzlar), 100 - 50000 - 200000 + 1000 - 1000);
+            // ikkinchi marta
+            return Data.boshlash(ESKI_BAZA).then(function () { Data.yopish(); return xomOqish(ESKI_BAZA); }).then(function (i) { teng(JSON.stringify(i.qarzlar), JSON.stringify(h.qarzlar)); return bazaniOchirish(ESKI_BAZA); });
+          })
+          .then(function () { return Data.boshlash(SINOV_BAZA); });
       });
       test('Data: yozuv saqlanadi, o\'qiladi va o\'chiriladi', function () {
         var id = Data.yangiId();

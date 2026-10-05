@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 8 (05.10.2026)
+Hujjat versiyasi: 9 (05.10.2026)
 
 ## 1. Maqsad
 
@@ -115,13 +115,13 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Misol: Oziq-ovqat chegarasi 500 000, sarflangan 450 000 = 90%, sariq, bosh sahifada ogohlantirish.
 
 ### F8. Qarzlar
-- Qarz qo'shish: yo'nalish (men berdim yoki men oldim), kimga yoki kimdan (ism), summa, hisob, sana va soat (`vaqt`), qaytarish muddati (ixtiyoriy), izoh.
-- **Vaqt qoidasi qarzga ham tegishli:** qarzning sanasi va soati hozirgi vaqtdan keyin bo'lmaydi (F2 dagi qoida: daqiqa aniqligida, standart qiymat — hozirgi vaqt, sana va soat uchun F2 dagi g'ildirakli tanlagich; saqlashda hozirgi vaqt qayta tekshiriladi). Faqat **qaytarish muddati** bundan mustasno: u tabiatan kelajakda bo'ladi.
-- Qarzni qisman yoki to'liq qaytarilgan deb belgilash. Har bir to'lov sanasi, soati (`vaqt`) va summasi bilan saqlanadi. To'lov vaqti ham F2 dagi vaqt qoidasiga bo'ysunadi: hozirgi vaqtdan keyin bo'lmaydi.
-- Ko'rsatiladi: menga qaytarilishi kerak bo'lgan jami summa, men qaytarishim kerak bo'lgan jami summa.
-- Muddati o'tgan qarzlar alohida belgilanadi.
-- To'liq yopilgan qarzlar "Yopilganlar" ro'yxatiga o'tadi.
-- Qarz amallari hisob qoldig'ini o'zgartiradi (bergan pulim hisobdan chiqadi, qaytgani kiradi), lekin xarajat yoki daromad sifatida hisobotga kirmaydi.
+- **Qarz qo'shish:** yo'nalish (men berdim yoki men oldim), kimga yoki kimdan (shaxs ismi), summa, hisob, sana va soat (`vaqt`), qaytarish muddati (ixtiyoriy), izoh.
+- **Vaqt qoidasi qarzga ham tegishli:** qarzning sanasi va soati hozirgi vaqtdan keyin bo'lmaydi (F2 dagi qoida: daqiqa aniqligida, standart qiymat — hozirgi vaqt, sana va soat uchun F2 dagi g'ildirakli tanlagich; saqlashda hozirgi vaqt qayta tekshiriladi). Faqat **qaytarish muddati** bundan mustasno: u tabiatan kelajakda bo'ladi (lekin qarz sanasidan oldin bo'lmaydi).
+- **To'lov (qaytarish):** qarzni qisman yoki to'liq qaytarilgan deb belgilash. Har bir to'lov summasi, sanasi, soati (`vaqt`) va hisobi bilan saqlanadi. To'lov summasi qolgan qarzdan oshmaydi. To'lov vaqti qarz vaqtidan oldin ham, hozirgi vaqtdan keyin ham bo'lmaydi (21:00 mumkin, 21:01 mumkin emas). To'lov hisobi qarz hisobidan farq qilishi mumkin. To'lovni tahrirlash va o'chirish mumkin. To'lovlar yig'indisi qarz summasiga yetsa, qarz avtomatik yopiladi (`yopilgan`); to'lov o'chirilsa, qayta ochiladi.
+- **Hisob qoldig'iga ta'siri:** bergan qarz hisobdan chiqadi, olgan qarz hisobga kiradi, qaytarilgani teskari yo'nalishda o'zgaradi (8-band, 1-qoida). Qarz amallari daromad yoki xarajat hisoblanmaydi: hisobotga (F5), byudjetga (F7) va diagrammalarga (F6) kirmaydi.
+- **Ko'rinish ("Yana" → Qarzlar):** tepada ikkita jami: "Menga qaytarilishi kerak" va "Men qaytarishim kerak" (qolgan summalar yig'indisi). Ro'yxat shaxs (va yo'nalish) bo'yicha guruhlangan: har guruhda qolgan summa, qaytarilgan/jami va to'lish chizig'i, ichida har bir qarz. Muddati o'tgan qarzlar rangdan tashqari ⚠ belgisi va "Muddati o'tgan" matni bilan ajratiladi (muddat kuni o'zi hali o'tgan hisoblanmaydi) va ro'yxatda birinchi turadi. To'liq yopilgan qarzlar alohida "Yopilganlar" ro'yxatiga o'tadi.
+- **Tahrirlash va o'chirish:** qarzni tahrirlash mumkin, lekin summa shu paytgacha to'langandan kam bo'lmaydi va qarz vaqti mavjud to'lovlardan keyin bo'lmaydi. Qarzni ham, to'lovni ham o'chirishda 10 soniya davomida "Bekor qilish" turadi. Qarz o'chirilsa, uning hisob qoldig'iga ta'siri ham yo'qoladi.
+- **Arxivlangan hisob:** hisobni arxivlashda unga bog'langan hali yopilmagan qarzlar bo'lsa, tasdiqlash oynasida ogohlantirish chiqadi (qarzlar saqlanadi). Arxivdagi hisobga bog'langan qarzda "⚠ Hisob arxivda" belgisi ko'rinadi, yangi to'lov uchun faol hisob taklif qilinadi.
 
 ### F9. Zaxira va eksport
 - Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi.
@@ -184,12 +184,13 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 | Yozuv | id, tur (daromad / xarajat / otkazma), summa, sana, vaqt, hisob_id, qabul_hisob_id (faqat o'tkazmada), kategoriya_id, izoh |
 | Kategoriya | id, nom, tur (daromad / xarajat), rang, arxivlangan |
 | Byudjet | kategoriya_id (yoki "umumiy"), oylik_limit |
-| Qarz | id, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, vaqt, muddat, izoh, tolovlar [{sana, vaqt, summa, hisob_id}], yopilgan |
-| Sozlamalar | sxema_versiyasi (hozir 2), oxirgi_zaxira_sanasi |
+| Qarz | id, yaratilgan, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, vaqt, muddat (bo'sh yoki sana), izoh, tolovlar [{id, sana, vaqt, summa, hisob_id}], yopilgan |
+| Sozlamalar | sxema_versiyasi (hozir 3), oxirgi_zaxira_sanasi |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
-- **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi. Qarz to'plami 8-bosqichda quriladi va hozir bo'sh, shuning uchun qarzdagi `vaqt` uchun alohida ko'chirish kerak emas: qarzlar boshidanoq `vaqt` bilan yoziladi.
+- **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi; 3 — qarzlar: to'lovlar qarz ichida (`tolovlar`, har to'lovda `id`), qarzda `vaqt`, `muddat`, `izoh`, `yopilgan` majburiy maydonlar. To'lovlar alohida to'plam emas, qarzning ichida saqlanadi: qarz o'chirilsa, to'lovlari ham ketadi va ular bir butun sifatida zaxiraga tushadi.
+- **Ko'chirish (2 → 3):** qarzda tushib qolgan maydonlar to'ldiriladi (`tolovlar` bo'sh ro'yxat, `vaqt` "00:00", `muddat` va `izoh` bo'sh, to'lovga `id`, `yopilgan` to'lovlardan hisoblanadi). To'liq qarzga va boshqa to'plamlarga tegilmaydi, hech narsa o'chirilmaydi; 1 → 2 bilan bitta tranzaksiyada bajariladi va takror ishlasa ham ma'lumot buzilmaydi.
 - **Ko'chirish (1 → 2):** eski yozuvlarga faqat `vaqt` qo'shiladi, boshqa hech narsa o'zgarmaydi va hech narsa o'chirilmaydi. Yozuvning `yaratilgan` vaqtidagi (mahalliy) sana yozuvning `sana` si bilan bir xil bo'lsa, `vaqt` o'sha yaratilgan soat:daqiqa bo'ladi, aks holda `00:00`. Ko'chirish bitta amal sifatida bajariladi (yarim yo'lda to'xtamaydi) va ikkinchi marta ishlasa ham ma'lumot buzilmaydi. Shu qoida eski zaxira fayllarini tiklashda ham qo'llanadi.
 
 ## 8. Hisob-kitob qoidalari
@@ -211,7 +212,7 @@ Pastda beshta tugmali navigatsiya:
 2. **Hisobot:** sarlavha va ikki belgi (diagramma almashtirish, filtr); Xarajat / Daromadlar yorlig'i; Kun / Hafta / Oy / Yil tezkor tugmalari; ko'rsatkichlar, taqqoslash; doira yoki ustunli diagramma. Filtr — pastdan chiqadigan oyna (oylik, yillik, davr, hisob).
 3. **Qo'shish (+):** o'rtadagi katta tugma, yozuv qo'shishning 5 qadamli oynasini ochadi (F2).
 4. **Byudjet:** kategoriyalar bo'yicha chegaralar va ularning holati.
-5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar, hisoblar, kategoriyalar, zaxira va eksport, ilova haqida.
+5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar (jami, shaxs bo'yicha ro'yxat, yopilganlar), hisoblar, kategoriyalar, zaxira va eksport, ilova haqida.
 
 ## 10. Qurish bosqichlari
 
@@ -276,6 +277,8 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Diagrammalar: doiradagi tilimlar va ustunlardagi raqamlar hisobotdagi raqamlarga aynan teng (sinov ma'lumoti bilan: oylik daromad 5 000 000, xarajat 500 000; Oziq-ovqat 450 000 (90%), Transport 50 000 (10%); 2-kun ustunida xarajat 350 000). Doira tilimi yoki ustun bosilsa, tegishli yozuvlar ochiladi.
 - Diagrammalar chegara holatlarida to'g'ri: davrda yozuv yo'q, faqat bitta kategoriya, 15 ta kategoriya, juda katta va juda kichik summalar, manfiy qoldiq; 5 000 yozuv bilan 1 soniyadan tez; 360 piksel kenglikda gorizontal aylantirishsiz, yorug' va qorong'i rejimda.
 - Qarzning sanasi va soati hozirdan keyin bo'lsa, qarz saqlanmaydi (21:00 mumkin, 21:01 mumkin emas); to'lov sanasi va soati ham shunday. Qaytarish muddati kelajakda bo'lishi mumkin.
+- Qarz: to'lov summasi qolgan qarzdan oshsa rad etiladi; to'lov vaqti qarz vaqtidan oldin bo'lsa rad etiladi; summa to'langandan kam qilib tahrirlanmaydi; qisman va to'liq qaytarish; muddati o'tgan qarz ⚠ belgisi bilan; qarz va to'lovni o'chirish 10 soniya ichida "Bekor qilish" bilan qaytadi; arxivlanayotgan hisobga bog'langan qarz haqida ogohlantirish.
+- Eski (2-versiya) bazani ochganda hech narsa o'chmaydi, qarzlarga faqat tushib qolgan maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.
 - Bazada oldindan qolgan kelajak vaqtli yozuv o'chirilmaydi, "Kelajak" belgisi bilan ko'rinadi va tahrirlashda vaqtni o'tmishga to'g'rilashni talab qiladi.
 

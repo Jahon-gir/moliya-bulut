@@ -4,7 +4,7 @@
 
   var DB_NOMI = 'moliya';
   var DB_VERSIYASI = 1;      // IndexedDB tuzilishi (to'plamlar ro'yxati)
-  var SXEMA_VERSIYASI = 2;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM) qo'shilgan
+  var SXEMA_VERSIYASI = 3;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`)
   // To'plamlar (TZ 7-band). Byudjetning kaliti kategoriya_id, qolganlariniki id.
   var TOPLAMLAR = {
     hisoblar: 'id',
@@ -103,28 +103,45 @@
     return r;
   }
 
-  // Ma'lumot tuzilishini yangi versiyaga o'tkazadi (hozircha 1 -> 2: yozuvlarga `vaqt` qo'shiladi).
+  // Ma'lumot tuzilishini yangi versiyaga o'tkazadi: 1 -> 2 (yozuvlarga `vaqt` qo'shiladi), 2 -> 3 (qarzlarda tushib qolgan
+  // maydonlar to'ldiriladi; hozirgacha qarzlar bo'sh bo'lgani uchun odatda hech narsa o'zgarmaydi).
   // Hammasi BITTA tranzaksiyada: xato bo'lsa, hech narsa o'zgarmaydi. Hech narsa o'chirilmaydi.
   // Versiya Sozlamalar ichida tekshiriladi, shuning uchun ikkinchi marta ishlasa yoki ilova ikki joyda
   // bir vaqtda ochilsa ham ma'lumot buzilmaydi.
   function sxemaniYangilash() {
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(['yozuvlar', 'sozlamalar'], 'readwrite');
+      var tx = db.transaction(['yozuvlar', 'qarzlar', 'sozlamalar'], 'readwrite');
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error); };
       var sozlamaSorovi = tx.objectStore('sozlamalar').get('asosiy');
       sozlamaSorovi.onsuccess = function () {
         var sozlama = sozlamaSorovi.result;
-        if (!sozlama || (sozlama.sxema_versiyasi || 1) >= SXEMA_VERSIYASI) return;
-        var yozuvSorovi = tx.objectStore('yozuvlar').getAll();
-        yozuvSorovi.onsuccess = function () {
-          yozuvSorovi.result.forEach(function (y) {
-            var yangi = Calc.yozuvniYangilash(y);
-            if (yangi !== y) tx.objectStore('yozuvlar').put(yangi);
-          });
+        var eski = sozlama ? (sozlama.sxema_versiyasi || 1) : SXEMA_VERSIYASI;
+        if (eski >= SXEMA_VERSIYASI) return;
+        var kutilmoqda = 2;
+        function tugadi() {
+          if (--kutilmoqda) return;
           sozlama.sxema_versiyasi = SXEMA_VERSIYASI;
           tx.objectStore('sozlamalar').put(sozlama);
+        }
+        if (eski < 2) {
+          var yozuvSorovi = tx.objectStore('yozuvlar').getAll();
+          yozuvSorovi.onsuccess = function () {
+            yozuvSorovi.result.forEach(function (y) {
+              var yangi = Calc.yozuvniYangilash(y);
+              if (yangi !== y) tx.objectStore('yozuvlar').put(yangi);
+            });
+            tugadi();
+          };
+        } else tugadi();
+        var qarzSorovi = tx.objectStore('qarzlar').getAll();
+        qarzSorovi.onsuccess = function () {
+          qarzSorovi.result.forEach(function (q) {
+            var yangi = Calc.qarzniYangilash(q);
+            if (yangi !== q) tx.objectStore('qarzlar').put(yangi);
+          });
+          tugadi();
         };
       };
     });

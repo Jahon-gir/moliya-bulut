@@ -670,7 +670,10 @@
     f.hisoblar.forEach(function (x, i) {
       var n = (i + 1) + '-hisobda ';
       if (!matnli(x.nom)) rad(n + 'nom yo\'q');
-      if (['naqd', 'karta', 'boshqa'].indexOf(x.tur) === -1) rad(n + 'tur noto\'g\'ri');
+      if (HISOB_TURLARI.indexOf(x.tur) === -1) rad(n + 'tur noto\'g\'ri');
+      if (x.belgi !== undefined && (typeof x.belgi !== 'string' || !x.belgi)) rad(n + 'belgi noto\'g\'ri');
+      if (x.rang !== undefined && (typeof x.rang !== 'string' || !x.rang)) rad(n + 'rang noto\'g\'ri');
+      if (x.oxirgi4 !== undefined && (typeof x.oxirgi4 !== 'string' || (x.oxirgi4 !== '' && !/^\d{4}$/.test(x.oxirgi4)))) rad(n + 'karta raqamining oxirgi 4 raqami noto\'g\'ri');
       if (!butun(x.boshlangich_qoldiq)) rad(n + 'boshlang\'ich qoldiq noto\'g\'ri');
       if (x.arxivlangan !== undefined && typeof x.arxivlangan !== 'boolean') rad(n + 'arxiv belgisi noto\'g\'ri');
     });
@@ -679,6 +682,7 @@
       var n = (i + 1) + '-kategoriyada ';
       if (!matnli(x.nom)) rad(n + 'nom yo\'q');
       if (x.tur !== 'daromad' && x.tur !== 'xarajat') rad(n + 'tur noto\'g\'ri');
+      if (x.belgi !== undefined && (typeof x.belgi !== 'string' || !x.belgi)) rad(n + 'belgi noto\'g\'ri');
     });
     var kelajak = { yozuv: 0, qarz: 0, tolov: 0 };
     f.yozuvlar.forEach(function (x, i) {
@@ -736,8 +740,8 @@
 
     // Joriy sxemaga o'tkazish (hech narsa o'chirilmaydi): yozuvlarga vaqt (1 -> 2), qarzlarda tushib qolgan maydonlar (2 -> 3)
     var m = {
-      hisoblar: f.hisoblar.map(function (x) { return x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x; }),
-      kategoriyalar: f.kategoriyalar.map(function (x) { return x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x; }),
+      hisoblar: f.hisoblar.map(function (x) { return hisobniYangilash(x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x); }),
+      kategoriyalar: f.kategoriyalar.map(function (x) { return kategoriyaniYangilash(x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x); }),
       yozuvlar: f.yozuvlar.map(yozuvniYangilash), byudjetlar: f.byudjetlar.slice(), qarzlar: f.qarzlar.map(qarzniYangilash),
       sozlamalar: f.sozlamalar.slice()
     };
@@ -898,6 +902,70 @@
       if (e.turi === 'yozuv') { if (e.yozuv.tur === 'xarajat') g.xarajat += e.yozuv.summa; else if (e.yozuv.tur === 'daromad') g.daromad += e.yozuv.summa; }
     });
     return guruhlar;
+  }
+
+  // ---- Belgi (ikonka), hisob turlari va yangi maydonlar (sxema 5) ----
+  var HISOB_TURLARI = ['karta', 'bank', 'naqd', 'boshqa'];
+  var HISOB_TURI_NOMI = { karta: 'Karta', bank: 'Bank hisobi', naqd: 'Naqd pul', boshqa: 'Boshqa' };
+  var HISOB_RANGLARI = { naqd: '#43a047', karta: '#1e88e5', bank: '#7e57c2', boshqa: '#78909c' };
+  var HISOB_BELGISI = { naqd: 'naqd', karta: 'karta', bank: 'bank', boshqa: 'hamyon' };
+
+  function belgiTaxmin(nom, guruh) { return global.Belgilar ? global.Belgilar.taxmin(nom, guruh) : 'umumiy'; }
+  // Eski hisobga tur berish: faqat tur yo'q yoki noto'g'ri bo'lsa. Nomida "naqd" bo'lsa naqd pul, bo'lmasa karta.
+  function hisobTuriTaxmin(nom) { return /naqd/i.test(String(nom || '')) ? 'naqd' : 'karta'; }
+
+  // Sxema 4 -> 5: hisobga tur (bo'lsa saqlanadi), belgi, rang va oxirgi4 beriladi. Hech narsa o'chirilmaydi; hammasi joyida bo'lsa
+  // o'sha obyektning o'zi qaytadi (ikkinchi marta ishlasa ham buzilmaydi).
+  function hisobniYangilash(h) {
+    var yangi = {}, o = false;
+    Object.keys(h).forEach(function (k) { yangi[k] = h[k]; });
+    if (HISOB_TURLARI.indexOf(h.tur) === -1) { yangi.tur = hisobTuriTaxmin(h.nom); o = true; }
+    if (typeof h.belgi !== 'string' || !h.belgi) { yangi.belgi = HISOB_BELGISI[yangi.tur]; o = true; }
+    if (typeof h.rang !== 'string' || !h.rang) { yangi.rang = HISOB_RANGLARI[yangi.tur]; o = true; }
+    if (typeof h.oxirgi4 !== 'string') { yangi.oxirgi4 = ''; o = true; }
+    return o ? yangi : h;
+  }
+  // Sxema 4 -> 5: kategoriyaga belgi nomiga qarab beriladi (topilmasa umumiy belgi)
+  function kategoriyaniYangilash(k) {
+    if (typeof k.belgi === 'string' && k.belgi) return k;
+    var yangi = {};
+    Object.keys(k).forEach(function (x) { yangi[x] = k[x]; });
+    yangi.belgi = belgiTaxmin(k.nom, k.tur);
+    return yangi;
+  }
+  // Ko'rsatish uchun: hisobning belgisi va rangi (maydon yo'q bo'lsa turga qarab)
+  function hisobBelgisiOl(h) { return h.belgi || HISOB_BELGISI[h.tur] || 'hamyon'; }
+  function hisobRangiOl(h) { return h.rang || HISOB_RANGLARI[h.tur] || HISOB_RANGLARI.boshqa; }
+  // Kartaning OXIRGI 4 raqami: bo'sh (ixtiyoriy) yoki aynan 4 ta raqam. To'liq karta raqami qabul qilinmaydi va saqlanmaydi.
+  function oxirgi4Tekshir(matn) {
+    var s = String(matn == null ? '' : matn).replace(/\s+/g, '');
+    if (s === '') return { oxirgi4: '' };
+    if (!/^\d+$/.test(s)) return { xato: 'Faqat raqam kiriting (kartaning oxirgi 4 raqami)' };
+    if (s.length > 4) return { xato: 'To\'liq karta raqamini kiritmang: faqat oxirgi 4 raqam' };
+    if (s.length < 4) return { xato: 'Aynan 4 ta raqam kiriting' };
+    return { oxirgi4: s };
+  }
+  // "•••• 1234" (faqat kartada va raqam berilgan bo'lsa), aks holda ''
+  function hisobMaskasi(h) { return h.tur === 'karta' && /^\d{4}$/.test(h.oxirgi4 || '') ? '•••• ' + h.oxirgi4 : ''; }
+  // Hisoblar ekrani filtri: faqat faol hisoblar; tur '' yoki 'hammasi' bo'lsa hammasi
+  function hisoblarniSuz(hisoblar, tur) {
+    return hisoblar.filter(function (h) { return !h.arxivlangan && (!tur || tur === 'hammasi' || h.tur === tur); });
+  }
+  // Standart kategoriyalar: har biriga "bor" (shu turda faol kategoriya shu nom bilan allaqachon bor — apostrof va harf kattaligiga e'tiborsiz)
+  function standartHolati(standart, kategoriyalar, tur) {
+    var bor = {};
+    kategoriyalar.forEach(function (k) { if (!k.arxivlangan) bor[k.tur + '|' + nomKaliti(k.nom)] = true; });
+    return standart.filter(function (x) { return !tur || x.tur === tur; }).map(function (x) {
+      return { nom: x.nom, tur: x.tur, belgi: x.belgi, rang: x.rang, bor: !!bor[x.tur + '|' + nomKaliti(x.nom)] };
+    });
+  }
+  // Oy strelkalari: oylar — oqimOylari() natijasi (eng yangisi birinchi). n = -1 oldingi oy, +1 keyingi oy. Chegarada joyida qoladi.
+  // Natija: { oy, oldingiBor, keyingiBor }
+  function oyKochir(oylar, joriy, n) {
+    var i = oylar.indexOf(joriy);
+    if (i === -1) i = 0;
+    var yangi = Math.max(0, Math.min(oylar.length - 1, i - n));   // ro'yxat yangidan eskiga: keyingi oy = indeks - 1
+    return { oy: oylar[yangi], oldingiBor: yangi < oylar.length - 1, keyingiBor: yangi > 0 };
   }
 
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
@@ -1214,6 +1282,9 @@
     ZAXIRA_ESLATMA_KUNI: ZAXIRA_ESLATMA_KUNI, sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraNomi: zaxiraNomi, zaxiraniTekshir: zaxiraniTekshir, zaxiraHolati: zaxiraHolati,
     csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, yozuvlarCSV: yozuvlarCSV, qarzlarCSV: qarzlarCSV,
     oyKalitiSur: oyKalitiSur, oqimOylari: oqimOylari, tarixOylari: tarixOylari, oyJami: oyJami, qarzSatrlari: qarzSatrlari, qarzSatrlariniSuz: qarzSatrlariniSuz, tarixGuruhlari: tarixGuruhlari,
+    HISOB_TURLARI: HISOB_TURLARI, HISOB_TURI_NOMI: HISOB_TURI_NOMI, HISOB_RANGLARI: HISOB_RANGLARI, HISOB_BELGISI: HISOB_BELGISI, belgiTaxmin: belgiTaxmin, hisobTuriTaxmin: hisobTuriTaxmin,
+    hisobniYangilash: hisobniYangilash, kategoriyaniYangilash: kategoriyaniYangilash, hisobBelgisiOl: hisobBelgisiOl, hisobRangiOl: hisobRangiOl, oxirgi4Tekshir: oxirgi4Tekshir,
+    hisobMaskasi: hisobMaskasi, hisoblarniSuz: hisoblarniSuz, standartHolati: standartHolati, oyKochir: oyKochir,
     donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
     BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,

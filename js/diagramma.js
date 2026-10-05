@@ -58,6 +58,24 @@
     return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
   }
 
+  // Doira yonidagi chap/o'ng tugmalar (masalan oldingi/keyingi oy): [chap, ong], har biri { belgi, ariya, bosilganda, ochiq }.
+  // Tugmalar kamida 44 px; ochiq false bo'lsa o'chiq. markaz — doira (yoki doira o'rnidagi matn) elementi.
+  function donaQatori(markaz, yon) {
+    var q = el('div', undefined, 'dona-qatori');
+    function tugma(t, klass) {
+      var b = el('button', t.belgi, 'yon-tugma ' + klass);
+      b.type = 'button';
+      b.setAttribute('aria-label', t.ariya);
+      b.disabled = !t.ochiq;
+      b.addEventListener('click', t.bosilganda);
+      return b;
+    }
+    q.appendChild(tugma(yon[0], 'yon-chap'));
+    q.appendChild(markaz);
+    q.appendChild(tugma(yon[1], 'yon-ong'));
+    return q;
+  }
+
   // ======================================================================
   // Doira (donut): xarajatlarning kategoriyalar bo'yicha taqsimoti
   // opts: { taqsimot: [{ kategoriya_id, summa, foiz }] (kattasidan kichigiga), jami,
@@ -73,9 +91,9 @@
     var tilimlar = Calc.tilimBurchaklari(guruh.tilimlar);
     var BOSHQALAR = 'boshqalar';
     function malumot(id) {
-      if (id === BOSHQALAR) return { nom: 'Boshqalar', rang: null };
+      if (id === BOSHQALAR) return { nom: 'Boshqalar', rang: null, belgi: 'boshqa' };
       var k = opts.kategoriya(id);
-      return { nom: k ? k.nom : 'Kategoriyasiz', rang: k ? k.rang : '#90a4ae' };
+      return { nom: k ? k.nom : 'Kategoriyasiz', rang: k ? k.rang : '#90a4ae', belgi: k ? k.belgi || Calc.belgiTaxmin(k.nom, k.tur) : 'umumiy' };
     }
     function nomi(t) {
       return t.kategoriya_id === BOSHQALAR ? 'Boshqalar (' + guruh.boshqalar.soni + ' ta kategoriya)' : malumot(t.kategoriya_id).nom;
@@ -87,7 +105,8 @@
     var guruhIdlari = {};   // "Boshqalar" ga kirgan kategoriya -> tilim kaliti
     guruh.dum.forEach(function (x) { guruhIdlari[x.kategoriya_id] = BOSHQALAR; });
 
-    var CX = 120, CY = 120, R2 = 108, R1 = 68, ORTA = (R1 + R2) / 2, FARQ = 2 / ORTA;   // tilimlar orasida 2 px bo'shliq
+    var CX = 120, CY = 120, R2 = 108, R1 = 88, ORTA = (R1 + R2) / 2, FARQ = 2 / ORTA;   // ingichka halqa (qalinligi 20); tilimlar orasida 2 px bo'shliq
+    var MIN_BURCHAK = 0.034;   // juda kichik tilim ham ko'rinsin (taxminan 3 px): faqat chizishda, hisob-kitobga ta'sir qilmaydi
     var s = svg('svg', { viewBox: '0 0 240 240', role: 'group', 'aria-label':
       (opts.turNomi || 'Xarajatlar') + ' kategoriyalar bo\'yicha doira diagrammasi' + (opts.markazNom ? ', ' + opts.markazNom : '') + '. Jami ' + sum(opts.jami) + ', ' + opts.taqsimot.length + ' ta kategoriya' +
       (guruh.boshqalar ? ', eng kattasi ' + Calc.DONA_ENG_KATTA + ' tasi alohida, qolgan ' + guruh.boshqalar.soni + ' tasi "Boshqalar" tilimida.' : '.') }, 'dona-svg');
@@ -98,8 +117,10 @@
       if (tilimlar.length === 1) {   // bitta kategoriya: to'liq halqa
         e = svg('circle', { cx: CX, cy: CY, r: ORTA, fill: 'none', 'stroke-width': R2 - R1, stroke: m.rang });
       } else {
-        var kirish = Math.min(FARQ / 2, (t.a1 - t.a0) * 0.2);
-        e = svg('path', { d: Calc.yoyYoli(CX, CY, R1, R2, t.a0 + kirish, t.a1 - kirish) });
+        var a0 = t.a0, a1 = t.a1;
+        if (a1 - a0 < MIN_BURCHAK) { var orta = (a0 + a1) / 2; a0 = orta - MIN_BURCHAK / 2; a1 = orta + MIN_BURCHAK / 2; }
+        var kirish = Math.min(FARQ / 2, (a1 - a0) * 0.2);
+        e = svg('path', { d: Calc.yoyYoli(CX, CY, R1, R2, a0 + kirish, a1 - kirish) });
         if (m.rang) e.setAttribute('fill', m.rang);
       }
       e.setAttribute('class', 'dona-tilim' + (t.kategoriya_id === BOSHQALAR ? ' dona-boshqalar' : ''));
@@ -171,12 +192,12 @@
     });
     var rasm = el('div', undefined, 'dona-rasm');
     rasm.appendChild(s);
-    quti.appendChild(rasm);
+    if (opts.yonTugmalari) quti.appendChild(donaQatori(rasm, opts.yonTugmalari)); else quti.appendChild(rasm);
 
     // Ro'yxat: HAMMA kategoriya (rangi, nomi, summasi, foizi). "Boshqalar" tilimiga kirganlar guruh sarlavhasi ostida.
     // Bu — diagrammaning matnli (jadval) nusxasi
     var royxat = el('ul', undefined, 'dona-royxat');
-    function qator(kalit, nom, rangi, summa, foiz, ariya, bosilganda, qoshimcha) {
+    function qator(kalit, nom, rangi, summa, foiz, ariya, bosilganda, qoshimcha, belgiKaliti) {
       var li = el('li', undefined, qoshimcha || '');
       var b = el('button', undefined, 'dona-qator');
       b.type = 'button';
@@ -184,8 +205,9 @@
       b.setAttribute('data-kategoriya', kalit);
       b.setAttribute('data-summa', summa);
       b.setAttribute('data-foiz', foiz);
-      var kalitEl = el('span', undefined, 'dona-kalit' + (rangi ? '' : ' dona-boshqalar-kalit'));
-      if (rangi) kalitEl.style.background = rangi;
+      var kalitEl = el('span', undefined, 'dona-kalit dona-belgi' + (rangi ? '' : ' dona-boshqalar-kalit'));
+      if (rangi) { kalitEl.style.background = rangi; kalitEl.style.color = Calc.matnRangi(rangi); }
+      kalitEl.appendChild(global.Belgilar.chiz(belgiKaliti || 'umumiy', 14));
       b.appendChild(kalitEl);
       b.appendChild(el('span', nom, 'dona-nom'));
       b.appendChild(el('span', sum(summa) + ' · ' + foiz + '%', 'dona-qiymat'));
@@ -202,13 +224,13 @@
     function kategoriyaQatori(x, ichki) {
       var m = malumot(x.kategoriya_id);
       qator(x.kategoriya_id, m.nom, m.rang, x.summa, x.foiz, matn({ kategoriya_id: x.kategoriya_id, summa: x.summa, foiz: x.foiz }),
-        function () { opts.bosilganda(x.kategoriya_id); }, ichki ? 'dona-ichki' : '');
+        function () { opts.bosilganda(x.kategoriya_id); }, ichki ? 'dona-ichki' : '', m.belgi);
     }
     var boshQism = guruh.boshqalar ? opts.taqsimot.slice(0, Calc.DONA_ENG_KATTA) : opts.taqsimot;
     boshQism.forEach(function (x) { kategoriyaQatori(x, false); });
     if (guruh.boshqalar) {
       var g = guruh.boshqalar;
-      qator(BOSHQALAR, 'Boshqalar (' + g.soni + ' ta kategoriya)', null, g.summa, g.foiz, matn(g), function () { opts.guruhBosilganda(g.idlar); }, 'dona-guruh');
+      qator(BOSHQALAR, 'Boshqalar (' + g.soni + ' ta kategoriya)', null, g.summa, g.foiz, matn(g), function () { opts.guruhBosilganda(g.idlar); }, 'dona-guruh', 'boshqa');
       guruh.dum.forEach(function (x) { kategoriyaQatori(x, true); });
     }
     quti.appendChild(royxat);
@@ -462,5 +484,5 @@
     return quti;
   }
 
-  global.Diagramma = { dona: dona, ustunli: ustunli, byudjetChizigi: byudjetChizigi, maslahatYashir: maslahatYashir };
+  global.Diagramma = { donaQatori: donaQatori, dona: dona, ustunli: ustunli, byudjetChizigi: byudjetChizigi, maslahatYashir: maslahatYashir };
 })(typeof window !== 'undefined' ? window : this);

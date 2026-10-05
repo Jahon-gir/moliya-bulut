@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 12 (06.10.2026)
+Hujjat versiyasi: 13 (07.10.2026)
 
 ## 1. Maqsad
 
@@ -37,7 +37,10 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 ## 4. Funksiyalar (1-versiya)
 
 ### F1. Hisoblar
-- Hisob qo'shish: nomi, turi (naqd, karta, boshqa), boshlang'ich qoldiq.
+- Hisob qo'shish: "+ Hisob" bosilganda pastdan "Hisob turini tanlang" oynasi chiqadi: **Karta** (qo'lda yuritiladigan karta hisobi), **Bank hisobi**, **Naqd pul**, **Boshqa**. Har birida belgi, nom, kulrang izoh va o'ngda ">". Tanlangach forma: nomi, hozirgi qoldiq, rang va belgi (turga mos standart belgi oldindan tanlangan, o'zgartirsa bo'ladi).
+- **Faqat Karta turida** ixtiyoriy maydon: kartaning **oxirgi 4 raqami**. To'liq karta raqami, amal qilish muddati va CVV so'ralmaydi va saqlanmaydi (formada shu haqda izoh bor; 4 tadan ko'p raqam rad etiladi). Ko'rsatilganda "•••• 1234".
+- Hisoblar ekranida tepada turi bo'yicha filtr yorliqlari (Hammasi, Karta, Bank hisobi, Naqd pul, Boshqa; yon tomonga suriladi). Har hisobda belgi, nom, (karta bo'lsa) "•••• 1234" va qoldiq.
+- Hisob tahrirlanganda nom, hozirgi qoldiq, rang va belgi o'zgaradi. Hisob belgisi Asosiy sahifadagi hisob kartalarida, yozuv qo'shishdagi hisob qadamida va Tarixda ko'rinadi.
 - Ilova birinchi ochilganda "Naqd pul" hisobi tayyor turadi.
 - Har bir hisobning joriy qoldig'i va barcha hisoblar bo'yicha umumiy balans ko'rsatiladi.
 - Hisob nomini o'zgartirish mumkin. Yozuvlari bor hisob o'chirilmaydi, arxivlanadi (ro'yxatdan yashiriladi, eski yozuvlar saqlanadi).
@@ -84,7 +87,10 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 ### F4. Kategoriyalar
 - Tayyor xarajat kategoriyalari: Oziq-ovqat, Transport, Kommunal to'lovlar, Uy-ro'zg'or, Sog'liq, Ta'lim, Kiyim, Aloqa va internet, Ko'ngilochar, Xayriya, Boshqa.
 - Tayyor daromad kategoriyalari: Oylik maosh, Qo'shimcha daromad, Sovg'a, Boshqa.
-- Yangi kategoriya qo'shish, nomini va rangini o'zgartirish mumkin.
+- Har kategoriyada rang bilan birga **belgi** (oddiy chiziqli SVG) bor. Belgilar (taxminan 40 ta, ilovaning o'zi chizgan) bitta ro'yxatda saqlanadi (`js/belgilar.js`); kategoriyada faqat belgi kaliti (`belgi`) saqlanadi.
+- "Kategoriya qo'shish" oynasi (Kategoriyalar bo'limidan va yozuv qo'shishdan) ikki yo'l bilan: **Standart kategoriya** (tayyor ro'yxat: nomi, belgisi, rangi; Xarajat/Daromadlar yorlig'i; qatorda "+"; allaqachon bor kategoriya kulrang va "Qo'shilgan") va **Maxsus kategoriya** (nom, rang, belgi; nom bo'sh yoki takror bo'lsa "Qo'shish" o'chiq va xato xabari chiqadi).
+- Mavjud kategoriyaning nomi, rangi va belgisini o'zgartirish mumkin (nom o'zgarsa, eski yozuvlarda ham yangi nom ko'rinadi).
+- Belgi hamma joyda ko'rinadi: yozuv qo'shish qadamlari, Tarix, Asosiy doira ro'yxati, Hisobot, Byudjet, tahrirlash ekrani.
 - Nom o'zgartirilsa, eski yozuvlarda ham yangi nom ko'rinadi.
 - Yozuvlari bor kategoriya o'chirilmaydi, arxivlanadi.
 
@@ -196,16 +202,18 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 
 | To'plam | Maydonlar |
 |---|---|
-| Hisob | id, nom, tur (naqd / karta / boshqa), boshlangich_qoldiq, arxivlangan |
+| Hisob | id, nom, tur (karta / bank / naqd / boshqa), belgi (kalit), rang, oxirgi4 (bo'sh yoki aynan 4 raqam; faqat karta uchun), boshlangich_qoldiq, arxivlangan |
 | Yozuv | id, tur (daromad / xarajat / otkazma), summa, sana, vaqt, hisob_id, qabul_hisob_id (faqat o'tkazmada), kategoriya_id, izoh |
-| Kategoriya | id, nom, tur (daromad / xarajat), rang, arxivlangan |
+| Kategoriya | id, nom, tur (daromad / xarajat), rang, belgi (kalit), arxivlangan |
 | Byudjet | kategoriya_id (yoki "umumiy"), oylik_limit |
 | Qarz | id, yaratilgan, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, vaqt, muddat (bo'sh yoki sana), izoh, tolovlar [{id, sana, vaqt, summa, hisob_id}], yopilgan |
-| Sozlamalar | sxema_versiyasi (hozir 4), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi) |
+| Sozlamalar | sxema_versiyasi (hozir 5), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi) |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
 - **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi; 4 — sozlamalarga `balans_yashirin` qo'shildi; 3 — qarzlar: to'lovlar qarz ichida (`tolovlar`, har to'lovda `id`), qarzda `vaqt`, `muddat`, `izoh`, `yopilgan` majburiy maydonlar. To'lovlar alohida to'plam emas, qarzning ichida saqlanadi: qarz o'chirilsa, to'lovlari ham ketadi va ular bir butun sifatida zaxiraga tushadi.
+- **Sxema 5:** kategoriyaga `belgi`; hisobga `tur` (karta / bank / naqd / boshqa), `belgi`, `rang`, `oxirgi4`.
+- **Ko'chirish (4 → 5):** kategoriyalarga nomiga qarab mos belgi qo'yiladi (topilmasa umumiy belgi). Hisoblarga tur beriladi: nomida "naqd" bo'lsa Naqd pul, bo'lmasa Karta (tur allaqachon to'g'ri bo'lsa, o'zgarmaydi); turga mos belgi va rang qo'yiladi, `oxirgi4` bo'sh. Hech narsa o'chirilmaydi, takror ishlasa ma'lumot buzilmaydi; bitta tranzaksiyada boshqa ko'chirishlar bilan birga bajariladi. Zaxira faylida bu maydonlar bo'lmasa (eski zaxira), tiklashda xuddi shu qoida bo'yicha to'ldiriladi; maydon noto'g'ri bo'lsa (noma'lum tur, `oxirgi4` 4 raqam emas, belgi matn emas), fayl rad etiladi.
 - **Ko'chirish (3 → 4):** sozlamalarga `balans_yashirin: false` qo'shiladi (allaqachon bo'lsa, o'zgarmaydi). Boshqa hech narsaga tegilmaydi va hech narsa o'chirilmaydi. Zaxira faylida bu belgi bo'lmasa (eski zaxira), tiklashda `false` qo'yiladi; belgi mantiqiy qiymat bo'lmasa, fayl rad etiladi.
 - **Ko'chirish (2 → 3):** qarzda tushib qolgan maydonlar to'ldiriladi (`tolovlar` bo'sh ro'yxat, `vaqt` "00:00", `muddat` va `izoh` bo'sh, to'lovga `id`, `yopilgan` to'lovlardan hisoblanadi). To'liq qarzga va boshqa to'plamlarga tegilmaydi, hech narsa o'chirilmaydi; 1 → 2 bilan bitta tranzaksiyada bajariladi va takror ishlasa ham ma'lumot buzilmaydi.
 - **Ko'chirish (1 → 2):** eski yozuvlarga faqat `vaqt` qo'shiladi, boshqa hech narsa o'zgarmaydi va hech narsa o'chirilmaydi. Yozuvning `yaratilgan` vaqtidagi (mahalliy) sana yozuvning `sana` si bilan bir xil bo'lsa, `vaqt` o'sha yaratilgan soat:daqiqa bo'ladi, aks holda `00:00`. Ko'chirish bitta amal sifatida bajariladi (yarim yo'lda to'xtamaydi) va ikkinchi marta ishlasa ham ma'lumot buzilmaydi. Shu qoida eski zaxira fayllarini tiklashda ham qo'llanadi.
@@ -229,8 +237,8 @@ Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"
    1. **Umumiy balans kartasi:** ko'z belgisi (bosilsa Asosiydagi summalar — balans, naqd pul oqimi, hisoblar, byudjet va qarz summalari, doira diagramma — "••••" bo'ladi; holat sozlamalarda saqlanadi va zaxiraga kiradi), "N ta hisob" va "Boshqarish" (hisoblar ekraniga). N — faol (arxivlanmagan) hisoblar soni.
    2. **Naqd pul oqimi:** oy tanlagich (oyning nomi va ochiluvchi ro'yxat; kelajak oylar yo'q) va tanlangan oy uchun xarajat, daromad, sof balans (hisobot qoidasi: o'tkazma va qarz kirmaydi). Karta bosilsa, Hisobot shu oy bilan ochiladi.
    3. **Tez qo'shish:** yon tomonga suriladigan kartalar: O'tkazma, Xarajat qo'shish, Daromad qo'shish, Qarz berish, Qarz olish. Har biri yozuv oynasini (F2, 5 qadam) yoki qarz oynasini (F8) tegishli tur yoki yo'nalish oldindan tanlangan holda ochadi; "Orqaga" Asosiyga qaytaradi.
-   4. **Hisoblar (N), "Hammasi":** yon tomonga suriladigan kartalar (nomi va qoldig'i). N va "N ta hisob" faol hisoblar sonini ko'rsatadi: hisob qo'shilganda oshadi, arxivlanganda kamayadi; arxivlangani kartalarda chiqmaydi. "Hammasi" hisoblar ekranini ochadi.
-   5. **Kategoriyalar:** Xarajat / Daromadlar yorlig'i, doira diagramma (F6: 6 ta alohida tilim va "Boshqalar" qoidasi) va ro'yxat, tanlangan oy uchun. "Hammasi" Hisobotni ochadi.
+   4. **Hisoblar (N), "Hammasi":** yon tomonga suriladigan kartalar (belgi, nomi, karta bo'lsa "•••• 1234" va qoldig'i). N va "N ta hisob" faol hisoblar sonini ko'rsatadi: hisob qo'shilganda oshadi, arxivlanganda kamayadi; arxivlangani kartalarda chiqmaydi. "Hammasi" hisoblar ekranini ochadi.
+   5. **Kategoriyalar:** sarlavha yonida kichik son belgisi (tanlangan oy va turdagi yozuvi bor kategoriyalar soni; oy yoki tur o'zgarganda yangilanadi). Xarajat / Daromadlar tugmalari (tanlangani asosiy rangda to'ldirilgan, oq matn; tanlov eslab qolinadi). Ingichka halqali doira diagramma (F6: 6 ta alohida tilim va "Boshqalar" qoidasi; kichik tilim ham ko'rinadi) va belgili ro'yxat. Doira yonida "‹" / "›" tugmalari (kamida 44 px, aria-label) oyni almashtiradi; joriy oyda "›" o'chiq. Oy holati "Naqd pul oqimi" dagi oy tanlagich bilan umumiy: ikkala karta doim bir oyni ko'rsatadi. Doira markazida oy nomi va jami. "Hammasi" Hisobotni ochadi.
    6. **Byudjetlar:** F7 ga qarang. Bosilsa Byudjet ekrani.
    7. **Qarzlar (N), "Hammasi":** yon tomonga suriladigan kartalar: shaxs, qaytarilgan/jami, qolgan summa, muddat (muddati o'tganlarda ⚠). Karta bosilsa qarz tafsiloti, "Hammasi" Qarzlar bo'limini ochadi.
    8. **Zaxira nusxa:** oxirgi zaxira sanasi va 14 kundan oshsa eslatma (F9).
@@ -310,6 +318,8 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Qarz: to'lov summasi qolgan qarzdan oshsa rad etiladi; to'lov vaqti qarz vaqtidan oldin bo'lsa rad etiladi; summa to'langandan kam qilib tahrirlanmaydi; qisman va to'liq qaytarish; muddati o'tgan qarz ⚠ belgisi bilan; qarz va to'lovni o'chirish 10 soniya ichida "Bekor qilish" bilan qaytadi; arxivlanayotgan hisobga bog'langan qarz haqida ogohlantirish.
 - Zaxira: zaxira olinadi, ma'lumot o'chiriladi, tiklanadi — balans, hisobotlar, byudjet va qarzlar avvalgidek; buzuq, yarim, bo'sh yoki boshqa ilova fayli rad etiladi va mavjud ma'lumotga tegilmaydi; eski sxema versiyali zaxira ko'chiriladi; tiklashdan oldin joriy holat zaxirasi yuklab beriladi; vaqti hozirdan keyingi yozuv saqlanadi va "Kelajak" belgisi bilan ko'rinadi. Bosh sahifada oxirgi zaxira sanasi, 14 kundan oshsa eslatma.
 - CSV: UTF-8 BOM, `;` ajratuvchi, ustunlar tartibi (Sana, Vaqt, Tur, Summa, Kategoriya, Hisob, Qayerga, Izoh), sana KK.OO.YYYY, summa mingliksiz; qarzlar alohida fayl; izohdagi tirnoq/vergul/nuqtali vergul o'raladi; `=`, `+`, `-`, `@` bilan boshlangan matn oldiga `'` qo'yiladi; 5 000 yozuvda zaxira, CSV va tiklash 1 soniyadan tez.
+- Belgilar va hisob turlari: kategoriya va hisob belgisi hamma joyda ko'rinadi; takror yoki bo'sh kategoriya nomi rad etiladi; karta uchun faqat oxirgi 4 raqam saqlanadi; Hisoblar filtri turi bo'yicha ishlaydi; Asosiydagi oy strelkalari kelajakka o'tmaydi va Naqd pul oqimi bilan bir oyni ko'rsatadi; son belgisi oy/tur o'zgarganda yangilanadi.
+- Eski (4-versiya) bazani ochganda hech narsa o'chmaydi, kategoriya va hisoblarga faqat yangi maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi); zaxira olish va tiklash yangi maydonlar bilan ishlaydi, eski zaxiralar ham tiklanadi.
 - Eski (2-versiya) bazani ochganda hech narsa o'chmaydi, qarzlarga faqat tushib qolgan maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.
 - Bazada oldindan qolgan kelajak vaqtli yozuv o'chirilmaydi, "Kelajak" belgisi bilan ko'rinadi va tahrirlashda vaqtni o'tmishga to'g'rilashni talab qiladi.

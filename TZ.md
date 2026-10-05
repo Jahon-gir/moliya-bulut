@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 10 (05.10.2026)
+Hujjat versiyasi: 11 (05.10.2026)
 
 ## 1. Maqsad
 
@@ -129,12 +129,19 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Arxivlangan hisob:** hisobni arxivlashda unga bog'langan hali yopilmagan qarzlar bo'lsa, tasdiqlash oynasida ogohlantirish chiqadi (qarzlar saqlanadi). Arxivdagi hisobga bog'langan qarzda "⚠ Hisob arxivda" belgisi ko'rinadi, yangi to'lov uchun faol hisob taklif qilinadi.
 
 ### F9. Zaxira va eksport
-- Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi.
-- "Zaxira nusxa olish": barcha ma'lumot bitta JSON faylga saqlanadi. Fayl nomida sana bo'ladi.
-- "Zaxiradan tiklash": JSON fayldan ma'lumot yuklanadi. Mavjud ma'lumot almashtirilishi haqida ogohlantiriladi va tiklashdan oldin joriy holatning zaxirasi avtomatik yuklab beriladi.
-- Eski sxema versiyasidagi zaxira (masalan, `vaqt` maydoni yo'q 1-versiya) tiklanganda 7-bandagi ko'chirish qoidasi qo'llanadi: yozuvlarga `vaqt` qo'shiladi, hech narsa o'chirilmaydi. Zaxirada vaqti hozirdan keyin bo'lgan yozuv bo'lsa, u rad etilmaydi va o'chirilmaydi: F3 dagidek "Kelajak" belgisi bilan ko'rinadi. Zaxira fayliga `vaqt` ham yoziladi.
-- "Excel uchun eksport": yozuvlar CSV faylga chiqariladi (UTF-8 BOM bilan, ajratuvchi nuqtali vergul), o'zbekcha harflar Excel'da to'g'ri ko'rinishi kerak. Sana ustunidan keyin alohida `vaqt` ustuni bo'ladi (`HH:MM`).
-- Bosh sahifada oxirgi zaxira sanasi ko'rsatiladi. 14 kundan oshgan bo'lsa, eslatma chiqadi.
+- Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi. Hammasi "Yana" → "Zaxira va eksport" ekranida.
+- **Zaxira nusxa olish:** barcha ma'lumot (hisoblar, yozuvlar (`vaqt` bilan), kategoriyalar, byudjetlar, qarzlar (to'lovlari bilan), sozlamalar) bitta JSON faylga saqlanadi. Fayl nomida sana va vaqt: `moliya-zaxira-2026-10-05-2130.json`. Fayl `ilova: "moliya"`, `sxema_versiyasi`, `zaxira_vaqti` va har to'plamning soni (`soni`, fayl butunligini tekshirish uchun) bilan boshlanadi. Zaxira olingach "oxirgi zaxira sanasi" (`YYYY-MM-DD`) yangilanadi; fayl ichida ham shu sana turadi.
+- **Zaxiradan tiklash:** JSON fayl tanlanadi. Tartib: (1) fayl to'liq tekshiriladi — mavjud ma'lumotga TEGILMAYDI; (2) tasdiq oynasi: fayldagi sonlar, mavjud ma'lumot almashtirilishi haqida ogohlantirish; (3) joriy holatning zaxirasi avtomatik yuklab beriladi (`moliya-zaxira-tiklashdan-oldin-…json`); (4) ma'lumot BITTA tranzaksiyada almashtiriladi: xato bo'lsa hech narsa o'zgarmaydi (yarim holat bo'lmaydi).
+- **Rad etiladi** (xabar chiqadi, mavjud ma'lumot o'zgarmaydi): bo'sh fayl, JSON emas yoki yarim/kesilgan fayl, boshqa ilova fayli, sxema versiyasi yo'q yoki ilovadan yangiroq, to'plam yetishmaydi yoki `soni` mos emas, buzuq yozuv (noto'g'ri tur, summa — musbat butun son bo'lishi kerak, sana, vaqt), mavjud bo'lmagan hisob yoki kategoriyaga havola, kategoriya turi yozuv turiga mos emas, takroriy `id`, qarzdagi to'lovlar yig'indisi qarz summasidan oshgani, faol hisob yo'qligi.
+- **Eski sxema versiyasidagi zaxira** (masalan, `vaqt` maydoni yo'q 1-versiya yoki qarzi to'liq bo'lmagan 2-versiya) tiklanganda 7-bandagi ko'chirish qoidasi qo'llanadi: yozuvlarga `vaqt` qo'shiladi, qarzdagi tushib qolgan maydonlar to'ldiriladi, hech narsa o'chirilmaydi; tasdiq oynasida "eski versiya" deb aytiladi.
+- **Vaqt qoidasi tiklashda:** zaxirada vaqti hozirdan keyin bo'lgan yozuv, qarz yoki to'lov tekshiriladi va sanaladi, lekin rad etilmaydi va o'chirilmaydi: F3 dagidek "Kelajak" belgisi bilan ko'rinadi, tasdiq oynasida ularning soni ogohlantiriladi, tahrirlashda vaqtni o'tmishga to'g'rilash talab qilinadi.
+- **Excel uchun eksport (CSV):** UTF-8 BOM bilan, ajratuvchi nuqtali vergul (`;`), qator oxiri CRLF; o'zbekcha harflar (oʻ, gʻ, ’ ...) Excel'da to'g'ri ko'rinadi. Davr: hammasi, tanlangan oy yoki tanlangan yil (yozuv o'z sanasi bo'yicha); tanlangan davrda yozuv bo'lmasa, fayl yuklanmaydi va xabar chiqadi.
+  - **Yozuvlar fayli** (`moliya-yozuvlar-<davr>.csv`) ustunlari: `Sana` (KK.OO.YYYY), `Vaqt` (SS:DD), `Tur` (Daromad / Xarajat / O'tkazma), `Summa` (butun son, mingliksiz), `Kategoriya`, `Hisob`, `Qayerga` (faqat o'tkazmada), `Izoh`. Sana va vaqt bo'yicha o'sish tartibida.
+  - **Qarzlar va to'lovlar fayli** (`moliya-qarzlar-<davr>.csv`, alohida): `Sana`, `Vaqt`, `Turi` (Qarz / To'lov), `Yo'nalish` (Men berdim / Men oldim), `Shaxs`, `Summa`, `Hisob`, `Muddat`, `Izoh`, `Holat` (qarzda: Ochiq / Yopilgan). Har qarz qatoridan keyin uning to'lovlari; qator o'z sanasi bo'yicha davrga kiradi.
+  - **O'rash:** maydonda qo'sh tirnoq, vergul, nuqtali vergul yoki qator oxiri bo'lsa, qo'sh tirnoqqa o'raladi (ichidagi tirnoq ikkilanadi).
+  - **Formula in'ektsiyasidan himoya:** matn maydoni (izoh, kategoriya, hisob, shaxs) `=`, `+`, `-`, `@` (yoki tab/CR) bilan boshlansa, oldiga bitta tirnoq (`'`) qo'yiladi.
+  - CSV dan import hozircha yo'q.
+- **Bosh sahifada** oxirgi zaxira sanasi ko'rsatiladi ("Oxirgi zaxira: 05.10.2026 (3 kun oldin)"). 14 kundan OSHSA (aynan 14 kun emas) yoki zaxira hali olinmagan, lekin yozuv bor bo'lsa, ⚠ eslatma va "Hozir zaxira olish" tugmasi chiqadi.
 
 ### F10. Telefonga o'rnatish va internetsiz ishlash
 - Ilova telefon brauzerida ochiladi va "bosh ekranga qo'shish" orqali o'rnatiladi. O'rnatilgach o'z belgisi bilan, brauzer paneli ko'rinmaydigan holda ochiladi.
@@ -217,7 +224,7 @@ Pastda beshta tugmali navigatsiya:
 2. **Hisobot:** sarlavha va ikki belgi (diagramma almashtirish, filtr); Xarajat / Daromadlar yorlig'i; Kun / Hafta / Oy / Yil tezkor tugmalari; ko'rsatkichlar, taqqoslash; doira yoki ustunli diagramma. Filtr — pastdan chiqadigan oyna (oylik, yillik, davr, hisob).
 3. **Qo'shish (+):** o'rtadagi katta tugma. Bosilsa pastdan "Yangi yozuv yaratish" oynasi chiqadi: "Tranzaksiya qo'shish" (birinchi, 5 qadamli yozuv oynasi, F2) va "Qarz qo'shish" (qarz oynasi, F8).
 4. **Byudjet:** kategoriyalar bo'yicha chegaralar va ularning holati.
-5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar (jami, shaxs bo'yicha ro'yxat, yopilganlar), hisoblar, kategoriyalar, zaxira va eksport, ilova haqida.
+5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar (jami, shaxs bo'yicha ro'yxat, yopilganlar), hisoblar, kategoriyalar, zaxira va eksport, kategoriyalar, zaxira va eksport, ilova haqida.
 
 ## 10. Qurish bosqichlari
 
@@ -267,7 +274,6 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 
 - `tests.html` dagi barcha testlar o'tadi. Testlar kamida quyidagilarni qamraydi: davr chegaralari (hafta ikki oyga to'g'ri kelishi, yil almashishi, kabisa yili), yig'indilar, foizlar, byudjet holati, hisob qoldig'i.
 - Sahifa yopilib qayta ochilganda barcha ma'lumot joyida.
-- Zaxira olinadi, ma'lumot o'chiriladi, zaxiradan tiklanadi va barcha raqamlar avvalgidek.
 - Summa bo'sh qoldirilsa, yozuv saqlanmaydi va xato xabari chiqadi.
 - O'chirilgan yozuv "Bekor qilish" bilan qaytadi.
 - Telefonda bosh ekranga o'rnatiladi va samolyot rejimida to'liq ishlaydi.
@@ -284,6 +290,8 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Qarzning sanasi va soati hozirdan keyin bo'lsa, qarz saqlanmaydi (21:00 mumkin, 21:01 mumkin emas); to'lov sanasi va soati ham shunday. Qaytarish muddati kelajakda bo'lishi mumkin.
 - "+" tugmasi "Yangi yozuv yaratish" oynasini ochadi (ikki qator, birinchisi "Tranzaksiya qo'shish" fokusda); Esc, yopish belgisi, "Orqaga" va oyna tashqarisi yopadi; qarz oynasidan "Orqaga" tanlov oynasiga qaytaradi; "Yana" → Qarzlar ichidagi "+ Qarz qo'shish" qarz oynasini to'g'ridan-to'g'ri ochadi. Tugmalar kamida 44 piksel, 360 piksel kenglikda yorug' va qorong'i rejimda to'g'ri ko'rinadi.
 - Qarz: to'lov summasi qolgan qarzdan oshsa rad etiladi; to'lov vaqti qarz vaqtidan oldin bo'lsa rad etiladi; summa to'langandan kam qilib tahrirlanmaydi; qisman va to'liq qaytarish; muddati o'tgan qarz ⚠ belgisi bilan; qarz va to'lovni o'chirish 10 soniya ichida "Bekor qilish" bilan qaytadi; arxivlanayotgan hisobga bog'langan qarz haqida ogohlantirish.
+- Zaxira: zaxira olinadi, ma'lumot o'chiriladi, tiklanadi — balans, hisobotlar, byudjet va qarzlar avvalgidek; buzuq, yarim, bo'sh yoki boshqa ilova fayli rad etiladi va mavjud ma'lumotga tegilmaydi; eski sxema versiyali zaxira ko'chiriladi; tiklashdan oldin joriy holat zaxirasi yuklab beriladi; vaqti hozirdan keyingi yozuv saqlanadi va "Kelajak" belgisi bilan ko'rinadi. Bosh sahifada oxirgi zaxira sanasi, 14 kundan oshsa eslatma.
+- CSV: UTF-8 BOM, `;` ajratuvchi, ustunlar tartibi (Sana, Vaqt, Tur, Summa, Kategoriya, Hisob, Qayerga, Izoh), sana KK.OO.YYYY, summa mingliksiz; qarzlar alohida fayl; izohdagi tirnoq/vergul/nuqtali vergul o'raladi; `=`, `+`, `-`, `@` bilan boshlangan matn oldiga `'` qo'yiladi; 5 000 yozuvda zaxira, CSV va tiklash 1 soniyadan tez.
 - Eski (2-versiya) bazani ochganda hech narsa o'chmaydi, qarzlarga faqat tushib qolgan maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.
 - Bazada oldindan qolgan kelajak vaqtli yozuv o'chirilmaydi, "Kelajak" belgisi bilan ko'rinadi va tahrirlashda vaqtni o'tmishga to'g'rilashni talab qiladi.

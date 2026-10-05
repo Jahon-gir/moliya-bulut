@@ -474,3 +474,10 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .tanlov-matn strong { font-size: 17px; }
 .tanlov-matn .xira { font-size: 14px; line-height: 1.35; }
 .tanlov-keyingi { flex: none; color: var(--xira); }
+
+/* 9-bosqich: zaxira va eksport */
+.xato-karta { margin: 0 0 12px; padding: 12px 14px; font-weight: 600; color: var(--matn); background: var(--karta); border: 1px solid var(--xarajat); border-left-width: 5px; border-radius: 12px; }
+.xato-karta[hidden] { display: none; }
+.zaxira-karta .zaxira-sana { font-weight: 600; margin-bottom: 4px; }
+.zaxira-eslatma { margin: 8px 0 10px; line-height: 1.4; }
+.zaxira-karta .ikkinchi-tugma { margin-top: 0; }

@@ -1701,25 +1701,10 @@
     return bloklar;
   }
 
-  // Bosh sahifa: chegarasi 80% dan oshgan kategoriyalar (va umumiy chegara) haqida ogohlantirish
-  function byudjetOgohlantirishi() {
-    var h = byudjetHisobi();
-    if (!h.ogohlantirishlar.length) return null;
-    var k = karta();
-    k.classList.add('byudjet-karta', 'ogohlantirish-karta');
-    k.appendChild(el('h2', 'Byudjet ogohlantirishi'));
-    h.ogohlantirishlar.forEach(function (x) {
-      k.appendChild(byudjetQatori(x.umumiy ? 'Umumiy oylik chegara' : x.kategoriya.nom, x.umumiy ? null : x.kategoriya.rang, x.holat,
-        function () { korsat('byudjet'); }, true));
-    });
-    return k;
-  }
-
-  // ---- Qarzlar (F8): "Yana" → Qarzlar ----
+  // ---- Qarzlar (F8): pastki menyudagi "Qarzlar" bo'limi ----
   var YONALISH_NOMI = { berdim: 'Men berdim', oldim: 'Men oldim' };
   var YONALISH_IZOHI = { berdim: 'Menga qaytarilishi kerak', oldim: 'Men qaytarishim kerak' };
 
-  function ochiqQarzlarSoni() { return malumot.qarzlar.filter(function (q) { return !Calc.qarzYopilganmi(q); }).length; }
   function qarzniOl(id) { return malumot.qarzlar.filter(function (q) { return q.id === id; })[0]; }
 
   // Saqlash va xotirani yangilash; muvaffaqiyatli bo'lsa keyingi qadam chaqiriladi

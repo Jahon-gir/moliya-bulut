@@ -606,6 +606,10 @@
   }
 
   // ---- Zaxira va eksport (TZ F9) ----
+  // Mavzu (sozlamalarda `tema`): qurilma sozlamasi, yorug' yoki qorong'i
+  var TEMALAR = ['qurilma', 'yorug', 'qorongi'];
+  function temaTogrimi(t) { return TEMALAR.indexOf(t) !== -1; }
+
   var ZAXIRA_TOPLAMLARI = ['hisoblar', 'yozuvlar', 'kategoriyalar', 'byudjetlar', 'qarzlar', 'sozlamalar'];
   var ZAXIRA_ESLATMA_KUNI = 14;   // oxirgi zaxiradan shuncha kundan oshsa, eslatma chiqadi
 
@@ -746,10 +750,11 @@
       sozlamalar: f.sozlamalar.slice()
     };
     var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
-    if (!asosiy) { asosiy = { kalit: 'asosiy', oxirgi_zaxira_sanasi: null, balans_yashirin: false }; m.sozlamalar.push(asosiy); }
+    if (!asosiy) { asosiy = { kalit: 'asosiy', oxirgi_zaxira_sanasi: null, balans_yashirin: false, tema: 'qurilma' }; m.sozlamalar.push(asosiy); }
     else if (asosiy.oxirgi_zaxira_sanasi && !sanaYaroqli(asosiy.oxirgi_zaxira_sanasi)) rad('Oxirgi zaxira sanasi noto\'g\'ri');
     if (asosiy.balans_yashirin !== undefined && typeof asosiy.balans_yashirin !== 'boolean') rad('Sozlamalarda balansni yashirish belgisi noto\'g\'ri');
-    m.sozlamalar = m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { sxema_versiyasi: sxema, balans_yashirin: x.balans_yashirin === true }) : x; });
+    if (asosiy.tema !== undefined && !temaTogrimi(asosiy.tema)) rad('Sozlamalarda mavzu noto\'g\'ri (qurilma, yorug yoki qorongi bo\'lishi kerak)');
+    m.sozlamalar = m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { sxema_versiyasi: sxema, balans_yashirin: x.balans_yashirin === true, tema: temaTogrimi(x.tema) ? x.tema : 'qurilma' }) : x; });
     var soni = {}; ZAXIRA_TOPLAMLARI.forEach(function (t) { soni[t] = m[t].length; });
     return { malumot: m, soni: soni, kelajak: kelajak, eskiSxema: v < sxema, fayldagiSxema: v };
   }
@@ -1288,6 +1293,7 @@
     kunlarSoni: kunlarSoni, oraliqNomi: oraliqNomi, oraliqTekshir: oraliqTekshir, oraliqSur: oraliqSur, hisobotDavri: hisobotDavri,
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     ZAXIRA_ESLATMA_KUNI: ZAXIRA_ESLATMA_KUNI, sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraNomi: zaxiraNomi, zaxiraniTekshir: zaxiraniTekshir, zaxiraHolati: zaxiraHolati,
+    TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
     csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, eksport: eksport, eksportCSV: eksportCSV, EKSPORT_SARLAVHA: EKSPORT_SARLAVHA,
     oyKalitiSur: oyKalitiSur, oqimOylari: oqimOylari, tarixOylari: tarixOylari, oyJami: oyJami, qarzSatrlari: qarzSatrlari, qarzSatrlariniSuz: qarzSatrlariniSuz, tarixGuruhlari: tarixGuruhlari,
     HISOB_TURLARI: HISOB_TURLARI, HISOB_TURI_NOMI: HISOB_TURI_NOMI, HISOB_RANGLARI: HISOB_RANGLARI, HISOB_BELGISI: HISOB_BELGISI, belgiTaxmin: belgiTaxmin, hisobTuriTaxmin: hisobTuriTaxmin,

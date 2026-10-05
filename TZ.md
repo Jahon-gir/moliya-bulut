@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 11 (05.10.2026)
+Hujjat versiyasi: 12 (06.10.2026)
 
 ## 1. Maqsad
 
@@ -45,9 +45,9 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 ### F2. Yozuv qo'shish
 - **Kirish yo'li.** Pastki menyudagi "+" tugmasi darhol shaklni emas, pastdan chiqadigan "Yangi yozuv yaratish" oynasini ochadi. Oynada ikki qator, har birida o'z belgisi (SVG), sarlavha, ostida kulrang izoh va o'ng tomonda ">" belgisi:
   1. **"Tranzaksiya qo'shish"** — "Daromad, xarajat yoki o'tkazma qo'shing". Bosilsa quyidagi 5 qadamli oyna ochiladi. Bu qator birinchi turadi, rang bilan ajralib turadi va oyna ochilganda fokusda bo'ladi: tezkor yo'l "+" va Enter (yozuv qo'shish faqat bitta bosish ko'proq ketadi).
-  2. **"Qarz qo'shish"** — "Berilgan yoki olingan qarz. Hisob qoldig'ini o'zgartiradi, hisobotga kirmaydi". Bosilsa qarz qo'shish oynasi ochiladi (F8); undagi "Orqaga" tanlov oynasiga qaytaradi. Qarz saqlansa, "Yana" → Qarzlar ro'yxati ochiladi.
+  2. **"Qarz qo'shish"** — "Berilgan yoki olingan qarz. Hisob qoldig'ini o'zgartiradi, hisobotga kirmaydi". Bosilsa qarz qo'shish oynasi ochiladi (F8); undagi "Orqaga" tanlov oynasiga qaytaradi. Qarz saqlansa, Qarzlar bo'limi ochiladi.
   - Oyna tashqarisi, yopish belgisi yoki "Orqaga" bosilsa yopiladi (hech narsa saqlanmaydi, "+" bosilgan bo'limda qolinadi). Tugmalar kamida 44 piksel; klaviatura bilan ham ishlaydi: Esc yopadi, Tab bilan yurish oyna ichida aylanadi, har tugmada `aria-label`, oyna `role="dialog"`. Yopilganda fokus "+" tugmasiga qaytadi.
-  - "Yana" → Qarzlar ichidagi "+ Qarz qo'shish" tugmasi tanlov oynasisiz to'g'ridan-to'g'ri qarz oynasini ochadi (u yerdagi "Orqaga" Qarzlar ro'yxatiga qaytaradi).
+  - Qarzlar bo'limidagi "+ Qarz qo'shish" tugmasi tanlov oynasisiz to'g'ridan-to'g'ri qarz oynasini ochadi (u yerdagi "Orqaga" Qarzlar bo'limiga qaytaradi). Asosiy sahifadagi "Tez qo'shish" kartalari ham (F2, 9-band) tanlov oynasisiz tegishli oynani ochadi.
 - Maydonlar: tur (daromad, xarajat, o'tkazma), summa, hisob, kategoriya, sana, soat, izoh.
 - Standart qiymatlar: tur xarajat, sana va soat hozirgi vaqt (qurilmaning mahalliy vaqti, daqiqa aniqligida), hisob oxirgi ishlatilgani.
 - **Qadamlar (wizard).** Yangi yozuv 5 ta ketma-ket qadamda kiritiladi. Har qadamda "Orqaga" tugmasi va "2 / 5" kabi ko'rsatkich bor:
@@ -69,13 +69,17 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Saqlangach shakl tozalanadi (1-qadamdan boshlanadi) va "Saqlandi" xabari chiqadi; balans, ro'yxat va hisobotlar darhol yangilanadi.
 - Oxirgi ishlatilgan hisob va kategoriya eslab qolinadi: keyingi yozuvda hisob oldindan tanlangan, kategoriya ajralib turadi.
 
-### F3. Yozuvlar ro'yxati
-- Yozuvlar kunlar bo'yicha guruhlangan, eng yangisi tepada. Har kun sarlavhasida o'sha kunning jami xarajati.
-- Har yozuvda soat ko'rinadi. Kun ichida soati kattasi tepada, soat teng bo'lsa `yaratilgan` bo'yicha (yangisi tepada).
+### F3. Yozuvlar ro'yxati ("Tarix")
+- Ro'yxat pastki menyudagi **Tarix** bo'limida. Tepada sarlavha va o'ng tomonda ikki belgi (SVG): qidiruv va filtr (ikkalasi dastlab yopiq, bosilganda ochiladi; filtr faol bo'lsa ochiq turadi).
+- **Oy yorliqlari** (yon tomonga suriladi, eskisidan yangisiga, oxirgisi joriy oy; faqat bazada oldindan qolgan kelajak yozuvlari bo'lsa, o'sha kelajak oylar ham qo'shiladi): tanlangan oy yozuvlari ko'rinadi. Yorliqlar ostida oylik **balans, xarajat, daromad** — Hisobot (F5) dagi oylik raqamlar bilan aynan bir xil qoidada (o'tkazma va qarz kirmaydi).
+- Yozuvlar kunlar bo'yicha guruhlangan, eng yangisi tepada. Har kun sarlavhasida o'sha kunning jami xarajati (daromad bo'lsa, daromadi ham).
+- Har yozuvda kategoriya, hisob, izoh va soat ko'rinadi. Kun ichida soati kattasi tepada, soat teng bo'lsa `yaratilgan` bo'yicha (yangisi tepada).
+- **O'tkazma va qarz amallari ham ro'yxatda** (qarz va to'lov alohida qator, "Qarz" belgisi bilan; bosilsa qarz tafsiloti ochiladi), lekin oylik va kunlik xarajat/daromad jamiga kirmaydi.
 - Bazada allaqachon bor, vaqti hozirdan keyingi yozuvlar o'chirilmaydi va yashirilmaydi: ular ro'yxatda "Kelajak" belgisi bilan ko'rinadi. Ularni tahrirlashda vaqtni o'tmishga to'g'rilash talab qilinadi (o'chirish esa to'g'rilashsiz mumkin).
 - Yozuvni tahrirlash mumkin. Tahrirlashda vaqt F2 dagi qoida bo'yicha qayta tekshiriladi.
 - Yozuvni o'chirish mumkin. O'chirilgach 10 soniya davomida "Bekor qilish" tugmasi ko'rinadi.
-- Filtrlar: tur, hisob, kategoriya, sana oralig'i. Izoh bo'yicha qidiruv.
+- Filtrlar: tur, hisob, kategoriya (oy yorliqlari davrni belgilaydi, shuning uchun Tarixda sana oralig'i maydoni yo'q). Izoh bo'yicha qidiruv (qarz qatorlarida izoh yoki shaxs ismi bo'yicha). Tur yoki kategoriya filtri tanlansa, qarz qatorlari chiqmaydi.
+- Diagramma bo'lagi bosilganda ochiladigan filtrlangan ro'yxat ("Barcha yozuvlar", sana oralig'i bilan) — ichki ekran, "Orqaga" bilan qaytiladi.
 
 ### F4. Kategoriyalar
 - Tayyor xarajat kategoriyalari: Oziq-ovqat, Transport, Kommunal to'lovlar, Uy-ro'zg'or, Sog'liq, Ta'lim, Kiyim, Aloqa va internet, Ko'ngilochar, Xayriya, Boshqa.
@@ -113,23 +117,23 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Har bir chegara uchun ko'rsatiladi: sarflangan summa, chegara, qolgan summa, foiz va to'lish chizig'i.
 - Faqat **joriy kalendar oyi** xarajatlari hisoblanadi (barcha hisoblar bo'yicha; daromad, o'tkazma va qarz kirmaydi). O'tgan oy xarajati hisobga kirmaydi.
 - Chegaralar aniq solishtiriladi: aynan 80% gacha — me'yorda; 80% dan oshsa chiziq sariq (⚠); aynan 100% sariq; 100% dan oshsa qizil (✕) va oshgan summa ko'rsatiladi. Rang bilan birga belgi va matn ham bor. Ko'rsatiladigan foiz rangga zid kelmaydi (sariqda kamida 81, qizilda kamida 101).
-- Bosh sahifada chegarasi 80 foizdan oshgan kategoriyalar (va umumiy chegara) haqida ogohlantirish chiqadi; to'lganlari birinchi. Bosilsa Byudjet bo'limi ochiladi.
+- **Asosiy** sahifadagi "Byudjetlar" bo'limida chegarasi 80 foizdan oshgan kategoriyalar (va umumiy chegara) to'lish chizig'i bilan chiqadi, to'lganlari birinchi; hamma chegara me'yorda bo'lsa, shuni aytadi; chegara umuman yo'q bo'lsa, "Byudjet qo'shish" qatori turadi. Bosilsa Byudjet ekrani ochiladi ("Ko'proq" ichida ham bor).
 - Ixtiyoriy umumiy oylik chegara (barcha xarajatlar uchun) shu ekranda o'rnatiladi.
 - Arxivlangan kategoriyalar Byudjet ekranida ko'rinmaydi (ularning chegaralari saqlanib qoladi).
 - Ma'lumot: `Byudjet = { kategoriya_id (yoki "umumiy"), oylik_limit }`.
-- Misol: Oziq-ovqat chegarasi 500 000, sarflangan 450 000 = 90%, sariq, bosh sahifada ogohlantirish.
+- Misol: Oziq-ovqat chegarasi 500 000, sarflangan 450 000 = 90%, sariq, Asosiy sahifada ogohlantirish.
 
 ### F8. Qarzlar
 - **Qarz qo'shish:** yo'nalish (men berdim yoki men oldim), kimga yoki kimdan (shaxs ismi), summa, hisob, sana va soat (`vaqt`), qaytarish muddati (ixtiyoriy), izoh.
 - **Vaqt qoidasi qarzga ham tegishli:** qarzning sanasi va soati hozirgi vaqtdan keyin bo'lmaydi (F2 dagi qoida: daqiqa aniqligida, standart qiymat — hozirgi vaqt, sana va soat uchun F2 dagi g'ildirakli tanlagich; saqlashda hozirgi vaqt qayta tekshiriladi). Faqat **qaytarish muddati** bundan mustasno: u tabiatan kelajakda bo'ladi (lekin qarz sanasidan oldin bo'lmaydi).
 - **To'lov (qaytarish):** qarzni qisman yoki to'liq qaytarilgan deb belgilash. Har bir to'lov summasi, sanasi, soati (`vaqt`) va hisobi bilan saqlanadi. To'lov summasi qolgan qarzdan oshmaydi. To'lov vaqti qarz vaqtidan oldin ham, hozirgi vaqtdan keyin ham bo'lmaydi (21:00 mumkin, 21:01 mumkin emas). To'lov hisobi qarz hisobidan farq qilishi mumkin. To'lovni tahrirlash va o'chirish mumkin. To'lovlar yig'indisi qarz summasiga yetsa, qarz avtomatik yopiladi (`yopilgan`); to'lov o'chirilsa, qayta ochiladi.
 - **Hisob qoldig'iga ta'siri:** bergan qarz hisobdan chiqadi, olgan qarz hisobga kiradi, qaytarilgani teskari yo'nalishda o'zgaradi (8-band, 1-qoida). Qarz amallari daromad yoki xarajat hisoblanmaydi: hisobotga (F5), byudjetga (F7) va diagrammalarga (F6) kirmaydi.
-- **Ko'rinish ("Yana" → Qarzlar):** tepada ikkita jami: "Menga qaytarilishi kerak" va "Men qaytarishim kerak" (qolgan summalar yig'indisi). Ro'yxat shaxs (va yo'nalish) bo'yicha guruhlangan: har guruhda qolgan summa, qaytarilgan/jami va to'lish chizig'i, ichida har bir qarz. Muddati o'tgan qarzlar rangdan tashqari ⚠ belgisi va "Muddati o'tgan" matni bilan ajratiladi (muddat kuni o'zi hali o'tgan hisoblanmaydi) va ro'yxatda birinchi turadi. To'liq yopilgan qarzlar alohida "Yopilganlar" ro'yxatiga o'tadi.
+- **Ko'rinish (pastki menyudagi "Qarzlar" bo'limi):** tepada "Berilgan qarzlar" va "Olingan qarzlar" jami (qolgan summalar yig'indisi), tepa o'ngda arxiv belgisi (yopilgan qarzlar). Ostida har qarz alohida karta: shaxs, qolgan summa, to'lish chizig'i, qaytarilgan, qolgan, jami, muddat (tartib: muddati o'tganlar, keyin qolgani kattasi). Muddati o'tgan qarzlar rangdan tashqari ⚠ belgisi va "Muddati o'tgan" matni bilan ajratiladi (muddat kuni o'zi hali o'tgan hisoblanmaydi) va ro'yxatda birinchi turadi. To'liq yopilgan qarzlar arxiv belgisi ostidagi "Yopilgan qarzlar" ro'yxatiga o'tadi.
 - **Tahrirlash va o'chirish:** qarzni tahrirlash mumkin, lekin summa shu paytgacha to'langandan kam bo'lmaydi va qarz vaqti mavjud to'lovlardan keyin bo'lmaydi. Qarzni ham, to'lovni ham o'chirishda 10 soniya davomida "Bekor qilish" turadi. Qarz o'chirilsa, uning hisob qoldig'iga ta'siri ham yo'qoladi.
 - **Arxivlangan hisob:** hisobni arxivlashda unga bog'langan hali yopilmagan qarzlar bo'lsa, tasdiqlash oynasida ogohlantirish chiqadi (qarzlar saqlanadi). Arxivdagi hisobga bog'langan qarzda "⚠ Hisob arxivda" belgisi ko'rinadi, yangi to'lov uchun faol hisob taklif qilinadi.
 
 ### F9. Zaxira va eksport
-- Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi. Hammasi "Yana" → "Zaxira va eksport" ekranida.
+- Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi. Hammasi "Ko'proq" → "Zaxira va eksport" ekranida. Oxirgi zaxira sanasi va "summalarni yashirish" holati sozlamalarda saqlanadi va zaxiraga kiradi.
 - **Zaxira nusxa olish:** barcha ma'lumot (hisoblar, yozuvlar (`vaqt` bilan), kategoriyalar, byudjetlar, qarzlar (to'lovlari bilan), sozlamalar) bitta JSON faylga saqlanadi. Fayl nomida sana va vaqt: `moliya-zaxira-2026-10-05-2130.json`. Fayl `ilova: "moliya"`, `sxema_versiyasi`, `zaxira_vaqti` va har to'plamning soni (`soni`, fayl butunligini tekshirish uchun) bilan boshlanadi. Zaxira olingach "oxirgi zaxira sanasi" (`YYYY-MM-DD`) yangilanadi; fayl ichida ham shu sana turadi.
 - **Zaxiradan tiklash:** JSON fayl tanlanadi. Tartib: (1) fayl to'liq tekshiriladi — mavjud ma'lumotga TEGILMAYDI; (2) tasdiq oynasi: fayldagi sonlar, mavjud ma'lumot almashtirilishi haqida ogohlantirish; (3) joriy holatning zaxirasi avtomatik yuklab beriladi (`moliya-zaxira-tiklashdan-oldin-…json`); (4) ma'lumot BITTA tranzaksiyada almashtiriladi: xato bo'lsa hech narsa o'zgarmaydi (yarim holat bo'lmaydi).
 - **Rad etiladi** (xabar chiqadi, mavjud ma'lumot o'zgarmaydi): bo'sh fayl, JSON emas yoki yarim/kesilgan fayl, boshqa ilova fayli, sxema versiyasi yo'q yoki ilovadan yangiroq, to'plam yetishmaydi yoki `soni` mos emas, buzuq yozuv (noto'g'ri tur, summa — musbat butun son bo'lishi kerak, sana, vaqt), mavjud bo'lmagan hisob yoki kategoriyaga havola, kategoriya turi yozuv turiga mos emas, takroriy `id`, qarzdagi to'lovlar yig'indisi qarz summasidan oshgani, faol hisob yo'qligi.
@@ -197,11 +201,12 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 | Kategoriya | id, nom, tur (daromad / xarajat), rang, arxivlangan |
 | Byudjet | kategoriya_id (yoki "umumiy"), oylik_limit |
 | Qarz | id, yaratilgan, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, vaqt, muddat (bo'sh yoki sana), izoh, tolovlar [{id, sana, vaqt, summa, hisob_id}], yopilgan |
-| Sozlamalar | sxema_versiyasi (hozir 3), oxirgi_zaxira_sanasi |
+| Sozlamalar | sxema_versiyasi (hozir 4), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi) |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
-- **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi; 3 — qarzlar: to'lovlar qarz ichida (`tolovlar`, har to'lovda `id`), qarzda `vaqt`, `muddat`, `izoh`, `yopilgan` majburiy maydonlar. To'lovlar alohida to'plam emas, qarzning ichida saqlanadi: qarz o'chirilsa, to'lovlari ham ketadi va ular bir butun sifatida zaxiraga tushadi.
+- **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi; 4 — sozlamalarga `balans_yashirin` qo'shildi; 3 — qarzlar: to'lovlar qarz ichida (`tolovlar`, har to'lovda `id`), qarzda `vaqt`, `muddat`, `izoh`, `yopilgan` majburiy maydonlar. To'lovlar alohida to'plam emas, qarzning ichida saqlanadi: qarz o'chirilsa, to'lovlari ham ketadi va ular bir butun sifatida zaxiraga tushadi.
+- **Ko'chirish (3 → 4):** sozlamalarga `balans_yashirin: false` qo'shiladi (allaqachon bo'lsa, o'zgarmaydi). Boshqa hech narsaga tegilmaydi va hech narsa o'chirilmaydi. Zaxira faylida bu belgi bo'lmasa (eski zaxira), tiklashda `false` qo'yiladi; belgi mantiqiy qiymat bo'lmasa, fayl rad etiladi.
 - **Ko'chirish (2 → 3):** qarzda tushib qolgan maydonlar to'ldiriladi (`tolovlar` bo'sh ro'yxat, `vaqt` "00:00", `muddat` va `izoh` bo'sh, to'lovga `id`, `yopilgan` to'lovlardan hisoblanadi). To'liq qarzga va boshqa to'plamlarga tegilmaydi, hech narsa o'chirilmaydi; 1 → 2 bilan bitta tranzaksiyada bajariladi va takror ishlasa ham ma'lumot buzilmaydi.
 - **Ko'chirish (1 → 2):** eski yozuvlarga faqat `vaqt` qo'shiladi, boshqa hech narsa o'zgarmaydi va hech narsa o'chirilmaydi. Yozuvning `yaratilgan` vaqtidagi (mahalliy) sana yozuvning `sana` si bilan bir xil bo'lsa, `vaqt` o'sha yaratilgan soat:daqiqa bo'ladi, aks holda `00:00`. Ko'chirish bitta amal sifatida bajariladi (yarim yo'lda to'xtamaydi) va ikkinchi marta ishlasa ham ma'lumot buzilmaydi. Shu qoida eski zaxira fayllarini tiklashda ham qo'llanadi.
 
@@ -218,13 +223,23 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 
 ## 9. Ekranlar
 
-Pastda beshta tugmali navigatsiya:
+Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"** (o'rtada, katta), **Qarzlar**, **Ko'proq**. Hamma tugma kamida 44 piksel. Oxirgi tanlangan bo'lim eslab qolinadi; ichki ekranlarda "Orqaga" oldingi ekranga qaytaradi (Hisobot va Byudjet ichki ekran: Asosiy yoki Ko'proq dan ochiladi, "Orqaga" ochilgan joyga qaytaradi).
 
-1. **Bosh sahifa:** umumiy balans, hisoblar qoldig'i, joriy oy daromadi va xarajati, byudjet ogohlantirishlari, oxirgi 10 ta yozuv, zaxira eslatmasi.
-2. **Hisobot:** sarlavha va ikki belgi (diagramma almashtirish, filtr); Xarajat / Daromadlar yorlig'i; Kun / Hafta / Oy / Yil tezkor tugmalari; ko'rsatkichlar, taqqoslash; doira yoki ustunli diagramma. Filtr — pastdan chiqadigan oyna (oylik, yillik, davr, hisob).
+1. **Asosiy** (tepadan pastga):
+   1. **Umumiy balans kartasi:** ko'z belgisi (bosilsa Asosiydagi summalar — balans, naqd pul oqimi, hisoblar, byudjet va qarz summalari, doira diagramma — "••••" bo'ladi; holat sozlamalarda saqlanadi va zaxiraga kiradi), "N ta hisob" va "Boshqarish" (hisoblar ekraniga). N — faol (arxivlanmagan) hisoblar soni.
+   2. **Naqd pul oqimi:** oy tanlagich (oyning nomi va ochiluvchi ro'yxat; kelajak oylar yo'q) va tanlangan oy uchun xarajat, daromad, sof balans (hisobot qoidasi: o'tkazma va qarz kirmaydi). Karta bosilsa, Hisobot shu oy bilan ochiladi.
+   3. **Tez qo'shish:** yon tomonga suriladigan kartalar: O'tkazma, Xarajat qo'shish, Daromad qo'shish, Qarz berish, Qarz olish. Har biri yozuv oynasini (F2, 5 qadam) yoki qarz oynasini (F8) tegishli tur yoki yo'nalish oldindan tanlangan holda ochadi; "Orqaga" Asosiyga qaytaradi.
+   4. **Hisoblar (N), "Hammasi":** yon tomonga suriladigan kartalar (nomi va qoldig'i). N va "N ta hisob" faol hisoblar sonini ko'rsatadi: hisob qo'shilganda oshadi, arxivlanganda kamayadi; arxivlangani kartalarda chiqmaydi. "Hammasi" hisoblar ekranini ochadi.
+   5. **Kategoriyalar:** Xarajat / Daromadlar yorlig'i, doira diagramma (F6: 6 ta alohida tilim va "Boshqalar" qoidasi) va ro'yxat, tanlangan oy uchun. "Hammasi" Hisobotni ochadi.
+   6. **Byudjetlar:** F7 ga qarang. Bosilsa Byudjet ekrani.
+   7. **Qarzlar (N), "Hammasi":** yon tomonga suriladigan kartalar: shaxs, qaytarilgan/jami, qolgan summa, muddat (muddati o'tganlarda ⚠). Karta bosilsa qarz tafsiloti, "Hammasi" Qarzlar bo'limini ochadi.
+   8. **Zaxira nusxa:** oxirgi zaxira sanasi va 14 kundan oshsa eslatma (F9).
+2. **Tarix:** F3.
 3. **Qo'shish (+):** o'rtadagi katta tugma. Bosilsa pastdan "Yangi yozuv yaratish" oynasi chiqadi: "Tranzaksiya qo'shish" (birinchi, 5 qadamli yozuv oynasi, F2) va "Qarz qo'shish" (qarz oynasi, F8).
-4. **Byudjet:** kategoriyalar bo'yicha chegaralar va ularning holati.
-5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar (jami, shaxs bo'yicha ro'yxat, yopilganlar), hisoblar, kategoriyalar, zaxira va eksport, kategoriyalar, zaxira va eksport, ilova haqida.
+4. **Qarzlar:** F8 (jami, har qarz kartasi, arxiv belgisi, qarz qo'shish).
+5. **Ko'proq:** Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4), Zaxira va eksport (F9), ilova versiyasi.
+
+Ilova faqat shu ekranlarni o'z ichiga oladi: valyuta kurslari, sodiqlik kartalari, maqsadlar va reklama kartalari yo'q.
 
 ## 10. Qurish bosqichlari
 
@@ -288,6 +303,9 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Diagrammalar: doiradagi tilimlar va ustunlardagi raqamlar hisobotdagi raqamlarga aynan teng (sinov ma'lumoti bilan: oylik daromad 5 000 000, xarajat 500 000; Oziq-ovqat 450 000 (90%), Transport 50 000 (10%); 2-kun ustunida xarajat 350 000). Doira tilimi yoki ustun bosilsa, tegishli yozuvlar ochiladi.
 - Diagrammalar chegara holatlarida to'g'ri: davrda yozuv yo'q, faqat bitta kategoriya, 15 ta kategoriya, juda katta va juda kichik summalar, manfiy qoldiq; 5 000 yozuv bilan 1 soniyadan tez; 360 piksel kenglikda gorizontal aylantirishsiz, yorug' va qorong'i rejimda.
 - Qarzning sanasi va soati hozirdan keyin bo'lsa, qarz saqlanmaydi (21:00 mumkin, 21:01 mumkin emas); to'lov sanasi va soati ham shunday. Qaytarish muddati kelajakda bo'lishi mumkin.
+- Navigatsiya: pastki menyu Asosiy, Tarix, "+", Qarzlar, Ko'proq (tugmalar kamida 44 px); oxirgi bo'lim eslab qolinadi; Hisobot va Byudjet "Ko'proq" ichida va "Orqaga" bilan qaytiladi.
+- Asosiy: ko'z belgisi summalarni "••••" qiladi va holat qayta ochilganda saqlanib turadi (zaxiraga kiradi); oy tanlagichda kelajak oy yo'q; tez qo'shish kartalari tegishli turni oldindan tanlab ochadi; hisoblar soni hisob qo'shilganda oshadi, arxivlanganda kamayadi; kategoriyalar doirasi 6 tilim + "Boshqalar"; byudjetlar (80% dan oshganlar yoki "Byudjet qo'shish"); qarz kartalari.
+- Tarix: oy yorliqlari (oxirgisi joriy oy), oylik balans/xarajat/daromad Hisobot bilan aynan mos; o'tkazma va qarz amallari ro'yxatda, lekin jamga kirmaydi.
 - "+" tugmasi "Yangi yozuv yaratish" oynasini ochadi (ikki qator, birinchisi "Tranzaksiya qo'shish" fokusda); Esc, yopish belgisi, "Orqaga" va oyna tashqarisi yopadi; qarz oynasidan "Orqaga" tanlov oynasiga qaytaradi; "Yana" → Qarzlar ichidagi "+ Qarz qo'shish" qarz oynasini to'g'ridan-to'g'ri ochadi. Tugmalar kamida 44 piksel, 360 piksel kenglikda yorug' va qorong'i rejimda to'g'ri ko'rinadi.
 - Qarz: to'lov summasi qolgan qarzdan oshsa rad etiladi; to'lov vaqti qarz vaqtidan oldin bo'lsa rad etiladi; summa to'langandan kam qilib tahrirlanmaydi; qisman va to'liq qaytarish; muddati o'tgan qarz ⚠ belgisi bilan; qarz va to'lovni o'chirish 10 soniya ichida "Bekor qilish" bilan qaytadi; arxivlanayotgan hisobga bog'langan qarz haqida ogohlantirish.
 - Zaxira: zaxira olinadi, ma'lumot o'chiriladi, tiklanadi — balans, hisobotlar, byudjet va qarzlar avvalgidek; buzuq, yarim, bo'sh yoki boshqa ilova fayli rad etiladi va mavjud ma'lumotga tegilmaydi; eski sxema versiyali zaxira ko'chiriladi; tiklashdan oldin joriy holat zaxirasi yuklab beriladi; vaqti hozirdan keyingi yozuv saqlanadi va "Kelajak" belgisi bilan ko'rinadi. Bosh sahifada oxirgi zaxira sanasi, 14 kundan oshsa eslatma.

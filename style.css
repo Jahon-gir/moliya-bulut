@@ -481,3 +481,59 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .zaxira-karta .zaxira-sana { font-weight: 600; margin-bottom: 4px; }
 .zaxira-eslatma { margin: 8px 0 10px; line-height: 1.4; }
 .zaxira-karta .ikkinchi-tugma { margin-top: 0; }
+
+/* 10-bosqich: Asosiy, Tarix, Qarzlar, Ko'proq */
+.bolim-bosh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.bolim-bosh h2 { margin: 0; flex: 1; min-width: 0; }
+.balans-yuqori { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.balans-past { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.koz-tugma { border: 0; background: none; }
+.oy-tanlagich { width: auto; max-width: 62%; min-height: 44px; padding: 6px 28px 6px 12px; font-weight: 600; border-radius: 22px; }
+.oqim-qator {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; min-height: 64px; padding: 8px 0 2px; text-align: left;
+  font: inherit; color: var(--matn); background: none; border: 0; cursor: pointer;
+}
+.oqim-katak { min-width: 0; }
+.oqim-katak strong { display: block; font-size: 15px; overflow-wrap: anywhere; }
+.surma {
+  display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; padding: 2px 2px 8px; margin: 0 -2px;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+}
+.surma > * { scroll-snap-align: start; flex: none; }
+.tez-karta {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 104px; min-height: 96px; padding: 10px 6px;
+  font: inherit; text-align: center; cursor: pointer; color: var(--matn); background: var(--fon); border: 1px solid var(--chiziq); border-radius: 16px;
+}
+.tez-karta:focus-visible, .hisob-mini:focus-visible, .qarz-mini:focus-visible, .oy-yorliq:focus-visible, .oqim-qator:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.tez-nom { font-size: 13px; font-weight: 600; line-height: 1.25; }
+.hisob-mini {
+  display: flex; flex-direction: column; gap: 2px; width: 150px; min-height: 88px; padding: 12px; font: inherit; text-align: left; cursor: pointer;
+  color: var(--matn); background: var(--fon); border: 1px solid var(--chiziq); border-radius: 16px;
+}
+.hisob-mini-nom { font-weight: 700; overflow-wrap: anywhere; }
+.hisob-mini-qoldiq { font-size: 17px; }
+.hisob-mini-tur { font-size: 13px; }
+.qarz-mini {
+  display: block; width: 220px; min-height: 120px; padding: 12px; font: inherit; text-align: left; cursor: pointer;
+  color: var(--matn); background: var(--fon); border: 1px solid var(--chiziq); border-radius: 16px;
+}
+.qarz-mini .qarz-bosh { margin-bottom: 0; }
+.qarz-mini .qarz-raqam { font-size: 13px; margin-bottom: 0; }
+.qarz-mini .qarz-muddat { font-size: 13px; margin-top: 2px; }
+.qarz-karta-tugma { display: block; width: 100%; text-align: left; font: inherit; color: var(--matn); cursor: pointer; }
+.qarz-karta-tugma.karta { background: var(--karta); border: 1px solid var(--chiziq); border-radius: 16px; padding: 14px; }
+.qarz-qatori { font-weight: 600; margin: 2px 0; }
+.qarz-muddat { font-size: 14px; }
+.byudjet-karta .byudjet-qoshish { margin-top: 0; }
+.oy-yorliqlar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin: 0 -2px 4px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.oy-yorliq {
+  flex: none; min-width: 64px; min-height: 44px; padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer; scroll-snap-align: center;
+  color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 22px;
+}
+.oy-yorliq[aria-selected="true"] { color: var(--asosiy-matn); background: var(--asosiy); border-color: var(--asosiy); }
+.tarix-jami { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tarix-jami-katak { min-width: 0; }
+.tarix-jami-katak strong { display: block; font-size: 15px; overflow-wrap: anywhere; }
+.kun-jami { font-size: 14px; color: var(--xira); text-align: right; }
+.filtr-quti[hidden] { display: none; }
+.qarz-belgi-tarix { display: inline-block; margin-left: 6px; padding: 0 8px; font-size: 12px; font-weight: 700; color: var(--xira); border: 1px solid var(--chiziq); border-radius: 10px; white-space: nowrap; }

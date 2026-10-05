@@ -6,7 +6,7 @@
   var tugmalar = document.querySelectorAll('[data-bolim]');
   var keyingiBosqich = 'Bu bo\'lim keyingi bosqichlarda quriladi.';
 
-  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [], qarzlar: [], zaxiraSanasi: null, balansYashirin: false };
+  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [], qarzlar: [], zaxiraSanasi: null, balansYashirin: false, tema: 'qurilma' };
   var xabar = '';          // "Saqlandi" xabari, faqat qo'shish ekranida bir marta ko'rsatiladi
   var joriy = 'bosh';      // hozirgi bo'lim
   var stek = [];           // bo'lim ichidagi ochiq ekranlar: [{ yasash, forma }]; "Orqaga" oxirgisini yopadi
@@ -1469,6 +1469,20 @@
       k.appendChild(q);
     });
     bloklar.push(k);
+    var m = karta();
+    m.classList.add('mavzu-karta');
+    m.appendChild(el('h2', 'Mavzu'));
+    var tanlov = el('div', undefined, 'tanlov mavzu-tanlov');
+    tanlov.setAttribute('role', 'group');
+    tanlov.setAttribute('aria-label', 'Mavzu');
+    [['qurilma', 'Qurilma bo\'yicha'], ['yorug', 'Yorug\''], ['qorongi', 'Qorong\'i']].forEach(function (t) {
+      var b = tugma(t[1], undefined, function () { temaniTanlash(t[0]); });
+      b.id = 'tema-' + t[0];
+      b.setAttribute('aria-pressed', String(malumot.tema === t[0]));
+      tanlov.appendChild(b);
+    });
+    m.appendChild(tanlov);
+    bloklar.push(m);
     bloklar.push(el('p', 'Moliya · versiya ' + VERSIYA, 'versiya'));
     return bloklar;
   }
@@ -2665,6 +2679,15 @@
   function pulBelgili(n) { return malumot.balansYashirin ? '••••' : (n > 0 ? '+' : '') + Calc.sumFormat(n); }
   function asosiyniQayta() { chizish(bolimlar.bosh(malumot), true); }
 
+  // Mavzu: darhol qo'llanadi (qayta yuklamasdan), sozlamalarda saqlanadi (zaxiraga kiradi)
+  function temaniTanlash(tema) {
+    Tema.qollash(tema);
+    return Data.olish('sozlamalar', 'asosiy').then(function (z) {
+      return Data.saqlash('sozlamalar', Object.assign({ kalit: 'asosiy', sxema_versiyasi: Data.SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null }, z || {}, { tema: tema }));
+    }).then(function () { malumot.tema = tema; chizish(koproqMenyusi(), true); })
+      .catch(function (x) { qisqaXabar('Saqlab bo\'lmadi: ' + x); });
+  }
+
   function balansniYashirish(yashirin) {
     var sozlama;
     return Data.olish('sozlamalar', 'asosiy').then(function (z) {
@@ -2994,6 +3017,8 @@
     }).then(function (sozlama) {
       malumot.zaxiraSanasi = sozlama ? sozlama.oxirgi_zaxira_sanasi || null : null;
       malumot.balansYashirin = !!(sozlama && sozlama.balans_yashirin === true);
+      malumot.tema = Tema.togrimi(sozlama && sozlama.tema) ? sozlama.tema : 'qurilma';
+      Tema.qollash(malumot.tema);   // zaxiradan tiklangach ham, ilova ochilganda ham saqlangan mavzu qo'llanadi
     });
   }
 

@@ -4,7 +4,7 @@
 
   var DB_NOMI = 'moliya';
   var DB_VERSIYASI = 1;      // IndexedDB tuzilishi (to'plamlar ro'yxati)
-  var SXEMA_VERSIYASI = 5;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`; 5 — kategoriyada `belgi`, hisobda `tur`, `belgi`, `rang`, `oxirgi4`
+  var SXEMA_VERSIYASI = 6;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`; 6 — sozlamalarda `tema`; 5 — kategoriyada `belgi`, hisobda `tur`, `belgi`, `rang`, `oxirgi4`
   // To'plamlar (TZ 7-band). Byudjetning kaliti kategoriya_id, qolganlariniki id.
   var TOPLAMLAR = {
     hisoblar: 'id',
@@ -89,7 +89,7 @@
           });
         });
         tx.objectStore('sozlamalar').put({
-          kalit: 'asosiy', sxema_versiyasi: SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null, balans_yashirin: false
+          kalit: 'asosiy', sxema_versiyasi: SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null, balans_yashirin: false, tema: 'qurilma'
         });
       };
     });
@@ -104,7 +104,7 @@
   }
 
   // Ma'lumot tuzilishini yangi versiyaga o'tkazadi: 1 -> 2 (yozuvlarga `vaqt` qo'shiladi), 2 -> 3 (qarzlarda tushib qolgan
-  // maydonlar to'ldiriladi), 3 -> 4 (sozlamalarga `balans_yashirin: false`), 4 -> 5 (kategoriyaga belgi; hisobga tur, belgi, rang, oxirgi4).
+  // maydonlar to'ldiriladi), 3 -> 4 (sozlamalarga `balans_yashirin: false`), 4 -> 5 (kategoriyaga belgi; hisobga tur, belgi, rang, oxirgi4), 5 -> 6 (sozlamalarga `tema`).
   // Hammasi BITTA tranzaksiyada: xato bo'lsa, hech narsa o'zgarmaydi. Hech narsa o'chirilmaydi.
   // Versiya Sozlamalar ichida tekshiriladi, shuning uchun ikkinchi marta ishlasa yoki ilova ikki joyda
   // bir vaqtda ochilsa ham ma'lumot buzilmaydi.
@@ -122,7 +122,8 @@
         var kutilmoqda = 4;
         function tugadi() {
           if (--kutilmoqda) return;
-          if (typeof sozlama.balans_yashirin !== 'boolean') sozlama.balans_yashirin = false;   // 3 -> 4: ko'z belgisi holati (summalarni yashirish)
+          if (typeof sozlama.balans_yashirin !== 'boolean') sozlama.balans_yashirin = false;
+          if (!Calc.temaTogrimi(sozlama.tema)) sozlama.tema = 'qurilma';   // 5 -> 6: mavzu tanlovi (standart: qurilma bo'yicha)   // 3 -> 4: ko'z belgisi holati (summalarni yashirish)
           sozlama.sxema_versiyasi = SXEMA_VERSIYASI;
           tx.objectStore('sozlamalar').put(sozlama);
         }

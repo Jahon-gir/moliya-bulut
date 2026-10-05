@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 14 (08.10.2026)
+Hujjat versiyasi: 15 (09.10.2026)
 
 ## 1. Maqsad
 
@@ -198,7 +198,10 @@ Claude Code bu ro'yxatdagi narsalarni so'ralmaguncha qo'shmasligi kerak.
 - **Sana:** saqlashda `YYYY-MM-DD`, ko'rsatishda `KK.OO.YYYY`. Qurilmaning mahalliy vaqti ishlatiladi.
 - **Vaqt (soat):** saqlashda `HH:MM` (24 soatlik, masalan `07:05`, `21:00`), qurilmaning mahalliy vaqti. Tekshiruv daqiqa aniqligida.
 - **Ekran:** avvalo telefon uchun chiziladi (kengligi 360 pikseldan). Kompyuterda ham to'g'ri ko'rinadi. Tugmalar barmoq bilan bosishga qulay (kamida 44 piksel).
-- **Ko'rinish:** yorug' va qorong'i rejim, qurilma sozlamasiga qarab.
+- **Ko'rinish va mavzu:** "Ko'proq" → "Mavzu" bo'limi: **Qurilma bo'yicha** (standart; qurilma sozlamasiga ergashadi), **Yorug'**, **Qorong'i**. Tanlov darhol qo'llanadi (sahifa qayta yuklanmaydi), sozlamalarda (`tema`) saqlanadi va zaxiraga kiradi.
+  - **Chaqnashsiz boshlash:** `js/tema.js` `<head>` ichida, sahifa chizilishidan oldin yuklanadi va tanlovni `<html data-tema>` ga qo'yadi (tanlov tez boshlash uchun qurilmada ham nusxalanadi; asosiy joyi — sozlamalar). Shuning uchun ilova ochilganda oq yoki qora chaqnash bo'lmaydi.
+  - **Ranglar:** barcha ranglar CSS o'zgaruvchilarida; qorong'i qiymatlar ham qurilma rejimida, ham `data-tema="qorongi"` da qo'llanadi (diagramma ranglari ham). Aniq tanlov qurilma rejimidan ustun.
+  - **Brauzer rangi:** `<meta name="theme-color">` ikkita (yorug'/qorong'i, media sharti bilan); aniq tanlovda ikkalasi tanlangan mavzu foni rangiga o'rnatiladi.
 - **Brauzerlar:** Chrome (Android), Safari (iPhone), Chrome va Edge (kompyuter).
 - **Tezlik:** 5 000 ta yozuv bilan ham ro'yxat va hisobotlar 1 soniyadan tez ochiladi.
 
@@ -213,12 +216,14 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 | Kategoriya | id, nom, tur (daromad / xarajat), rang, belgi (kalit), arxivlangan |
 | Byudjet | kategoriya_id (yoki "umumiy"), oylik_limit |
 | Qarz | id, yaratilgan, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, vaqt, muddat (bo'sh yoki sana), izoh, tolovlar [{id, sana, vaqt, summa, hisob_id}], yopilgan |
-| Sozlamalar | sxema_versiyasi (hozir 5), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi) |
+| Sozlamalar | sxema_versiyasi (hozir 6), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi), tema (`qurilma` / `yorug` / `qorongi`) |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
 - **Eksport jadvali** (saqlanmaydi, har safar yasaladi; ma'lumot tuzilishi o'zgarmaydi, sxema 5): Sana va vaqt, ID, Tur, Hisob, Qayerga, Kategoriya, Summa, Valyuta, Qarz nomi, Qarz turi, Izoh — F9 ga qarang.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
 - **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi; 4 — sozlamalarga `balans_yashirin` qo'shildi; 3 — qarzlar: to'lovlar qarz ichida (`tolovlar`, har to'lovda `id`), qarzda `vaqt`, `muddat`, `izoh`, `yopilgan` majburiy maydonlar. To'lovlar alohida to'plam emas, qarzning ichida saqlanadi: qarz o'chirilsa, to'lovlari ham ketadi va ular bir butun sifatida zaxiraga tushadi.
+- **Sxema 6:** sozlamalarga `tema` (standart `qurilma`).
+- **Ko'chirish (5 → 6):** sozlamalarga `tema: "qurilma"` qo'shiladi (allaqachon to'g'ri qiymat bo'lsa, o'zgarmaydi). Boshqa hech narsaga tegilmaydi va hech narsa o'chirilmaydi; boshqa ko'chirishlar bilan bitta tranzaksiyada bajariladi, takror ishlasa ham ma'lumot buzilmaydi. Zaxira faylida `tema` bo'lmasa (eski zaxira), tiklashda `qurilma` qo'yiladi; noma'lum qiymat bo'lsa fayl rad etiladi.
 - **Sxema 5:** kategoriyaga `belgi`; hisobga `tur` (karta / bank / naqd / boshqa), `belgi`, `rang`, `oxirgi4`.
 - **Ko'chirish (4 → 5):** kategoriyalarga nomiga qarab mos belgi qo'yiladi (topilmasa umumiy belgi). Hisoblarga tur beriladi: nomida "naqd" bo'lsa Naqd pul, bo'lmasa Karta (tur allaqachon to'g'ri bo'lsa, o'zgarmaydi); turga mos belgi va rang qo'yiladi, `oxirgi4` bo'sh. Hech narsa o'chirilmaydi, takror ishlasa ma'lumot buzilmaydi; bitta tranzaksiyada boshqa ko'chirishlar bilan birga bajariladi. Zaxira faylida bu maydonlar bo'lmasa (eski zaxira), tiklashda xuddi shu qoida bo'yicha to'ldiriladi; maydon noto'g'ri bo'lsa (noma'lum tur, `oxirgi4` 4 raqam emas, belgi matn emas), fayl rad etiladi.
 - **Ko'chirish (3 → 4):** sozlamalarga `balans_yashirin: false` qo'shiladi (allaqachon bo'lsa, o'zgarmaydi). Boshqa hech narsaga tegilmaydi va hech narsa o'chirilmaydi. Zaxira faylida bu belgi bo'lmasa (eski zaxira), tiklashda `false` qo'yiladi; belgi mantiqiy qiymat bo'lmasa, fayl rad etiladi.
@@ -252,7 +257,7 @@ Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"
 2. **Tarix:** F3.
 3. **Qo'shish (+):** o'rtadagi katta tugma. Bosilsa pastdan "Yangi yozuv yaratish" oynasi chiqadi: "Tranzaksiya qo'shish" (birinchi, 5 qadamli yozuv oynasi, F2) va "Qarz qo'shish" (qarz oynasi, F8).
 4. **Qarzlar:** F8 (jami, har qarz kartasi, arxiv belgisi, qarz qo'shish).
-5. **Ko'proq:** Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4), Zaxira va eksport (F9), ilova versiyasi.
+5. **Ko'proq:** Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4), Zaxira va eksport (F9), **Mavzu** (Qurilma bo'yicha / Yorug' / Qorong'i), ilova versiyasi.
 
 Ilova faqat shu ekranlarni o'z ichiga oladi: valyuta kurslari, sodiqlik kartalari, maqsadlar va reklama kartalari yo'q.
 
@@ -326,6 +331,8 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Zaxira: zaxira olinadi, ma'lumot o'chiriladi, tiklanadi — balans, hisobotlar, byudjet va qarzlar avvalgidek; buzuq, yarim, bo'sh yoki boshqa ilova fayli rad etiladi va mavjud ma'lumotga tegilmaydi; eski sxema versiyali zaxira ko'chiriladi; tiklashdan oldin joriy holat zaxirasi yuklab beriladi; vaqti hozirdan keyingi yozuv saqlanadi va "Kelajak" belgisi bilan ko'rinadi. Bosh sahifada oxirgi zaxira sanasi, 14 kundan oshsa eslatma.
 - Eksport: haqiqiy .xlsx (bitta varaq "Eksport", 11 ustun aynan tartibda, sana-vaqt katagi, Summa raqam, qotirilgan sarlavha, filtr, formula himoyasi) va xuddi shu ustunli CSV; barcha matn o'zbekcha; davr: hammasi/oy/yil; davrda yozuv yo'q bo'lsa fayl yuklanmaydi; 5 000 yozuv < 2 soniya; fayl openpyxl bilan ochib tekshiriladi.
 - Belgilar va hisob turlari: kategoriya va hisob belgisi hamma joyda ko'rinadi; takror yoki bo'sh kategoriya nomi rad etiladi; karta uchun faqat oxirgi 4 raqam saqlanadi; Hisoblar filtri turi bo'yicha ishlaydi; Asosiydagi oy strelkalari kelajakka o'tmaydi va Naqd pul oqimi bilan bir oyni ko'rsatadi; son belgisi oy/tur o'zgarganda yangilanadi.
+- Mavzu: tanlov darhol qo'llanadi (sahifa qayta yuklanmaydi), qayta ochilganda saqlangan (chaqnashsiz), brauzer rangi (theme-color) mos; sozlamalarda saqlanadi, zaxiraga kiradi va tiklanadi; eski zaxira (maydonsiz) "Qurilma bo'yicha" bo'ladi; noto'g'ri qiymat rad etiladi; Asosiy, Tarix, Qarzlar, Ko'proq, Hisobot va yozuv qo'shish oynasi 360 pikselda ikkala mavzuda o'qiladi.
+- Eski (5-versiya) bazani ochganda hech narsa o'chmaydi, sozlamalarga faqat `tema` qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (4-versiya) bazani ochganda hech narsa o'chmaydi, kategoriya va hisoblarga faqat yangi maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi); zaxira olish va tiklash yangi maydonlar bilan ishlaydi, eski zaxiralar ham tiklanadi.
 - Eski (2-versiya) bazani ochganda hech narsa o'chmaydi, qarzlarga faqat tushib qolgan maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.

@@ -1483,7 +1483,22 @@
     });
     m.appendChild(tanlov);
     bloklar.push(m);
-    bloklar.push(el('p', 'Moliya · versiya ' + VERSIYA, 'versiya'));
+    // Bosh ekranga o'rnatish (o'rnatilgan bo'lsa ko'rsatilmaydi)
+    if (typeof Pwa !== 'undefined' && !Pwa.ornatilgan()) {
+      var o = karta();
+      o.classList.add('ornatish-karta');
+      o.appendChild(el('h2', 'Bosh ekranga o\'rnatish'));
+      if (Pwa.ornatishMumkin()) {
+        o.appendChild(el('p', ILOVA.nom + ' ni telefon bosh ekraniga o\'rnating: o\'z belgisi bilan, brauzer panelisiz ochiladi va internetsiz ishlaydi.', 'xira'));
+        var ot = tugma('O\'rnatish', 'asosiy-tugma', function () { Pwa.ornatish().then(function () { chizish(koproqMenyusi(), true); }); });
+        ot.id = 'ornatish-tugma';
+        o.appendChild(ot);
+      } else {
+        o.appendChild(el('p', Pwa.ios() ? 'Safari\'da "Ulashish" tugmasini bosing, so\'ng "Bosh ekranga qo\'shish" ni tanlang.' : 'Brauzer menyusidan "Ilovani o\'rnatish" yoki "Bosh ekranga qo\'shish" ni tanlang.', 'xira ornatish-yoriqnoma'));
+      }
+      bloklar.push(o);
+    }
+    bloklar.push(el('p', ILOVA.nom + ' · versiya ' + VERSIYA, 'versiya'));
     return bloklar;
   }
 
@@ -2616,7 +2631,7 @@
     }
     var davr = { tur: eksportHolat.tur, yil: eksportHolat.yil, oy: eksportHolat.oy };
     var ek = Calc.eksport({ yozuvlar: malumot.yozuvlar, hisoblar: malumot.hisoblar, kategoriyalar: malumot.kategoriyalar, qarzlar: malumot.qarzlar }, davr);
-    var faylNomi = 'moliya-eksport-' + Calc.bugun();
+    var faylNomi = ILOVA.faylBelgisi + '-eksport-' + Calc.bugun();
     e.appendChild(el('p', 'Bitta jadval: yozuvlar va qarz amallari birga, eng yangisi tepada. CSV: UTF-8, ustunlar ";" bilan ajratilgan.', 'xira'));
     var xTugma = tugma('Excel (.xlsx) yuklab olish (' + ek.soni + ' ta qator)', 'ikkinchi-tugma', function () {
       if (!ek.soni) { qisqaXabar('Tanlangan davrda yozuv yo\'q'); return; }

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Chuntak AI">
+  <rect width="512" height="512" rx="112" fill="#0f8b6d"/>
+  <g transform="translate(0 -40)" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M190 214 C112 282 112 410 256 414 C400 410 400 282 322 214"/>
+    <path d="M190 214 Q256 240 322 214"/>
+    <path d="M190 214 Q172 168 142 156 M322 214 Q340 168 370 156"/>
+    <path d="M232 280 Q214 276 204 292 Q194 312 204 332 Q214 348 232 344"/>
+    <path d="M272 268 V344 M272 308 Q272 286 296 286 Q318 286 318 310 V344"/>
+  </g>
+</svg>

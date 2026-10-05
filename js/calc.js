@@ -627,10 +627,10 @@
     return f;
   }
 
-  // Fayl nomi: moliya-zaxira-2026-10-05-2130.json (mahalliy sana va vaqt)
+  // Fayl nomi: chuntak-zaxira-2026-10-05-2130.json (mahalliy sana va vaqt)
   function zaxiraNomi(d, old) {
     var h = hozir(d);
-    return 'moliya-' + (old || 'zaxira') + '-' + h.sana + '-' + h.vaqt.replace(':', '') + '.json';
+    return ILOVA.faylBelgisi + '-' + (old || 'zaxira') + '-' + h.sana + '-' + h.vaqt.replace(':', '') + '.json';
   }
 
   // Zaxira matnini tekshiradi va joriy sxemaga o'tkazadi. HECH NARSAGA TEGMAYDI (faqat yangi obyekt qaytaradi).
@@ -647,8 +647,8 @@
     if (typeof matn !== 'string' || !matn.trim()) rad('Fayl bo\'sh');
     var f;
     try { f = JSON.parse(matn.charCodeAt(0) === 0xFEFF ? matn.slice(1) : matn); } catch (e) { rad('Fayl buzuq yoki yarim (JSON o\'qilmadi)'); }
-    if (!f || typeof f !== 'object' || Array.isArray(f)) rad('Bu Moliya zaxira fayli emas');
-    if (f.ilova !== 'moliya') rad('Bu Moliya zaxira fayli emas');
+    if (!f || typeof f !== 'object' || Array.isArray(f)) rad('Bu ' + ILOVA.nom + ' zaxira fayli emas');
+    if (f.ilova !== 'moliya') rad('Bu ' + ILOVA.nom + ' zaxira fayli emas');   // 'moliya' — zaxira faylidagi ichki belgi (eski zaxiralar uchun o'zgarmaydi)
     var v = f.sxema_versiyasi;
     if (typeof v !== 'number' || v !== Math.floor(v) || v < 1) rad('Zaxira faylida sxema versiyasi yo\'q yoki noto\'g\'ri');
     if (v > sxema) rad('Zaxira yangiroq versiyadagi ilovadan olingan (sxema ' + v + '). Avval ilovani yangilang');

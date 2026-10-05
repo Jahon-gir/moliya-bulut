@@ -1,6 +1,6 @@
-# TZ: Shaxsiy moliya ilovasi
+# TZ: Chuntak AI — shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 15 (09.10.2026)
+Hujjat versiyasi: 16 (10.10.2026)
 
 ## 1. Maqsad
 
@@ -140,12 +140,12 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 
 ### F9. Zaxira va eksport
 - Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi. Hammasi "Ko'proq" → "Zaxira va eksport" ekranida. Oxirgi zaxira sanasi va "summalarni yashirish" holati sozlamalarda saqlanadi va zaxiraga kiradi.
-- **Zaxira nusxa olish:** barcha ma'lumot (hisoblar, yozuvlar (`vaqt` bilan), kategoriyalar, byudjetlar, qarzlar (to'lovlari bilan), sozlamalar) bitta JSON faylga saqlanadi. Fayl nomida sana va vaqt: `moliya-zaxira-2026-10-05-2130.json`. Fayl `ilova: "moliya"`, `sxema_versiyasi`, `zaxira_vaqti` va har to'plamning soni (`soni`, fayl butunligini tekshirish uchun) bilan boshlanadi. Zaxira olingach "oxirgi zaxira sanasi" (`YYYY-MM-DD`) yangilanadi; fayl ichida ham shu sana turadi.
-- **Zaxiradan tiklash:** JSON fayl tanlanadi. Tartib: (1) fayl to'liq tekshiriladi — mavjud ma'lumotga TEGILMAYDI; (2) tasdiq oynasi: fayldagi sonlar, mavjud ma'lumot almashtirilishi haqida ogohlantirish; (3) joriy holatning zaxirasi avtomatik yuklab beriladi (`moliya-zaxira-tiklashdan-oldin-…json`); (4) ma'lumot BITTA tranzaksiyada almashtiriladi: xato bo'lsa hech narsa o'zgarmaydi (yarim holat bo'lmaydi).
+- **Zaxira nusxa olish:** barcha ma'lumot (hisoblar, yozuvlar (`vaqt` bilan), kategoriyalar, byudjetlar, qarzlar (to'lovlari bilan), sozlamalar) bitta JSON faylga saqlanadi. Fayl nomida sana va vaqt: `chuntak-zaxira-2026-10-05-2130.json`. Fayl `ilova: "moliya"`, `sxema_versiyasi`, `zaxira_vaqti` va har to'plamning soni (`soni`, fayl butunligini tekshirish uchun) bilan boshlanadi. Zaxira olingach "oxirgi zaxira sanasi" (`YYYY-MM-DD`) yangilanadi; fayl ichida ham shu sana turadi.
+- **Zaxiradan tiklash:** JSON fayl tanlanadi. Tartib: (1) fayl to'liq tekshiriladi — mavjud ma'lumotga TEGILMAYDI; (2) tasdiq oynasi: fayldagi sonlar, mavjud ma'lumot almashtirilishi haqida ogohlantirish; (3) joriy holatning zaxirasi avtomatik yuklab beriladi (`chuntak-zaxira-tiklashdan-oldin-…json`); (4) ma'lumot BITTA tranzaksiyada almashtiriladi: xato bo'lsa hech narsa o'zgarmaydi (yarim holat bo'lmaydi).
 - **Rad etiladi** (xabar chiqadi, mavjud ma'lumot o'zgarmaydi): bo'sh fayl, JSON emas yoki yarim/kesilgan fayl, boshqa ilova fayli, sxema versiyasi yo'q yoki ilovadan yangiroq, to'plam yetishmaydi yoki `soni` mos emas, buzuq yozuv (noto'g'ri tur, summa — musbat butun son bo'lishi kerak, sana, vaqt), mavjud bo'lmagan hisob yoki kategoriyaga havola, kategoriya turi yozuv turiga mos emas, takroriy `id`, qarzdagi to'lovlar yig'indisi qarz summasidan oshgani, faol hisob yo'qligi.
 - **Eski sxema versiyasidagi zaxira** (masalan, `vaqt` maydoni yo'q 1-versiya yoki qarzi to'liq bo'lmagan 2-versiya) tiklanganda 7-bandagi ko'chirish qoidasi qo'llanadi: yozuvlarga `vaqt` qo'shiladi, qarzdagi tushib qolgan maydonlar to'ldiriladi, hech narsa o'chirilmaydi; tasdiq oynasida "eski versiya" deb aytiladi.
 - **Vaqt qoidasi tiklashda:** zaxirada vaqti hozirdan keyin bo'lgan yozuv, qarz yoki to'lov tekshiriladi va sanaladi, lekin rad etilmaydi va o'chirilmaydi: F3 dagidek "Kelajak" belgisi bilan ko'rinadi, tasdiq oynasida ularning soni ogohlantiriladi, tahrirlashda vaqtni o'tmishga to'g'rilash talab qilinadi.
-- **Excel uchun eksport:** haqiqiy `.xlsx` fayl (tashqi kutubxonasiz, ilovaning o'zi yozadi: minimal OOXML, siqmasdan ZIP) va xuddi shu ustunli CSV. Fayl nomi: `moliya-eksport-YYYY-MM-DD.xlsx` (CSV: `.csv`). Davr: hammasi, tanlangan oy yoki yil (yozuv o'z sanasi bo'yicha); davrda qator bo'lmasa fayl yuklanmaydi va "Tanlangan davrda yozuv yo'q" xabari chiqadi. Hamma matn o'zbekcha (lotin): varaq nomi, sarlavhalar va "Tur" qiymatlari.
+- **Excel uchun eksport:** haqiqiy `.xlsx` fayl (tashqi kutubxonasiz, ilovaning o'zi yozadi: minimal OOXML, siqmasdan ZIP) va xuddi shu ustunli CSV. Fayl nomi: `chuntak-eksport-YYYY-MM-DD.xlsx` (CSV: `.csv`). Davr: hammasi, tanlangan oy yoki yil (yozuv o'z sanasi bo'yicha); davrda qator bo'lmasa fayl yuklanmaydi va "Tanlangan davrda yozuv yo'q" xabari chiqadi. Hamma matn o'zbekcha (lotin): varaq nomi, sarlavhalar va "Tur" qiymatlari.
   - **Bitta varaq "Eksport"**: barcha yozuvlar va qarz amallari bitta jadvalda, eng yangisi tepada (sana va vaqt kamayish tartibida; teng bo'lsa keyin yaratilgani tepada). Qarz amallari ham shu jadvalda qator.
   - **Ustunlar (aynan shu tartibda):** `Sana va vaqt` | `ID` | `Tur` | `Hisob` | `Qayerga` | `Kategoriya` | `Summa` | `Valyuta` | `Qarz nomi` | `Qarz turi` | `Izoh`.
     - `Sana va vaqt`: xlsx da Excel'ning haqiqiy sana-vaqt katagi, ko'rinishi `KK.OO.YYYY SS:DD`; CSV da shu ko'rinishdagi matn.
@@ -160,8 +160,17 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Bosh sahifada** oxirgi zaxira sanasi ko'rsatiladi ("Oxirgi zaxira: 05.10.2026 (3 kun oldin)"). 14 kundan OSHSA (aynan 14 kun emas) yoki zaxira hali olinmagan, lekin yozuv bor bo'lsa, ⚠ eslatma va "Hozir zaxira olish" tugmasi chiqadi.
 
 ### F10. Telefonga o'rnatish va internetsiz ishlash
-- Ilova telefon brauzerida ochiladi va "bosh ekranga qo'shish" orqali o'rnatiladi. O'rnatilgach o'z belgisi bilan, brauzer paneli ko'rinmaydigan holda ochiladi.
-- Birinchi marta ochilgandan keyin internetsiz to'liq ishlaydi.
+- **Nom:** ilova nomi **"Chuntak AI"**, qisqa nomi **"Chuntak"**. Nom `js/ilova.js` dagi `ILOVA` o'zgaruvchisida bitta joyda turadi (ilova ichidagi matnlar, sahifa sarlavhasi, fayl nomlari: `chuntak-zaxira-…json`, `chuntak-eksport-…`). Statik fayllar (`manifest.json`: `name`, `short_name`; `index.html`: `<title>`, `apple-mobile-web-app-title`) o'zgaruvchini o'qiy olmaydi, shuning uchun ularning bir xilligi testda tekshiriladi. "Ko'proq" bo'limidagi versiya qatori: "Chuntak AI · versiya X.Y.Z". Oldingi nom ishlatilmaydi.
+- **Ma'lumotga ta'sir yo'q:** nom o'zgargani ma'lumotlar bazasining nomiga (`moliya`), zaxira faylidagi ichki belgiga (`ilova: "moliya"`) va qurilmadagi sozlama kalitlariga tegmaydi: yozuvlar yo'qolmaydi, eski zaxira fayllari tiklanadi.
+- **O'rnatish:** `manifest.json` (`display: standalone`, `start_url` va `scope` nisbiy `./`, `lang: uz`). Bosh ekranga o'rnatilgach o'z belgisi bilan, brauzer paneli ko'rinmaydigan holda ochiladi. "Ko'proq" ichida "Bosh ekranga o'rnatish" kartasi: brauzer o'rnatish so'rovini bersa — "O'rnatish" tugmasi, aks holda qisqa yo'riqnoma (iPhone: "Ulashish" → "Bosh ekranga qo'shish"). O'rnatilgan bo'lsa karta ko'rinmaydi.
+- **Belgi:** o'zimiz chizgan oddiy chiziqli SVG (`icons/icon.svg`: chuntak/xalta va "ch" harflari). PNG: 192 va 512 piksel, 192 va 512 maskable, 180 apple-touch (`tools/ikonka-yasash.js` bilan SVG dan yasaladi).
+- **Rang va ochilish ekrani:** brauzer tepasidagi rang (`theme-color`) mavzuga mos (F11 / "Mavzu"); manifestda `theme_color` va `background_color` yorug' mavzu foni (`#f4f6f5`). Manifest bitta rang beradi, shuning uchun qorong'i qurilmada ochilish ekrani yorug' bo'lishi mumkin (brauzer cheklovi).
+- **Service worker (`sw.js`):** faqat Cache Storage bilan ishlaydi, IndexedDB ga HECH QACHON tegmaydi. Keshlash xatosi ma'lumotni buzmaydi: kesh bilan ishlashda har qanday xatoda so'rov oddiy tarmoq orqali bajariladi.
+  - **Versiya bo'yicha kesh:** `sw.js?v=X.Y.Z` (ilova versiyasi bilan bir xil), kesh nomi `chuntak-kesh-X.Y.Z`. O'rnatishda barcha ilova fayllari oldindan keshlanadi; biror fayl yuklanmasa, o'rnatish bekor bo'ladi va eski versiya ishlayveradi (yarim kesh bo'lmaydi). Yangi worker faollashgach, eski versiya keshlari o'chiriladi.
+  - **Strategiya:** ilova sahifasi (`index.html`) — avval tarmoq (4 soniyadan sekin yoki internetsiz bo'lsa — keshdagi nusxa), qolgan fayllar — avval kesh. Keshga faqat shu worker versiyasidagi `index.html` yoziladi. Faqat o'z manzilidagi GET so'rovlar ushlanadi.
+- **Internetsiz ishlash:** birinchi ochilgandan keyin ilovaning hamma bo'limi (Asosiy, Tarix, Qarzlar, Ko'proq, Hisobot, yozuv qo'shish, eksport, mavzu) internetsiz ishlaydi; yozuvlar qurilmada saqlanadi.
+- **Yangilanish:** ilova versiyasi o'zgarganda (sahifa ochilganda, ilovaga qaytilganda, internet qaytganda va har 30 daqiqada tekshiriladi) yangi worker o'rnatiladi va pastda **"Yangi versiya tayyor" + "Yangilash"** paneli chiqadi (tugma kamida 44 px). "Yangilash" bosilganda yangi versiya faollashadi va ilova bir marta qayta yuklanadi; bosilmaguncha ochiq ilova eski versiyada ishlayveradi. Sahifa allaqachon yangi versiyada ochilgan bo'lsa, panel chiqmaydi (jimgina faollashadi). Ma'lumot yangilanishda o'zgarmaydi.
+- **Joylash:** GitHub Pages (HTTPS); hamma yo'llar nisbiy, shuning uchun pastki yo'lda ham (`…github.io/<repo>/`) ishlaydi. Kompyuterda sinash: `python3 -m http.server 8000` (README).
 
 ## 5. 1-versiyaga kirmaydigan narsalar
 
@@ -276,7 +285,7 @@ Har bir bosqich alohida bajariladi, sinab ko'riladi va saqlanadi (git commit). K
 | 7 | Byudjet (F7) | Chegara 80 va 100 foizda rang o'zgartiradi |
 | 8 | Qarzlar (F8) | Qarz balansga ta'sir qiladi, hisobotga kirmaydi |
 | 9 | Zaxira, tiklash, eksport (F9) | Zaxiradan tiklangach hamma raqam avvalgidek |
-| 10 | PWA: manifest, service worker, belgi, GitHub Pages'ga joylash (F10) | Telefonda o'rnatiladi va internetsiz ishlaydi |
+| 10 | PWA: manifest, service worker, belgi, yangilanish tugmasi, GitHub Pages'ga joylash (F10) | Telefonda o'rnatiladi va internetsiz ishlaydi |
 
 ## 11. Qabul mezonlari
 
@@ -331,6 +340,7 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Zaxira: zaxira olinadi, ma'lumot o'chiriladi, tiklanadi — balans, hisobotlar, byudjet va qarzlar avvalgidek; buzuq, yarim, bo'sh yoki boshqa ilova fayli rad etiladi va mavjud ma'lumotga tegilmaydi; eski sxema versiyali zaxira ko'chiriladi; tiklashdan oldin joriy holat zaxirasi yuklab beriladi; vaqti hozirdan keyingi yozuv saqlanadi va "Kelajak" belgisi bilan ko'rinadi. Bosh sahifada oxirgi zaxira sanasi, 14 kundan oshsa eslatma.
 - Eksport: haqiqiy .xlsx (bitta varaq "Eksport", 11 ustun aynan tartibda, sana-vaqt katagi, Summa raqam, qotirilgan sarlavha, filtr, formula himoyasi) va xuddi shu ustunli CSV; barcha matn o'zbekcha; davr: hammasi/oy/yil; davrda yozuv yo'q bo'lsa fayl yuklanmaydi; 5 000 yozuv < 2 soniya; fayl openpyxl bilan ochib tekshiriladi.
 - Belgilar va hisob turlari: kategoriya va hisob belgisi hamma joyda ko'rinadi; takror yoki bo'sh kategoriya nomi rad etiladi; karta uchun faqat oxirgi 4 raqam saqlanadi; Hisoblar filtri turi bo'yicha ishlaydi; Asosiydagi oy strelkalari kelajakka o'tmaydi va Naqd pul oqimi bilan bir oyni ko'rsatadi; son belgisi oy/tur o'zgarganda yangilanadi.
+- PWA: `manifest.json` (nom "Chuntak AI", qisqa "Chuntak"), 192/512 va maskable belgilar mavjud va o'lchami to'g'ri; service worker IndexedDB ga tegmaydi; birinchi ochilgandan keyin hamma bo'lim internetsiz ishlaydi (yozuv qo'shish ham); yangi versiya chiqqanda "Yangilash" paneli chiqadi va bosilganda ilova yangilanadi, eski kesh o'chadi, ma'lumot joyida; o'rnatilmay qolgan yangilanish eski versiyani buzmaydi; Cache Storage xatosida ilova tarmoq orqali ishlayveradi; nom o'zgargani bazani o'zgartirmaydi; 360 pikselda yorug' va qorong'i rejimda panel va kartalar to'g'ri ko'rinadi.
 - Mavzu: tanlov darhol qo'llanadi (sahifa qayta yuklanmaydi), qayta ochilganda saqlangan (chaqnashsiz), brauzer rangi (theme-color) mos; sozlamalarda saqlanadi, zaxiraga kiradi va tiklanadi; eski zaxira (maydonsiz) "Qurilma bo'yicha" bo'ladi; noto'g'ri qiymat rad etiladi; Asosiy, Tarix, Qarzlar, Ko'proq, Hisobot va yozuv qo'shish oynasi 360 pikselda ikkala mavzuda o'qiladi.
 - Eski (5-versiya) bazani ochganda hech narsa o'chmaydi, sozlamalarga faqat `tema` qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (4-versiya) bazani ochganda hech narsa o'chmaydi, kategoriya va hisoblarga faqat yangi maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi); zaxira olish va tiklash yangi maydonlar bilan ishlaydi, eski zaxiralar ham tiklanadi.

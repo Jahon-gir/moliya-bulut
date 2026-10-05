@@ -1,12 +1,16 @@
-# Moliya
+# Chuntak AI
 
-Shaxsiy moliya ilovasi (telefon uchun veb-ilova). Texnik topshiriq: `TZ.md`.
-Hozirgi holat: **5-bosqich** (yozuvlar, hisoblar, o'tkazma, kategoriyalar, filtr va qidiruv, hisobotlar).
+Shaxsiy moliya ilovasi (telefon uchun veb-ilova, PWA): xarajat, daromad, qarz, byudjet va hisobotlar.
+Ma'lumot faqat qurilmada saqlanadi, hech qayerga yuborilmaydi. Texnik topshiriq: `TZ.md`.
 
-## Kompyuterda ishga tushirish
+Ilova nomi `js/ilova.js` dagi `ILOVA` o'zgaruvchisida **bitta joyda** turadi (ilova ichidagi matnlar, sahifa sarlavhasi, fayl nomlari
+shundan olinadi). `manifest.json` va `index.html` statik fayl bo'lgani uchun o'zgaruvchini o'qiy olmaydi: nomni o'zgartirsangiz,
+ularni ham qo'lda yangilang (`tests.html` ularning bir xilligini tekshiradi).
 
-Ilovani `index.html` ni ikki marta bosib emas, lokal server orqali oching
-(service worker keyingi bosqichlarda `file://` da ishlamaydi). Papkada:
+## Kompyuterda ishga tushirish va sinash
+
+Ilovani `index.html` ni ikki marta bosib emas, lokal server orqali oching (service worker `file://` da ishlamaydi).
+`localhost` xavfsiz manzil hisoblanadi, shuning uchun HTTPS kerak emas. Papkada:
 
     python3 -m http.server 8000
 
@@ -15,18 +19,35 @@ So'ng brauzerda oching:
 - Ilova: http://localhost:8000/
 - Testlar: http://localhost:8000/tests.html
 
+**Internetsiz ishlashni sinash:** ilovani bir marta oching va bir-ikki soniya kuting (fayllar keshlanadi). Keyin
+brauzer DevTools → Application → Service Workers da "Offline" ni yoqing (yoki serverni to'xtating) va sahifani yangilang:
+ilova to'liq ishlaydi.
+
+**Yangilanishni sinash:** ilovani oching, so'ng versiyani oshiring (pastga qarang), saqlang va ilovaga qaytib
+sahifani bir marta ko'ring (yoki bir necha soniya kuting): pastda "Yangi versiya tayyor" va "Yangilash" tugmasi chiqadi.
+Tugma bosilganda ilova yangi versiyada qayta ochiladi; ma'lumotlar o'zgarmaydi.
+
 ## Versiya
 
-Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yoziladi va "Yana" bo'limining
-pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, shuning uchun
-versiya o'zgarsa, brauzer eski fayllarni emas, yangilarini yuklaydi.
+Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yoziladi va "Ko'proq" bo'limining
+pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
+orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.13.0 → 0.13.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.14.0 → 0.14.1), `index.html` va `tests.html` da hammasini birdaniga:
 
-    sed -i 's/0\.6\.0/0.7.0/g' index.html tests.html
+    sed -i 's/0\.14\.0/0.14.1/g' index.html tests.html
 
-`tests.html` dagi versiya testlari havolalar bir xil versiyada ekanini tekshiradi.
+`sw.js` ning o'zida versiya yo'q: u o'z manzilidagi `?v=` dan oladi. Agar `js/` ga yangi fayl qo'shsangiz, uni `index.html` ga
+va `sw.js` dagi `royxat()` ga ham qo'shing (`tests.html` mosligini tekshiradi).
 
-## Joylash
+## Ilova belgisi
 
-GitHub Pages bo'yicha yo'riqnoma 10-bosqichda yoziladi.
+`icons/icon.svg` — o'zimiz chizgan belgi. PNG variantlari (192, 512, maskable, apple-touch) undan yasaladi:
+
+    node tools/ikonka-yasash.js        # Playwright va Chromium kerak
+
+## Joylash (GitHub Pages)
+
+Repozitoriya sozlamalarida Settings → Pages → "Deploy from a branch" → `main` / `/ (root)`. Service worker faqat HTTPS da
+ishlaydi (GitHub Pages HTTPS beradi). Barcha yo'llar nisbiy, shuning uchun ilova `https://<nom>.github.io/<repo>/` kabi
+pastki yo'lda ham ishlaydi.

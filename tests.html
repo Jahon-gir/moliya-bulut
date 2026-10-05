@@ -15,12 +15,14 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/tema.js?v=0.13.0"></script>
-  <script src="js/belgilar.js?v=0.13.0"></script>
-  <script src="js/calc.js?v=0.13.0"></script>
-  <script src="js/xlsx.js?v=0.13.0"></script>
-  <script src="js/data.js?v=0.13.0"></script>
-  <script src="js/diagramma.js?v=0.13.0"></script>
+  <script src="js/ilova.js?v=0.14.0"></script>
+  <script src="js/tema.js?v=0.14.0"></script>
+  <script src="js/belgilar.js?v=0.14.0"></script>
+  <script src="js/calc.js?v=0.14.0"></script>
+  <script src="js/xlsx.js?v=0.14.0"></script>
+  <script src="js/data.js?v=0.14.0"></script>
+  <script src="js/diagramma.js?v=0.14.0"></script>
+  <script src="js/pwa.js?v=0.14.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1426,7 +1428,7 @@
         teng(f.yozuvlar[0].vaqt, '09:00'); teng(f.qarzlar[0].tolovlar[0].summa, 50000); teng(f.qarzlar[0].vaqt, '12:00');
       });
       test('zaxira nomi: sana va vaqt (mahalliy) bilan', function () {
-        teng(Calc.zaxiraNomi(new Date(2026, 9, 5, 21, 30)), 'moliya-zaxira-2026-10-05-2130.json'); teng(Calc.zaxiraNomi(new Date(2026, 0, 2, 3, 4), 'zaxira-tiklashdan-oldin'), 'moliya-zaxira-tiklashdan-oldin-2026-01-02-0304.json');
+        teng(Calc.zaxiraNomi(new Date(2026, 9, 5, 21, 30)), 'chuntak-zaxira-2026-10-05-2130.json'); teng(Calc.zaxiraNomi(new Date(2026, 0, 2, 3, 4), 'zaxira-tiklashdan-oldin'), 'chuntak-zaxira-tiklashdan-oldin-2026-01-02-0304.json');
       });
       test('zaxira -> tekshirish: ma\'lumot aynan avvalgidek, raqamlar (balans, hisobot, byudjet, qarzlar) bir xil', function () {
         var asl = zMalumot(), r = Calc.zaxiraniTekshir(zMatn(), 6, Z_HOZIR);
@@ -1441,7 +1443,7 @@
       function xatoMi(matn, bolak) { var r = Calc.zaxiraniTekshir(matn, 6, Z_HOZIR); teng(typeof r.xato, 'string'); teng(r.malumot, undefined); if (bolak) teng(bolak.test(r.xato), true); }
       function ozgar(fn) { var f = JSON.parse(zMatn()); fn(f); return JSON.stringify(f); }
       test('buzuq fayl rad etiladi: bo\'sh, JSON emas, yarim (kesilgan), massiv, boshqa ilova', function () {
-        xatoMi(''); xatoMi('   '); xatoMi('salom'); xatoMi('[]', /Moliya/); xatoMi('{"ilova":"boshqa"}', /Moliya/);
+        xatoMi(''); xatoMi('   '); xatoMi('salom'); xatoMi('[]', /Chuntak AI/); xatoMi('{"ilova":"boshqa"}', /Chuntak AI/);
         var t = zMatn(); xatoMi(t.slice(0, Math.floor(t.length / 2)), /buzuq yoki yarim/); xatoMi(t.slice(0, t.length - 1), /buzuq yoki yarim/); xatoMi(t + 'x');
       });
       test('buzuq fayl: sxema versiyasi, yetishmaydigan to\'plam, sonlar mos emas', function () {
@@ -1736,6 +1738,72 @@
           .then(function () { return Data.boshlash(SINOV_BAZA); });
       });
 
+
+      // --- 10-bosqich: PWA (nom, manifest, belgilar, service worker) ---
+      function matnOl(url) { return fetch(url, { cache: 'no-store' }).then(function (r) { teng(r.ok, true); return r.text(); }); }
+      function pngOlchami(url) {
+        return fetch(url, { cache: 'no-store' }).then(function (r) { teng(r.ok, true); return r.arrayBuffer(); }).then(function (b) {
+          var dv = new DataView(b); teng(dv.getUint32(0), 0x89504E47); teng(dv.getUint32(12), 0x49484452);   // PNG belgisi va IHDR
+          return dv.getUint32(16) + 'x' + dv.getUint32(20);
+        });
+      }
+      test('ilova nomi: ILOVA bitta joyda; manifest, <title>, apple nomi va sahifa sarlavhasi bir xil; eski "Moliya" nomi qolmagan', function () {
+        teng(ILOVA.nom, 'Chuntak AI'); teng(ILOVA.qisqaNom, 'Chuntak'); teng(ILOVA.faylBelgisi, 'chuntak');
+        return Promise.all(['manifest.json', 'index.html', 'README.md', 'TZ.md', 'js/ui.js', 'js/calc.js', 'js/data.js', 'js/pwa.js', 'sw.js', 'js/ilova.js'].map(matnOl)).then(function (t) {
+          var man = JSON.parse(t[0]); teng(man.name, ILOVA.nom); teng(man.short_name, ILOVA.qisqaNom);
+          teng(t[1].indexOf('<title>' + ILOVA.nom + '</title>') > 0, true); teng(t[1].indexOf('<meta name="apple-mobile-web-app-title" content="' + ILOVA.qisqaNom + '">') > 0, true);
+          teng(/js\/ilova\.js\?v=/.test(t[1]) && t[1].indexOf('js/ilova.js') < t[1].indexOf('js/ui.js'), true);
+          t.forEach(function (m, i) { teng(/Moliya\b/.test(m), false); });   // matnda "Moliya" nomi yo'q (ichki 'moliya' belgilari kichik harfda qoladi)
+          teng(t[8].indexOf('chuntak-kesh-') > 0 && t[4].indexOf('ILOVA.nom') > 0, true);
+        });
+      });
+      test('ilova nomi: Ko\'proq versiya qatori va fayl nomlari ILOVA dan; ma\'lumotlar bazasi nomi o\'zgarmagan ("moliya"), zaxira belgisi "moliya"', function () {
+        return matnOl('js/data.js').then(function (d) {
+          teng(d.indexOf("var DB_NOMI = 'moliya';") > 0, true);   // nom o'zgardi, baza nomi emas: yozuvlar yo'qolmaydi
+          teng(Calc.zaxiraYasash({ hisoblar: [], yozuvlar: [], kategoriyalar: [], byudjetlar: [], qarzlar: [], sozlamalar: [] }, 6, new Date()).ilova, 'moliya');
+          teng(Calc.zaxiraNomi(new Date(2026, 9, 5, 21, 30)).indexOf(ILOVA.faylBelgisi + '-zaxira-'), 0);
+          teng(document.title, ILOVA.nom);   // ilova.js sarlavhani qo'yadi
+        });
+      });
+      test('manifest: standalone, start_url va scope nisbiy, o\'zbekcha, ranglar, belgilar (192 va 512, maskable ham) mavjud va o\'lchami to\'g\'ri', function () {
+        return matnOl('manifest.json').then(function (t) {
+          var m = JSON.parse(t); teng(m.display, 'standalone'); teng(m.start_url, './'); teng(m.scope, './'); teng(m.lang, 'uz'); teng(/^#[0-9a-f]{6}$/i.test(m.theme_color), true); teng(/^#[0-9a-f]{6}$/i.test(m.background_color), true);
+          teng(m.icons.some(function (i) { return i.sizes === '192x192' && i.purpose === 'any'; }), true); teng(m.icons.some(function (i) { return i.sizes === '512x512' && i.purpose === 'any'; }), true);
+          teng(m.icons.some(function (i) { return i.purpose === 'maskable' && i.sizes === '192x192'; }), true); teng(m.icons.some(function (i) { return i.purpose === 'maskable' && i.sizes === '512x512'; }), true);
+          return Promise.all(m.icons.filter(function (i) { return /\.png$/.test(i.src); }).map(function (i) { return pngOlchami(i.src).then(function (o) { teng(o, i.sizes); }); })).then(function () { return pngOlchami('icons/apple-touch-icon.png'); }).then(function (o) { teng(o, '180x180'); });
+        });
+      });
+      test('index.html: manifest, belgilar, theme-color (yorug\'/qorong\'i), apple sozlamalari; pwa.js va ilova.js versiyali', function () {
+        return matnOl('index.html').then(function (t) {
+          teng(t.indexOf('<link rel="manifest" href="manifest.json">') > 0, true); teng(t.indexOf('rel="apple-touch-icon" href="icons/apple-touch-icon.png"') > 0, true); teng(t.indexOf('rel="icon" type="image/svg+xml" href="icons/icon.svg"') > 0, true);
+          teng(/theme-color" media="\(prefers-color-scheme: light\)"/.test(t) && /theme-color" media="\(prefers-color-scheme: dark\)"/.test(t), true); teng(t.indexOf('apple-mobile-web-app-capable') > 0, true);
+          teng(/js\/pwa\.js\?v=/.test(t) && t.indexOf('js/pwa.js') < t.indexOf('js/ui.js'), true);
+        });
+      });
+      test('service worker: IndexedDB ga tegmaydi; xatoda tarmoqqa qaytadi; skipWaiting faqat xabar bilan; eski keshni versiya bo\'yicha tozalaydi; faqat o\'z manzilidagi GET', function () {
+        return matnOl('sw.js').then(function (t) {
+          var kodsiz = t.replace(/\/\/[^\n]*/g, '');   // izohlarsiz
+          teng(/indexedDB|IDBDatabase|IDBFactory|openDatabase/i.test(kodsiz), false);
+          teng(kodsiz.indexOf("searchParams.get('v')") > 0, true); teng(kodsiz.indexOf("KESH_BOSHI = 'chuntak-kesh-'") > 0, true);
+          teng((kodsiz.match(/skipWaiting/g) || []).length, 1); teng(kodsiz.indexOf("tur === 'yangilash') self.skipWaiting()") > 0, true);   // install ichida emas
+          teng(kodsiz.indexOf("so.method !== 'GET'") > 0 && kodsiz.indexOf('url.origin !== self.location.origin') > 0, true);
+          teng(kodsiz.indexOf('caches.delete(n)') > 0 && kodsiz.indexOf("n.indexOf(KESH_BOSHI) === 0 && n !== KESH") > 0, true);
+          teng(kodsiz.indexOf("e.respondWith(fayl(so).catch(function () { return fetch(so); }))") > 0, true);   // kesh xatosi — oddiy tarmoq
+        });
+      });
+      test('service worker: oldindan keshlanadigan ro\'yxat index.html dagi barcha style/js bilan mos va hamma fayl mavjud', function () {
+        return Promise.all([matnOl('sw.js'), matnOl('index.html')]).then(function (t) {
+          var royxatQism = t[0].slice(t[0].indexOf('function royxat()'), t[0].indexOf("self.addEventListener('install'")), sw = (royxatQism.match(/'[^']+'/g) || []).map(function (x) { return x.slice(1, -1); }).filter(function (x) { return /\.(js|css|png|svg|json|html)/.test(x); });
+          var havolalar = (t[1].match(/(?:src|href)="((?:js\/[a-z]+\.js|style\.css)\?v=[^"]+)"/g) || []).map(function (x) { return x.match(/"([^"?]+)\?/)[1]; });
+          teng(havolalar.length >= 10, true); havolalar.forEach(function (h) { teng(sw.indexOf(h) >= 0, true); });   // har bir skript/uslub oldindan keshlanadi
+          teng(sw.indexOf('index.html') >= 0 && sw.indexOf('manifest.json') >= 0 && sw.indexOf('icons/icon-192.png') >= 0 && sw.indexOf('icons/icon-512.png') >= 0, true);
+          return Promise.all(sw.map(function (f) { return fetch(f.split('?')[0], { cache: 'no-store' }).then(function (r) { teng(r.ok, true); }); }));
+        });
+      });
+      test('Pwa: yordamchilar bor; testlar muhitida (http, localhost) ishlaydi, o\'rnatilmagan, prompt yo\'q', function () {
+        teng(typeof Pwa.ishlaydimi, 'function'); teng(typeof Pwa.yangilanishniTekshir, 'function'); teng(typeof Pwa.ornatish, 'function'); teng(Pwa.ornatishMumkin(), false); teng(typeof Pwa.ornatilgan(), 'boolean');
+        return Pwa.ornatish().then(function (r) { teng(r, false); });
+      });
 
       // --- Mavzu: qurilma bo'yicha / yorug' / qorong'i (sxema 6) ---
       test('mavzu: qiymatlar (Calc va Tema bir xil), tekshiruv', function () {

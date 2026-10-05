@@ -436,3 +436,20 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .filtr-katak.kulrang, .filtr-katak:disabled { color: var(--xira); opacity: .45; background: var(--fon); cursor: not-allowed; }
 .qoshimcha-quti { margin: 4px 0 12px; }
 .davr-kunlari { margin: -6px 0 10px; }
+
+/* 8-bosqich: qarzlar */
+.qarz-guruh { padding-bottom: 6px; }
+.qarz-bosh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.qarz-shaxs { font-size: 17px; min-width: 0; overflow-wrap: anywhere; }
+.qarz-qolgan { font-size: 18px; font-weight: 800; white-space: nowrap; }
+.qarz-chiziq { height: 10px; margin: 8px 0 4px; border-radius: 5px; overflow: hidden; background: var(--chiziq); }
+.qarz-tolgan { display: block; height: 100%; border-radius: 5px; background: var(--asosiy); }
+.qarz-raqam { font-size: 14px; margin-bottom: 4px; }
+.qarz-belgi { display: inline-block; margin-left: 4px; padding: 1px 8px; font-size: 13px; font-weight: 700; border: 1px solid currentColor; border-radius: 10px; white-space: nowrap; }
+.qarz-belgi.muddat-otgan { color: var(--xarajat); }
+.qarz-belgi.yopilgan { margin: 8px 0 0; color: var(--daromad); }
+.qarz-qator { border-top: 1px solid var(--chiziq); }
+.yopilganlar summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer; }
+.qarz-tafsilot .qator { gap: 8px; }
+.qarz-tafsilot .qator strong { text-align: right; overflow-wrap: anywhere; }
+.qarz-tafsilot .ogohlantirish { margin: 10px 0 0; }

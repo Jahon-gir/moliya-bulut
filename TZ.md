@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 9 (05.10.2026)
+Hujjat versiyasi: 10 (05.10.2026)
 
 ## 1. Maqsad
 
@@ -43,6 +43,11 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Hisob nomini o'zgartirish mumkin. Yozuvlari bor hisob o'chirilmaydi, arxivlanadi (ro'yxatdan yashiriladi, eski yozuvlar saqlanadi).
 
 ### F2. Yozuv qo'shish
+- **Kirish yo'li.** Pastki menyudagi "+" tugmasi darhol shaklni emas, pastdan chiqadigan "Yangi yozuv yaratish" oynasini ochadi. Oynada ikki qator, har birida o'z belgisi (SVG), sarlavha, ostida kulrang izoh va o'ng tomonda ">" belgisi:
+  1. **"Tranzaksiya qo'shish"** — "Daromad, xarajat yoki o'tkazma qo'shing". Bosilsa quyidagi 5 qadamli oyna ochiladi. Bu qator birinchi turadi, rang bilan ajralib turadi va oyna ochilganda fokusda bo'ladi: tezkor yo'l "+" va Enter (yozuv qo'shish faqat bitta bosish ko'proq ketadi).
+  2. **"Qarz qo'shish"** — "Berilgan yoki olingan qarz. Hisob qoldig'ini o'zgartiradi, hisobotga kirmaydi". Bosilsa qarz qo'shish oynasi ochiladi (F8); undagi "Orqaga" tanlov oynasiga qaytaradi. Qarz saqlansa, "Yana" → Qarzlar ro'yxati ochiladi.
+  - Oyna tashqarisi, yopish belgisi yoki "Orqaga" bosilsa yopiladi (hech narsa saqlanmaydi, "+" bosilgan bo'limda qolinadi). Tugmalar kamida 44 piksel; klaviatura bilan ham ishlaydi: Esc yopadi, Tab bilan yurish oyna ichida aylanadi, har tugmada `aria-label`, oyna `role="dialog"`. Yopilganda fokus "+" tugmasiga qaytadi.
+  - "Yana" → Qarzlar ichidagi "+ Qarz qo'shish" tugmasi tanlov oynasisiz to'g'ridan-to'g'ri qarz oynasini ochadi (u yerdagi "Orqaga" Qarzlar ro'yxatiga qaytaradi).
 - Maydonlar: tur (daromad, xarajat, o'tkazma), summa, hisob, kategoriya, sana, soat, izoh.
 - Standart qiymatlar: tur xarajat, sana va soat hozirgi vaqt (qurilmaning mahalliy vaqti, daqiqa aniqligida), hisob oxirgi ishlatilgani.
 - **Qadamlar (wizard).** Yangi yozuv 5 ta ketma-ket qadamda kiritiladi. Har qadamda "Orqaga" tugmasi va "2 / 5" kabi ko'rsatkich bor:
@@ -210,7 +215,7 @@ Pastda beshta tugmali navigatsiya:
 
 1. **Bosh sahifa:** umumiy balans, hisoblar qoldig'i, joriy oy daromadi va xarajati, byudjet ogohlantirishlari, oxirgi 10 ta yozuv, zaxira eslatmasi.
 2. **Hisobot:** sarlavha va ikki belgi (diagramma almashtirish, filtr); Xarajat / Daromadlar yorlig'i; Kun / Hafta / Oy / Yil tezkor tugmalari; ko'rsatkichlar, taqqoslash; doira yoki ustunli diagramma. Filtr — pastdan chiqadigan oyna (oylik, yillik, davr, hisob).
-3. **Qo'shish (+):** o'rtadagi katta tugma, yozuv qo'shishning 5 qadamli oynasini ochadi (F2).
+3. **Qo'shish (+):** o'rtadagi katta tugma. Bosilsa pastdan "Yangi yozuv yaratish" oynasi chiqadi: "Tranzaksiya qo'shish" (birinchi, 5 qadamli yozuv oynasi, F2) va "Qarz qo'shish" (qarz oynasi, F8).
 4. **Byudjet:** kategoriyalar bo'yicha chegaralar va ularning holati.
 5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar (jami, shaxs bo'yicha ro'yxat, yopilganlar), hisoblar, kategoriyalar, zaxira va eksport, ilova haqida.
 
@@ -277,6 +282,7 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Diagrammalar: doiradagi tilimlar va ustunlardagi raqamlar hisobotdagi raqamlarga aynan teng (sinov ma'lumoti bilan: oylik daromad 5 000 000, xarajat 500 000; Oziq-ovqat 450 000 (90%), Transport 50 000 (10%); 2-kun ustunida xarajat 350 000). Doira tilimi yoki ustun bosilsa, tegishli yozuvlar ochiladi.
 - Diagrammalar chegara holatlarida to'g'ri: davrda yozuv yo'q, faqat bitta kategoriya, 15 ta kategoriya, juda katta va juda kichik summalar, manfiy qoldiq; 5 000 yozuv bilan 1 soniyadan tez; 360 piksel kenglikda gorizontal aylantirishsiz, yorug' va qorong'i rejimda.
 - Qarzning sanasi va soati hozirdan keyin bo'lsa, qarz saqlanmaydi (21:00 mumkin, 21:01 mumkin emas); to'lov sanasi va soati ham shunday. Qaytarish muddati kelajakda bo'lishi mumkin.
+- "+" tugmasi "Yangi yozuv yaratish" oynasini ochadi (ikki qator, birinchisi "Tranzaksiya qo'shish" fokusda); Esc, yopish belgisi, "Orqaga" va oyna tashqarisi yopadi; qarz oynasidan "Orqaga" tanlov oynasiga qaytaradi; "Yana" → Qarzlar ichidagi "+ Qarz qo'shish" qarz oynasini to'g'ridan-to'g'ri ochadi. Tugmalar kamida 44 piksel, 360 piksel kenglikda yorug' va qorong'i rejimda to'g'ri ko'rinadi.
 - Qarz: to'lov summasi qolgan qarzdan oshsa rad etiladi; to'lov vaqti qarz vaqtidan oldin bo'lsa rad etiladi; summa to'langandan kam qilib tahrirlanmaydi; qisman va to'liq qaytarish; muddati o'tgan qarz ⚠ belgisi bilan; qarz va to'lovni o'chirish 10 soniya ichida "Bekor qilish" bilan qaytadi; arxivlanayotgan hisobga bog'langan qarz haqida ogohlantirish.
 - Eski (2-versiya) bazani ochganda hech narsa o'chmaydi, qarzlarga faqat tushib qolgan maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (1-versiya) bazani ochganda hech narsa o'chmaydi, yozuvlarga faqat `vaqt` qo'shiladi; ilovani qayta ochish ma'lumotni o'zgartirmaydi.

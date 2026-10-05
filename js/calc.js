@@ -742,9 +742,10 @@
       sozlamalar: f.sozlamalar.slice()
     };
     var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
-    if (!asosiy) { asosiy = { kalit: 'asosiy', oxirgi_zaxira_sanasi: null }; m.sozlamalar.push(asosiy); }
+    if (!asosiy) { asosiy = { kalit: 'asosiy', oxirgi_zaxira_sanasi: null, balans_yashirin: false }; m.sozlamalar.push(asosiy); }
     else if (asosiy.oxirgi_zaxira_sanasi && !sanaYaroqli(asosiy.oxirgi_zaxira_sanasi)) rad('Oxirgi zaxira sanasi noto\'g\'ri');
-    m.sozlamalar = m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { sxema_versiyasi: sxema }) : x; });
+    if (asosiy.balans_yashirin !== undefined && typeof asosiy.balans_yashirin !== 'boolean') rad('Sozlamalarda balansni yashirish belgisi noto\'g\'ri');
+    m.sozlamalar = m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { sxema_versiyasi: sxema, balans_yashirin: x.balans_yashirin === true }) : x; });
     var soni = {}; ZAXIRA_TOPLAMLARI.forEach(function (t) { soni[t] = m[t].length; });
     return { malumot: m, soni: soni, kelajak: kelajak, eskiSxema: v < sxema, fayldagiSxema: v };
   }
@@ -820,6 +821,83 @@
       });
     });
     return { matn: csvFayl(['Sana', 'Vaqt', 'Turi', 'Yo\'nalish', 'Shaxs', 'Summa', 'Hisob', 'Muddat', 'Izoh', 'Holat'], q), soni: soni };
+  }
+
+  // ---- Asosiy sahifa va Tarix: faqat ko'rsatish uchun yordamchilar (hisob-kitob qoidalari o'zgarmagan) ----
+  function oyKalitiSur(kalit, n) {
+    var p = kalit.split('-'), j = parseInt(p[0], 10) * 12 + parseInt(p[1], 10) - 1 + n;
+    return Math.floor(j / 12) + '-' + ikki(j % 12 + 1);
+  }
+  // "Naqd pul oqimi" oy ro'yxati: eng yangisi birinchi, bu oydan KELAJAKKA chiqmaydi. Eng erta yozuv oyidan (kamida 12 oy) bugungi oygacha.
+  function oqimOylari(birinchiSana, bugunSana) {
+    var bu = bugunSana.slice(0, 7), boshi = oyKalitiSur(bu, -11);
+    if (birinchiSana && birinchiSana.slice(0, 7) < boshi) boshi = birinchiSana.slice(0, 7);
+    var r = [];
+    for (var k = bu; k >= boshi; k = oyKalitiSur(k, -1)) r.push(k);
+    return r;
+  }
+  // Tarix oy yorliqlari: eng eskisidan boshlab o'sish tartibida, OXIRGISI joriy oy. Faqat bazada oldindan qolgan kelajak yozuvlari
+  // bo'lgan kelajak oylar ham qo'shiladi (ular ko'rinmay qolmasligi uchun).
+  function tarixOylari(sanalar, bugunSana) {
+    var bu = bugunSana.slice(0, 7), eng = bu, bor = {};
+    sanalar.forEach(function (s) { var k = s.slice(0, 7); bor[k] = true; if (k < eng) eng = k; });
+    var r = [];
+    for (var k = eng; k <= bu; k = oyKalitiSur(k, 1)) r.push(k);
+    Object.keys(bor).filter(function (k) { return k > bu; }).sort().forEach(function (k) { r.push(k); });
+    return r;
+  }
+  // Oy jami (hisobot() bilan bir xil qoida): { daromad, xarajat, qoldiq, soni }
+  function oyJami(yozuvlar, kalit) {
+    var c = davrChegarasi('oy', kalit + '-01'), h = hisobot(yozuvlar, c.dan, c.gacha, '');
+    return { daromad: h.daromad, xarajat: h.xarajat, qoldiq: h.qoldiq, soni: h.soni };
+  }
+  // Tarixda ko'rinadigan qarz amallari: har qarz va har to'lov alohida qator. Ular oylik xarajat/daromadga KIRMAYDI.
+  function qarzSatrlari(qarzlar) {
+    var r = [];
+    qarzlar.forEach(function (z) {
+      r.push({ turi: 'qarz', id: 'q:' + z.id, qarz_id: z.id, sana: z.sana, vaqt: z.vaqt || '00:00', summa: z.summa, hisob_id: z.hisob_id, shaxs: z.shaxs, yonalish: z.yonalish, izoh: z.izoh || '', yaratilgan: z.yaratilgan || '' });
+      (z.tolovlar || []).forEach(function (t) {
+        r.push({ turi: 'tolov', id: 't:' + (t.id || '') + ':' + z.id, qarz_id: z.id, sana: t.sana, vaqt: t.vaqt || '00:00', summa: t.summa, hisob_id: t.hisob_id, shaxs: z.shaxs, yonalish: z.yonalish, izoh: '', yaratilgan: t.yaratilgan || '' });
+      });
+    });
+    return r;
+  }
+  // Qarz qatorlarini Tarix filtri/qidiruvi bo'yicha suzadi (yozuvlarniSuz bilan bir xil mantiq): tur va kategoriya tanlangan bo'lsa qarz
+  // qatorlari chiqmaydi; hisob — shu hisobdagi amal; qidiruv — izoh yoki shaxs ismi. oyKalit berilsa, faqat shu oy.
+  function qarzSatrlariniSuz(satrlar, f, oyKalit) {
+    f = f || {};
+    var q = String(f.qidiruv || '').trim().toLowerCase();
+    return satrlar.filter(function (x) {
+      if (oyKalit && x.sana.slice(0, 7) !== oyKalit) return false;
+      if (f.tur || f.kategoriya || (f.kategoriyalar && f.kategoriyalar.length)) return false;
+      if (f.hisob && x.hisob_id !== f.hisob) return false;
+      if (f.dan && x.sana < f.dan) return false;
+      if (f.gacha && x.sana > f.gacha) return false;
+      if (q && (String(x.izoh || '') + ' ' + String(x.shaxs || '')).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+  }
+  // Tarix: yozuvlar va qarz qatorlari kunlar bo'yicha (eng yangi kun birinchi; kun ichida soat bo'yicha kamayish).
+  // Kun jami (xarajat, daromad) faqat yozuvlardan: o'tkazma va qarz kirmaydi.
+  // Natija: [{ sana, xarajat, daromad, elementlar: [{ turi: 'yozuv', yozuv } | { turi: 'qarz' | 'tolov', satr }] }]
+  function tarixGuruhlari(yozuvlar, qarzQatorlari) {
+    var el = [];
+    yozuvlar.forEach(function (y) { el.push({ turi: 'yozuv', yozuv: y, sana: y.sana, vaqt: yozuvVaqti(y), yaratilgan: y.yaratilgan || '', t: 0 }); });
+    qarzQatorlari.forEach(function (x) { el.push({ turi: x.turi, satr: x, sana: x.sana, vaqt: x.vaqt, yaratilgan: x.yaratilgan || '', t: 1 }); });
+    el.sort(function (a, b) {
+      if (a.sana !== b.sana) return a.sana < b.sana ? 1 : -1;
+      if (a.vaqt !== b.vaqt) return a.vaqt < b.vaqt ? 1 : -1;
+      if (a.yaratilgan !== b.yaratilgan) return a.yaratilgan < b.yaratilgan ? 1 : -1;
+      return a.t - b.t;
+    });
+    var guruhlar = [];
+    el.forEach(function (e) {
+      var g = guruhlar[guruhlar.length - 1];
+      if (!g || g.sana !== e.sana) { g = { sana: e.sana, xarajat: 0, daromad: 0, elementlar: [] }; guruhlar.push(g); }
+      g.elementlar.push(e);
+      if (e.turi === 'yozuv') { if (e.yozuv.tur === 'xarajat') g.xarajat += e.yozuv.summa; else if (e.yozuv.tur === 'daromad') g.daromad += e.yozuv.summa; }
+    });
+    return guruhlar;
   }
 
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
@@ -1135,6 +1213,7 @@
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     ZAXIRA_ESLATMA_KUNI: ZAXIRA_ESLATMA_KUNI, sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraNomi: zaxiraNomi, zaxiraniTekshir: zaxiraniTekshir, zaxiraHolati: zaxiraHolati,
     csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, yozuvlarCSV: yozuvlarCSV, qarzlarCSV: qarzlarCSV,
+    oyKalitiSur: oyKalitiSur, oqimOylari: oqimOylari, tarixOylari: tarixOylari, oyJami: oyJami, qarzSatrlari: qarzSatrlari, qarzSatrlariniSuz: qarzSatrlariniSuz, tarixGuruhlari: tarixGuruhlari,
     donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
     BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,

@@ -67,6 +67,7 @@
   // to'liq turadi ("Boshqalar" guruhi sarlavhasi ostida). Tilim rangi — kategoriyaning o'z rangi (4-bosqichdagi bilan bir xil).
   // ======================================================================
   function dona(opts) {
+    function sum(n) { return opts.yashirin ? '••••' : Calc.sumFormat(n); }   // summalar yashirilgan bo'lsa ••••
     var quti = el('div', undefined, 'dona-quti');
     var guruh = Calc.donaGuruhlash(opts.taqsimot);
     var tilimlar = Calc.tilimBurchaklari(guruh.tilimlar);
@@ -220,7 +221,8 @@
   // 100% dan oshsa — qizil. Rang bir o'zi emas: belgi (✓ ⚠ ✕) va matn ham bor.
   // ======================================================================
   var DARAJA_MATNI = { yaxshi: ['✓', 'Me\'yorda'], sariq: ['⚠', 'Chegaraga yaqin'], qizil: ['✕', 'Chegaradan oshdi'] };
-  function byudjetChizigi(holat, nom) {
+  function byudjetChizigi(holat, nom, yashirin) {
+    function sum(n) { return yashirin ? '••••' : Calc.sumFormat(n); }
     var quti = el('div', undefined, 'byudjet-quti');
     quti.setAttribute('data-daraja', holat.daraja);
     quti.setAttribute('data-foiz', holat.foiz);

@@ -4,7 +4,7 @@
 
   var DB_NOMI = 'moliya';
   var DB_VERSIYASI = 1;      // IndexedDB tuzilishi (to'plamlar ro'yxati)
-  var SXEMA_VERSIYASI = 3;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`)
+  var SXEMA_VERSIYASI = 4;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`
   // To'plamlar (TZ 7-band). Byudjetning kaliti kategoriya_id, qolganlariniki id.
   var TOPLAMLAR = {
     hisoblar: 'id',
@@ -89,7 +89,7 @@
           });
         });
         tx.objectStore('sozlamalar').put({
-          kalit: 'asosiy', sxema_versiyasi: SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null
+          kalit: 'asosiy', sxema_versiyasi: SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null, balans_yashirin: false
         });
       };
     });
@@ -104,7 +104,7 @@
   }
 
   // Ma'lumot tuzilishini yangi versiyaga o'tkazadi: 1 -> 2 (yozuvlarga `vaqt` qo'shiladi), 2 -> 3 (qarzlarda tushib qolgan
-  // maydonlar to'ldiriladi; hozirgacha qarzlar bo'sh bo'lgani uchun odatda hech narsa o'zgarmaydi).
+  // maydonlar to'ldiriladi), 3 -> 4 (sozlamalarga `balans_yashirin: false` qo'shiladi).
   // Hammasi BITTA tranzaksiyada: xato bo'lsa, hech narsa o'zgarmaydi. Hech narsa o'chirilmaydi.
   // Versiya Sozlamalar ichida tekshiriladi, shuning uchun ikkinchi marta ishlasa yoki ilova ikki joyda
   // bir vaqtda ochilsa ham ma'lumot buzilmaydi.
@@ -122,6 +122,7 @@
         var kutilmoqda = 2;
         function tugadi() {
           if (--kutilmoqda) return;
+          if (typeof sozlama.balans_yashirin !== 'boolean') sozlama.balans_yashirin = false;   // 3 -> 4: ko'z belgisi holati (summalarni yashirish)
           sozlama.sxema_versiyasi = SXEMA_VERSIYASI;
           tx.objectStore('sozlamalar').put(sozlama);
         }

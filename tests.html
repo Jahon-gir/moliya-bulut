@@ -15,9 +15,9 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/calc.js?v=0.9.0"></script>
-  <script src="js/data.js?v=0.9.0"></script>
-  <script src="js/diagramma.js?v=0.9.0"></script>
+  <script src="js/calc.js?v=0.10.0"></script>
+  <script src="js/data.js?v=0.10.0"></script>
+  <script src="js/diagramma.js?v=0.10.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1383,7 +1383,7 @@
         var idsiz = Calc.qarzniYangilash({ id: 'w', yonalish: 'berdim', shaxs: 'C', summa: 900, hisob_id: 'a', sana: '2026-10-04', vaqt: '08:00', muddat: '', izoh: '', tolovlar: [{ sana: '2026-10-05', vaqt: '09:00', summa: 100, hisob_id: 'a' }, { id: 'bor', sana: '2026-10-05', vaqt: '09:30', summa: 200, hisob_id: 'a' }], yopilgan: false });
         teng(idsiz.tolovlar[0].id, 'w-t1'); teng(idsiz.tolovlar[1].id, 'bor'); teng(idsiz.tolovlar[0].summa, 100); teng(Calc.qarzniYangilash(idsiz), idsiz);   // id yo'q to'lovga id beriladi, qolgani o'zgarmaydi
       });
-      test('Data: sxema versiyasi 3, qarzlar to\'plami bor', function () { teng(Data.SXEMA_VERSIYASI, 3); });
+      test('Data: sxema versiyasi 4, qarzlar to\'plami bor', function () { teng(Data.SXEMA_VERSIYASI, 4); });
 
 
       // --- 9-bosqich: zaxira va eksport (F9) ---
@@ -1401,10 +1401,10 @@
       var ZQ = [{ id: 'z1', yaratilgan: 'x', yonalish: 'berdim', shaxs: 'Ali', summa: 200000, hisob_id: 'naqd', sana: '2026-10-04', vaqt: '12:00', muddat: '2026-12-01', izoh: 'bozor', tolovlar: [{ id: 't1', sana: '2026-10-05', vaqt: '10:00', summa: 50000, hisob_id: 'karta' }], yopilgan: false },
         { id: 'z2', yaratilgan: 'y', yonalish: 'oldim', shaxs: 'G\'ayrat O\'ktam', summa: 1000, hisob_id: 'karta', sana: '2026-10-04', vaqt: '08:00', muddat: '', izoh: '', tolovlar: [{ id: 't2', sana: '2026-10-05', vaqt: '11:00', summa: 1000, hisob_id: 'karta' }], yopilgan: true }];
       var ZB = [{ kategoriya_id: 'oziq', oylik_limit: 500000 }, { kategoriya_id: 'umumiy', oylik_limit: 2000000 }];
-      var ZS = [{ kalit: 'asosiy', sxema_versiyasi: 3, oxirgi_zaxira_sanasi: '2026-09-30' }];
+      var ZS = [{ kalit: 'asosiy', sxema_versiyasi: 4, oxirgi_zaxira_sanasi: '2026-09-30', balans_yashirin: false }];
       function zMalumot() { return JSON.parse(JSON.stringify({ hisoblar: ZH, yozuvlar: ZY, kategoriyalar: ZK, byudjetlar: ZB, qarzlar: ZQ, sozlamalar: ZS })); }
       var Z_HOZIR = { sana: '2026-10-10', vaqt: '21:00' };
-      function zMatn(o) { return JSON.stringify(Object.assign(Calc.zaxiraYasash(zMalumot(), 3, new Date(2026, 9, 10, 21, 0)), o || {})); }
+      function zMatn(o) { return JSON.stringify(Object.assign(Calc.zaxiraYasash(zMalumot(), 4, new Date(2026, 9, 10, 21, 0)), o || {})); }
       // barcha raqamlar: balans, hisobotlar, byudjet, qarzlar
       function raqamlar(m) {
         var c = Calc.davrChegarasi('oy', '2026-10-15'), h = Calc.hisobot(m.yozuvlar, c.dan, c.gacha, '');
@@ -1418,7 +1418,7 @@
       }
       test('zaxira: fayl tuzilishi — barcha to\'plam, sxema versiyasi, ilova belgisi, sonlar; yozuvda vaqt, qarzda to\'lovlar', function () {
         var f = JSON.parse(zMatn());
-        teng(f.ilova, 'moliya'); teng(f.sxema_versiyasi, 3); teng(typeof f.zaxira_vaqti, 'string');
+        teng(f.ilova, 'moliya'); teng(f.sxema_versiyasi, 4); teng(typeof f.zaxira_vaqti, 'string');
         ['hisoblar', 'yozuvlar', 'kategoriyalar', 'byudjetlar', 'qarzlar', 'sozlamalar'].forEach(function (t) { teng(Array.isArray(f[t]), true); teng(f.soni[t], f[t].length); });
         teng(f.yozuvlar[0].vaqt, '09:00'); teng(f.qarzlar[0].tolovlar[0].summa, 50000); teng(f.qarzlar[0].vaqt, '12:00');
       });
@@ -1426,23 +1426,23 @@
         teng(Calc.zaxiraNomi(new Date(2026, 9, 5, 21, 30)), 'moliya-zaxira-2026-10-05-2130.json'); teng(Calc.zaxiraNomi(new Date(2026, 0, 2, 3, 4), 'zaxira-tiklashdan-oldin'), 'moliya-zaxira-tiklashdan-oldin-2026-01-02-0304.json');
       });
       test('zaxira -> tekshirish: ma\'lumot aynan avvalgidek, raqamlar (balans, hisobot, byudjet, qarzlar) bir xil', function () {
-        var asl = zMalumot(), r = Calc.zaxiraniTekshir(zMatn(), 3, Z_HOZIR);
+        var asl = zMalumot(), r = Calc.zaxiraniTekshir(zMatn(), 4, Z_HOZIR);
         teng(r.xato, undefined); teng(r.eskiSxema, false); teng(r.soni.yozuvlar, 6); teng(r.soni.qarzlar, 2); teng(r.kelajak.yozuv, 0);
         ['hisoblar', 'yozuvlar', 'kategoriyalar', 'byudjetlar', 'qarzlar'].forEach(function (t) { teng(JSON.stringify(r.malumot[t]), JSON.stringify(asl[t])); });
         teng(raqamlar(r.malumot), raqamlar(asl));
         var o = JSON.parse(raqamlar(asl)); teng(o.naqd, 5000000 - 300000 - 150000 - 1000000 - 777 - 200000); teng(o.oy[0], 5000000); teng(o.byudjet[2].sarflangan, 450000 + 50000);
       });
       test('zaxira: bom bilan boshlansa ham o\'qiladi; sozlamalar (oxirgi zaxira sanasi) saqlanadi', function () {
-        var r = Calc.zaxiraniTekshir('﻿' + zMatn(), 3, Z_HOZIR); teng(r.xato, undefined); teng(r.malumot.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
+        var r = Calc.zaxiraniTekshir('﻿' + zMatn(), 4, Z_HOZIR); teng(r.xato, undefined); teng(r.malumot.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
       });
-      function xatoMi(matn, bolak) { var r = Calc.zaxiraniTekshir(matn, 3, Z_HOZIR); teng(typeof r.xato, 'string'); teng(r.malumot, undefined); if (bolak) teng(bolak.test(r.xato), true); }
+      function xatoMi(matn, bolak) { var r = Calc.zaxiraniTekshir(matn, 4, Z_HOZIR); teng(typeof r.xato, 'string'); teng(r.malumot, undefined); if (bolak) teng(bolak.test(r.xato), true); }
       function ozgar(fn) { var f = JSON.parse(zMatn()); fn(f); return JSON.stringify(f); }
       test('buzuq fayl rad etiladi: bo\'sh, JSON emas, yarim (kesilgan), massiv, boshqa ilova', function () {
         xatoMi(''); xatoMi('   '); xatoMi('salom'); xatoMi('[]', /Moliya/); xatoMi('{"ilova":"boshqa"}', /Moliya/);
         var t = zMatn(); xatoMi(t.slice(0, Math.floor(t.length / 2)), /buzuq yoki yarim/); xatoMi(t.slice(0, t.length - 1), /buzuq yoki yarim/); xatoMi(t + 'x');
       });
       test('buzuq fayl: sxema versiyasi, yetishmaydigan to\'plam, sonlar mos emas', function () {
-        xatoMi(ozgar(function (f) { delete f.sxema_versiyasi; }), /sxema/); xatoMi(ozgar(function (f) { f.sxema_versiyasi = 'x'; }), /sxema/); xatoMi(ozgar(function (f) { f.sxema_versiyasi = 4; }), /yangiroq/);
+        xatoMi(ozgar(function (f) { delete f.sxema_versiyasi; }), /sxema/); xatoMi(ozgar(function (f) { f.sxema_versiyasi = 'x'; }), /sxema/); xatoMi(ozgar(function (f) { f.sxema_versiyasi = 5; }), /yangiroq/);
         ['hisoblar', 'yozuvlar', 'kategoriyalar', 'byudjetlar', 'qarzlar', 'sozlamalar'].forEach(function (t) { xatoMi(ozgar(function (f) { delete f[t]; }), /to'liq emas/); xatoMi(ozgar(function (f) { f[t] = 'x'; }), /to'liq emas/); });
         xatoMi(ozgar(function (f) { f.yozuvlar.pop(); }), /to'liq emas/); xatoMi(ozgar(function (f) { f.qarzlar = []; }), /to'liq emas/);
         xatoMi(ozgar(function (f) { f.yozuvlar[0] = null; }), /buzuq/);
@@ -1466,23 +1466,23 @@
         var v1 = { ilova: 'moliya', sxema_versiyasi: 1, hisoblar: ZH, kategoriyalar: ZK, byudjetlar: ZB, qarzlar: [], sozlamalar: [{ kalit: 'asosiy', sxema_versiyasi: 1, oxirgi_zaxira_sanasi: null }],
           yozuvlar: [{ id: 'a', tur: 'xarajat', summa: 50000, sana: '2026-10-03', hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: 'tushlik', yaratilgan: mahalliyISO(2026, 10, 3, 13, 20, 5) },
             { id: 'b', tur: 'daromad', summa: 5000000, sana: '2026-10-01', hisob_id: 'naqd', kategoriya_id: 'maosh', izoh: '', yaratilgan: 'yaroqsiz' }] };
-        var r = Calc.zaxiraniTekshir(JSON.stringify(v1), 3, Z_HOZIR);
+        var r = Calc.zaxiraniTekshir(JSON.stringify(v1), 4, Z_HOZIR);
         teng(r.xato, undefined); teng(r.eskiSxema, true); teng(r.fayldagiSxema, 1); teng(r.malumot.yozuvlar.length, 2); teng(r.malumot.yozuvlar[0].vaqt, '13:20'); teng(r.malumot.yozuvlar[1].vaqt, '00:00'); teng(r.malumot.yozuvlar[0].izoh, 'tushlik');
-        teng(r.malumot.sozlamalar[0].sxema_versiyasi, 3); teng(r.malumot.hisoblar.length, 3); teng(r.malumot.byudjetlar.length, 2);
+        teng(r.malumot.sozlamalar[0].sxema_versiyasi, 4); teng(r.malumot.hisoblar.length, 3); teng(r.malumot.byudjetlar.length, 2);
       });
       test('eski sxema (2): qarzda tushib qolgan maydonlar to\'ldiriladi, to\'liq qarzga tegilmaydi; fayl yaratilganda soni yo\'q bo\'lsa ham o\'qiladi', function () {
         var v2 = { ilova: 'moliya', sxema_versiyasi: 2, hisoblar: ZH, kategoriyalar: ZK, byudjetlar: [], yozuvlar: ZY, sozlamalar: [],
           qarzlar: [ZQ[0], { id: 'q9', yonalish: 'oldim', shaxs: 'Vali', summa: 100, hisob_id: 'naqd', sana: '2026-10-04', tolovlar: [{ sana: '2026-10-05', vaqt: '09:00', summa: 100, hisob_id: 'naqd' }] }] };
-        var r = Calc.zaxiraniTekshir(JSON.stringify(v2), 3, Z_HOZIR);
+        var r = Calc.zaxiraniTekshir(JSON.stringify(v2), 4, Z_HOZIR);
         teng(r.xato, undefined); teng(r.eskiSxema, true); teng(JSON.stringify(r.malumot.qarzlar[0]), JSON.stringify(ZQ[0])); var q = r.malumot.qarzlar[1];
-        teng(q.vaqt, '00:00'); teng(q.muddat, ''); teng(q.yopilgan, true); teng(q.tolovlar[0].id, 'q9-t1'); teng(r.malumot.sozlamalar.length, 1); teng(r.malumot.sozlamalar[0].kalit, 'asosiy'); teng(r.malumot.sozlamalar[0].sxema_versiyasi, 3);
+        teng(q.vaqt, '00:00'); teng(q.muddat, ''); teng(q.yopilgan, true); teng(q.tolovlar[0].id, 'q9-t1'); teng(r.malumot.sozlamalar.length, 1); teng(r.malumot.sozlamalar[0].kalit, 'asosiy'); teng(r.malumot.sozlamalar[0].sxema_versiyasi, 4);
       });
       test('vaqti hozirdan keyin bo\'lgan yozuv, qarz va to\'lov: rad etilmaydi va o\'chirilmaydi, sanaladi ("Kelajak" belgisi bilan ko\'rinadi)', function () {
         var f = JSON.parse(zMatn());
         f.yozuvlar.push({ id: 'k1', tur: 'xarajat', summa: 1, sana: '2999-01-01', vaqt: '00:00', hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: '' }); f.yozuvlar.push({ id: 'k2', tur: 'xarajat', summa: 2, sana: '2026-10-10', vaqt: '21:01', hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: '' });
         f.yozuvlar.push({ id: 'k3', tur: 'xarajat', summa: 3, sana: '2026-10-10', vaqt: '21:00', hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: '' });   // 21:00 mumkin
         f.qarzlar[1].sana = '2999-02-02'; f.qarzlar[0].tolovlar[0].sana = '2026-10-11'; f.soni = undefined;
-        var r = Calc.zaxiraniTekshir(JSON.stringify(f), 3, Z_HOZIR);
+        var r = Calc.zaxiraniTekshir(JSON.stringify(f), 4, Z_HOZIR);
         teng(r.xato, undefined); teng(r.kelajak.yozuv, 2); teng(r.kelajak.qarz, 1); teng(r.kelajak.tolov, 1); teng(r.malumot.yozuvlar.length, 9); teng(r.malumot.yozuvlar.filter(function (y) { return y.id === 'k1'; })[0].sana, '2999-01-01');
       });
       test('zaxiraHolati: hech qachon, bugun, 14 kun (eslatmasiz), 15 kun (eslatma)', function () {
@@ -1569,10 +1569,88 @@
       }
       test('tezlik: 5 000 yozuv — zaxira yasash, tekshirish va CSV har biri 1 soniyadan tez; raqamlar bir xil', function () {
         var m = zMalumot(); m.yozuvlar = ZKatta(5000);
-        var t0 = performance.now(), fayl = JSON.stringify(Calc.zaxiraYasash(m, 3, new Date())), t1 = performance.now(), r = Calc.zaxiraniTekshir(fayl, 3, Z_HOZIR), t2 = performance.now();
+        var t0 = performance.now(), fayl = JSON.stringify(Calc.zaxiraYasash(m, 4, new Date())), t1 = performance.now(), r = Calc.zaxiraniTekshir(fayl, 4, Z_HOZIR), t2 = performance.now();
         var c = Calc.yozuvlarCSV(m.yozuvlar, m.hisoblar, m.kategoriyalar, { tur: 'hammasi' }), t3 = performance.now(), q = csvOqish(c.matn);
         teng(r.xato, undefined); teng(r.soni.yozuvlar, 5000); teng(c.soni, 5000); teng(q.length, 5001); teng(q.every(function (x) { return x.length === 8; }), true);
         teng(t1 - t0 < 1000, true); teng(t2 - t1 < 1000, true); teng(t3 - t2 < 1000, true); teng(raqamlar(r.malumot), raqamlar(m));
+      });
+
+
+      // --- 10-bosqich: navigatsiya va Asosiy sahifa uchun ko'rsatish yordamchilari; ko'z belgisi sozlamasi (sxema 4) ---
+      test('oqimOylari: eng yangisi birinchi, joriy oydan KELAJAKKA chiqmaydi, kamida 12 oy, eng erta yozuv oyigacha', function () {
+        var a = Calc.oqimOylari('', '2026-10-15'); teng(a.length, 12); teng(a[0], '2026-10'); teng(a[11], '2025-11'); teng(a.every(function (k) { return k <= '2026-10'; }), true);
+        var b = Calc.oqimOylari('2024-03-05', '2026-10-15'); teng(b[0], '2026-10'); teng(b[b.length - 1], '2024-03'); teng(b.length, 32);
+        teng(Calc.oqimOylari('2999-01-01', '2026-10-15').length, 12);   // kelajak yozuv oy ro'yxatini kengaytirmaydi
+        teng(Calc.oqimOylari('', '2026-01-31')[11], '2025-02'); teng(Calc.oyKalitiSur('2026-01', -1), '2025-12'); teng(Calc.oyKalitiSur('2026-12', 1), '2027-01');
+      });
+      test('tarixOylari: o\'sish tartibida, oxirgisi joriy oy; kelajak oy faqat bazada yozuvi bo\'lsa qo\'shiladi', function () {
+        var a = Calc.tarixOylari([], '2026-10-15'); teng(a.join(), '2026-10');
+        var b = Calc.tarixOylari(['2026-08-03', '2026-10-01', '2026-08-30'], '2026-10-15'); teng(b.join(), '2026-08,2026-09,2026-10');
+        var c = Calc.tarixOylari(['2025-12-31', '2026-10-05'], '2026-10-15'); teng(c[0], '2025-12'); teng(c[c.length - 1], '2026-10'); teng(c.length, 11);
+        var d = Calc.tarixOylari(['2026-09-01', '2999-01-01'], '2026-10-15'); teng(d.join(), '2026-09,2026-10,2999-01');
+      });
+      var NY = [
+        { id: 'a', tur: 'daromad', summa: 5000000, sana: '2026-10-01', vaqt: '09:00', hisob_id: 'naqd', kategoriya_id: 'maosh', yaratilgan: '1' },
+        { id: 'b', tur: 'xarajat', summa: 300000, sana: '2026-10-02', vaqt: '09:30', hisob_id: 'naqd', kategoriya_id: 'oziq', yaratilgan: '2' },
+        { id: 'c', tur: 'xarajat', summa: 50000, sana: '2026-10-02', vaqt: '18:00', hisob_id: 'karta', kategoriya_id: 'yol', yaratilgan: '3' },
+        { id: 'd', tur: 'otkazma', summa: 1000000, sana: '2026-10-03', vaqt: '10:00', hisob_id: 'naqd', qabul_hisob_id: 'karta', kategoriya_id: null, yaratilgan: '4' },
+        { id: 'e', tur: 'xarajat', summa: 777, sana: '2026-09-30', vaqt: '23:59', hisob_id: 'naqd', kategoriya_id: 'oziq', yaratilgan: '5' }];
+      test('oyJami: Tarix oylik jami hisobot() bilan aynan bir xil (daromad, xarajat, balans); o\'tkazma kirmaydi', function () {
+        var j = Calc.oyJami(NY, '2026-10'), c = Calc.davrChegarasi('oy', '2026-10-15'), h = Calc.hisobot(NY, c.dan, c.gacha, '');
+        teng(j.daromad, h.daromad); teng(j.xarajat, h.xarajat); teng(j.qoldiq, h.qoldiq); teng(j.soni, h.soni);
+        teng(j.daromad, 5000000); teng(j.xarajat, 350000); teng(j.qoldiq, 4650000);
+        var s = Calc.oyJami(NY, '2026-09'); teng(s.xarajat, 777); teng(s.daromad, 0); teng(s.qoldiq, -777); teng(Calc.oyJami(NY, '2026-08').soni, 0);
+        var n = 0; ['2026-09', '2026-10'].forEach(function (k) { n += Calc.oyJami(NY, k).xarajat; }); teng(n, 350000 + 777);
+      });
+      var NQ = [{ id: 'z1', yaratilgan: 'x', yonalish: 'berdim', shaxs: 'Ali', summa: 200000, hisob_id: 'naqd', sana: '2026-10-02', vaqt: '12:00', muddat: '', izoh: 'bozor', tolovlar: [{ id: 't1', sana: '2026-10-05', vaqt: '10:00', summa: 50000, hisob_id: 'karta' }], yopilgan: false },
+        { id: 'z2', yaratilgan: 'y', yonalish: 'oldim', shaxs: 'Vali', summa: 1000, hisob_id: 'karta', sana: '2026-09-30', vaqt: '08:00', muddat: '', izoh: '', tolovlar: [], yopilgan: false }];
+      test('qarzSatrlari: har qarz va har to\'lov alohida qator; oyga va filtrga qarab suziladi (tur/kategoriya tanlansa chiqmaydi)', function () {
+        var q = Calc.qarzSatrlari(NQ); teng(q.length, 3); teng(q.map(function (x) { return x.turi; }).join(), 'qarz,tolov,qarz'); teng(q[1].shaxs, 'Ali'); teng(q[1].yonalish, 'berdim'); teng(q[1].summa, 50000);
+        teng(Calc.qarzSatrlariniSuz(q, {}, '2026-10').length, 2); teng(Calc.qarzSatrlariniSuz(q, {}, '2026-09').length, 1); teng(Calc.qarzSatrlariniSuz(q, {}).length, 3);
+        teng(Calc.qarzSatrlariniSuz(q, { tur: 'xarajat' }, '2026-10').length, 0); teng(Calc.qarzSatrlariniSuz(q, { kategoriya: 'oziq' }, '2026-10').length, 0); teng(Calc.qarzSatrlariniSuz(q, { kategoriyalar: ['oziq'] }, '2026-10').length, 0);
+        teng(Calc.qarzSatrlariniSuz(q, { hisob: 'karta' }, '2026-10').length, 1); teng(Calc.qarzSatrlariniSuz(q, { qidiruv: 'BOZOR' }, '2026-10').length, 1); teng(Calc.qarzSatrlariniSuz(q, { qidiruv: 'vali' }).length, 1); teng(Calc.qarzSatrlariniSuz(q, { qidiruv: 'yo\'q' }).length, 0);
+      });
+      test('tarixGuruhlari: kunlar bo\'yicha, yozuv va qarz birga, kun ichida soat kamayish; kun jami faqat xarajat/daromad (o\'tkazma va qarz kirmaydi)', function () {
+        var g = Calc.tarixGuruhlari(NY.filter(function (y) { return y.sana.slice(0, 7) === '2026-10'; }), Calc.qarzSatrlariniSuz(Calc.qarzSatrlari(NQ), {}, '2026-10'));
+        teng(g.map(function (x) { return x.sana; }).join(), '2026-10-05,2026-10-03,2026-10-02,2026-10-01');
+        teng(g[0].elementlar.length, 1); teng(g[0].elementlar[0].turi, 'tolov'); teng(g[0].xarajat, 0); teng(g[0].daromad, 0);
+        teng(g[1].elementlar[0].yozuv.tur, 'otkazma'); teng(g[1].xarajat, 0);
+        teng(g[2].elementlar.map(function (e) { return e.turi + ':' + (e.yozuv ? e.yozuv.id : e.satr.id.slice(0, 2)); }).join(), 'yozuv:c,qarz:q:,yozuv:b');   // 18:00, 12:00, 09:30
+        teng(g[2].xarajat, 350000); teng(g[3].daromad, 5000000); teng(g.reduce(function (a, x) { return a + x.xarajat; }, 0), Calc.oyJami(NY, '2026-10').xarajat); teng(g.reduce(function (a, x) { return a + x.daromad; }, 0), Calc.oyJami(NY, '2026-10').daromad);
+        teng(Calc.tarixGuruhlari([], []).length, 0);
+      });
+      test('hisoblar soni: faol hisoblar soni hisob qo\'shilganda oshadi, arxivlanganda kamayadi (arxivlangani hisoblanmaydi); umumiy balansga arxivlangani kirmaydi', function () {
+        var H = [{ id: 'a', nom: 'Naqd', tur: 'naqd', boshlangich_qoldiq: 100, arxivlangan: false }];
+        function faol(x) { return x.filter(function (h) { return !h.arxivlangan; }); }
+        teng(faol(H).length, 1); H = H.concat([{ id: 'b', nom: 'Karta', tur: 'karta', boshlangich_qoldiq: 50, arxivlangan: false }]); teng(faol(H).length, 2); teng(Calc.umumiyBalans(H, [], []), 150);
+        H = H.map(function (h) { return h.id === 'b' ? Object.assign({}, h, { arxivlangan: true }) : h; }); teng(faol(H).length, 1); teng(H.length, 2); teng(Calc.umumiyBalans(H, [], []), 100);
+      });
+      test('sozlamalar: ko\'z belgisi (balans_yashirin) zaxiraga kiradi va tiklanadi; eski zaxirada yo\'q bo\'lsa false; noto\'g\'ri qiymat rad etiladi', function () {
+        var m = zMalumot(); m.sozlamalar = [{ kalit: 'asosiy', sxema_versiyasi: 4, oxirgi_zaxira_sanasi: '2026-09-30', balans_yashirin: true }];
+        var f = Calc.zaxiraYasash(m, 4, new Date()), r = Calc.zaxiraniTekshir(JSON.stringify(f), 4, Z_HOZIR);
+        teng(r.xato, undefined); teng(r.malumot.sozlamalar[0].balans_yashirin, true); teng(r.malumot.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
+        var eski = JSON.parse(zMatn()); eski.sxema_versiyasi = 3; eski.sozlamalar = [{ kalit: 'asosiy', sxema_versiyasi: 3, oxirgi_zaxira_sanasi: '2026-09-30' }];
+        var r3 = Calc.zaxiraniTekshir(JSON.stringify(eski), 4, Z_HOZIR); teng(r3.xato, undefined); teng(r3.eskiSxema, true); teng(r3.malumot.sozlamalar[0].balans_yashirin, false); teng(r3.malumot.sozlamalar[0].sxema_versiyasi, 4);
+        var bad = JSON.parse(zMatn()); bad.sozlamalar[0].balans_yashirin = 'ha'; var rb = Calc.zaxiraniTekshir(JSON.stringify(bad), 4, Z_HOZIR); teng(typeof rb.xato, 'string'); teng(/yashirish/.test(rb.xato), true);
+        var bos = JSON.parse(zMatn()); bos.sozlamalar = []; bos.soni = undefined; var rs = Calc.zaxiraniTekshir(JSON.stringify(bos), 4, Z_HOZIR); teng(rs.malumot.sozlamalar[0].balans_yashirin, false);
+      });
+      test('Migratsiya 3 -> 4 (butun baza): sozlamalarga balans_yashirin: false qo\'shiladi, hech narsa o\'chmaydi; true bo\'lsa saqlanadi', function () {
+        var yoz = [{ id: 'a', tur: 'xarajat', summa: 50000, sana: '2026-10-03', vaqt: '13:20', hisob_id: 'h1', kategoriya_id: 'k1', izoh: '', yaratilgan: 'x' }];
+        var oldin;
+        Data.yopish();
+        return bazaniOchirish(ESKI_BAZA).then(function () { return eskiBazaYasash(yoz, 3, []); })
+          .then(function () { return xomOqish(ESKI_BAZA); })
+          .then(function (x) { oldin = x; return Data.boshlash(ESKI_BAZA); })
+          .then(function () { Data.yopish(); return xomOqish(ESKI_BAZA); })
+          .then(function (h) {
+            Object.keys(STORELAR).forEach(function (n) { teng(h[n].length, oldin[n].length); });
+            ['hisoblar', 'kategoriyalar', 'byudjetlar', 'yozuvlar', 'qarzlar'].forEach(function (n) { teng(JSON.stringify(h[n]), JSON.stringify(oldin[n])); });
+            var z = h.sozlamalar[0]; teng(z.sxema_versiyasi, 4); teng(z.balans_yashirin, false); teng(z.oxirgi_zaxira_sanasi, '2026-09-30');
+            z.balans_yashirin = true; z.sxema_versiyasi = 3;   // majburan qayta: true saqlanishi kerak
+            return Data.boshlash(ESKI_BAZA).then(function () { return Data.saqlash('sozlamalar', z); }).then(function () { return Data.sxemaniYangilash(); }).then(function () { Data.yopish(); return xomOqish(ESKI_BAZA); });
+          })
+          .then(function (ik) { teng(ik.sozlamalar[0].balans_yashirin, true); teng(ik.sozlamalar[0].sxema_versiyasi, 4); return bazaniOchirish(ESKI_BAZA); })
+          .then(function () { return Data.boshlash(SINOV_BAZA); });
       });
 
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
@@ -1586,7 +1664,7 @@
           teng(r[0][0].boshlangich_qoldiq, 0);
           teng(r[1].filter(function (k) { return k.tur === 'xarajat'; }).length, 11);
           teng(r[1].filter(function (k) { return k.tur === 'daromad'; }).length, 4);
-          teng(r[2].sxema_versiyasi, 3); teng(Data.SXEMA_VERSIYASI, 3);   // yangi baza darhol yangi sxemada yoziladi
+          teng(r[2].sxema_versiyasi, 4); teng(Data.SXEMA_VERSIYASI, 4);   // yangi baza darhol yangi sxemada yoziladi
           // qayta ochilganda takrorlanmasligi kerak
           Data.yopish();
           return Data.boshlash(SINOV_BAZA);
@@ -1710,7 +1788,7 @@
               teng(JSON.stringify(o, Object.keys(o).sort()), JSON.stringify(e, Object.keys(e).sort()));
             });
             // sozlamalar: faqat versiya o'zgargan
-            teng(hozirgi.sozlamalar[0].sxema_versiyasi, 3); teng(hozirgi.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
+            teng(hozirgi.sozlamalar[0].sxema_versiyasi, 4); teng(hozirgi.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
             // ikkinchi marta: versiyani qaytadan 1 qilib, majburan qayta ishga tushiramiz — hech narsa o'zgarmasligi kerak
             return Data.boshlash(ESKI_BAZA).then(function () { return Data.olish('sozlamalar', 'asosiy'); }).then(function (s) {
               s.sxema_versiyasi = 1; return Data.saqlash('sozlamalar', s);
@@ -1720,7 +1798,7 @@
           .then(function (ikkinchi) {
             teng(JSON.stringify(ikkinchi.yozuvlar.sort(function (a, b) { return a.id < b.id ? -1 : 1; })),
                  JSON.stringify(birinchi.yozuvlar.sort(function (a, b) { return a.id < b.id ? -1 : 1; })));
-            teng(ikkinchi.sozlamalar[0].sxema_versiyasi, 3);
+            teng(ikkinchi.sozlamalar[0].sxema_versiyasi, 4);
             return bazaniOchirish(ESKI_BAZA);
           })
           .then(function () { return Data.boshlash(SINOV_BAZA); });   // keyingi testlar uchun asosiy sinov bazasiga qaytamiz
@@ -1744,7 +1822,7 @@
             Object.keys(e).forEach(function (id) { Object.keys(e[id]).forEach(function (k) { teng(JSON.stringify(m[id][k]), JSON.stringify(e[id][k])); }); });   // eski maydonlar o'zgarmagan
             teng(m.q1.yopilgan, false); teng(m.q1.tolovlar.length, 1); teng(m.q2.yopilgan, true); teng(m.q2.vaqt, '00:00'); teng(m.q2.muddat, ''); teng(m.q2.tolovlar[0].summa, 1000);
             teng(JSON.stringify(m.q3), JSON.stringify(e.q3)); teng(JSON.stringify(m.q1), JSON.stringify(e.q1));   // to'liq qarzlarga tegilmagan
-            teng(h.sozlamalar[0].sxema_versiyasi, 3); teng(h.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
+            teng(h.sozlamalar[0].sxema_versiyasi, 4); teng(h.sozlamalar[0].oxirgi_zaxira_sanasi, '2026-09-30');
             // balans: migratsiyadan keyin ham o'sha raqamlar
             var hisob = h.hisoblar.filter(function (x) { return x.id === 'h1'; })[0];
             teng(Calc.hisobQoldigi(hisob, h.yozuvlar, h.qarzlar), 100 - 50000 - 200000 + 1000 - 1000);

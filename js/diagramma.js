@@ -88,7 +88,7 @@
 
     var CX = 120, CY = 120, R2 = 108, R1 = 68, ORTA = (R1 + R2) / 2, FARQ = 2 / ORTA;   // tilimlar orasida 2 px bo'shliq
     var s = svg('svg', { viewBox: '0 0 240 240', role: 'group', 'aria-label':
-      'Xarajatlar kategoriyalar bo\'yicha doira diagrammasi. Jami ' + sum(opts.jami) + ', ' + opts.taqsimot.length + ' ta kategoriya' +
+      (opts.turNomi || 'Xarajatlar') + ' kategoriyalar bo\'yicha doira diagrammasi' + (opts.markazNom ? ', ' + opts.markazNom : '') + '. Jami ' + sum(opts.jami) + ', ' + opts.taqsimot.length + ' ta kategoriya' +
       (guruh.boshqalar ? ', eng kattasi ' + Calc.DONA_ENG_KATTA + ' tasi alohida, qolgan ' + guruh.boshqalar.soni + ' tasi "Boshqalar" tilimida.' : '.') }, 'dona-svg');
     var tilimElementlari = {};
 
@@ -117,15 +117,29 @@
     var markaz2 = svg('text', { x: CX, y: CY + 16, 'text-anchor': 'middle', 'aria-hidden': 'true' }, 'dona-markaz-2');
     s.appendChild(markaz1);
     s.appendChild(markaz2);
-    function markazYoz(nom, qiymat) {
-      markaz1.textContent = nom.length > 20 ? nom.slice(0, 19) + '…' : nom;
-      markaz1.setAttribute('class', 'dona-markaz-1' + (nom.length > 14 ? ' kichik' : ''));
+    // Markazda 1-2 qator kichik matn (davr nomi yoki tilim nomi) va katta summa
+    function markazYoz(satrlar, qiymat) {
+      var uzun = Math.max.apply(null, satrlar.map(function (x) { return x.length; }));
+      markaz1.textContent = '';
+      markaz1.setAttribute('y', satrlar.length > 1 ? CY - 19 : CY - 6);
+      satrlar.forEach(function (x, i) {
+        var ts = svg('tspan', { x: CX, dy: i ? 13 : 0 });
+        ts.textContent = x.length > 20 ? x.slice(0, 19) + '…' : x;
+        markaz1.appendChild(ts);
+      });
+      markaz1.setAttribute('class', 'dona-markaz-1' + (uzun > 14 ? ' kichik' : ''));
+      markaz2.setAttribute('y', satrlar.length > 1 ? CY + 21 : CY + 16);
       markaz2.textContent = qiymat;
-      markaz2.setAttribute('class', 'dona-markaz-2' + (qiymat.length > 14 ? ' kichik' : ''));
+      markaz2.setAttribute('class', 'dona-markaz-2' + (qiymat.length > 12 ? ' kichik' : ''));
+    }
+    // Davr nomi ikki qismdan iborat bo'lsa ("01.10.2026 – 07.10.2026"), ikki qatorga bo'linadi
+    function davrSatrlari(nom) {
+      var q = nom.split(' – ');
+      return q.length === 2 ? [q[0] + ' –', q[1]] : [nom];
     }
     function jamiKorsat() {
       var t = sum(opts.jami);
-      markazYoz('Jami xarajat', t.length > 14 ? Calc.qisqaSum(opts.jami) + ' so\'m' : t);
+      markazYoz(opts.markazNom ? davrSatrlari(opts.markazNom) : ['Jami xarajat'], t.length > 14 ? Calc.qisqaSum(opts.jami) + ' so\'m' : t);
     }
     jamiKorsat();
 
@@ -137,7 +151,7 @@
         qatorlar[k].classList.toggle('vurgulangan', k === kalit || guruhIdlari[k] === kalit);
       });
       var t = tilimlar.filter(function (z) { return z.kategoriya_id === kalit; })[0], m = malumot(kalit);
-      markazYoz(nomi(t), sum(t.summa));
+      markazYoz([nomi(t)], sum(t.summa));
       if (x !== undefined) maslahatKorsat(nomi(t), [{ rang: m.rang || 'var(--g-boshqa)', qiymat: sum(t.summa), nom: t.foiz + '%' }], x, y);
     }
     function vurgulashniOlish() {
@@ -272,13 +286,14 @@
     function chiz(W) {
       chizma.textContent = '';
       guruhlar = [];
-      var H = v.tur === 'hafta' ? 250 : 236, yuqori = 14, osti = v.tur === 'hafta' ? 40 : 26;
+      var ikkiQator = v.tur === 'hafta' || (v.tur === 'oraliq' && v.bucketlar.some(function (b) { return b.qisqa2; }));
+      var H = ikkiQator ? 250 : 236, yuqori = 14, osti = ikkiQator ? 40 : 26;
       var t = Calc.chiroyliTiklar(v.eng, 4);
       var uzun = Math.max.apply(null, t.tiklar.map(function (x) { return Calc.qisqaSum(x).length; }));
       var x0 = Math.round(uzun * 6.3) + 12, x1 = W - 8, y0 = yuqori, y1 = H - osti, balandlik = y1 - y0;
       var slot = (x1 - x0) / n, bw = Math.max(1.5, Math.min(24, (slot * 0.8 - 2) / 2));
       var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'group', tabindex: '0', 'aria-label':
-        'Daromad va xarajat, ' + v.davrNomi + ', ' + (v.tur === 'yil' ? 'oylar' : 'kunlar') + ' bo\'yicha. Jami daromad ' + sum(v.jami.daromad) +
+        'Daromad va xarajat, ' + v.davrNomi + ', ' + (v.birlikNomi || (v.tur === 'yil' ? 'oylar' : 'kunlar')) + ' bo\'yicha. Jami daromad ' + sum(v.jami.daromad) +
         ', jami xarajat ' + sum(v.jami.xarajat) + '. Strelka tugmalari bilan yuring, Enter bilan yozuvlarni oching.' }, 'ustun-svg');
 
       // Gorizontal chiziqlar va chap o'q (summalar qisqartirilgan)
@@ -312,8 +327,9 @@
             ' H' + (x + bw - r) + ' Q' + (x + bw) + ' ' + top + ' ' + (x + bw) + ' ' + (top + r) + ' V' + y1 + ' Z' }, 'ustun-belgi ' + z[1]));
         });
         if (engJoy && engJoy.i === i) {
-          var q = svg('text', { x: gx + (engJoy.bar ? bw + 2 : 0) + bw / 2, y: y1 - Calc.ustunBalandligi(v.eng, t.eng, balandlik, 2) - 4,
-            'text-anchor': 'middle', 'aria-hidden': 'true' }, 'g-eng');
+          var qx = gx + (engJoy.bar ? bw + 2 : 0) + bw / 2, chetda = qx > W - 26;   // o'ng chetdagi yozuv kesilmasin
+          var q = svg('text', { x: chetda ? W - 2 : qx, y: y1 - Calc.ustunBalandligi(v.eng, t.eng, balandlik, 2) - 4,
+            'text-anchor': chetda ? 'end' : 'middle', 'aria-hidden': 'true' }, 'g-eng');
           q.textContent = Calc.qisqaSum(v.eng);
           g.appendChild(q);
         }
@@ -339,7 +355,9 @@
       // X o'qi yozuvlari: hafta — kun nomi va sana, oy — kun raqami (har 5-kun), yil — oy nomi
       v.bucketlar.forEach(function (b, i) {
         var korsat = true;
-        if (v.tur === 'oy') {
+        if (v.tur === 'oraliq') {   // erkin davr: yozuvlar bir-biriga tegmasligi uchun qadam bilan
+          korsat = i % Math.max(1, Math.ceil(n / Math.max(1, Math.floor((x1 - x0) / (v.birlik === 'kun' ? 22 : v.birlik === 'hafta' ? 40 : 30))))) === 0;
+        } else if (v.tur === 'oy') {
           var kun = i + 1;
           korsat = kun === 1 || kun % 5 === 0 || (i === n - 1 && kun - Math.floor(kun / 5) * 5 >= 3);
         }

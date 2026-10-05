@@ -4,7 +4,7 @@
 
   var DB_NOMI = 'moliya';
   var DB_VERSIYASI = 1;      // IndexedDB tuzilishi (to'plamlar ro'yxati)
-  var SXEMA_VERSIYASI = 4;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`
+  var SXEMA_VERSIYASI = 5;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`; 5 — kategoriyada `belgi`, hisobda `tur`, `belgi`, `rang`, `oxirgi4`
   // To'plamlar (TZ 7-band). Byudjetning kaliti kategoriya_id, qolganlariniki id.
   var TOPLAMLAR = {
     hisoblar: 'id',
@@ -78,14 +78,14 @@
         var hozir = new Date().toISOString();
         var vaqt = Date.now();
         tx.objectStore('hisoblar').put({
-          id: yangiId(), yaratilgan: hozir, nom: 'Naqd pul', tur: 'naqd',
+          id: yangiId(), yaratilgan: hozir, nom: 'Naqd pul', tur: 'naqd', belgi: 'naqd', rang: Calc.HISOB_RANGLARI.naqd, oxirgi4: '',
           boshlangich_qoldiq: 0, arxivlangan: false
         });
         tayyorKategoriyalar().forEach(function (k) {
           // yaratilgan har biriga 1 ms farq bilan yoziladi: ro'yxat tayyor tartibda chiqishi uchun
           tx.objectStore('kategoriyalar').put({
             id: yangiId(), yaratilgan: new Date(vaqt++).toISOString(),
-            nom: k.nom, tur: k.tur, rang: k.rang, arxivlangan: false
+            nom: k.nom, tur: k.tur, rang: k.rang, belgi: Calc.belgiTaxmin(k.nom, k.tur), arxivlangan: false
           });
         });
         tx.objectStore('sozlamalar').put({
@@ -104,13 +104,13 @@
   }
 
   // Ma'lumot tuzilishini yangi versiyaga o'tkazadi: 1 -> 2 (yozuvlarga `vaqt` qo'shiladi), 2 -> 3 (qarzlarda tushib qolgan
-  // maydonlar to'ldiriladi), 3 -> 4 (sozlamalarga `balans_yashirin: false` qo'shiladi).
+  // maydonlar to'ldiriladi), 3 -> 4 (sozlamalarga `balans_yashirin: false`), 4 -> 5 (kategoriyaga belgi; hisobga tur, belgi, rang, oxirgi4).
   // Hammasi BITTA tranzaksiyada: xato bo'lsa, hech narsa o'zgarmaydi. Hech narsa o'chirilmaydi.
   // Versiya Sozlamalar ichida tekshiriladi, shuning uchun ikkinchi marta ishlasa yoki ilova ikki joyda
   // bir vaqtda ochilsa ham ma'lumot buzilmaydi.
   function sxemaniYangilash() {
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(['yozuvlar', 'qarzlar', 'sozlamalar'], 'readwrite');
+      var tx = db.transaction(['yozuvlar', 'qarzlar', 'hisoblar', 'kategoriyalar', 'sozlamalar'], 'readwrite');
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error); };
@@ -119,31 +119,28 @@
         var sozlama = sozlamaSorovi.result;
         var eski = sozlama ? (sozlama.sxema_versiyasi || 1) : SXEMA_VERSIYASI;
         if (eski >= SXEMA_VERSIYASI) return;
-        var kutilmoqda = 2;
+        var kutilmoqda = 4;
         function tugadi() {
           if (--kutilmoqda) return;
           if (typeof sozlama.balans_yashirin !== 'boolean') sozlama.balans_yashirin = false;   // 3 -> 4: ko'z belgisi holati (summalarni yashirish)
           sozlama.sxema_versiyasi = SXEMA_VERSIYASI;
           tx.objectStore('sozlamalar').put(sozlama);
         }
-        if (eski < 2) {
-          var yozuvSorovi = tx.objectStore('yozuvlar').getAll();
-          yozuvSorovi.onsuccess = function () {
-            yozuvSorovi.result.forEach(function (y) {
-              var yangi = Calc.yozuvniYangilash(y);
-              if (yangi !== y) tx.objectStore('yozuvlar').put(yangi);
+        // har to'plam: hammasini o'qib, yangilangan (o'zgargan) obyektlarni qayta yozadi. Hech narsa o'chirilmaydi.
+        function yangila(toplam, fn) {
+          var so = tx.objectStore(toplam).getAll();
+          so.onsuccess = function () {
+            so.result.forEach(function (x) {
+              var yangi = fn(x);
+              if (yangi !== x) tx.objectStore(toplam).put(yangi);
             });
             tugadi();
           };
-        } else tugadi();
-        var qarzSorovi = tx.objectStore('qarzlar').getAll();
-        qarzSorovi.onsuccess = function () {
-          qarzSorovi.result.forEach(function (q) {
-            var yangi = Calc.qarzniYangilash(q);
-            if (yangi !== q) tx.objectStore('qarzlar').put(yangi);
-          });
-          tugadi();
-        };
+        }
+        if (eski < 2) yangila('yozuvlar', Calc.yozuvniYangilash); else tugadi();
+        yangila('qarzlar', Calc.qarzniYangilash);
+        yangila('hisoblar', Calc.hisobniYangilash);          // 4 -> 5: tur, belgi, rang, oxirgi4
+        yangila('kategoriyalar', Calc.kategoriyaniYangilash); // 4 -> 5: belgi
       };
     });
   }

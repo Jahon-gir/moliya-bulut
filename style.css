@@ -537,3 +537,52 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .kun-jami { font-size: 14px; color: var(--xira); text-align: right; }
 .filtr-quti[hidden] { display: none; }
 .qarz-belgi-tarix { display: inline-block; margin-left: 6px; padding: 0 8px; font-size: 12px; font-weight: 700; color: var(--xira); border: 1px solid var(--chiziq); border-radius: 10px; white-space: nowrap; }
+
+/* 11-bosqich: belgilar (ikonka), ingichka halqa, oy strelkalari, kategoriya va hisob oynalari */
+.belgi-dum { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%; vertical-align: middle; margin-right: 8px; }
+.belgi-dum svg { display: block; }
+.belgi-dum.mini { margin-right: 4px; }
+.yozuv-hisob { display: flex; align-items: center; flex-wrap: wrap; }
+.katak svg { display: block; margin: 0 auto 4px; }
+.katak-qosh { background: var(--karta); color: var(--matn); border: 2px dashed var(--asosiy); }
+.katak-qosh .katak-nom { font-weight: 700; }
+.dona-kalit.dona-belgi { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; }
+.dona-boshqalar-kalit { color: #fff; }
+.dona-qatori { display: flex; align-items: center; gap: 4px; }
+.dona-qatori .dona-rasm { flex: 1; min-width: 0; margin: 0 auto 8px; }
+.yon-tugma {
+  flex: none; width: 44px; height: 44px; padding: 0; font: inherit; font-size: 26px; line-height: 1; cursor: pointer;
+  color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 50%;
+}
+.yon-tugma:disabled { opacity: .35; cursor: default; }
+.yon-tugma:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.dona-bosh { flex: 1; min-width: 0; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.bolim-nom { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.bolim-nom h2 { margin: 0; }
+.son-belgi { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; font-size: 13px; font-weight: 700; color: var(--asosiy-matn); background: var(--asosiy); border-radius: 12px; }
+.tur-tugmalari { margin: 4px 0 10px; }
+.belgi-tarmoq { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
+.belgi-tanlov { min-height: 44px; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 12px; }
+.belgi-tanlov.tanlangan { color: var(--asosiy-matn); background: var(--asosiy); border-color: var(--asosiy); }
+.belgi-tanlov:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.kq-rejim { margin-bottom: 10px; }
+.kq-tur { margin-bottom: 8px; }
+.kq-qator { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 2px; border-bottom: 1px solid var(--chiziq); }
+.kq-qator .belgi-dum { margin-right: 0; }
+.kq-nom { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.kq-qator.bor { opacity: .6; background: var(--fon); border-radius: 10px; }
+.kq-bor { flex: none; padding: 2px 10px; font-size: 13px; font-weight: 700; color: var(--xira); border: 1px solid var(--chiziq); border-radius: 10px; }
+.kq-plus { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; cursor: pointer; color: var(--asosiy-matn); background: var(--asosiy); border: 0; border-radius: 50%; }
+.kq-plus:focus-visible { outline: 3px solid var(--matn); outline-offset: 2px; }
+.kq-oniz { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+.kq-oniz .belgi-dum { margin-right: 0; }
+.kq-maxsus .asosiy-tugma:disabled { opacity: .45; cursor: not-allowed; }
+.hisob-yorliqlar { margin-bottom: 8px; }
+.hisob-qatori { text-align: left; }
+.hisob-qatori .yozuv-chap { flex: 1; min-width: 0; }
+.hisob-qatori .belgi-dum { margin-right: 0; flex-shrink: 0; }
+.hisob-maska { letter-spacing: .5px; white-space: nowrap; }
+.hisob-mini-ust { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hisob-mini-ust .belgi-dum { margin-right: 0; }
+.hisob-turi-qator { display: flex; gap: 6px; align-items: baseline; }
+.kategoriya-oynasi .tanlov-bosh { margin-bottom: 0; }

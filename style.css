@@ -453,3 +453,24 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .qarz-tafsilot .qator { gap: 8px; }
 .qarz-tafsilot .qator strong { text-align: right; overflow-wrap: anywhere; }
 .qarz-tafsilot .ogohlantirish { margin: 10px 0 0; }
+
+/* 8.1: "+" tugmasi — "Yangi yozuv yaratish" tanlov oynasi */
+.tanlov-bosh { justify-content: space-between; margin-bottom: 0; }
+.tanlov-oynasi h2 { margin: 0 0 12px; font-size: 22px; color: var(--matn); }
+.tanlov-qator {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; margin-bottom: 10px; padding: 10px 12px;
+  font: inherit; text-align: left; cursor: pointer; color: var(--matn); background: var(--karta);
+  border: 1px solid var(--chiziq); border-radius: 16px;
+}
+.tanlov-qator.birinchi { background: rgba(15, 139, 109, .10); border: 2px solid var(--asosiy); }
+@media (prefers-color-scheme: dark) { .tanlov-qator.birinchi { background: rgba(43, 181, 143, .14); } }
+.tanlov-qator:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.tanlov-belgi {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 50%;
+  color: var(--asosiy); background: var(--fon);
+}
+.tanlov-qator.birinchi .tanlov-belgi { color: var(--asosiy-matn); background: var(--asosiy); }
+.tanlov-matn { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.tanlov-matn strong { font-size: 17px; }
+.tanlov-matn .xira { font-size: 14px; line-height: 1.35; }
+.tanlov-keyingi { flex: none; color: var(--xira); }

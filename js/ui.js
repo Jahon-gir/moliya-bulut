@@ -1108,13 +1108,16 @@
     ustun: [['rect', { x: 4, y: 12, width: 4, height: 8, rx: 1 }], ['rect', { x: 10, y: 4, width: 4, height: 16, rx: 1 }], ['rect', { x: 16, y: 9, width: 4, height: 11, rx: 1 }]],
     dona: [['circle', { cx: 12, cy: 12, r: 7.5, fill: 'none', stroke: 'currentColor', 'stroke-width': 4, 'stroke-dasharray': '13.2 2.5', 'stroke-dashoffset': 6.6 }]],
     filtr: [['path', { d: 'M3 5h18l-7 8.5V20l-4-2v-4.5L3 5z', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linejoin': 'round' }]],
+    almashuv: [['path', { d: 'M7 7h11l-3-3M17 17H6l3 3', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    qarz: [['circle', { cx: 12, cy: 12, r: 8.5, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }], ['path', { d: 'M9 12.5l2.2 2.2L15.5 9.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    keyingi: [['path', { d: 'M9 5l7 7-7 7', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     yopish: [['path', { d: 'M6 6l12 12M18 6L6 18', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round' }]]
   };
-  function svgBelgi(nom) {
+  function svgBelgi(nom, olcham) {
     var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg');
     s.setAttribute('viewBox', '0 0 24 24');
-    s.setAttribute('width', '22');
-    s.setAttribute('height', '22');
+    s.setAttribute('width', String(olcham || 22));
+    s.setAttribute('height', String(olcham || 22));
     s.setAttribute('aria-hidden', 'true');
     s.setAttribute('focusable', 'false');
     BELGILAR[nom].forEach(function (x) {
@@ -1801,8 +1804,9 @@
     return bloklar;
   }
 
-  function qarzShakli(q) {
-    var bloklar = [orqagaTugmasi(), el('h1', q ? 'Qarzni tahrirlash' : 'Yangi qarz')];
+  // rejim (ixtiyoriy): "+" tugmasidan ochilganda { orqaga: tanlov oynasiga qaytadi, saqlandi: qarzlar ro'yxatiga o'tadi }
+  function qarzShakli(q, rejim) {
+    var bloklar = [rejim ? tugma('← Orqaga', 'orqaga-tugma', rejim.orqaga) : orqagaTugmasi(), el('h1', q ? 'Qarzni tahrirlash' : 'Yangi qarz')];
     var forma = document.createElement('form');
     forma.noValidate = true;
     forma.className = 'karta';
@@ -1904,7 +1908,7 @@
       saqla.disabled = true;
       qarzniSaqlash(yangi).then(function () {
         qisqaXabar(q ? 'Qarz yangilandi' : 'Qarz qo\'shildi');
-        orqaga();
+        if (rejim) rejim.saqlandi(); else orqaga();
       }).catch(function (xato) {
         saqla.disabled = false;
         summa.xato.textContent = 'Saqlab bo\'lmadi: ' + xato;
@@ -2000,6 +2004,96 @@
     }).catch(function (xato) { qisqaXabar('O\'chirib bo\'lmadi: ' + xato); });
   }
 
+  // ---- "+" tugmasi: pastdan chiqadigan tanlov oynasi ("Yangi yozuv yaratish") ----
+  var qoshishRejimi = 'yozuv';   // "qoshish" bo'limida nima ko'rinadi: yozuv shakli (wizard) yoki qarz shakli
+  var tanlovOynasi = null;       // ochiq oyna (bo'lsa)
+  var qoshishOldingi = 'bosh';   // "+" bosilgan paytdagi bo'lim
+
+  function yangiYozuvOynasi() {
+    if (tanlovOynasi) return;
+    var oldingiFokus = document.activeElement, oldingiOverflow = document.body.style.overflow;
+    if (joriy !== 'qoshish') qoshishOldingi = joriy;   // qarz oynasidan "Orqaga" shu bo'limga qaytaradi
+    var parda = el('div', undefined, 'sheet-parda');
+    var oyna = el('div', undefined, 'sheet tanlov-oynasi');
+    oyna.setAttribute('role', 'dialog');
+    oyna.setAttribute('aria-modal', 'true');
+    oyna.setAttribute('aria-labelledby', 'yy-sarlavha');
+    oyna.tabIndex = -1;
+    parda.appendChild(oyna);
+    tanlovOynasi = parda;
+
+    function yop(fokus) {
+      document.removeEventListener('keydown', tugmaBosildi, true);
+      if (parda.parentNode) parda.parentNode.removeChild(parda);
+      document.body.style.overflow = oldingiOverflow;
+      tanlovOynasi = null;
+      if (fokus !== false && oldingiFokus && oldingiFokus.focus && oldingiFokus.isConnected) oldingiFokus.focus();
+    }
+    function tugmaBosildi(e) {
+      if (e.key === 'Escape') { e.preventDefault(); yop(); return; }
+      if (e.key !== 'Tab') return;
+      var f = Array.prototype.slice.call(oyna.querySelectorAll('button:not([disabled])'));
+      var i = f.indexOf(document.activeElement);
+      e.preventDefault();
+      f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+    }
+
+    var bosh = el('div', undefined, 'sheet-bosh tanlov-bosh');
+    var orqa = tugma('← Orqaga', 'matn-tugma', function () { yop(); });
+    orqa.setAttribute('aria-label', 'Orqaga, oynani yopish');
+    bosh.appendChild(orqa);
+    var yopTugma = belgiTugmasi('yopish', 'Yopish', function () { yop(); });
+    yopTugma.classList.add('yopish-tugma');
+    bosh.appendChild(yopTugma);
+    oyna.appendChild(bosh);
+    var sarlavha = el('h2', 'Yangi yozuv yaratish');
+    sarlavha.id = 'yy-sarlavha';
+    oyna.appendChild(sarlavha);
+
+    function qator(klass, belgi, nom, izoh, bosilganda) {
+      var b = tugma(undefined, 'tanlov-qator ' + klass, bosilganda);
+      b.setAttribute('aria-label', nom + '. ' + izoh);
+      var rasm = el('span', undefined, 'tanlov-belgi');
+      rasm.appendChild(svgBelgi(belgi, 24));
+      b.appendChild(rasm);
+      var matn = el('span', undefined, 'tanlov-matn');
+      matn.appendChild(el('strong', nom));
+      matn.appendChild(el('span', izoh, 'xira'));
+      b.appendChild(matn);
+      var q = svgBelgi('keyingi', 20);
+      q.classList.add('tanlov-keyingi');
+      b.appendChild(q);
+      oyna.appendChild(b);
+      return b;
+    }
+    // Birinchi qator ajralib turadi va oyna ochilganda tayyor turadi: Enter bilan tezkor yo'l
+    var tranzaksiya = qator('birinchi', 'almashuv', 'Tranzaksiya qo\'shish', 'Daromad, xarajat yoki o\'tkazma qo\'shing', function () {
+      yop(false);
+      qoshishRejimi = 'yozuv';
+      korsat('qoshish');
+    });
+    tranzaksiya.id = 'yy-tranzaksiya';
+    var qarz = qator('', 'qarz', 'Qarz qo\'shish', 'Berilgan yoki olingan qarz. Hisob qoldig\'ini o\'zgartiradi, hisobotga kirmaydi', function () {
+      yop(false);
+      qoshishRejimi = 'qarz';
+      korsat('qoshish');
+    });
+    qarz.id = 'yy-qarz';
+
+    parda.addEventListener('click', function (e) { if (e.target === parda) yop(); });
+    document.body.appendChild(parda);
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', tugmaBosildi, true);
+    tranzaksiya.focus();
+  }
+
+  // Qarz oynasidan "Orqaga": avvalgi bo'limga qaytib, tanlov oynasini qayta ochadi
+  function qarzdanOrqaga() {
+    qoshishRejimi = 'yozuv';
+    korsat(qoshishOldingi);
+    yangiYozuvOynasi();
+  }
+
   // ---- Bo'limlar ----
   var bolimlar = {
     bosh: function (m) {
@@ -2041,7 +2135,11 @@
       return bloklar;
     },
     hisobot: hisobotEkrani,
-    qoshish: wizardEkrani,
+    qoshish: function () {
+      return qoshishRejimi === 'qarz'
+        ? qarzShakli(null, { orqaga: qarzdanOrqaga, saqlandi: function () { qoshishRejimi = 'yozuv'; korsat('yana'); ochish(qarzlarEkrani, false); } })
+        : wizardEkrani();
+    },
     byudjet: byudjetEkrani,
     yana: yanaMenyusi
   };
@@ -2059,7 +2157,7 @@
 
   function korsat(nom) {
     if (!bolimlar[nom]) nom = 'bosh';
-    if (nom !== 'qoshish') { xabar = ''; wiz = null; }   // boshqa bo'limga o'tilsa, yozuv shakli tozalanadi
+    if (nom !== 'qoshish') { xabar = ''; wiz = null; qoshishRejimi = 'yozuv'; }   // boshqa bo'limga o'tilsa, yozuv shakli tozalanadi
     joriy = nom;
     stek = [];
     tugmalar.forEach(function (t) {
@@ -2092,7 +2190,10 @@
   }
 
   tugmalar.forEach(function (t) {
-    t.addEventListener('click', function () { korsat(t.getAttribute('data-bolim')); });
+    t.addEventListener('click', function () {
+      // "+" darhol shaklni emas, tanlov oynasini ochadi
+      if (t.getAttribute('data-bolim') === 'qoshish') yangiYozuvOynasi(); else korsat(t.getAttribute('data-bolim'));
+    });
   });
 
   function yuklash() {

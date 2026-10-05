@@ -27,16 +27,19 @@
   function ochish(opts) {
     var oldingiFokus = document.activeElement;
     var oldingiOverflow = document.body.style.overflow;
-    var holat = Calc.glidirakTuzat(Calc.vaqtdanTanlov(opts.sana, opts.vaqt), Calc.hozir());
+    // faqatSana: faqat yil, oy va kun (erkin davr sanalari). katta — eng kech sana (standart: bugun), kichik — eng erta sana.
+    var ustunRoyxat = opts.faqatSana ? USTUNLAR.slice(0, 3) : USTUNLAR;
+    function hozirgi() { return opts.faqatSana ? { sana: opts.katta || Calc.bugun(), vaqt: '23:59' } : Calc.hozir(); }
+    var holat = Calc.glidirakTuzat(Calc.vaqtdanTanlov(opts.sana, opts.vaqt), hozirgi(), opts.kichik);
     var ustunlar = {};   // kalit -> { s: ustun elementi, vaqt: kechiktirish taymeri }
 
     var parda = el('div', undefined, 'g-parda');
     var oyna = el('div', undefined, 'g-oyna');
     oyna.setAttribute('role', 'dialog');
     oyna.setAttribute('aria-modal', 'true');
-    oyna.setAttribute('aria-label', 'Sana va vaqtni tanlash');
+    oyna.setAttribute('aria-label', opts.sarlavha || (opts.faqatSana ? 'Sanani tanlash' : 'Sana va vaqtni tanlash'));
     oyna.tabIndex = -1;
-    oyna.appendChild(el('div', 'Sana va vaqt', 'g-sarlavha'));
+    oyna.appendChild(el('div', opts.sarlavha || (opts.faqatSana ? 'Sana' : 'Sana va vaqt'), 'g-sarlavha'));
     var korinish = el('div', undefined, 'g-korinish');
     korinish.setAttribute('aria-live', 'polite');
     oyna.appendChild(korinish);
@@ -44,7 +47,7 @@
     var nomlar = el('div', undefined, 'g-nomlar');
     var quti = el('div', undefined, 'g-ustunlar');
     quti.appendChild(el('div', undefined, 'g-chiziq'));
-    USTUNLAR.forEach(function (u) {
+    ustunRoyxat.forEach(function (u) {
       nomlar.appendChild(el('span', u[1]));
       var s = el('div', undefined, 'g-ustun');
       s.setAttribute('role', 'listbox');
@@ -87,7 +90,7 @@
 
     // Ustun elementlarini holatga moslaydi (oyning kunlari soni o'zgarsa, qayta quriladi; kulrang qiymatlar belgilanadi)
     function elementlar(u) {
-      var s = ustunlar[u[0]].s, royxat = Calc.glidirakQiymatlari(u[0], holat, Calc.hozir());
+      var s = ustunlar[u[0]].s, royxat = Calc.glidirakQiymatlari(u[0], holat, hozirgi(), opts.kichik);
       if (s.children.length !== royxat.length) {
         s.textContent = '';
         royxat.forEach(function (r) {
@@ -109,8 +112,8 @@
     // Hammasini yangilaydi. faol — foydalanuvchi aylantirgan ustun (u silliq qaytadi, qolganlari bir zumda)
     function yangila(faol) {
       var v = Calc.tanlovdanVaqt(holat);
-      korinish.textContent = Calc.sanaKorsat(v.sana) + ' · ' + v.vaqt;
-      USTUNLAR.forEach(function (u) {
+      korinish.textContent = opts.faqatSana ? Calc.sanaKorsat(v.sana) : Calc.sanaKorsat(v.sana) + ' · ' + v.vaqt;
+      ustunRoyxat.forEach(function (u) {
         elementlar(u);
         var s = ustunlar[u[0]].s, kerak = joyi(u);
         if (Math.abs(s.scrollTop - kerak) > 1) s.scrollTo({ top: kerak, behavior: faol === u[0] ? 'smooth' : 'auto' });
@@ -121,12 +124,12 @@
       var t = {};
       Object.keys(holat).forEach(function (k) { t[k] = holat[k]; });
       t[u[2]] = qiymat;
-      holat = Calc.glidirakTuzat(t, Calc.hozir());   // kelajak qiymat bo'lsa, ruxsat etilgan eng yaqinga qaytadi
+      holat = Calc.glidirakTuzat(t, hozirgi(), opts.kichik);   // kelajak qiymat bo'lsa, ruxsat etilgan eng yaqinga qaytadi
       xato.textContent = '';
       yangila(silliq ? u[0] : null);
     }
     function tinch(u) {
-      var s = ustunlar[u[0]].s, royxat = Calc.glidirakQiymatlari(u[0], holat, Calc.hozir());
+      var s = ustunlar[u[0]].s, royxat = Calc.glidirakQiymatlari(u[0], holat, hozirgi(), opts.kichik);
       var i = Math.max(0, Math.min(royxat.length - 1, Math.round(s.scrollTop / BALANDLIK)));
       var q = royxat[i].qiymat;
       if (q === holat[u[2]] && royxat[i].ochiq) return;   // allaqachon shu qiymat
@@ -152,9 +155,11 @@
     parda.addEventListener('click', function (e) { if (e.target === parda) yop(); });
     tasdiqTugma.addEventListener('click', function () {
       // ikkinchi himoya: tasdiqlash paytidagi hozirgi vaqt bilan yana tekshiramiz
-      var h = Calc.hozir();
-      var v = Calc.tanlovdanVaqt(Calc.glidirakTuzat(holat, h));
-      var r = Calc.vaqtTekshir(v.sana, v.vaqt, h);
+      var h = hozirgi();
+      var v = Calc.tanlovdanVaqt(Calc.glidirakTuzat(holat, h, opts.kichik));
+      var r = opts.faqatSana
+        ? ((opts.kichik && v.sana < opts.kichik) || v.sana > h.sana ? { xato: 'Bu sanani tanlab bo\'lmaydi' } : {})
+        : Calc.vaqtTekshir(v.sana, v.vaqt, h);
       if (r.xato) { xato.textContent = r.xato; return; }
       yop();
       opts.tasdiq(v.sana, v.vaqt);
@@ -165,7 +170,7 @@
     document.addEventListener('keydown', tugmaBosildi, true);
     yangila(null);
     // boshlang'ich joylashuv (element joylashgandan keyin)
-    USTUNLAR.forEach(function (u) { ustunlar[u[0]].s.scrollTop = joyi(u); });
+    ustunRoyxat.forEach(function (u) { ustunlar[u[0]].s.scrollTop = joyi(u); });
     oyna.focus();
     return { yop: yop };
   }

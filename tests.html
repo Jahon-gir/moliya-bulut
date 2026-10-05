@@ -15,9 +15,9 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/calc.js?v=0.7.0"></script>
-  <script src="js/data.js?v=0.7.0"></script>
-  <script src="js/diagramma.js?v=0.7.0"></script>
+  <script src="js/calc.js?v=0.7.1"></script>
+  <script src="js/data.js?v=0.7.1"></script>
+  <script src="js/diagramma.js?v=0.7.1"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1132,6 +1132,126 @@
       test('byudjetChizigi DOM: me\'yorda — yashil belgi', function () {
         var q = Diagramma.byudjetChizigi(Calc.byudjetHolati(100000, 500000), 'X'); teng(q.getAttribute('data-daraja'), 'yaxshi'); teng(q.querySelector('.byudjet-belgi').textContent, '✓');
         teng(q.querySelector('.byudjet-tolgan').style.width, '20%');
+      });
+
+
+      // --- 7.1: hisobot filtri, erkin davr, ustunlar guruhlanishi ---
+      test('hisobotDavri: oy, hafta, yil, kun va oldingi davr (hisoblash qoidasi o\'zgarmagan)', function () {
+        var o = Calc.hisobotDavri('oy', '2026-10-15'); teng(o.dan + '..' + o.gacha, '2026-10-01..2026-10-31'); teng(o.nom, 'Oktabr 2026'); teng(o.oldingi.dan + '..' + o.oldingi.gacha, '2026-09-01..2026-09-30');
+        var h = Calc.hisobotDavri('hafta', '2026-10-03'); teng(h.dan + '..' + h.gacha, '2026-09-28..2026-10-04'); teng(h.oldingi.dan, '2026-09-21');
+        var y = Calc.hisobotDavri('yil', '2026-10-03'); teng(y.soni, 365); teng(y.oldingi.nom, '2025');
+        var k = Calc.hisobotDavri('kun', '2026-10-03'); teng(k.soni, 1); teng(k.oldingi.dan, '2026-10-02');
+      });
+      test('hisobotDavri: Davr — oldingi oraliq xuddi shuncha kun (10 kun, oy chegarasidan o\'tadi)', function () {
+        var d = Calc.hisobotDavri('davr', null, '2026-10-01', '2026-10-10');
+        teng(d.soni, 10); teng(d.oldingi.dan + '..' + d.oldingi.gacha, '2026-09-21..2026-09-30'); teng(d.nom, '01.10.2026 – 10.10.2026');
+        var e = Calc.hisobotDavri('davr', null, '2026-03-05', '2026-03-05'); teng(e.soni, 1); teng(e.oldingi.dan, '2026-03-04'); teng(e.nom, '05.03.2026');
+        var f = Calc.hisobotDavri('davr', null, '2024-03-01', '2024-03-31'); teng(f.oldingi.dan + '..' + f.oldingi.gacha, '2024-01-30..2024-02-29');   // kabisa yili
+      });
+      test('Davr hisobi: hisobot, taqqoslash va chekka kunlar (ikkala chekka kiradi)', function () {
+        var Y = [
+          { id: '1', tur: 'xarajat', summa: 100, sana: '2026-10-01', hisob_id: 'a', kategoriya_id: 'x' }, { id: '2', tur: 'xarajat', summa: 200, sana: '2026-10-10', hisob_id: 'a', kategoriya_id: 'x' },
+          { id: '3', tur: 'xarajat', summa: 400, sana: '2026-10-11', hisob_id: 'a', kategoriya_id: 'x' }, { id: '4', tur: 'xarajat', summa: 50, sana: '2026-09-30', hisob_id: 'a', kategoriya_id: 'y' },
+          { id: '5', tur: 'xarajat', summa: 25, sana: '2026-09-21', hisob_id: 'a', kategoriya_id: 'y' }, { id: '6', tur: 'xarajat', summa: 999, sana: '2026-09-20', hisob_id: 'a', kategoriya_id: 'y' },
+          { id: '7', tur: 'daromad', summa: 1000, sana: '2026-10-05', hisob_id: 'a', kategoriya_id: 'm' }, { id: '8', tur: 'otkazma', summa: 777, sana: '2026-10-05', hisob_id: 'a', qabul_hisob_id: 'b' },
+          { id: '9', tur: 'xarajat', summa: 5, sana: '2026-10-05', hisob_id: 'b', kategoriya_id: 'x' }];
+        var d = Calc.hisobotDavri('davr', null, '2026-10-01', '2026-10-10');
+        var j = Calc.hisobot(Y, d.dan, d.gacha, ''), o = Calc.hisobot(Y, d.oldingi.dan, d.oldingi.gacha, '');
+        teng(j.xarajat, 305); teng(j.daromad, 1000); teng(o.xarajat, 75); teng(Calc.taqqoslash(j.xarajat, o.xarajat).farq, 230);
+        teng(Calc.hisobot(Y, d.dan, d.gacha, 'b').xarajat, 5);
+      });
+      test('oraliqTekshir: tugash boshlanishdan oldin yoki bugundan keyin bo\'lmaydi', function () {
+        teng(Calc.oraliqTekshir('2026-10-05', '2026-10-01', '2026-10-05').xato !== undefined, true);
+        teng(Calc.oraliqTekshir('2026-10-01', '2026-10-06', '2026-10-05').xato !== undefined, true);
+        teng(Calc.oraliqTekshir('2026-10-06', '2026-10-07', '2026-10-05').xato !== undefined, true);
+        teng(Calc.oraliqTekshir('', '2026-10-01', '2026-10-05').xato !== undefined, true);
+        teng(Calc.oraliqTekshir('2026-10-05', '2026-10-05', '2026-10-05').soni, 1); teng(Calc.oraliqTekshir('2026-09-30', '2026-10-05', '2026-10-05').soni, 6);
+      });
+      test('oraliqSur: davr uzunligiga qadam bilan', function () {
+        var a = Calc.oraliqSur('2026-10-01', '2026-10-10', 1); teng(a.dan + '..' + a.gacha, '2026-10-11..2026-10-20');
+        var b = Calc.oraliqSur('2026-10-01', '2026-10-10', -1); teng(b.dan + '..' + b.gacha, '2026-09-21..2026-09-30');
+      });
+      test('filtrOylari: kelajak oylar ochiq emas; o\'tgan yilda hammasi ochiq; kelajak yilda hech biri', function () {
+        var a = Calc.filtrOylari(2026, '2026-10-05'); teng(a.length, 12); teng(a.filter(function (x) { return x.ochiq; }).length, 10); teng(a[9].ochiq, true); teng(a[10].ochiq, false);
+        teng(Calc.filtrOylari(2025, '2026-10-05').every(function (x) { return x.ochiq; }), true); teng(Calc.filtrOylari(2027, '2026-10-05').some(function (x) { return x.ochiq; }), false);
+        teng(Calc.filtrOylari(2026, '2026-01-31').filter(function (x) { return x.ochiq; }).length, 1);
+      });
+      test('filtrYillari: eng erta yozuv yilidan bugungi yilgacha, kelajak yil yo\'q', function () {
+        teng(Calc.filtrYillari('', '2026-10-05').join(), '2023,2024,2025,2026'); teng(Calc.filtrYillari('2019-05-01', '2026-10-05').join(), '2019,2020,2021,2022,2023,2024,2025,2026');
+        teng(Calc.filtrYillari('2025-05-01', '2026-10-05').join(), '2023,2024,2025,2026');
+      });
+      test('filtrQollash: oylik, yillik, davr; kelajak rad etiladi', function () {
+        var a = Calc.filtrQollash({ chastota: 'oy', yil: 2026, oy: 9 }, '2026-10-05'); teng(a.tur, 'oy'); teng(a.sana, '2026-09-01');
+        teng(Calc.filtrQollash({ chastota: 'oy', yil: 2026, oy: 11 }, '2026-10-05').xato !== undefined, true); teng(Calc.filtrQollash({ chastota: 'oy', yil: 2027, oy: 1 }, '2026-10-05').xato !== undefined, true);
+        teng(Calc.filtrQollash({ chastota: 'yil', yil: 2025 }, '2026-10-05').sana, '2025-01-01'); teng(Calc.filtrQollash({ chastota: 'yil', yil: 2027 }, '2026-10-05').xato !== undefined, true);
+        var d = Calc.filtrQollash({ chastota: 'davr', dan: '2026-10-01', gacha: '2026-10-05' }, '2026-10-05'); teng(d.tur, 'davr'); teng(d.dan, '2026-10-01'); teng(d.gacha, '2026-10-05');
+        teng(Calc.filtrQollash({ chastota: 'davr', dan: '2026-10-03', gacha: '2026-10-02' }, '2026-10-05').xato !== undefined, true);
+        teng(Calc.filtrQollash({ chastota: 'davr', dan: '2026-10-03', gacha: '2026-10-06' }, '2026-10-05').xato !== undefined, true);
+      });
+      test('g\'ildirak (faqat sana): tugash sanasi boshlanishdan oldin va bugundan keyin tanlanmaydi', function () {
+        var bugunH = { sana: '2026-10-05', vaqt: '23:59' }, past = '2026-09-20';
+        var t = Calc.glidirakTuzat({ y: 2026, m: 9, d: 10, H: 0, M: 0 }, bugunH, past); teng(t.y + '-' + t.m + '-' + t.d, '2026-9-20');   // boshlanishdan oldin -> boshlanish
+        var f = Calc.glidirakTuzat({ y: 2026, m: 10, d: 20, H: 0, M: 0 }, bugunH, past); teng(f.y + '-' + f.m + '-' + f.d, '2026-10-5');       // kelajak -> bugun
+        var k = Calc.glidirakQiymatlari('kun', { y: 2026, m: 9, d: 25, H: 0, M: 0 }, bugunH, past), ochiq = k.filter(function (x) { return x.ochiq; });
+        teng(ochiq[0].qiymat, 20); teng(ochiq[ochiq.length - 1].qiymat, 30);
+        var o = Calc.glidirakQiymatlari('oy', { y: 2026, m: 9, d: 25, H: 0, M: 0 }, bugunH, past).filter(function (x) { return x.ochiq; }); teng(o[0].qiymat, 9); teng(o[o.length - 1].qiymat, 10);
+        var y = Calc.glidirakQiymatlari('yil', { y: 2026, m: 9, d: 25, H: 0, M: 0 }, bugunH, past).filter(function (x) { return x.ochiq; }); teng(y.length, 1);
+        teng(Calc.glidirakQiymatlari('kun', { y: 2026, m: 10, d: 1, H: 0, M: 0 }, bugunH, past).filter(function (x) { return x.ochiq; }).length, 5);   // oktabrda faqat 1..5
+      });
+      test('g\'ildirak: kichik chegarasiz eski xatti-harakat o\'zgarmagan', function () {
+        var h = { sana: '2026-10-05', vaqt: '12:30' };
+        teng(Calc.glidirakQiymatlari('kun', { y: 2026, m: 9, d: 25, H: 0, M: 0 }, h).filter(function (x) { return x.ochiq; }).length, 30);
+        teng(Calc.glidirakTuzat({ y: 2026, m: 10, d: 5, H: 23, M: 0 }, h).H, 12);
+      });
+      function oraliqY(n) { var Y = [], b = '2026-01-01', i; for (i = 0; i < n; i++) Y.push({ id: 'q' + i, tur: i % 5 === 0 ? 'daromad' : 'xarajat', summa: 1000 + i, sana: Calc.kunQosh(b, i), hisob_id: i % 2 ? 'a' : 'b', kategoriya_id: 'k' }); return Y; }
+      test('diagrammaOraliq: 31 kungacha — kunlar, 32 dan 366 gacha — haftalar, undan uzun — oylar', function () {
+        var Y = oraliqY(800), d;
+        d = Calc.diagrammaOraliq(Y, '2026-01-01', '2026-01-31', ''); teng(d.birlik, 'kun'); teng(d.bucketlar.length, 31);
+        d = Calc.diagrammaOraliq(Y, '2026-01-01', '2026-02-01', ''); teng(d.birlik, 'hafta'); teng(d.birlikNomi, 'haftalar');
+        d = Calc.diagrammaOraliq(Y, '2026-01-01', '2026-12-31', ''); teng(d.birlik, 'hafta');
+        d = Calc.diagrammaOraliq(Y, '2026-01-01', '2027-01-01', ''); teng(d.birlik, 'hafta');   // 366 kun = 1 yil
+        d = Calc.diagrammaOraliq(Y, '2026-01-01', '2027-01-02', ''); teng(d.birlik, 'oy'); teng(d.bucketlar.length, 13);
+        d = Calc.diagrammaOraliq(Y, '2026-01-01', '2027-12-31', ''); teng(d.birlik, 'oy'); teng(d.bucketlar.length, 24);
+      });
+      test('diagrammaOraliq: haftalar dushanbadan yakshanbagacha, davr chetlarida qisqartiriladi', function () {
+        var d = Calc.diagrammaOraliq(oraliqY(100), '2026-01-01', '2026-02-15', '');   // payshanba boshlanadi, yakshanba tugaydi
+        teng(d.bucketlar[0].dan + '..' + d.bucketlar[0].gacha, '2026-01-01..2026-01-04'); teng(d.bucketlar[1].dan + '..' + d.bucketlar[1].gacha, '2026-01-05..2026-01-11');
+        var oxirgi = d.bucketlar[d.bucketlar.length - 1]; teng(oxirgi.gacha, '2026-02-15'); teng(oxirgi.dan, '2026-02-09'); teng(d.bucketlar.length, 7);
+        teng(d.bucketlar.every(function (b, i) { return i === 0 || b.dan === Calc.kunQosh(d.bucketlar[i - 1].gacha, 1); }), true);   // bo'shliqsiz, ustma-ust tushmaydi
+      });
+      test('diagrammaOraliq: oylar davr chetlarida qisqartiriladi', function () {
+        var d = Calc.diagrammaOraliq(oraliqY(500), '2026-01-15', '2027-03-10', '');
+        teng(d.bucketlar[0].dan + '..' + d.bucketlar[0].gacha, '2026-01-15..2026-01-31'); teng(d.bucketlar.length, 15); teng(d.bucketlar[14].gacha, '2027-03-10'); teng(d.bucketlar[12].qisqa2, '2027');
+      });
+      test('diagrammaOraliq: yig\'indilar hisobot bilan bir xil (har uchala birlikda), hisob filtri, o\'tkazma kirmaydi', function () {
+        var Y = oraliqY(800).concat([{ id: 'o', tur: 'otkazma', summa: 99999, sana: '2026-01-10', hisob_id: 'a', qabul_hisob_id: 'b' }]);
+        [['2026-01-05', '2026-01-20'], ['2026-01-03', '2026-08-09'], ['2026-01-01', '2027-12-31']].forEach(function (r) {
+          ['', 'a', 'b'].forEach(function (hisob) {
+            var d = Calc.diagrammaOraliq(Y, r[0], r[1], hisob), h = Calc.hisobot(Y, r[0], r[1], hisob);
+            teng(d.jami.xarajat, h.xarajat); teng(d.jami.daromad, h.daromad);
+            teng(d.bucketlar.reduce(function (a, b) { return a + b.xarajat; }, 0), h.xarajat); teng(d.bucketlar.reduce(function (a, b) { return a + b.daromad; }, 0), h.daromad);
+          });
+        });
+      });
+      test('diagrammaOraliq: bir kunlik va bo\'sh davr', function () {
+        var d = Calc.diagrammaOraliq([], '2026-10-03', '2026-10-03', ''); teng(d.bucketlar.length, 1); teng(d.eng, 0);
+        var e = Calc.diagrammaOraliq(oraliqY(5), '2026-01-03', '2026-01-03', ''); teng(e.bucketlar[0].toliq, '03.01.2026'); teng(e.bucketlar[0].soni, 1);
+      });
+      test('DOM doira: davr nomi markazda (ikki qator), daromad turi, aria-label', function () {
+        var t = [{ kategoriya_id: 'a', summa: 600, foiz: 60 }, { kategoriya_id: 'b', summa: 400, foiz: 40 }];
+        var quti = Diagramma.dona({ taqsimot: t, jami: 1000, kategoriya: katOl, turNomi: 'Daromadlar', markazNom: '01.10.2026 – 07.10.2026', bosilganda: function () {}, guruhBosilganda: function () {} });
+        var m1 = quti.querySelector('.dona-markaz-1'); teng(m1.textContent, '01.10.2026 –07.10.2026'); teng(m1.querySelectorAll('tspan').length, 2);
+        teng(quti.querySelector('.dona-markaz-2').textContent, '1 000 so\'m'); teng(/^Daromadlar kategoriyalar bo'yicha doira diagrammasi, 01.10.2026/.test(quti.querySelector('svg').getAttribute('aria-label')), true);
+        var q = Diagramma.dona({ taqsimot: t, jami: 1000, kategoriya: katOl, markazNom: 'Oktabr 2026', bosilganda: function () {}, guruhBosilganda: function () {} });
+        teng(q.querySelector('.dona-markaz-1').textContent, 'Oktabr 2026'); teng(q.querySelectorAll('.dona-markaz-1 tspan').length, 1);
+      });
+      test('DOM ustunlar (erkin davr): haftalar, aria-label, jadval, bosilganda chegara', function () {
+        var Y = oraliqY(200), v = Calc.diagrammaOraliq(Y, '2026-01-01', '2026-06-30', ''), tanlangan = null;
+        var quti = Diagramma.ustunli({ vaqt: v, bosilganda: function (b) { tanlangan = b; } });
+        teng(ustunOl(quti).length, v.bucketlar.length); teng(/haftalar bo'yicha/.test(quti.querySelector('.ustun-svg').getAttribute('aria-label')), true);
+        teng(quti.querySelectorAll('.g-jadval tbody tr').length, v.bucketlar.length);
+        ustunOl(quti)[1].querySelector('.ustun-hit').dispatchEvent(new MouseEvent('click', { bubbles: true })); teng(tanlangan.dan, '2026-01-05');
+        teng(Number(quti.querySelector('[data-jami-xarajat]').getAttribute('data-jami-xarajat')), v.jami.xarajat);
       });
 
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---

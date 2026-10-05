@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 7 (03.10.2026)
+Hujjat versiyasi: 8 (05.10.2026)
 
 ## 1. Maqsad
 
@@ -80,20 +80,24 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - Yozuvlari bor kategoriya o'chirilmaydi, arxivlanadi.
 
 ### F5. Hisobotlar
-- Davr turi tanlanadi: kun, hafta, oy, yil. "Oldingi", "keyingi" va "bugun" tugmalari.
+- Davr turi tanlanadi: kun, hafta, oy, yil yoki **erkin davr** (ikki sana). Tezkor yo'l sifatida "Kun / Hafta / Oy / Yil" tugmalari, "Oldingi", "Bugun" va "Keyingi" tugmalari turadi. Filtr oynasi (F6 dagi filtr belgisi) shu tugmalar bilan bir xil holatni boshqaradi.
+- **Filtr oynasi** (pastdan chiqadi): sarlavha "Filtrlar", "Tozalash", yopish tugmasi va "Amalga oshirish". Chastota: *Oylik* (yil va oyni katak ko'rinishida tanlash), *Yillik* (yil tanlash), *Davr* (boshlanish va tugash sanasi, g'ildirakli tanlagich bilan). Kelajak oylar kulrang va tanlanmaydi, kelajak yil ro'yxatda yo'q. Erkin davrda tugash sanasi boshlanishdan oldin bo'lmaydi va ikkala sana ham bugundan keyin bo'lmaydi (g'ildirakda ham, saqlashda ham tekshiriladi). Qo'shimcha variantlar (yig'iladigan blok): hisobni tanlash. "Tozalash" tanlovni joriy oy va barcha hisoblarga qaytaradi.
+- **Erkin davr:** hisobot, doira, ro'yxat va taqqoslash shu oraliq bo'yicha hisoblanadi (ikkala chekka kun kiradi). Taqqoslash: xuddi shuncha kun uzunlikdagi oldingi oraliq (masalan, 01.10–10.10 uchun 21.09–30.09). "Oldingi" va "Keyingi" tugmalari davrni o'z uzunligiga suradi; "Keyingi" tugash bugundan oshadigan bo'lsa o'chiq turadi. Kun, hafta, oy, yil tugmalaridan biri bosilsa, erkin davr tugagan oyga qaytiladi.
+- **Xarajat / Daromadlar yorlig'i:** sarlavha ostida; standart — Xarajat. Doira va ro'yxat tanlangan tur bo'yicha almashadi (daromad taqsimoti ham doira bilan). Jami ko'rsatkichlar va taqqoslash (xarajat) yorliqqa bog'liq emas.
 - Tanlangan davr uchun:
   - jami daromad, jami xarajat, qoldiq (manfiy bo'lsa alohida rangda);
   - xarajatlarning kategoriyalar bo'yicha taqsimoti: summa va foiz, kattasidan kichigiga;
   - daromadlarning kategoriyalar bo'yicha taqsimoti;
   - oldingi davr bilan taqqoslash: xarajat qanchaga o'zgargan (summa va foiz).
-- Hisobotni bitta hisob bo'yicha yoki barcha hisoblar bo'yicha ko'rish mumkin.
+- Hisobotni bitta hisob bo'yicha yoki barcha hisoblar bo'yicha ko'rish mumkin (filtr oynasidagi "Qo'shimcha variantlar" da).
 - O'tkazmalar va qarz amallari daromad yoki xarajat hisoblanmaydi va hisobotga kirmaydi.
 - Davrda yozuv bo'lmasa, "Bu davrda yozuvlar yo'q" degan xabar chiqadi.
 
 ### F6. Diagrammalar
-- **Doiraviy diagramma** (halqa): tanlangan davr uchun xarajatlarning kategoriyalar bo'yicha taqsimoti. Tilim rangi — kategoriyaning o'z rangi (F4). Tilimlar orasida 2 piksel bo'shliq. Markazda jami xarajat, tilim ustiga olib borilsa (yoki ro'yxat qatoriga) shu kategoriya va summasi ko'rinadi. Diagramma ostida ro'yxat: har kategoriyaning rangi, nomi, summasi va foizi. Nomlar so'z o'rtasidan sinmaydi (kerak bo'lsa so'zlar bo'yicha keyingi qatorga o'raladi). Bitta kategoriya bo'lsa to'liq halqa.
-- **"Boshqalar" tilimi:** eng katta 6 ta kategoriya alohida tilim, qolganlari bitta kulrang "Boshqalar" tilimiga birlashadi (summa va foiz yig'indisi; jami 100%). Qolgan bitta kategoriya bo'lsa birlashtirilmaydi (7 ta kategoriya = 7 tilim). Ro'yxatda hamma kategoriya to'liq turadi ("Boshqalar" qatori ostida o'z ichki qatorlari bilan). "Boshqalar" tilimi yoki qatori bosilsa, shu kategoriyalar bo'yicha filtrlangan yozuvlar ro'yxati ochiladi.
-- **Vaqt bo'yicha ustunli diagramma:** hafta va oyda kunlar bo'yicha, yilda oylar bo'yicha (kun davri uchun bu diagramma yo'q). Har ustunda daromad va xarajat yonma-yon (ko'k va to'q sariq: rang ko'rligi sinovidan o'tgan juft). O'qlarda sana va summa ko'rinadi; katta summalar qisqartiriladi (`1,2 mln`, `5 ming`, `2,5 mlrd`). Eng katta qiymatga bitta yozuv qo'yiladi, har ustunga raqam yozilmaydi. Juda kichik, lekin noldan katta qiymat ham ko'rinadi (kamida 2 piksel balandlikda).
+- **Hisobot ekrani tepasi:** sarlavha va o'ng tomonda ikkita belgi (SVG): diagramma belgisi va filtr belgisi (F5). **Bir vaqtda bitta diagramma** ko'rinadi: doira yoki ustunlar. Diagramma belgisi bosilsa doira o'rniga ustunli diagramma ochiladi va belgi doiraga qaytaruvchi belgiga almashadi; tanlov qurilmada eslab qolinadi. Kun davrida ustunli diagramma yo'q, belgi ham ko'rinmaydi.
+- **Doiraviy diagramma** (halqa): tanlangan davr uchun tanlangan tur (xarajat yoki daromad) kategoriyalar bo'yicha taqsimoti. Tilim rangi — kategoriyaning o'z rangi (F4). Tilimlar orasida 2 piksel bo'shliq. Markazda davr nomi (uzun bo'lsa ikki qatorda) va jami summa, tilim ustiga olib borilsa (yoki ro'yxat qatoriga) shu kategoriya va summasi ko'rinadi. Diagramma ostida ro'yxat: har kategoriyaning rangi, nomi, summasi va foizi. Nomlar so'z o'rtasidan sinmaydi (kerak bo'lsa so'zlar bo'yicha keyingi qatorga o'raladi). Bitta kategoriya bo'lsa to'liq halqa.
+- **"Boshqalar" tilimi:** eng katta 6 ta kategoriya (bu son kodda bitta joyda, `Calc.DONA_ENG_KATTA`, saqlanadi) alohida tilim, qolganlari bitta kulrang "Boshqalar" tilimiga birlashadi (summa va foiz yig'indisi; jami 100%). Qolgan bitta kategoriya bo'lsa birlashtirilmaydi (7 ta kategoriya = 7 tilim). Ro'yxatda hamma kategoriya to'liq turadi ("Boshqalar" qatori ostida o'z ichki qatorlari bilan). "Boshqalar" tilimi yoki qatori bosilsa, shu kategoriyalar bo'yicha filtrlangan yozuvlar ro'yxati ochiladi.
+- **Vaqt bo'yicha ustunli diagramma:** hafta va oyda kunlar bo'yicha, yilda oylar bo'yicha (kun davri uchun bu diagramma yo'q). **Erkin davrda:** 31 kungacha kunlar bo'yicha, 366 kungacha (1 yil) haftalar bo'yicha (dushanba–yakshanba, davr chetlarida qisqartiriladi), undan uzunda oylar bo'yicha (chetdagi oylar ham qisqartiriladi). Hisoblash qoidasi boshqa davrlardagi bilan bir xil. Har ustunda daromad va xarajat yonma-yon (ko'k va to'q sariq: rang ko'rligi sinovidan o'tgan juft). O'qlarda sana va summa ko'rinadi; katta summalar qisqartiriladi (`1,2 mln`, `5 ming`, `2,5 mlrd`). Eng katta qiymatga bitta yozuv qo'yiladi, har ustunga raqam yozilmaydi. Juda kichik, lekin noldan katta qiymat ham ko'rinadi (kamida 2 piksel balandlikda).
 - **Diagramma bo'lagini bossa** (sichqoncha, barmoq yoki Enter), o'sha kategoriya (tanlangan davr va hisob bo'yicha) yoki kunning (yilda oyning) yozuvlari filtrlangan ro'yxat sifatida ochiladi; "Orqaga" hisobotga qaytaradi.
 - **Raqamlar hisobot bilan aynan mos:** diagrammadagi har tilim va ustun hisobot (F5) bilan bir xil hisob-kitobdan olinadi: tanlangan hisob filtri, o'tkazma va qarz kirmasligi, davr chegaralari bir xil.
 - **Tashqi kutubxonasiz**, SVG bilan chiziladi; yorug' va qorong'i rejimda ranglar mos (ustun ranglari har rejim uchun alohida tanlangan). Tooltip (hover va klaviatura fokusida) faqat qo'shimcha: har qiymat diagramma ostidagi ro'yxatda yoki "Jadval ko'rinishi"da ham bor.
@@ -204,7 +208,7 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 Pastda beshta tugmali navigatsiya:
 
 1. **Bosh sahifa:** umumiy balans, hisoblar qoldig'i, joriy oy daromadi va xarajati, byudjet ogohlantirishlari, oxirgi 10 ta yozuv, zaxira eslatmasi.
-2. **Hisobot:** davr tanlash, ko'rsatkichlar, taqsimot, diagrammalar.
+2. **Hisobot:** sarlavha va ikki belgi (diagramma almashtirish, filtr); Xarajat / Daromadlar yorlig'i; Kun / Hafta / Oy / Yil tezkor tugmalari; ko'rsatkichlar, taqqoslash; doira yoki ustunli diagramma. Filtr — pastdan chiqadigan oyna (oylik, yillik, davr, hisob).
 3. **Qo'shish (+):** o'rtadagi katta tugma, yozuv qo'shishning 5 qadamli oynasini ochadi (F2).
 4. **Byudjet:** kategoriyalar bo'yicha chegaralar va ularning holati.
 5. **Yana:** barcha yozuvlar (filtr bilan), qarzlar, hisoblar, kategoriyalar, zaxira va eksport, ilova haqida.

@@ -185,7 +185,8 @@
 
   // Tanlovni ruxsat etilgan eng yaqin qiymatga keltiradi: kelajak qiymatlar hozirgi vaqtga qaytariladi,
   // oyning kunlari soniga (28/29/30/31) moslanadi. Takror chaqirilsa o'zgarmaydi.
-  function glidirakTuzat(t, hozirgi) {
+  // past (ixtiyoriy) — eng erta ruxsat etilgan sana "YYYY-MM-DD" (faqat sana tanlagichi uchun: erkin davrning tugash sanasi)
+  function glidirakTuzat(t, hozirgi, past) {
     var n = vaqtdanTanlov(hozirgi.sana, hozirgi.vaqt);
     var r = { y: Math.max(GLIDIRAK_BOSHI, Math.min(t.y, n.y)) };
     r.m = Math.max(1, Math.min(t.m, r.y === n.y ? n.m : 12));
@@ -193,16 +194,24 @@
     var bugun = r.y === n.y && r.m === n.m && r.d === n.d;
     r.H = Math.max(0, Math.min(t.H, bugun ? n.H : 23));
     r.M = Math.max(0, Math.min(t.M, bugun && r.H === n.H ? n.M : 59));
+    if (past) {
+      var q = sanaQismlari(past);
+      if (r.y < q.y) r.y = q.y;
+      if (r.y === q.y && r.m < q.m) r.m = q.m;
+      if (r.y === q.y && r.m === q.m && r.d < q.d) r.d = q.d;
+    }
     return r;
   }
 
   // Ustun qiymatlari ro'yxati: [{ qiymat, ochiq }], ochiq=false — kulrang, tanlanmaydi.
   // ustun: 'yil' | 'oy' | 'kun' | 'soat' | 'daqiqa'
-  function glidirakQiymatlari(ustun, t, hozirgi) {
+  function glidirakQiymatlari(ustun, t, hozirgi, past) {
     var n = vaqtdanTanlov(hozirgi.sana, hozirgi.vaqt), ch = glidirakChegarasi(t, hozirgi), r = [], i;
     var boshi = { yil: GLIDIRAK_BOSHI, oy: 1, kun: 1, soat: 0, daqiqa: 0 }[ustun];
     var oxiri = { yil: n.y, oy: 12, kun: oyKunlari(t.y, t.m), soat: 23, daqiqa: 59 }[ustun];
-    for (i = boshi; i <= oxiri; i++) r.push({ qiymat: i, ochiq: i <= ch[ustun] });
+    var q = past ? sanaQismlari(past) : null, pastChegara = !q ? boshi : ustun === 'yil' ? q.y
+      : ustun === 'oy' ? (t.y <= q.y ? q.m : 1) : ustun === 'kun' ? (t.y === q.y && t.m === q.m ? q.d : 1) : boshi;
+    for (i = boshi; i <= oxiri; i++) r.push({ qiymat: i, ochiq: i <= ch[ustun] && i >= pastChegara });
     return r;
   }
 
@@ -358,6 +367,119 @@
     var umumiy = limitlar.umumiy ? { umumiy: true, holat: byudjetHolati(h.xarajat, limitlar.umumiy) } : null;
     var ogoh = chegarali.concat(umumiy ? [umumiy] : []).filter(function (x) { return x.holat.daraja !== 'yaxshi'; }).sort(nisbat);
     return { oy: oy, oyNomi: davrNomi('oy', bugunSana), umumiy: umumiy, chegarali: chegarali, chegarasiz: chegarasiz, ogohlantirishlar: ogoh, jami: h.xarajat };
+  }
+
+  // ---- Hisobot filtri: davr (kun/hafta/oy/yil yoki erkin oraliq), filtr oynasi, ustunli diagramma guruhlari ----
+  // Kunlar soni (ikkala chekka ham kiradi)
+  function kunlarSoni(dan, gacha) { return Math.round((sanaUTC(gacha) - sanaUTC(dan)) / 86400000) + 1; }
+
+  // "01.10.2026 – 07.10.2026"; bitta kun bo'lsa "01.10.2026"
+  function oraliqNomi(dan, gacha) { return dan === gacha ? sanaKorsat(dan) : sanaKorsat(dan) + ' – ' + sanaKorsat(gacha); }
+
+  // Erkin davr tekshiruvi: tugash boshlanishdan oldin bo'lmasin, ikkalasi ham bugundan keyin bo'lmasin.
+  // Natija: { soni } yoki { xato }
+  function oraliqTekshir(dan, gacha, bugunSana) {
+    if (!dan || !gacha) return { xato: 'Boshlanish va tugash sanasini tanlang' };
+    if (dan > bugunSana) return { xato: 'Boshlanish sanasi bugundan keyin bo\'lmasin' };
+    if (gacha > bugunSana) return { xato: 'Tugash sanasi bugundan keyin bo\'lmasin' };
+    if (gacha < dan) return { xato: 'Tugash sanasi boshlanishdan oldin bo\'lmasin' };
+    return { soni: kunlarSoni(dan, gacha) };
+  }
+
+  // Erkin davrni n davr uzunligiga suradi (n = -1: xuddi shuncha kunlik oldingi oraliq)
+  function oraliqSur(dan, gacha, n) {
+    var k = kunlarSoni(dan, gacha) * n;
+    return { dan: kunQosh(dan, k), gacha: kunQosh(gacha, k) };
+  }
+
+  // Hisobot davri va taqqoslash uchun oldingi davr. tur: 'kun' | 'hafta' | 'oy' | 'yil' | 'davr'.
+  // 'davr' uchun dan va gacha beriladi, oldingi davr — xuddi shuncha kunlik oldingi oraliq; boshqalarda sana tushgan davr.
+  // Natija: { dan, gacha, nom, soni, oldingi: { dan, gacha, nom } }
+  function hisobotDavri(tur, sana, dan, gacha) {
+    if (tur === 'davr') {
+      var o = oraliqSur(dan, gacha, -1);
+      return { tur: tur, dan: dan, gacha: gacha, nom: oraliqNomi(dan, gacha), soni: kunlarSoni(dan, gacha),
+        oldingi: { dan: o.dan, gacha: o.gacha, nom: oraliqNomi(o.dan, o.gacha) } };
+    }
+    var c = davrChegarasi(tur, sana), oldSana = davrniSur(tur, sana, -1), oc = davrChegarasi(tur, oldSana);
+    return { tur: tur, dan: c.dan, gacha: c.gacha, nom: davrNomi(tur, sana), soni: kunlarSoni(c.dan, c.gacha),
+      oldingi: { dan: oc.dan, gacha: oc.gacha, nom: davrNomi(tur, oldSana) } };
+  }
+
+  // Filtr oynasi: yilning 12 oyi, kelajak oylar ochiq emas (kulrang). Natija: [{ oy: 1..12, ochiq }]
+  function filtrOylari(yil, bugunSana) {
+    var b = sanaQismlari(bugunSana), r = [];
+    for (var m = 1; m <= 12; m++) r.push({ oy: m, ochiq: yil < b.y || (yil === b.y && m <= b.m) });
+    return r;
+  }
+  // Filtr oynasi: yillar ro'yxati — eng erta yozuv yilidan (yoki oxirgi 4 yildan) bugungi yilgacha; kelajak yillar yo'q
+  function filtrYillari(birinchiSana, bugunSana) {
+    var bu = sanaQismlari(bugunSana).y, boshi = bu - 3, r = [];
+    if (birinchiSana) boshi = Math.min(boshi, sanaQismlari(birinchiSana).y);
+    for (var y = boshi; y <= bu; y++) r.push(y);
+    return r;
+  }
+  // Filtr oynasidagi tanlovni hisobot holatiga aylantiradi (yoki xato). chastota: 'oy' | 'yil' | 'davr'
+  function filtrQollash(t, bugunSana) {
+    var b = sanaQismlari(bugunSana);
+    if (t.chastota === 'oy') {
+      if (t.yil > b.y || (t.yil === b.y && t.oy > b.m)) return { xato: 'Kelajak oyni tanlab bo\'lmaydi' };
+      return { tur: 'oy', sana: t.yil + '-' + ikki(t.oy) + '-01' };
+    }
+    if (t.chastota === 'yil') {
+      if (t.yil > b.y) return { xato: 'Kelajak yilni tanlab bo\'lmaydi' };
+      return { tur: 'yil', sana: t.yil + '-01-01' };
+    }
+    var r = oraliqTekshir(t.dan, t.gacha, bugunSana);
+    return r.xato ? r : { tur: 'davr', dan: t.dan, gacha: t.gacha };
+  }
+
+  // Erkin davr uchun ustunli diagramma ma'lumoti (diagrammaVaqt bilan bir xil tuzilma va hisoblash qoidasi).
+  // 31 kungacha — kunlar, 366 kungacha (1 yil) — haftalar (dushanba–yakshanba, davr chetlarida qisqartiriladi),
+  // undan uzunda — oylar. Natija: { tur: 'oraliq', birlik: 'kun'|'hafta'|'oy', birlikNomi, bucketlar, jami, eng, davrNomi, dan, gacha }
+  function diagrammaOraliq(yozuvlar, dan, gacha, hisobId) {
+    var soni = kunlarSoni(dan, gacha), birlik = soni <= 31 ? 'kun' : soni <= 366 ? 'hafta' : 'oy', bucketlar = [];
+    function qosh(kalit, d1, d2, qisqa, qisqa2, toliq) {
+      bucketlar.push({ kalit: kalit, dan: d1, gacha: d2, qisqa: qisqa, qisqa2: qisqa2, toliq: toliq, daromad: 0, xarajat: 0, soni: 0 });
+    }
+    var haftaBoshi = kunQosh(dan, -((sanaUTC(dan).getUTCDay() + 6) % 7)), pb = sanaQismlari(dan);
+    if (birlik === 'kun') {
+      for (var k = dan; k <= gacha; k = kunQosh(k, 1)) {
+        var q = sanaQismlari(k);
+        qosh(k, k, k, String(q.d), (k === dan || q.d === 1) ? OY_QISQA[q.m - 1] : '', sanaKorsat(k));
+      }
+    } else if (birlik === 'hafta') {
+      for (var h = haftaBoshi; h <= gacha; h = kunQosh(h, 7)) {
+        var d1 = h < dan ? dan : h, e = kunQosh(h, 6), d2 = e > gacha ? gacha : e, p1 = sanaQismlari(d1);
+        qosh(d1, d1, d2, ikki(p1.d) + '.' + ikki(p1.m), '', oraliqNomi(d1, d2));
+      }
+    } else {
+      var y = pb.y, m = pb.m;
+      while (y + '-' + ikki(m) + '-01' <= gacha) {
+        var oc = davrChegarasi('oy', y + '-' + ikki(m) + '-01');
+        qosh(y + '-' + ikki(m), oc.dan < dan ? dan : oc.dan, oc.gacha > gacha ? gacha : oc.gacha, OY_QISQA[m - 1],
+          (m === 1 || (y === pb.y && m === pb.m)) ? String(y) : '', OY_NOMLARI[m - 1] + ' ' + y);
+        if (++m > 12) { m = 1; y++; }
+      }
+    }
+    function indeks(sana) {
+      if (birlik === 'kun') return kunlarSoni(dan, sana) - 1;
+      if (birlik === 'hafta') return Math.floor((kunlarSoni(haftaBoshi, sana) - 1) / 7);
+      var q = sanaQismlari(sana);
+      return (q.y - pb.y) * 12 + q.m - pb.m;
+    }
+    var jami = { daromad: 0, xarajat: 0 }, eng = 0;
+    yozuvlar.forEach(function (y) {
+      if (y.tur !== 'daromad' && y.tur !== 'xarajat') return;
+      if (y.sana < dan || y.sana > gacha) return;
+      if (hisobId && y.hisob_id !== hisobId) return;
+      var b = bucketlar[indeks(y.sana)];
+      if (!b) return;
+      b[y.tur] += y.summa; b.soni++; jami[y.tur] += y.summa;
+    });
+    bucketlar.forEach(function (b) { eng = Math.max(eng, b.daromad, b.xarajat); });
+    return { tur: 'oraliq', birlik: birlik, birlikNomi: { kun: 'kunlar', hafta: 'haftalar', oy: 'oylar' }[birlik], dan: dan, gacha: gacha,
+      bucketlar: bucketlar, jami: jami, eng: eng, davrNomi: oraliqNomi(dan, gacha) };
   }
 
   // Kiritilayotgan matndagi mingliklarni ajratadi: "1250000" -> "1 250 000".
@@ -658,6 +780,8 @@
     oxirgiKategoriyaId: oxirgiKategoriyaId, matnRangi: matnRangi,
     oyKunlari: oyKunlari, vaqtdanTanlov: vaqtdanTanlov, tanlovdanVaqt: tanlovdanVaqt,
     glidirakChegarasi: glidirakChegarasi, glidirakTuzat: glidirakTuzat, glidirakQiymatlari: glidirakQiymatlari,
+    kunlarSoni: kunlarSoni, oraliqNomi: oraliqNomi, oraliqTekshir: oraliqTekshir, oraliqSur: oraliqSur, hisobotDavri: hisobotDavri,
+    filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
     BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,

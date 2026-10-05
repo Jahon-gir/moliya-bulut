@@ -15,10 +15,11 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/belgilar.js?v=0.11.0"></script>
-  <script src="js/calc.js?v=0.11.0"></script>
-  <script src="js/data.js?v=0.11.0"></script>
-  <script src="js/diagramma.js?v=0.11.0"></script>
+  <script src="js/belgilar.js?v=0.12.0"></script>
+  <script src="js/calc.js?v=0.12.0"></script>
+  <script src="js/xlsx.js?v=0.12.0"></script>
+  <script src="js/data.js?v=0.12.0"></script>
+  <script src="js/diagramma.js?v=0.12.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1508,72 +1509,151 @@
         if (x !== '' || q.length) { q.push(x); qatorlar.push(q); }
         return qatorlar;
       }
-      test('CSV (yozuvlar): BOM, ajratuvchi ;, ustunlar tartibi, sana KK.OO.YYYY, summa mingliksiz butun, o\'tkazmada Qayerga', function () {
-        var r = Calc.yozuvlarCSV(ZY, ZH, ZK, { tur: 'hammasi' }), t = r.matn;
-        teng(t.charCodeAt(0), 0xFEFF); teng(r.soni, 6); var q = csvOqish(t);
-        teng(q[0].join('|'), 'Sana|Vaqt|Tur|Summa|Kategoriya|Hisob|Qayerga|Izoh'); teng(q.length, 7); teng(q.every(function (x) { return x.length === 8; }), true);
-        teng(q[1].join('|'), '30.09.2026|23:59|Xarajat|777|Oziq-ovqat|Naqd pul||\'-5 so\'m');   // eng eski birinchi; "-" bilan boshlangan izohga ' qo'yilgan
-        teng(q[2].slice(0, 7).join('|'), '01.10.2026|09:00|Daromad|5000000|Oylik maosh|Naqd pul|');
-        var o = q.filter(function (x) { return x[2] === 'O\'tkazma'; })[0]; teng(o.join('|'), '03.10.2026|10:00|O\'tkazma|1000000||Naqd pul|Karta|Kartaga');
-        teng(q.every(function (x, i) { return i === 0 || /^\d+$/.test(x[3]); }), true); teng(q.every(function (x, i) { return i === 0 || /^\d{2}\.\d{2}\.\d{4}$/.test(x[0]); }), true); teng(t.indexOf('\r\n') > 0, true); teng(t.slice(-2), '\r\n');
-        teng(/5000000/.test(t) && !/5 000 000/.test(t), true);
+      // --- Eksport: bitta jadval, haqiqiy .xlsx va CSV ---
+      var EK_O = ['Sana va vaqt', 'ID', 'Tur', 'Hisob', 'Qayerga', 'Kategoriya', 'Summa', 'Valyuta', 'Qarz nomi', 'Qarz turi', 'Izoh'];
+      function EKm(Y, Q) { return { yozuvlar: Y || ZY, hisoblar: ZH, kategoriyalar: ZK, qarzlar: Q || ZQ }; }
+      // .xlsx (ZIP, siqmasdan) ni o'qish: { nom: matn }, har faylning CRC si tekshiriladi
+      function zipOqish(bayt) {
+        var dv = new DataView(bayt.buffer, bayt.byteOffset, bayt.byteLength), e = bayt.length - 22;
+        teng(dv.getUint32(e, true), 0x06054b50); var n = dv.getUint16(e + 10, true), o = dv.getUint32(e + 16, true), natija = {}, dek = new TextDecoder('utf-8');
+        for (var i = 0; i < n; i++) {
+          teng(dv.getUint32(o, true), 0x02014b50);
+          var usul = dv.getUint16(o + 10, true), crc = dv.getUint32(o + 16, true), hajm = dv.getUint32(o + 24, true), nl = dv.getUint16(o + 28, true), sil = dv.getUint32(o + 42, true);
+          var nom = dek.decode(bayt.subarray(o + 46, o + 46 + nl)); teng(usul, 0);
+          teng(dv.getUint32(sil, true), 0x04034b50); var lnl = dv.getUint16(sil + 26, true), ex = dv.getUint16(sil + 28, true), bosh = sil + 30 + lnl + ex;
+          var tana = bayt.subarray(bosh, bosh + hajm); teng(Xlsx.crc32(tana), crc); natija[nom] = dek.decode(tana);
+          o += 46 + nl + dv.getUint16(o + 30, true) + dv.getUint16(o + 32, true);
+        }
+        return natija;
+      }
+      function xmlOl(matn) { var d = new DOMParser().parseFromString(matn, 'application/xml'); teng(d.getElementsByTagName('parsererror').length, 0); return d; }
+      function xlsxOqish(Y, Q, davr) {
+        var e = Calc.eksport(EKm(Y, Q), davr || { tur: 'hammasi' }), z = zipOqish(Xlsx.fayl(e)), ss = [];
+        Array.prototype.forEach.call(xmlOl(z['xl/sharedStrings.xml']).getElementsByTagName('si'), function (si) { ss.push(si.textContent); });
+        var ws = xmlOl(z['xl/worksheets/sheet1.xml']), qatorlar = Array.prototype.map.call(ws.getElementsByTagName('row'), function (r) {
+          return Array.prototype.map.call(r.getElementsByTagName('c'), function (c) { var v = c.getElementsByTagName('v')[0]; return { r: c.getAttribute('r'), s: c.getAttribute('s'), t: c.getAttribute('t'), v: v ? v.textContent : null, m: c.getAttribute('t') === 's' && v ? ss[+v.textContent] : null }; });
+        });
+        return { e: e, z: z, ws: ws, ss: ss, q: qatorlar };
+      }
+      test('eksport: bitta jadval, ustunlar aynan shu tartibda, eng yangisi tepada, yozuv + qarz + qarz to\'lovi birga', function () {
+        var e = Calc.eksport(EKm(), { tur: 'hammasi' });
+        teng(e.sarlavha.join('|'), EK_O.join('|')); teng(e.soni, 10); teng(e.qatorlar.length, 10);
+        teng(e.qatorlar.map(function (r) { return r.id; }).join(), 'T-000002,T-000001,Q-000001,Q-000002,Y-000005,Y-000004,Y-000003,Y-000002,Y-000001,Y-000006'.replace('Q-000001,Q-000002', 'Q-000001,Q-000002'));
       });
-      test('CSV: UTF-8 BOM baytlari (EF BB BF) va o\'zbekcha harflar (oʻ gʻ ’ sh ch ñ) buzilmaydi', function () {
-        var K2 = [{ id: 'k', nom: 'Oʻqish va gʻalla ’ ‘ Sharq Ñandú Ўзбек', tur: 'xarajat', arxivlangan: false }], H2 = [{ id: 'h', nom: 'Jamg\'arma — Hamyon', tur: 'naqd', boshlangich_qoldiq: 0 }];
-        var Y2 = [{ id: 'a', tur: 'xarajat', summa: 1500, sana: '2026-10-03', vaqt: '08:05', hisob_id: 'h', kategoriya_id: 'k', izoh: 'Oʻzbekiston: gʻisht, o\'rik, choy ☕' }];
-        var t = Calc.yozuvlarCSV(Y2, H2, K2, { tur: 'hammasi' }).matn, bayt = new TextEncoder().encode(t);
-        teng(bayt[0] === 0xEF && bayt[1] === 0xBB && bayt[2] === 0xBF, true); teng(bayt[3], 'S'.charCodeAt(0));   // BOM dan keyin "Sana"
-        var dekod = new TextDecoder('utf-8').decode(bayt).replace(/^﻿/, ''), q = csvOqish(dekod);
-        teng(q[1][4], 'Oʻqish va gʻalla ’ ‘ Sharq Ñandú Ўзбек'); teng(q[1][5], 'Jamg\'arma — Hamyon'); teng(q[1][7], 'Oʻzbekiston: gʻisht, o\'rik, choy ☕');
+      test('eksport: qatorlar mazmuni — o\'tkazma, qarz, qarz to\'lovi, kategoriya, summa musbat, valyuta UZS, ID Y-000123 ko\'rinishida', function () {
+        var e = Calc.eksport(EKm(), { tur: 'hammasi' }), R = {}; e.qatorlar.forEach(function (r) { R[r.id] = r; });
+        teng(e.qatorlar.every(function (r) { return /^[YQT]-\d{6}$/.test(r.id) && r.valyuta === 'UZS' && r.summa > 0 && r.summa === Math.round(r.summa); }), true);
+        var o = R['Y-000005']; teng([o.sana, o.vaqt, o.tur, o.hisob, o.qayerga, o.kategoriya, o.summa, o.qarzNomi, o.qarzTuri, o.izoh].join('|'), '2026-10-03|10:00|O\'tkazma|Naqd pul|Karta||1000000|||Kartaga');
+        var x = R['Y-000002']; teng([x.tur, x.hisob, x.qayerga, x.kategoriya, x.summa, x.qarzNomi, x.qarzTuri].join('|'), 'Xarajat|Naqd pul||Oziq-ovqat|300000||');
+        teng(R['Y-000001'].tur, 'Daromad');
+        var q = R['Q-000001']; teng([q.sana, q.vaqt, q.tur, q.hisob, q.qayerga, q.kategoriya, q.summa, q.qarzNomi, q.qarzTuri, q.izoh].join('|'), '2026-10-04|12:00|Qarz|Naqd pul|||200000|Ali|Berilgan|bozor');
+        var q2 = R['Q-000002']; teng([q2.tur, q2.qarzNomi, q2.qarzTuri, q2.summa].join('|'), 'Qarz|G\'ayrat O\'ktam|Olingan|1000');
+        var t = R['T-000001']; teng([t.sana, t.vaqt, t.tur, t.hisob, t.kategoriya, t.summa, t.qarzNomi, t.qarzTuri, t.izoh].join('|'), '2026-10-05|10:00|Qarz to\'lovi|Karta||50000|Ali|Berilgan|');
+        teng(R['T-000002'].qarzTuri, 'Olingan');
       });
-      test('CSV izoh: qo\'sh tirnoq, vergul, nuqtali vergul va qator oxiri to\'g\'ri o\'raladi (qayta o\'qilganda aynan o\'sha)', function () {
-        var izohlar = ['oddiy', 'a;b', 'a,b', 'u dedi: "salom"', '"boshida"', 'ikki\nqator', 'uch\r\nqator', ';', '"', 'a;b,c"d', ' bo\'sh joy bilan ', ''];
-        var Y = izohlar.map(function (iz, i) { return { id: 'i' + i, tur: 'xarajat', summa: 1 + i, sana: '2026-10-03', vaqt: '10:' + (10 + i), hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: iz }; });
-        var t = Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'hammasi' }).matn, q = csvOqish(t);
-        teng(q.length, izohlar.length + 1); q.slice(1).forEach(function (x, i) { teng(x.length, 8); teng(x[7], izohlar[i]); teng(x[3], String(1 + i)); });
-        teng(t.indexOf('"u dedi: ""salom"""') > 0, true); teng(t.indexOf('"a;b"') > 0, true);
+      test('eksport: barcha matnlar o\'zbekcha — inglizcha so\'z yo\'q (sarlavha, Tur va Qarz turi qiymatlari, varaq nomi)', function () {
+        var e = Calc.eksport(EKm(), { tur: 'hammasi' }), turlar = {}, qt = {}; e.qatorlar.forEach(function (r) { turlar[r.tur] = 1; qt[r.qarzTuri] = 1; });
+        teng(Object.keys(turlar).sort().join('|'), 'Daromad|Qarz|Qarz to\'lovi|Xarajat|O\'tkazma'.split('|').sort().join('|'));
+        teng(Object.keys(qt).sort().join('|'), '|Berilgan|Olingan'); teng(Xlsx.VARAQ_NOMI, 'Eksport');
+        var hammasi = e.sarlavha.concat(Object.keys(turlar), Object.keys(qt), [Xlsx.VARAQ_NOMI]).join(' ');
+        teng(/DateTime|Amount|Transfer|Expense|Income|Debt|Loan|Category|Account|Comment|Currency|Type\b|Date\b|Sheet|Export/i.test(hammasi), false);
       });
-      test('CSV formula in\'ektsiyasi: izoh = + - @ (va tab, CR) bilan boshlansa oldiga bitta tirnoq (\') qo\'yiladi; oddiy matnga tegilmaydi', function () {
-        teng(Calc.csvMatn('=1+1'), '\'=1+1'); teng(Calc.csvMatn('+5'), '\'+5'); teng(Calc.csvMatn('-5'), '\'-5'); teng(Calc.csvMatn('@SUM(A1)'), '\'@SUM(A1)'); teng(Calc.csvMatn('\t=1'), '\'\t=1');
-        teng(Calc.csvMatn('=HYPERLINK("http://x";"y")'), '"\'=HYPERLINK(""http://x"";""y"")"');   // tirnoq va ; bor: avval ', keyin o'raladi
-        teng(Calc.csvMatn('5-3'), '5-3'); teng(Calc.csvMatn('a=b'), 'a=b'); teng(Calc.csvMatn(' =1'), ' =1'); teng(Calc.csvMatn(''), ''); teng(Calc.csvMatn(undefined), ''); teng(Calc.csvMatn(null), ''); teng(Calc.csvMatn('Oziq-ovqat'), 'Oziq-ovqat');
-        var Y = ['=A1', '+1', '-1', '@a'].map(function (iz, i) { return { id: 'f' + i, tur: 'xarajat', summa: 5, sana: '2026-10-03', vaqt: '10:0' + i, hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: iz }; });
-        var q = csvOqish(Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'hammasi' }).matn); teng(q.slice(1).map(function (x) { return x[7]; }).join('|'), '\'=A1|\'+1|\'-1|\'@a');
-        // nomlar (kategoriya, hisob, shaxs) ham himoyalanadi
-        var K = [{ id: 'k', nom: '=cmd', tur: 'xarajat' }], H = [{ id: 'h', nom: '@h', tur: 'naqd' }], q2 = csvOqish(Calc.yozuvlarCSV([{ id: 'a', tur: 'xarajat', summa: 1, sana: '2026-10-03', vaqt: '10:00', hisob_id: 'h', kategoriya_id: 'k', izoh: '' }], H, K, { tur: 'hammasi' }).matn);
-        teng(q2[1][4] + '|' + q2[1][5], '\'=cmd|\'@h');
+      test('eksport davri: hammasi, oy, yil; davrda yozuv bo\'lmasa soni 0 (fayl yuklanmaydi); qarz va to\'lov o\'z sanasi bo\'yicha', function () {
+        teng(Calc.eksport(EKm(), { tur: 'oy', yil: 2026, oy: 10 }).soni, 9); teng(Calc.eksport(EKm(), { tur: 'oy', yil: 2026, oy: 9 }).soni, 1);
+        teng(Calc.eksport(EKm(), { tur: 'yil', yil: 2026 }).soni, 10); teng(Calc.eksport(EKm(), { tur: 'yil', yil: 2025 }).soni, 0); teng(Calc.eksport(EKm(), { tur: 'oy', yil: 2026, oy: 2 }).soni, 0);
+        teng(Calc.eksport(EKm([], []), { tur: 'hammasi' }).soni, 0);
+        var Q = JSON.parse(JSON.stringify(ZQ)); Q[0].tolovlar[0].sana = '2026-11-02'; teng(Calc.eksport(EKm([], Q), { tur: 'oy', yil: 2026, oy: 11 }).soni, 1);
+        // ID davrga bog'liq emas
+        teng(Calc.eksport(EKm(), { tur: 'oy', yil: 2026, oy: 9 }).qatorlar[0].id, 'Y-000006');
       });
-      test('CSV davri: hammasi, tanlangan oy, tanlangan yil (chegara kunlari: 30.09 / 01.10 / 31.10 / 01.11 / 31.12)', function () {
-        var Y = ['2025-12-31', '2026-01-01', '2026-09-30', '2026-10-01', '2026-10-31', '2026-11-01', '2026-12-31', '2027-01-01'].map(function (sana, i) { return { id: 'd' + i, tur: 'xarajat', summa: 100 + i, sana: sana, vaqt: '10:00', hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: '' }; });
-        teng(Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'hammasi' }).soni, 8);
-        var oy = Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'oy', yil: 2026, oy: 10 }); teng(oy.soni, 2); teng(csvOqish(oy.matn).slice(1).map(function (x) { return x[0]; }).join(), '01.10.2026,31.10.2026');
-        teng(Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'yil', yil: 2026 }).soni, 6); teng(Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'oy', yil: 2026, oy: 2 }).soni, 0); teng(Calc.yozuvlarCSV([], ZH, ZK, { tur: 'hammasi' }).soni, 0);
-        teng(csvOqish(Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'oy', yil: 2026, oy: 2 }).matn).length, 1);   // faqat sarlavha
-        teng(Calc.eksportDavri({ tur: 'hammasi' }), null); teng(Calc.eksportDavri({ tur: 'oy', yil: 2028, oy: 2 }).gacha, '2028-02-29');
+      test('eksport tartibi: sana-vaqt kamayish; bir vaqtdagilar — keyin yaratilgani tepada', function () {
+        var Y = [['2026-10-03', '15:00', 'a'], ['2026-10-02', '23:00', 'b'], ['2026-10-03', '09:00', 'c'], ['2026-10-03', '15:00', 'd']].map(function (a, i) { return { id: 's' + i, yaratilgan: '2026-10-01T0' + i + ':00:00Z', tur: 'xarajat', summa: i + 1, sana: a[0], vaqt: a[1], hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: a[2] }; });
+        teng(Calc.eksport(EKm(Y, []), { tur: 'hammasi' }).qatorlar.map(function (r) { return r.izoh; }).join(), 'd,a,c,b');
       });
-      test('CSV tartibi: sana va vaqt bo\'yicha o\'sish (kun ichida soat bo\'yicha)', function () {
-        var Y = [['2026-10-03', '15:00'], ['2026-10-02', '23:00'], ['2026-10-03', '09:00'], ['2026-10-03', '15:00']].map(function (a, i) { return { id: 's' + i, tur: 'xarajat', summa: i + 1, sana: a[0], vaqt: a[1], hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: '' }; });
-        teng(csvOqish(Calc.yozuvlarCSV(Y, ZH, ZK, { tur: 'hammasi' }).matn).slice(1).map(function (x) { return x[0] + ' ' + x[1]; }).join(), '02.10.2026 23:00,03.10.2026 09:00,03.10.2026 15:00,03.10.2026 15:00');
+      test('CSV: BOM, ustunlar xlsx bilan bir xil, "KK.OO.YYYY SS:DD", summa mingliksiz butun son, UZS, qarz qatorlari', function () {
+        var t = Calc.eksportCSV(Calc.eksport(EKm(), { tur: 'hammasi' })), q = csvOqish(t);
+        teng(t.charCodeAt(0), 0xFEFF); teng(q[0].join('|'), EK_O.join('|')); teng(q.length, 11); teng(q.every(function (x) { return x.length === 11; }), true);
+        teng(q[1].join('|'), '05.10.2026 11:00|T-000002|Qarz to\'lovi|Karta|||1000|UZS|G\'ayrat O\'ktam|Olingan|');
+        teng(q.every(function (x, i) { return i === 0 || (/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/.test(x[0]) && /^\d+$/.test(x[6]) && x[7] === 'UZS'); }), true);
+        teng(q.filter(function (x) { return x[2] === 'O\'tkazma'; })[0].join('|'), '03.10.2026 10:00|Y-000005|O\'tkazma|Naqd pul|Karta||1000000|UZS|||Kartaga');
+        teng(q.filter(function (x) { return x[1] === 'Q-000001'; })[0].join('|'), '04.10.2026 12:00|Q-000001|Qarz|Naqd pul|||200000|UZS|Ali|Berilgan|bozor');
+        teng(t.slice(-2), '\r\n'); teng(/5000000/.test(t) && !/5 000 000/.test(t), true);
       });
-      test('CSV (qarzlar va to\'lovlar): alohida fayl, ustunlar, qarz qatori va to\'lovlari, holat, muddat, o\'zbekcha ism, davr', function () {
-        var r = Calc.qarzlarCSV(ZQ, ZH, { tur: 'hammasi' }), q = csvOqish(r.matn);
-        teng(r.matn.charCodeAt(0), 0xFEFF); teng(r.soni, 4); teng(q.length, 5); teng(q[0].join('|'), 'Sana|Vaqt|Turi|Yo\'nalish|Shaxs|Summa|Hisob|Muddat|Izoh|Holat'); teng(q.every(function (x) { return x.length === 10; }), true);
-        teng(q[1].join('|'), '04.10.2026|08:00|Qarz|Men oldim|G\'ayrat O\'ktam|1000|Karta|||Yopilgan'); teng(q[2].join('|'), '05.10.2026|11:00|To\'lov|Men oldim|G\'ayrat O\'ktam|1000|Karta|||');
-        teng(q[3].join('|'), '04.10.2026|12:00|Qarz|Men berdim|Ali|200000|Naqd pul|01.12.2026|bozor|Ochiq'); teng(q[4].join('|'), '05.10.2026|10:00|To\'lov|Men berdim|Ali|50000|Karta|||');
-        var d = Calc.qarzlarCSV(ZQ, ZH, { tur: 'oy', yil: 2026, oy: 11 }); teng(d.soni, 0); teng(Calc.qarzlarCSV(ZQ, ZH, { tur: 'yil', yil: 2026 }).soni, 4); teng(Calc.qarzlarCSV([], ZH, { tur: 'hammasi' }).soni, 0);
-        var ZQ2 = JSON.parse(JSON.stringify(ZQ)); ZQ2[0].izoh = '=1+1'; ZQ2[0].shaxs = '+Ali'; var q2 = csvOqish(Calc.qarzlarCSV(ZQ2, ZH, { tur: 'hammasi' }).matn); teng(q2[3][8], '\'=1+1'); teng(q2[3][4], '\'+Ali');
+      test('CSV: formula himoyasi (oldiga bitta \'), tirnoq/vergul/nuqtali vergul/qator oxiri o\'raladi, o\'zbekcha harflar buzilmaydi', function () {
+        var iz = ['=1+1', '+5', '-5 so\'m', '@SUM(A1)', 'oddiy', 'a;b', 'a,b', 'u dedi: "salom"', 'ikki\nqator', 'Oʻzbekiston: gʻisht, o\'rik, choy ☕ ’ ‘ sh ch'];
+        var Y = iz.map(function (z, i) { return { id: 'i' + i, tur: 'xarajat', summa: 1 + i, sana: '2026-10-03', vaqt: '10:' + (10 + i), hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: z }; });
+        var t = Calc.eksportCSV(Calc.eksport(EKm(Y, []), { tur: 'hammasi' })), bayt = new TextEncoder().encode(t);
+        teng(bayt[0] === 0xEF && bayt[1] === 0xBB && bayt[2] === 0xBF, true);
+        var q = csvOqish(new TextDecoder('utf-8').decode(bayt)).slice(1).reverse(); teng(q.length, iz.length);
+        var kut = ['\'=1+1', '\'+5', '\'-5 so\'m', '\'@SUM(A1)', 'oddiy', 'a;b', 'a,b', 'u dedi: "salom"', 'ikki\nqator', iz[9]];
+        q.forEach(function (x, i) { teng(x[10], kut[i]); teng(x[6], String(1 + i)); });
+        var K = [{ id: 'k', nom: '=cmd', tur: 'xarajat' }], H = [{ id: 'h', nom: '@h', tur: 'naqd' }];
+        var q2 = csvOqish(Calc.eksportCSV(Calc.eksport({ yozuvlar: [{ id: 'a', tur: 'xarajat', summa: 1, sana: '2026-10-03', vaqt: '10:00', hisob_id: 'h', kategoriya_id: 'k', izoh: '' }], hisoblar: H, kategoriyalar: K, qarzlar: [] }, { tur: 'hammasi' })));
+        teng(q2[1][3] + '|' + q2[1][5], '\'@h|\'=cmd');
+      });
+      test('xlsx: ZIP tuzilishi, CRC to\'g\'ri, hamma XML qism to\'g\'ri, varaq nomi "Eksport", sarlavha qatori', function () {
+        var r = xlsxOqish();
+        teng(Object.keys(r.z).sort().join('|'), ['[Content_Types].xml', '_rels/.rels', 'xl/_rels/workbook.xml.rels', 'xl/sharedStrings.xml', 'xl/styles.xml', 'xl/workbook.xml', 'xl/worksheets/sheet1.xml'].sort().join('|'));
+        Object.keys(r.z).forEach(function (n) { xmlOl(r.z[n]); });
+        teng(xmlOl(r.z['xl/workbook.xml']).getElementsByTagName('sheet')[0].getAttribute('name'), 'Eksport'); teng(xmlOl(r.z['xl/workbook.xml']).getElementsByTagName('sheet').length, 1);
+        teng(r.q.length, 11); teng(r.q[0].map(function (c) { return c.m; }).join('|'), EK_O.join('|')); teng(r.q[0].every(function (c) { return c.s === '1' && c.t === 's'; }), true);
+      });
+      test('xlsx: Sana va vaqt — haqiqiy sana-vaqt katagi (raqam + sana formati), Summa — haqiqiy raqam (matn emas), mingliklar formati, o\'ngga tekis', function () {
+        var r = xlsxOqish(), a = r.q[1][0], g = r.q[1].filter(function (c) { return c.r === 'G2'; })[0];
+        teng(a.t, null); teng(a.s, '2'); teng(parseFloat(a.v), 46300 + 11 / 24);   // 05.10.2026 11:00
+        teng(Xlsx.seriya('2026-01-01', '00:00'), 46023); teng(Xlsx.seriya('2026-10-05', '00:00'), 46300); teng(Math.abs(Xlsx.seriya('2026-10-05', '23:59') - (46300 + 1439 / 1440)) < 1e-9, true);
+        teng(g.t, null); teng(g.v, '1000'); teng(g.s, '3');
+        var st = xmlOl(r.z['xl/styles.xml']), xf = st.getElementsByTagName('cellXfs')[0].getElementsByTagName('xf');
+        teng(st.getElementsByTagName('numFmt')[0].getAttribute('formatCode'), 'dd\\.mm\\.yyyy\\ hh:mm'); teng(xf[2].getAttribute('numFmtId'), '164'); teng(xf[3].getAttribute('numFmtId'), '3'); teng(xf[3].getElementsByTagName('alignment')[0].getAttribute('horizontal'), 'right');
+        teng(r.q.slice(1).every(function (q) { return q.filter(function (c) { return c.r.charAt(0) === 'G'; })[0].t === null && /^\d+$/.test(q.filter(function (c) { return c.r.charAt(0) === 'G'; })[0].v); }), true);
+        var cols = r.ws.getElementsByTagName('col'); teng(cols[6].getAttribute('style'), '3'); teng(parseFloat(cols[10].getAttribute('width')) > parseFloat(cols[0].getAttribute('width')) * 2, true);   // Izoh kengroq
+      });
+      test('xlsx: birinchi qator qalin va rangli fon, qotirilgan (ySplit=1), avtomatik filtr A1:K11', function () {
+        var r = xlsxOqish(), st = xmlOl(r.z['xl/styles.xml']), xf1 = st.getElementsByTagName('cellXfs')[0].getElementsByTagName('xf')[1];
+        var font = st.getElementsByTagName('fonts')[0].getElementsByTagName('font')[+xf1.getAttribute('fontId')], fill = st.getElementsByTagName('fills')[0].getElementsByTagName('fill')[+xf1.getAttribute('fillId')];
+        teng(font.getElementsByTagName('b').length, 1); teng(fill.getElementsByTagName('fgColor')[0].getAttribute('rgb'), 'FF0F8B6D'); teng(fill.getElementsByTagName('patternFill')[0].getAttribute('patternType'), 'solid');
+        var p = r.ws.getElementsByTagName('pane')[0]; teng(p.getAttribute('ySplit'), '1'); teng(p.getAttribute('state'), 'frozen'); teng(p.getAttribute('topLeftCell'), 'A2');
+        teng(r.ws.getElementsByTagName('autoFilter')[0].getAttribute('ref'), 'A1:K11'); teng(r.ws.getElementsByTagName('dimension')[0].getAttribute('ref'), 'A1:K11');
+        teng(xmlOl(r.z['xl/workbook.xml']).getElementsByTagName('definedName')[0].textContent, 'Eksport!$A$1:$K$11');
+      });
+      test('xlsx: matn katakchalari doim matn (t="s"), "=", "+", "-", "@" bilan boshlangan izoh formula emas (formula elementi yo\'q, himoyali stil)', function () {
+        var iz = ['=SUM(A1:A2)', '+5', '-5 so\'m', '@a', 'oddiy', ''];
+        var Y = iz.map(function (z, i) { return { id: 'i' + i, tur: 'xarajat', summa: 1 + i, sana: '2026-10-03', vaqt: '10:' + (10 + i), hisob_id: 'naqd', kategoriya_id: 'oziq', izoh: z }; });
+        var r = xlsxOqish(Y, []); teng(r.ws.getElementsByTagName('f').length, 0);
+        var qat = r.q.slice(1).reverse(); qat.forEach(function (q, i) {
+          var c = q.filter(function (x) { return x.r.charAt(0) === 'K'; })[0];
+          if (iz[i] === '') { teng(c, undefined); return; }
+          teng(c.t, 's'); teng(c.m, iz[i]); teng(c.s, /^[=+\-@]/.test(iz[i]) ? '4' : null);
+        });
+        var xf = xmlOl(r.z['xl/styles.xml']).getElementsByTagName('cellXfs')[0].getElementsByTagName('xf')[4]; teng(xf.getAttribute('quotePrefix'), '1'); teng(xf.getAttribute('numFmtId'), '49');
+        // kategoriya/hisob/qarz nomi ham himoyalanadi
+        var e = { sarlavha: EK_O, qatorlar: [{ sana: '2026-10-03', vaqt: '10:00', id: 'Y-000001', tur: 'Xarajat', hisob: '=h', qayerga: '', kategoriya: '+k', summa: 5, valyuta: 'UZS', qarzNomi: '@n', qarzTuri: '', izoh: '' }] };
+        var z = zipOqish(Xlsx.fayl(e)); teng(xmlOl(z['xl/worksheets/sheet1.xml']).getElementsByTagName('f').length, 0); teng(z['xl/sharedStrings.xml'].indexOf('=h') > 0, true);
+      });
+      test('xlsx: o\'zbekcha harflar (oʻ gʻ ’ sh ch), \' belgisi, & < > ", yangi qator buzilmaydi; yaroqsiz boshqaruv belgilari tashlanadi', function () {
+        var iz = 'Oʻzbekiston: gʻisht, o\'rik, G\'ayrat O\'ktam ’ ‘ sh ch ñ Ўзбек ☕ & < > "q"\nikkinchi qator', nom = 'Jamg\'arma — Hamyon';
+        var H = [{ id: 'h', nom: nom, tur: 'naqd' }], K = [{ id: 'k', nom: 'Oʻqish va gʻalla', tur: 'xarajat' }];
+        var m = { yozuvlar: [{ id: 'a', tur: 'xarajat', summa: 1500, sana: '2026-10-03', vaqt: '08:05', hisob_id: 'h', kategoriya_id: 'k', izoh: iz + '\u0001\u0008' }], hisoblar: H, kategoriyalar: K, qarzlar: [] };
+        var z = zipOqish(Xlsx.fayl(Calc.eksport(m, { tur: 'hammasi' }))), ss = []; Array.prototype.forEach.call(xmlOl(z['xl/sharedStrings.xml']).getElementsByTagName('si'), function (si) { ss.push(si.textContent); });
+        teng(ss.indexOf(iz) >= 0, true); teng(ss.indexOf(nom) >= 0, true); teng(ss.indexOf('Oʻqish va gʻalla') >= 0, true); teng(ss.indexOf('Xarajat') >= 0, true);
+      });
+      test('xlsx: bo\'sh bo\'lmagan davr uchun hujayra manzillari tartibli, har qatorda 11 katak o\'rniga faqat to\'ldirilgani; o\'tkazmada Qayerga, qarzda Qarz nomi', function () {
+        var r = xlsxOqish();
+        var ot = r.q.filter(function (x) { return x.some(function (c) { return c.m === 'O\'tkazma'; }); })[0];
+        teng(ot.filter(function (c) { return c.r.charAt(0) === 'E'; })[0].m, 'Karta'); teng(ot.filter(function (c) { return c.r.charAt(0) === 'F'; }).length, 0);
+        var qz = r.q.filter(function (x) { return x.some(function (c) { return c.m === 'Qarz'; }); })[0];
+        teng(qz.filter(function (c) { return c.r.charAt(0) === 'I'; })[0].m, 'Ali'); teng(qz.filter(function (c) { return c.r.charAt(0) === 'J'; })[0].m, 'Berilgan'); teng(qz.filter(function (c) { return c.r.charAt(0) === 'H'; })[0].m, 'UZS');
       });
       function ZKatta(n) {
         var Y = [], i; for (i = 0; i < n; i++) Y.push({ id: 'p' + i, tur: i % 7 === 0 ? 'daromad' : i % 13 === 0 ? 'otkazma' : 'xarajat', summa: 1000 + (i % 977), sana: '2026-' + ('0' + (1 + i % 12)).slice(-2) + '-' + ('0' + (1 + i % 28)).slice(-2), vaqt: '10:' + ('0' + (i % 60)).slice(-2),
           hisob_id: i % 2 ? 'naqd' : 'karta', qabul_hisob_id: i % 13 === 0 && i % 7 ? (i % 2 ? 'karta' : 'naqd') : undefined, kategoriya_id: i % 13 === 0 && i % 7 ? null : i % 7 === 0 ? 'maosh' : (i % 3 ? 'oziq' : 'yol'), izoh: 'yozuv ' + i + (i % 50 === 0 ? '; "maxsus", belgi' : '') });
         return Y;
       }
-      test('tezlik: 5 000 yozuv — zaxira yasash, tekshirish va CSV har biri 1 soniyadan tez; raqamlar bir xil', function () {
+      test('tezlik: 5 000 yozuv — eksport qatorlari + xlsx yasash 2 soniyadan tez, CSV ham; qator soni to\'g\'ri', function () {
         var m = zMalumot(); m.yozuvlar = ZKatta(5000);
-        var t0 = performance.now(), fayl = JSON.stringify(Calc.zaxiraYasash(m, 5, new Date())), t1 = performance.now(), r = Calc.zaxiraniTekshir(fayl, 5, Z_HOZIR), t2 = performance.now();
-        var c = Calc.yozuvlarCSV(m.yozuvlar, m.hisoblar, m.kategoriyalar, { tur: 'hammasi' }), t3 = performance.now(), q = csvOqish(c.matn);
-        teng(r.xato, undefined); teng(r.soni.yozuvlar, 5000); teng(c.soni, 5000); teng(q.length, 5001); teng(q.every(function (x) { return x.length === 8; }), true);
-        teng(t1 - t0 < 1000, true); teng(t2 - t1 < 1000, true); teng(t3 - t2 < 1000, true); teng(raqamlar(r.malumot), raqamlar(m));
+        var t0 = performance.now(), e = Calc.eksport(m, { tur: 'hammasi' }), bayt = Xlsx.fayl(e), t1 = performance.now(), c = Calc.eksportCSV(e), t2 = performance.now();
+        teng(e.soni, 5000 + 4); teng(csvOqish(c).length, e.soni + 1); teng(t1 - t0 < 2000, true); teng(t2 - t1 < 1000, true);
+        var z = zipOqish(bayt); teng(xmlOl(z['xl/worksheets/sheet1.xml']).getElementsByTagName('row').length, e.soni + 1);
       });
 
 

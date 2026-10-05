@@ -787,44 +787,52 @@
   }
   function davrdami(sana, c) { return !c || (sana >= c.dan && sana <= c.gacha); }
 
-  var TUR_CSV = { daromad: 'Daromad', xarajat: 'Xarajat', otkazma: 'O\'tkazma' };
-  // Yozuvlar CSV: Sana (KK.OO.YYYY); Vaqt; Tur; Summa (butun son, mingliksiz); Kategoriya; Hisob; Qayerga (faqat o'tkazmada); Izoh.
-  // Sana va vaqt bo'yicha o'sish tartibida. Natija: { matn, soni }
-  function yozuvlarCSV(yozuvlar, hisoblar, kategoriyalar, davr) {
-    var c = eksportDavri(davr), hn = {}, kn = {};
-    hisoblar.forEach(function (x) { hn[x.id] = x.nom; });
-    kategoriyalar.forEach(function (x) { kn[x.id] = x.nom; });
-    var r = yozuvlar.filter(function (y) { return davrdami(y.sana, c); }).sort(function (a, b) {
-      var x = a.sana + ' ' + yozuvVaqti(a), y = b.sana + ' ' + yozuvVaqti(b);
-      return x < y ? -1 : x > y ? 1 : 0;
-    });
-    var q = r.map(function (y) {
-      var o = y.tur === 'otkazma';
-      return [sanaDMY(y.sana), yozuvVaqti(y), TUR_CSV[y.tur] || y.tur, String(y.summa), o ? '' : csvMatn(kn[y.kategoriya_id] || ''),
-        csvMatn(hn[y.hisob_id] || ''), o ? csvMatn(hn[y.qabul_hisob_id] || '') : '', csvMatn(y.izoh)];
-    });
-    return { matn: csvFayl(['Sana', 'Vaqt', 'Tur', 'Summa', 'Kategoriya', 'Hisob', 'Qayerga', 'Izoh'], q), soni: q.length };
-  }
+  // ---- Eksport (F9): bitta jadval — yozuvlar va qarz amallari birga, eng yangisi tepada ----
+  var EKSPORT_SARLAVHA = ['Sana va vaqt', 'ID', 'Tur', 'Hisob', 'Qayerga', 'Kategoriya', 'Summa', 'Valyuta', 'Qarz nomi', 'Qarz turi', 'Izoh'];
+  var EKSPORT_TURI = { daromad: 'Daromad', xarajat: 'Xarajat', otkazma: 'O\'tkazma' };
+  function eksportRaqam(prefiks, n) { return prefiks + '-' + ('000000' + n).slice(-6); }
+  function eksportTartib(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
 
-  // Qarzlar va to'lovlar bitta alohida CSV: qarz qatori, undan keyin uning to'lovlari. Sana qatorning o'z sanasi bo'yicha davrga kiradi.
-  // Ustunlar: Sana; Vaqt; Turi (Qarz / To'lov); Yo'nalish; Shaxs; Summa; Hisob; Muddat; Izoh; Holat (qarzda: Ochiq / Yopilgan)
-  function qarzlarCSV(qarzlar, hisoblar, davr) {
-    var c = eksportDavri(davr), hn = {};
-    hisoblar.forEach(function (x) { hn[x.id] = x.nom; });
-    var q = [], soni = 0;
-    qarzlar.slice().sort(function (a, b) { var x = a.sana + ' ' + (a.vaqt || ''), y = b.sana + ' ' + (b.vaqt || ''); return x < y ? -1 : x > y ? 1 : 0; }).forEach(function (z) {
-      var yo = z.yonalish === 'berdim' ? 'Men berdim' : 'Men oldim';
+  // Natija: { sarlavha, qatorlar: [{ sana, vaqt, id, tur, hisob, qayerga, kategoriya, summa, valyuta, qarzNomi, qarzTuri, izoh }], soni }
+  // ID: ilovadagi yaratilish tartibi bo'yicha raqam (Y-000001 yozuv, Q-000001 qarz, T-000001 qarz to'lovi); davr tanlashga bog'liq emas.
+  // Summa har doim musbat: yo'nalishni "Tur" (va "Qarz turi") aytadi.
+  function eksport(malumot, davr) {
+    var c = eksportDavri(davr), hn = {}, kn = {}, qatorlar = [];
+    (malumot.hisoblar || []).forEach(function (x) { hn[x.id] = x.nom; });
+    (malumot.kategoriyalar || []).forEach(function (x) { kn[x.id] = x.nom; });
+    var yozuvlar = (malumot.yozuvlar || []).slice().sort(function (a, b) { return eksportTartib((a.yaratilgan || '') + ' ' + a.id, (b.yaratilgan || '') + ' ' + b.id); });
+    yozuvlar.forEach(function (y, i) {
+      if (!davrdami(y.sana, c)) return;
+      var o = y.tur === 'otkazma';
+      qatorlar.push({ sana: y.sana, vaqt: yozuvVaqti(y), ord: (y.yaratilgan || '') + ' ' + y.id, id: eksportRaqam('Y', i + 1), tur: EKSPORT_TURI[y.tur] || y.tur,
+        hisob: hn[y.hisob_id] || '', qayerga: o ? (hn[y.qabul_hisob_id] || '') : '', kategoriya: o ? '' : (kn[y.kategoriya_id] || ''),
+        summa: y.summa, valyuta: 'UZS', qarzNomi: '', qarzTuri: '', izoh: y.izoh || '' });
+    });
+    var qarzlar = (malumot.qarzlar || []).slice().sort(function (a, b) { return eksportTartib((a.yaratilgan || '') + ' ' + a.id, (b.yaratilgan || '') + ' ' + b.id); }), tn = 0;
+    qarzlar.forEach(function (z, i) {
+      var turi = z.yonalish === 'berdim' ? 'Berilgan' : 'Olingan';
       if (davrdami(z.sana, c)) {
-        q.push([sanaDMY(z.sana), z.vaqt || '00:00', 'Qarz', yo, csvMatn(z.shaxs), String(z.summa), csvMatn(hn[z.hisob_id] || ''), z.muddat ? sanaDMY(z.muddat) : '', csvMatn(z.izoh), qarzYopilganmi(z) ? 'Yopilgan' : 'Ochiq']);
-        soni++;
+        qatorlar.push({ sana: z.sana, vaqt: z.vaqt || '00:00', ord: (z.yaratilgan || '') + ' ' + z.id, id: eksportRaqam('Q', i + 1), tur: 'Qarz', hisob: hn[z.hisob_id] || '', qayerga: '', kategoriya: '',
+          summa: z.summa, valyuta: 'UZS', qarzNomi: z.shaxs || '', qarzTuri: turi, izoh: z.izoh || '' });
       }
-      (z.tolovlar || []).slice().sort(function (a, b) { var x = a.sana + ' ' + (a.vaqt || ''), y = b.sana + ' ' + (b.vaqt || ''); return x < y ? -1 : x > y ? 1 : 0; }).forEach(function (t) {
+      (z.tolovlar || []).slice().sort(function (a, b) { return eksportTartib(a.sana + ' ' + (a.vaqt || '') + ' ' + a.id, b.sana + ' ' + (b.vaqt || '') + ' ' + b.id); }).forEach(function (t) {
+        tn++;
         if (!davrdami(t.sana, c)) return;
-        q.push([sanaDMY(t.sana), t.vaqt || '00:00', 'To\'lov', yo, csvMatn(z.shaxs), String(t.summa), csvMatn(hn[t.hisob_id] || ''), '', '', '']);
-        soni++;
+        qatorlar.push({ sana: t.sana, vaqt: t.vaqt || '00:00', ord: t.sana + ' ' + (t.vaqt || '') + ' ' + t.id, id: eksportRaqam('T', tn), tur: 'Qarz to\'lovi', hisob: hn[t.hisob_id] || '', qayerga: '', kategoriya: '',
+          summa: t.summa, valyuta: 'UZS', qarzNomi: z.shaxs || '', qarzTuri: turi, izoh: '' });
       });
     });
-    return { matn: csvFayl(['Sana', 'Vaqt', 'Turi', 'Yo\'nalish', 'Shaxs', 'Summa', 'Hisob', 'Muddat', 'Izoh', 'Holat'], q), soni: soni };
+    // eng yangisi tepada: sana va vaqt kamayish tartibida, teng bo'lsa — keyin yaratilgani tepada
+    qatorlar.sort(function (a, b) { var x = a.sana + ' ' + a.vaqt, y = b.sana + ' ' + b.vaqt; return x !== y ? (x < y ? 1 : -1) : (a.ord < b.ord ? 1 : a.ord > b.ord ? -1 : 0); });
+    return { sarlavha: EKSPORT_SARLAVHA, qatorlar: qatorlar, soni: qatorlar.length };
+  }
+
+  // CSV: xuddi shu ustunlar. Sana va vaqt "KK.OO.YYYY SS:DD" matni, summa mingliksiz butun son; matnlarda formula himoyasi (csvMatn).
+  function eksportCSV(e) {
+    var q = e.qatorlar.map(function (r) {
+      return [sanaDMY(r.sana) + ' ' + r.vaqt, r.id, csvMatn(r.tur), csvMatn(r.hisob), csvMatn(r.qayerga), csvMatn(r.kategoriya), String(r.summa), r.valyuta, csvMatn(r.qarzNomi), r.qarzTuri, csvMatn(r.izoh)];
+    });
+    return csvFayl(e.sarlavha, q);
   }
 
   // ---- Asosiy sahifa va Tarix: faqat ko'rsatish uchun yordamchilar (hisob-kitob qoidalari o'zgarmagan) ----
@@ -1280,7 +1288,7 @@
     kunlarSoni: kunlarSoni, oraliqNomi: oraliqNomi, oraliqTekshir: oraliqTekshir, oraliqSur: oraliqSur, hisobotDavri: hisobotDavri,
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     ZAXIRA_ESLATMA_KUNI: ZAXIRA_ESLATMA_KUNI, sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraNomi: zaxiraNomi, zaxiraniTekshir: zaxiraniTekshir, zaxiraHolati: zaxiraHolati,
-    csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, yozuvlarCSV: yozuvlarCSV, qarzlarCSV: qarzlarCSV,
+    csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, eksport: eksport, eksportCSV: eksportCSV, EKSPORT_SARLAVHA: EKSPORT_SARLAVHA,
     oyKalitiSur: oyKalitiSur, oqimOylari: oqimOylari, tarixOylari: tarixOylari, oyJami: oyJami, qarzSatrlari: qarzSatrlari, qarzSatrlariniSuz: qarzSatrlariniSuz, tarixGuruhlari: tarixGuruhlari,
     HISOB_TURLARI: HISOB_TURLARI, HISOB_TURI_NOMI: HISOB_TURI_NOMI, HISOB_RANGLARI: HISOB_RANGLARI, HISOB_BELGISI: HISOB_BELGISI, belgiTaxmin: belgiTaxmin, hisobTuriTaxmin: hisobTuriTaxmin,
     hisobniYangilash: hisobniYangilash, kategoriyaniYangilash: kategoriyaniYangilash, hisobBelgisiOl: hisobBelgisiOl, hisobRangiOl: hisobRangiOl, oxirgi4Tekshir: oxirgi4Tekshir,

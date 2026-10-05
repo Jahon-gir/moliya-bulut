@@ -2572,7 +2572,7 @@
 
     // Excel uchun eksport (CSV)
     var e = karta();
-    e.appendChild(el('h2', 'Excel uchun eksport (CSV)'));
+    e.appendChild(el('h2', 'Excel uchun eksport'));
     var buYil = parseInt(Calc.bugun().slice(0, 4), 10), buOy = parseInt(Calc.bugun().slice(5, 7), 10);
     var birinchi = malumot.yozuvlar.concat(malumot.qarzlar).reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
     var yillar = Calc.filtrYillari(birinchi, Calc.bugun());
@@ -2601,23 +2601,23 @@
       e.appendChild(tanlar);
     }
     var davr = { tur: eksportHolat.tur, yil: eksportHolat.yil, oy: eksportHolat.oy };
-    var davrNomi = eksportHolat.tur === 'hammasi' ? 'hammasi' : eksportHolat.tur === 'yil' ? String(eksportHolat.yil) : eksportHolat.yil + '-' + (eksportHolat.oy < 10 ? '0' : '') + eksportHolat.oy;
-    var yz = Calc.yozuvlarCSV(malumot.yozuvlar, malumot.hisoblar, malumot.kategoriyalar, davr), qz = Calc.qarzlarCSV(malumot.qarzlar, malumot.hisoblar, davr);
-    e.appendChild(el('p', 'Fayl: UTF-8, ustunlar ";" bilan ajratilgan (Excel to\'g\'ri ochadi).', 'xira'));
-    var yTugma = tugma('Yozuvlarni yuklab olish (' + yz.soni + ' ta)', 'ikkinchi-tugma', function () {
-      if (!yz.soni) { qisqaXabar('Tanlangan davrda yozuv yo\'q'); return; }
-      faylYuklash('moliya-yozuvlar-' + davrNomi + '.csv', yz.matn, 'text/csv;charset=utf-8');
-      qisqaXabar('Yozuvlar yuklab olindi');
+    var ek = Calc.eksport({ yozuvlar: malumot.yozuvlar, hisoblar: malumot.hisoblar, kategoriyalar: malumot.kategoriyalar, qarzlar: malumot.qarzlar }, davr);
+    var faylNomi = 'moliya-eksport-' + Calc.bugun();
+    e.appendChild(el('p', 'Bitta jadval: yozuvlar va qarz amallari birga, eng yangisi tepada. CSV: UTF-8, ustunlar ";" bilan ajratilgan.', 'xira'));
+    var xTugma = tugma('Excel (.xlsx) yuklab olish (' + ek.soni + ' ta qator)', 'ikkinchi-tugma', function () {
+      if (!ek.soni) { qisqaXabar('Tanlangan davrda yozuv yo\'q'); return; }
+      faylYuklash(faylNomi + '.xlsx', Xlsx.fayl(ek), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      qisqaXabar('Excel fayli yuklab olindi');
     });
-    yTugma.id = 'eksport-yozuvlar';
-    e.appendChild(yTugma);
-    var qTugma = tugma('Qarzlar va to\'lovlarni yuklab olish (' + qz.soni + ' ta qator)', 'ikkinchi-tugma', function () {
-      if (!qz.soni) { qisqaXabar('Tanlangan davrda qarz yoki to\'lov yo\'q'); return; }
-      faylYuklash('moliya-qarzlar-' + davrNomi + '.csv', qz.matn, 'text/csv;charset=utf-8');
-      qisqaXabar('Qarzlar yuklab olindi');
+    xTugma.id = 'eksport-xlsx';
+    e.appendChild(xTugma);
+    var cTugma = tugma('CSV yuklab olish (' + ek.soni + ' ta qator)', 'ikkinchi-tugma', function () {
+      if (!ek.soni) { qisqaXabar('Tanlangan davrda yozuv yo\'q'); return; }
+      faylYuklash(faylNomi + '.csv', Calc.eksportCSV(ek), 'text/csv;charset=utf-8');
+      qisqaXabar('CSV fayli yuklab olindi');
     });
-    qTugma.id = 'eksport-qarzlar';
-    e.appendChild(qTugma);
+    cTugma.id = 'eksport-csv';
+    e.appendChild(cTugma);
     bloklar.push(e);
     return bloklar;
   }

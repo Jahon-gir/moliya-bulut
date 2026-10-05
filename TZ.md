@@ -1,6 +1,6 @@
 # TZ: Shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 13 (07.10.2026)
+Hujjat versiyasi: 14 (08.10.2026)
 
 ## 1. Maqsad
 
@@ -145,12 +145,18 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Rad etiladi** (xabar chiqadi, mavjud ma'lumot o'zgarmaydi): bo'sh fayl, JSON emas yoki yarim/kesilgan fayl, boshqa ilova fayli, sxema versiyasi yo'q yoki ilovadan yangiroq, to'plam yetishmaydi yoki `soni` mos emas, buzuq yozuv (noto'g'ri tur, summa — musbat butun son bo'lishi kerak, sana, vaqt), mavjud bo'lmagan hisob yoki kategoriyaga havola, kategoriya turi yozuv turiga mos emas, takroriy `id`, qarzdagi to'lovlar yig'indisi qarz summasidan oshgani, faol hisob yo'qligi.
 - **Eski sxema versiyasidagi zaxira** (masalan, `vaqt` maydoni yo'q 1-versiya yoki qarzi to'liq bo'lmagan 2-versiya) tiklanganda 7-bandagi ko'chirish qoidasi qo'llanadi: yozuvlarga `vaqt` qo'shiladi, qarzdagi tushib qolgan maydonlar to'ldiriladi, hech narsa o'chirilmaydi; tasdiq oynasida "eski versiya" deb aytiladi.
 - **Vaqt qoidasi tiklashda:** zaxirada vaqti hozirdan keyin bo'lgan yozuv, qarz yoki to'lov tekshiriladi va sanaladi, lekin rad etilmaydi va o'chirilmaydi: F3 dagidek "Kelajak" belgisi bilan ko'rinadi, tasdiq oynasida ularning soni ogohlantiriladi, tahrirlashda vaqtni o'tmishga to'g'rilash talab qilinadi.
-- **Excel uchun eksport (CSV):** UTF-8 BOM bilan, ajratuvchi nuqtali vergul (`;`), qator oxiri CRLF; o'zbekcha harflar (oʻ, gʻ, ’ ...) Excel'da to'g'ri ko'rinadi. Davr: hammasi, tanlangan oy yoki tanlangan yil (yozuv o'z sanasi bo'yicha); tanlangan davrda yozuv bo'lmasa, fayl yuklanmaydi va xabar chiqadi.
-  - **Yozuvlar fayli** (`moliya-yozuvlar-<davr>.csv`) ustunlari: `Sana` (KK.OO.YYYY), `Vaqt` (SS:DD), `Tur` (Daromad / Xarajat / O'tkazma), `Summa` (butun son, mingliksiz), `Kategoriya`, `Hisob`, `Qayerga` (faqat o'tkazmada), `Izoh`. Sana va vaqt bo'yicha o'sish tartibida.
-  - **Qarzlar va to'lovlar fayli** (`moliya-qarzlar-<davr>.csv`, alohida): `Sana`, `Vaqt`, `Turi` (Qarz / To'lov), `Yo'nalish` (Men berdim / Men oldim), `Shaxs`, `Summa`, `Hisob`, `Muddat`, `Izoh`, `Holat` (qarzda: Ochiq / Yopilgan). Har qarz qatoridan keyin uning to'lovlari; qator o'z sanasi bo'yicha davrga kiradi.
-  - **O'rash:** maydonda qo'sh tirnoq, vergul, nuqtali vergul yoki qator oxiri bo'lsa, qo'sh tirnoqqa o'raladi (ichidagi tirnoq ikkilanadi).
-  - **Formula in'ektsiyasidan himoya:** matn maydoni (izoh, kategoriya, hisob, shaxs) `=`, `+`, `-`, `@` (yoki tab/CR) bilan boshlansa, oldiga bitta tirnoq (`'`) qo'yiladi.
-  - CSV dan import hozircha yo'q.
+- **Excel uchun eksport:** haqiqiy `.xlsx` fayl (tashqi kutubxonasiz, ilovaning o'zi yozadi: minimal OOXML, siqmasdan ZIP) va xuddi shu ustunli CSV. Fayl nomi: `moliya-eksport-YYYY-MM-DD.xlsx` (CSV: `.csv`). Davr: hammasi, tanlangan oy yoki yil (yozuv o'z sanasi bo'yicha); davrda qator bo'lmasa fayl yuklanmaydi va "Tanlangan davrda yozuv yo'q" xabari chiqadi. Hamma matn o'zbekcha (lotin): varaq nomi, sarlavhalar va "Tur" qiymatlari.
+  - **Bitta varaq "Eksport"**: barcha yozuvlar va qarz amallari bitta jadvalda, eng yangisi tepada (sana va vaqt kamayish tartibida; teng bo'lsa keyin yaratilgani tepada). Qarz amallari ham shu jadvalda qator.
+  - **Ustunlar (aynan shu tartibda):** `Sana va vaqt` | `ID` | `Tur` | `Hisob` | `Qayerga` | `Kategoriya` | `Summa` | `Valyuta` | `Qarz nomi` | `Qarz turi` | `Izoh`.
+    - `Sana va vaqt`: xlsx da Excel'ning haqiqiy sana-vaqt katagi, ko'rinishi `KK.OO.YYYY SS:DD`; CSV da shu ko'rinishdagi matn.
+    - `ID`: ilova ID si, yaratilish tartibi bo'yicha raqam: `Y-000123` (yozuv), `Q-000001` (qarz), `T-000001` (qarz to'lovi). Davr tanlashga bog'liq emas.
+    - `Tur`: `Xarajat`, `Daromad`, `O'tkazma`, `Qarz`, `Qarz to'lovi`.
+    - `Hisob`: yozuv qaysi hisobdan (o'tkazmada — qayerdan). `Qayerga`: faqat o'tkazmada. `Kategoriya`: o'tkazma va qarzda bo'sh.
+    - `Summa`: haqiqiy raqam (xlsx da matn emas, `#,##0` formati, o'ngga tekis), har doim musbat; yo'nalishni `Tur` aytadi. `Valyuta`: `UZS`.
+    - `Qarz nomi` (shaxs) va `Qarz turi` (`Berilgan` / `Olingan`): faqat `Qarz` va `Qarz to'lovi` qatorlarida. `Izoh`: matn.
+  - **Ko'rinish (xlsx):** birinchi qator qalin, oq matn, ilovaning asosiy rangidagi fon; birinchi qator qotirilgan; avtomatik filtr yoqilgan; ustun kengliklari mazmuniga moslangan (`Izoh` eng keng).
+  - **Matn xavfsizligi:** xlsx da matn katakchalari doim matn turida (formula emas); `=`, `+`, `-`, `@` bilan boshlangan matn himoyali stilda (quotePrefix) yoziladi. CSV da shunday matnning oldiga bitta tirnoq (`'`) qo'yiladi; CSV: UTF-8 BOM, `;` ajratuvchi, CRLF, maydonda tirnoq/`;`/vergul/qator oxiri bo'lsa qo'sh tirnoqqa o'raladi.
+  - Tezlik: 5 000 yozuv bilan fayl 2 soniyadan tez yasaladi. Import (yuklash) hozircha yo'q.
 - **Bosh sahifada** oxirgi zaxira sanasi ko'rsatiladi ("Oxirgi zaxira: 05.10.2026 (3 kun oldin)"). 14 kundan OSHSA (aynan 14 kun emas) yoki zaxira hali olinmagan, lekin yozuv bor bo'lsa, ⚠ eslatma va "Hozir zaxira olish" tugmasi chiqadi.
 
 ### F10. Telefonga o'rnatish va internetsiz ishlash
@@ -210,6 +216,7 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 | Sozlamalar | sxema_versiyasi (hozir 5), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi) |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
+- **Eksport jadvali** (saqlanmaydi, har safar yasaladi; ma'lumot tuzilishi o'zgarmaydi, sxema 5): Sana va vaqt, ID, Tur, Hisob, Qayerga, Kategoriya, Summa, Valyuta, Qarz nomi, Qarz turi, Izoh — F9 ga qarang.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
 - **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi; 4 — sozlamalarga `balans_yashirin` qo'shildi; 3 — qarzlar: to'lovlar qarz ichida (`tolovlar`, har to'lovda `id`), qarzda `vaqt`, `muddat`, `izoh`, `yopilgan` majburiy maydonlar. To'lovlar alohida to'plam emas, qarzning ichida saqlanadi: qarz o'chirilsa, to'lovlari ham ketadi va ular bir butun sifatida zaxiraga tushadi.
 - **Sxema 5:** kategoriyaga `belgi`; hisobga `tur` (karta / bank / naqd / boshqa), `belgi`, `rang`, `oxirgi4`.
@@ -317,7 +324,7 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - "+" tugmasi "Yangi yozuv yaratish" oynasini ochadi (ikki qator, birinchisi "Tranzaksiya qo'shish" fokusda); Esc, yopish belgisi, "Orqaga" va oyna tashqarisi yopadi; qarz oynasidan "Orqaga" tanlov oynasiga qaytaradi; "Yana" → Qarzlar ichidagi "+ Qarz qo'shish" qarz oynasini to'g'ridan-to'g'ri ochadi. Tugmalar kamida 44 piksel, 360 piksel kenglikda yorug' va qorong'i rejimda to'g'ri ko'rinadi.
 - Qarz: to'lov summasi qolgan qarzdan oshsa rad etiladi; to'lov vaqti qarz vaqtidan oldin bo'lsa rad etiladi; summa to'langandan kam qilib tahrirlanmaydi; qisman va to'liq qaytarish; muddati o'tgan qarz ⚠ belgisi bilan; qarz va to'lovni o'chirish 10 soniya ichida "Bekor qilish" bilan qaytadi; arxivlanayotgan hisobga bog'langan qarz haqida ogohlantirish.
 - Zaxira: zaxira olinadi, ma'lumot o'chiriladi, tiklanadi — balans, hisobotlar, byudjet va qarzlar avvalgidek; buzuq, yarim, bo'sh yoki boshqa ilova fayli rad etiladi va mavjud ma'lumotga tegilmaydi; eski sxema versiyali zaxira ko'chiriladi; tiklashdan oldin joriy holat zaxirasi yuklab beriladi; vaqti hozirdan keyingi yozuv saqlanadi va "Kelajak" belgisi bilan ko'rinadi. Bosh sahifada oxirgi zaxira sanasi, 14 kundan oshsa eslatma.
-- CSV: UTF-8 BOM, `;` ajratuvchi, ustunlar tartibi (Sana, Vaqt, Tur, Summa, Kategoriya, Hisob, Qayerga, Izoh), sana KK.OO.YYYY, summa mingliksiz; qarzlar alohida fayl; izohdagi tirnoq/vergul/nuqtali vergul o'raladi; `=`, `+`, `-`, `@` bilan boshlangan matn oldiga `'` qo'yiladi; 5 000 yozuvda zaxira, CSV va tiklash 1 soniyadan tez.
+- Eksport: haqiqiy .xlsx (bitta varaq "Eksport", 11 ustun aynan tartibda, sana-vaqt katagi, Summa raqam, qotirilgan sarlavha, filtr, formula himoyasi) va xuddi shu ustunli CSV; barcha matn o'zbekcha; davr: hammasi/oy/yil; davrda yozuv yo'q bo'lsa fayl yuklanmaydi; 5 000 yozuv < 2 soniya; fayl openpyxl bilan ochib tekshiriladi.
 - Belgilar va hisob turlari: kategoriya va hisob belgisi hamma joyda ko'rinadi; takror yoki bo'sh kategoriya nomi rad etiladi; karta uchun faqat oxirgi 4 raqam saqlanadi; Hisoblar filtri turi bo'yicha ishlaydi; Asosiydagi oy strelkalari kelajakka o'tmaydi va Naqd pul oqimi bilan bir oyni ko'rsatadi; son belgisi oy/tur o'zgarganda yangilanadi.
 - Eski (4-versiya) bazani ochganda hech narsa o'chmaydi, kategoriya va hisoblarga faqat yangi maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi); zaxira olish va tiklash yangi maydonlar bilan ishlaydi, eski zaxiralar ham tiklanadi.
 - Eski (2-versiya) bazani ochganda hech narsa o'chmaydi, qarzlarga faqat tushib qolgan maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).

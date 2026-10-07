@@ -9,6 +9,8 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 |---|---|
 | `001_sxema.sql` | Jadvallar, ruxsatlar, qator himoyasi (RLS), triggerlar, indekslar. Supabase'da ishga tushiriladi |
 | `002_xavfsizlik_testi.sql` | Himoyani tekshiradi: ikkita sinov foydalanuvchi bir-birining ma'lumotini ko'ra olmasligini va h.k. Supabase'da ishga tushiriladi |
+| `003_hisobni_ochirish.sql` | Hisobni va serverdagi ma'lumotni o'chirish funksiyasi (S7). Supabase'da ishga tushiriladi |
+| `004_hisobni_ochirish_testi.sql` | 003 ni tekshiradi: ikkita sinov foydalanuvchi, A o'chirsa B ning ma'lumoti saqlanadi. Supabase'da ishga tushiriladi |
 | `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
@@ -24,6 +26,27 @@ Shuning uchun `001_sxema.sql` ruxsatlarni (GRANT) o'zi beradi: faqat `authentica
 6. Natija jadval bo'lib chiqadi. Har qatorda **O'TDI** yoki **O'TMADI** yozilgan. Eng pastki qator: `JAMI: 75 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`.
    - Sinov **hech narsa saqlamaydi**: sinov foydalanuvchilar va qatorlar tranzaksiya ichida yaratilib, oxirida bekor qilinadi.
    - Qatorlar soni (75) keyingi o'zgarishlarda farq qilishi mumkin; muhimi: "O'TMADI" yo'q va oxirgi qatorda "HAMMASI O'TDI".
+
+## 1-b. Hisobni o'chirish funksiyasi (S7): 003 va 004
+
+Bu bosqich **ilovadagi "Hisobimni va serverdagi ma'lumotimni o'chirish" tugmasi ishlashi uchun kerak**. 001 va 002 ishga tushirilgan bo'lishi shart.
+
+1. Supabase → **SQL Editor** → **New query**.
+2. `supabase/003_hisobni_ochirish.sql` faylining **hamma matnini** nusxalab qo'ying va **Run** ni bosing. Natija: **"Success. No rows returned"**. Fayl mavjud ma'lumotga tegmaydi, qayta ishga tushirish xavfsiz.
+3. Yana **New query**. `supabase/004_hisobni_ochirish_testi.sql` matnini nusxalab qo'ying va **Run** ni bosing.
+4. Natija jadval: har qatorda **O'TDI** yoki **O'TMADI**. Eng pastki qator: `JAMI: 18 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov **hech narsa saqlamaydi** (hamma narsa oxirida bekor qilinadi) va sizning haqiqiy akkauntingizga tegmaydi: u ikkita vaqtinchalik sinov foydalanuvchidan foydalanadi.
+5. Tekshirish (ixtiyoriy): **Database → Functions** ro'yxatida `hisobni_ochirish` ko'rinadi.
+
+**Funksiya nima qiladi:** kirgan foydalanuvchi (faqat chaqiruvchining o'zi, `auth.uid()` bo'yicha; parametr yo'q) 7 jadvaldagi hamma qatorini HAQIQATAN o'chiradi (tombstone ham qolmaydi), keyin `auth.users` dagi akkauntini o'chiradi. `SECURITY DEFINER`, `search_path` bo'sh, `EXECUTE` faqat `authenticated` roliga (anon va public ga yo'q). Hammasi bitta tranzaksiyada.
+
+**Xatolar:**
+
+| Xabar | Sababi va yechimi |
+|---|---|
+| Ilovada "Serverda bu funksiya yo'q ... (kod: PG_PGRST202)" | 003 ishga tushirilmagan (yoki Supabase kesh yangilanmagan: 1 daqiqa kuting). 003 ni ishga tushiring |
+| 004 da "Kutilmagan xato: permission denied for table users" | SQL Editor `postgres` roli bilan ishlashi kerak (odatiy). Rol tanlash bo'lsa, `postgres` ni tanlang |
+| 004 da biror qatorda **O'TMADI** | Ilovada hisobni o'chirish tugmasini ishlatmang va qator matnini menga yuboring |
+| Ilovada "Qatorlarni o'chirib bo'lmadi (kod: PG_55000)" | Funksiya egasi RLS ni chetlab o'ta olmaydi. Hech narsa o'chmaydi. Xato matnini menga yuboring |
 
 ## 2. Qanday tekshirish (qo'shimcha)
 
@@ -52,7 +75,7 @@ Shuning uchun `001_sxema.sql` ruxsatlarni (GRANT) o'zi beradi: faqat `authentica
 
 - **Ma'lumot egasi:** har qator `user_id` ga ega. Server `user_id` ni `auth.uid()` ga tenglashtiradi; boshqa foydalanuvchi nomidan yozishga urinish rad etiladi.
 - **Vaqt:** `created_at` va `updated_at` serverda belgilanadi; `user_id`, `created_at` va `id` o'zgartirilmaydi.
-- **O'chirish:** ilova qatorni mantiqiy o'chiradi (`deleted = true`). Qatorni butunlay o'chirish (DELETE) ham o'z qatorlari uchun ruxsat etilgan (keyingi bosqichlarda 90 kundan keyin tozalash va hisobni o'chirish uchun). Foydalanuvchi hisobi o'chirilsa, uning hamma qatori avtomatik o'chadi.
+- **O'chirish:** ilova qatorni mantiqiy o'chiradi (`deleted = true`). Qatorni butunlay o'chirish (DELETE) ham o'z qatorlari uchun ruxsat etilgan. Hisobni o'chirish (S7) `public.hisobni_ochirish()` funksiyasi orqali (003). Foydalanuvchi hisobi o'chirilsa, uning hamma qatori avtomatik o'chadi.
 - **Bog'liqlik:** hisob, kategoriya va qarzga havolalar faqat o'z qatorlariga bo'ladi (boshqa foydalanuvchi qatoriga bog'lab bo'lmaydi). Tekshiruv tranzaksiya oxirida bajariladi.
 - **Saqlanmaydigan narsalar:** balans, hisob qoldig'i (ilovada hisoblanadi), PIN-kod, to'liq karta raqami.
 - **Nom takrorlanishi** va boshqa jadvallararo qoidalar bazada tekshirilmaydi (sinxronlashda to'qnashuv chiqarmasligi uchun); ularni ilova tekshiradi.

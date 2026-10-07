@@ -486,7 +486,7 @@
   // Qarz: { id, yonalish: 'berdim' | 'oldim', shaxs, summa, hisob_id, sana, vaqt, muddat ('' yoki sana), izoh,
   //         tolovlar: [{ id, sana, vaqt, summa, hisob_id }], yopilgan }. Qolgan summa va "yopilgan" holati to'lovlardan hisoblanadi.
   function tolanganSumma(q) {
-    return (q.tolovlar || []).reduce(function (a, t) { return a + t.summa; }, 0);
+    return (q.tolovlar || []).reduce(function (a, t) { return t.deleted === true ? a : a + t.summa; }, 0);   // mantiqiy o'chirilgan to'lov (deleted) hisobga kirmaydi
   }
   function qarzQolgan(q) { return Math.max(0, q.summa - tolanganSumma(q)); }
   function qarzYopilganmi(q) { return tolanganSumma(q) >= q.summa; }
@@ -610,6 +610,145 @@
   var TEMALAR = ['qurilma', 'yorug', 'qorongi'];
   function temaTogrimi(t) { return TEMALAR.indexOf(t) !== -1; }
 
+  // ---- Mahalliy ID lar UUID ga o'tadi, har qatorda updated_at va deleted (S3, sxema 7) ----
+  var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  function uuidTogrimi(s) { return typeof s === 'string' && UUID_RE.test(s); }
+  // v4 UUID. crypto.randomUUID bo'lmasa (oddiy http), getRandomValues dan yig'iladi: ID har doim UUID bo'ladi.
+  function uuidYarat() {
+    var k = global.crypto;
+    if (k && typeof k.randomUUID === 'function') return k.randomUUID();
+    var b = new Uint8Array(16), i;
+    if (k && k.getRandomValues) k.getRandomValues(b); else for (i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    var h = ''; for (i = 0; i < 16; i++) h += (b[i] + 256).toString(16).slice(1);
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+  // sozlamalar to'plamidagi faqat shu qurilmaga tegishli yozuvlar: zaxiraga kirmaydi, tiklash ularni o'chirmaydi
+  var YEREL_KALITLAR = ['pin', 'migratsiya-zaxira'];
+  function yerelKalitmi(x) { return !!x && YEREL_KALITLAR.indexOf(x.kalit) !== -1; }
+
+  // Mantiqiy o'chirilgan (deleted) qatorlar ko'rinmaydi. Qarzning o'chirilgan to'lovlari ham.
+  function jonliQarz(q) {
+    if (!q || !Array.isArray(q.tolovlar) || !q.tolovlar.some(function (t) { return t && t.deleted === true; })) return q;
+    var y = Object.assign({}, q); y.tolovlar = q.tolovlar.filter(function (t) { return !(t && t.deleted === true); });
+    return y;
+  }
+  function jonlilar(toplam, qatorlar) {
+    var r = (qatorlar || []).filter(function (x) { return !(x && x.deleted === true); });
+    return toplam === 'qarzlar' ? r.map(jonliQarz) : r;
+  }
+
+  // Qarz saqlanganda to'lovlar ro'yxatini bazadagi bilan birlashtiradi: yangi to'lov — updated_at, o'zgargani — updated_at yangilanadi,
+  // ro'yxatdan olib tashlangani butunlay o'chmaydi: deleted = true (mantiqiy o'chirish). Sof funksiya.
+  function tolovlarniBirlashtir(mavjud, yangi, hozirISO, yangiIdFn) {
+    mavjud = mavjud || [];
+    var mid = {}, korilgan = {}, chiq = [];
+    mavjud.forEach(function (t) { if (t && t.id !== undefined) mid[t.id] = t; });
+    function mazmun(t) { var o = Object.assign({}, t); delete o.updated_at; delete o.deleted; return JSON.stringify(Object.keys(o).sort().map(function (k) { return [k, o[k]]; })); }
+    (yangi || []).forEach(function (t) {
+      var id = t.id || (yangiIdFn || uuidYarat)();
+      var eski = mid[id], o = Object.assign({}, t, { id: id, deleted: false });
+      korilgan[id] = true;
+      o.updated_at = eski && eski.deleted !== true && mazmun(eski) === mazmun(o) && eski.updated_at ? eski.updated_at : hozirISO;
+      chiq.push(o);
+    });
+    mavjud.forEach(function (t) {
+      if (!t || korilgan[t.id]) return;
+      chiq.push(t.deleted === true ? t : Object.assign({}, t, { deleted: true, updated_at: hozirISO }));
+    });
+    return chiq;
+  }
+
+  // Sxema 6 -> 7. Sof funksiya (kiritilgan obyektlarga tegmaydi). m: { hisoblar, kategoriyalar, yozuvlar, byudjetlar, qarzlar, sozlamalar }.
+  // - UUID bo'lmagan ID lar yangi UUID ga almashtiriladi (eski qiymat `eski_id` da qoladi: eksportdagi Y-000123 raqamlari tartibi o'zgarmasin);
+  //   to'g'ri UUID lar o'zgarmaydi (kichik harfga keltiriladi). Takror ishlasa ham hech narsa o'zgarmaydi.
+  // - Bog'lovchi maydonlar (hisob_id, qabul_hisob_id, kategoriya_id, to'lovdagi hisob_id) yangi ID larga o'tkaziladi. Topilmagan (avvaldan
+  //   uzilgan) havola o'zgarishsiz qoladi va hisobotda sanaladi.
+  // - Har qatorga updated_at (bo'lmasa yaratilgan vaqtidan, u yo'q bo'lsa hozirgi) va deleted = false qo'shiladi.
+  // - Byudjetga id, sozlamalarning `asosiy` yozuviga id beriladi. Hech narsa o'chirilmaydi.
+  function uuidgaOtkazish(m, opts) {
+    opts = opts || {};
+    var yangiIdFn = opts.yangiId || uuidYarat, hozirISO = opts.hozir || new Date().toISOString();
+    var ishlatilgan = {}, hisobot = { ozgargan: { hisoblar: 0, kategoriyalar: 0, yozuvlar: 0, qarzlar: 0, tolovlar: 0 }, uzilgan: 0 };
+    function yangiIdOl(eski) {
+      var kichik = typeof eski === 'string' ? eski.toLowerCase() : '', id = uuidTogrimi(kichik) && !ishlatilgan[kichik] ? kichik : null;
+      while (!id || ishlatilgan[id]) id = yangiIdFn();
+      ishlatilgan[id] = true;
+      return id;
+    }
+    function xarita(qatorlar) { var x = {}; (qatorlar || []).forEach(function (q) { if (q && q.id !== undefined && !Object.prototype.hasOwnProperty.call(x, q.id)) x[q.id] = yangiIdOl(q.id); }); return x; }
+    function havola(xr, v) {
+      if (v === null || v === undefined || v === '') return v;
+      if (Object.prototype.hasOwnProperty.call(xr, v)) return xr[v];
+      hisobot.uzilgan++;
+      return v;
+    }
+    function vaqtBelgisi(x) {
+      if (typeof x.updated_at === 'string' && x.updated_at) return x.updated_at;
+      var d = new Date(x.yaratilgan);
+      return x.yaratilgan && !isNaN(d.getTime()) ? d.toISOString() : hozirISO;
+    }
+    function qator(q, id, hisoblagich) {
+      var y = Object.assign({}, q);
+      if (q.id !== undefined && id !== q.id) { y.eski_id = q.eski_id !== undefined ? q.eski_id : q.id; if (hisoblagich) hisobot.ozgargan[hisoblagich]++; }
+      y.id = id; y.updated_at = vaqtBelgisi(q); y.deleted = q.deleted === true;
+      return y;
+    }
+    var H = xarita(m.hisoblar), K = xarita(m.kategoriyalar), Y = xarita(m.yozuvlar), Q = xarita(m.qarzlar);
+    var n = Object.assign({}, m);
+    n.hisoblar = (m.hisoblar || []).map(function (h) { return qator(h, H[h.id] !== undefined ? H[h.id] : yangiIdOl(), 'hisoblar'); });
+    n.kategoriyalar = (m.kategoriyalar || []).map(function (k) { return qator(k, K[k.id] !== undefined ? K[k.id] : yangiIdOl(), 'kategoriyalar'); });
+    n.yozuvlar = (m.yozuvlar || []).map(function (y) {
+      var z = qator(y, Y[y.id] !== undefined ? Y[y.id] : yangiIdOl(), 'yozuvlar');
+      z.hisob_id = havola(H, y.hisob_id);
+      if (y.qabul_hisob_id !== undefined) z.qabul_hisob_id = havola(H, y.qabul_hisob_id);
+      if (y.kategoriya_id !== undefined) z.kategoriya_id = havola(K, y.kategoriya_id);
+      return z;
+    });
+    n.byudjetlar = (m.byudjetlar || []).map(function (b) {
+      var z = Object.assign({}, b);
+      z.id = yangiIdOl(b.id); z.updated_at = vaqtBelgisi(b); z.deleted = b.deleted === true;
+      z.kategoriya_id = b.kategoriya_id === 'umumiy' ? 'umumiy' : havola(K, b.kategoriya_id);
+      return z;
+    });
+    n.qarzlar = (m.qarzlar || []).map(function (q) {
+      var z = qator(q, Q[q.id] !== undefined ? Q[q.id] : yangiIdOl(), 'qarzlar');
+      z.hisob_id = havola(H, q.hisob_id);
+      z.tolovlar = (q.tolovlar || []).map(function (t) {
+        var id = yangiIdOl(t.id), w = Object.assign({}, t);
+        if (t.id !== undefined && id !== t.id) { w.eski_id = t.eski_id !== undefined ? t.eski_id : t.id; hisobot.ozgargan.tolovlar++; }
+        w.id = id; w.updated_at = vaqtBelgisi(t); w.deleted = t.deleted === true; w.hisob_id = havola(H, t.hisob_id);
+        return w;
+      });
+      return z;
+    });
+    n.sozlamalar = (m.sozlamalar || []).map(function (s) {
+      if (!s || s.kalit !== 'asosiy') return s;
+      return Object.assign({}, s, { id: uuidTogrimi(s.id) ? s.id : yangiIdOl(), updated_at: typeof s.updated_at === 'string' && s.updated_at ? s.updated_at : hozirISO, deleted: s.deleted === true });
+    });
+    return { malumot: n, hisobot: hisobot };
+  }
+
+  // Mahalliy ma'lumotni eski versiyadan joriyga o'tkazadi (1 -> 2 ... 6 -> 7). Sof funksiya; hech narsa o'chirilmaydi.
+  // opts: { yangiId, hozir, sxema }. Natija: { malumot, hisobot }
+  function malumotniYangilash(m, eski, opts) {
+    opts = opts || {};
+    var n = {
+      hisoblar: (m.hisoblar || []).map(hisobniYangilash),
+      kategoriyalar: (m.kategoriyalar || []).map(kategoriyaniYangilash),
+      yozuvlar: eski < 2 ? (m.yozuvlar || []).map(yozuvniYangilash) : (m.yozuvlar || []).slice(),
+      byudjetlar: (m.byudjetlar || []).slice(),
+      qarzlar: (m.qarzlar || []).map(qarzniYangilash),
+      sozlamalar: (m.sozlamalar || []).map(function (s) {
+        return s && s.kalit === 'asosiy' ? Object.assign({}, s, { balans_yashirin: typeof s.balans_yashirin === 'boolean' ? s.balans_yashirin : false, tema: temaTogrimi(s.tema) ? s.tema : 'qurilma' }) : s;
+      })
+    };
+    var hisobot = null;
+    if (eski < 7) { var r = uuidgaOtkazish(n, opts); n = r.malumot; hisobot = r.hisobot; }
+    if (opts.sxema) n.sozlamalar = n.sozlamalar.map(function (s) { return s && s.kalit === 'asosiy' ? Object.assign({}, s, { sxema_versiyasi: opts.sxema }) : s; });
+    return { malumot: n, hisobot: hisobot };
+  }
+
   var ZAXIRA_TOPLAMLARI = ['hisoblar', 'yozuvlar', 'kategoriyalar', 'byudjetlar', 'qarzlar', 'sozlamalar'];
   var ZAXIRA_ESLATMA_KUNI = 14;   // oxirgi zaxiradan shuncha kundan oshsa, eslatma chiqadi
 
@@ -623,7 +762,7 @@
   // malumot: { hisoblar, yozuvlar, kategoriyalar, byudjetlar, qarzlar, sozlamalar }; sxema — joriy sxema versiyasi
   function zaxiraYasash(malumot, sxema, hozirgi) {
     var f = { ilova: 'moliya', sxema_versiyasi: sxema, zaxira_vaqti: (hozirgi || new Date()).toISOString(), soni: {} };
-    ZAXIRA_TOPLAMLARI.forEach(function (t) { f[t] = (malumot[t] || []).filter(function (x) { return !(t === 'sozlamalar' && x && x.kalit === 'pin'); }); f.soni[t] = f[t].length; });   // PIN zaxiraga kirmaydi
+    ZAXIRA_TOPLAMLARI.forEach(function (t) { f[t] = (malumot[t] || []).filter(function (x) { return !(t === 'sozlamalar' && yerelKalitmi(x)); }); f.soni[t] = f[t].length; });   // PIN va ichki nusxa zaxiraga kirmaydi
     return f;
   }
 
@@ -671,6 +810,13 @@
         ids[t][x.id] = x;
       });
     });
+    // S3: mantiqiy o'chirish belgisi va o'zgarish vaqti (zaxirada bo'lsa, to'g'ri turda bo'lishi kerak)
+    ['hisoblar', 'kategoriyalar', 'yozuvlar', 'byudjetlar', 'qarzlar'].forEach(function (t) {
+      f[t].forEach(function (x, i) {
+        if (x.deleted !== undefined && typeof x.deleted !== 'boolean') rad('"' + t + '" ' + (i + 1) + '-qatorida o\'chirilgan belgisi noto\'g\'ri');
+        if (x.updated_at !== undefined && (typeof x.updated_at !== 'string' || !x.updated_at)) rad('"' + t + '" ' + (i + 1) + '-qatorida o\'zgarish vaqti noto\'g\'ri');
+      });
+    });
     f.hisoblar.forEach(function (x, i) {
       var n = (i + 1) + '-hisobda ';
       if (!matnli(x.nom)) rad(n + 'nom yo\'q');
@@ -681,7 +827,7 @@
       if (!butun(x.boshlangich_qoldiq)) rad(n + 'boshlang\'ich qoldiq noto\'g\'ri');
       if (x.arxivlangan !== undefined && typeof x.arxivlangan !== 'boolean') rad(n + 'arxiv belgisi noto\'g\'ri');
     });
-    if (!f.hisoblar.some(function (x) { return !x.arxivlangan; })) rad('Zaxirada bitta ham faol hisob yo\'q');
+    if (!f.hisoblar.some(function (x) { return !x.arxivlangan && x.deleted !== true; })) rad('Zaxirada bitta ham faol hisob yo\'q');
     f.kategoriyalar.forEach(function (x, i) {
       var n = (i + 1) + '-kategoriyada ';
       if (!matnli(x.nom)) rad(n + 'nom yo\'q');
@@ -733,13 +879,14 @@
         if (t.vaqt !== undefined && !vaqtFormatiTogrimi(t.vaqt)) rad(m + 'vaqt noto\'g\'ri');
         if (!ids.hisoblar[t.hisob_id]) rad(m + 'hisob topilmadi');
         if (t.id !== undefined) { if (tid[t.id]) rad(m + 'takroriy id'); tid[t.id] = 1; }
+        if (t.deleted === true) return;   // mantiqiy o'chirilgan to'lov yig'indiga va "kelajak" sanoqqa kirmaydi
         jami += t.summa;
         if (kelajakmi(t.sana, t.vaqt || '00:00', h)) kelajak.tolov++;
       });
       if (jami > x.summa) rad(n + 'to\'lovlar yig\'indisi qarz summasidan oshib ketgan');
-      if (kelajakmi(x.sana, x.vaqt || '00:00', h)) kelajak.qarz++;
+      if (x.deleted !== true && kelajakmi(x.sana, x.vaqt || '00:00', h)) kelajak.qarz++;
     });
-    f.yozuvlar.forEach(function (x) { if (kelajakmi(x.sana, yozuvVaqti(x), h)) kelajak.yozuv++; });
+    f.yozuvlar.forEach(function (x) { if (x.deleted !== true && kelajakmi(x.sana, yozuvVaqti(x), h)) kelajak.yozuv++; });
     f.sozlamalar.forEach(function (x, i) { if (!matnli(x.kalit)) rad((i + 1) + '-sozlamada kalit yo\'q'); });
 
     // Joriy sxemaga o'tkazish (hech narsa o'chirilmaydi): yozuvlarga vaqt (1 -> 2), qarzlarda tushib qolgan maydonlar (2 -> 3)
@@ -747,7 +894,7 @@
       hisoblar: f.hisoblar.map(function (x) { return hisobniYangilash(x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x); }),
       kategoriyalar: f.kategoriyalar.map(function (x) { return kategoriyaniYangilash(x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x); }),
       yozuvlar: f.yozuvlar.map(yozuvniYangilash), byudjetlar: f.byudjetlar.slice(), qarzlar: f.qarzlar.map(qarzniYangilash),
-      sozlamalar: f.sozlamalar.filter(function (x) { return !(x && x.kalit === 'pin'); })   // zaxirada PIN bo'lsa ham e'tiborga olinmaydi
+      sozlamalar: f.sozlamalar.filter(function (x) { return !yerelKalitmi(x); })   // zaxirada PIN yoki ichki nusxa bo'lsa ham e'tiborga olinmaydi
     };
     var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
     if (!asosiy) { asosiy = { kalit: 'asosiy', oxirgi_zaxira_sanasi: null, balans_yashirin: false, tema: 'qurilma' }; m.sozlamalar.push(asosiy); }
@@ -755,8 +902,12 @@
     if (asosiy.balans_yashirin !== undefined && typeof asosiy.balans_yashirin !== 'boolean') rad('Sozlamalarda balansni yashirish belgisi noto\'g\'ri');
     if (asosiy.tema !== undefined && !temaTogrimi(asosiy.tema)) rad('Sozlamalarda mavzu noto\'g\'ri (qurilma, yorug yoki qorongi bo\'lishi kerak)');
     m.sozlamalar = m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { sxema_versiyasi: sxema, balans_yashirin: x.balans_yashirin === true, tema: temaTogrimi(x.tema) ? x.tema : 'qurilma' }) : x; });
-    var soni = {}; ZAXIRA_TOPLAMLARI.forEach(function (t) { soni[t] = m[t].length; });
-    return { malumot: m, soni: soni, kelajak: kelajak, eskiSxema: v < sxema, fayldagiSxema: v };
+    // S3 (sxema 7): eski zaxirada UUID, updated_at va deleted yo'q: tiklash vaqtida beriladi (bog'lanishlar yangi ID larga o'tadi, hech narsa o'chmaydi)
+    var uuidHisobot = null;
+    if (v < 7) { var uu = uuidgaOtkazish(m, { hozir: new Date().toISOString() }); m = uu.malumot; uuidHisobot = uu.hisobot; }
+    // Ko'rsatiladigan sonlar: mantiqiy o'chirilganlar (deleted) hisobga kirmaydi
+    var soni = {}; ZAXIRA_TOPLAMLARI.forEach(function (t) { soni[t] = t === 'sozlamalar' ? m[t].length : m[t].filter(function (x) { return x.deleted !== true; }).length; });
+    return { malumot: m, soni: soni, kelajak: kelajak, eskiSxema: v < sxema, fayldagiSxema: v, uuid: uuidHisobot };
   }
 
   // Oxirgi zaxira holati bosh sahifa uchun: { holat: 'yoq' | 'yaqinda' | 'eski', kun }.
@@ -797,6 +948,8 @@
   var EKSPORT_TURI = { daromad: 'Daromad', xarajat: 'Xarajat', otkazma: 'O\'tkazma' };
   function eksportRaqam(prefiks, n) { return prefiks + '-' + ('000000' + n).slice(-6); }
   function eksportTartib(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
+  // Tartib kaliti: UUID ga o'tgan qatorlar uchun eski ID (`eski_id`): Y-000123 raqamlari migratsiyadan keyin ham o'zgarmaydi
+  function eksportKaliti(x) { return (x.yaratilgan || '') + ' ' + (x.eski_id !== undefined ? x.eski_id : x.id); }
 
   // Natija: { sarlavha, qatorlar: [{ sana, vaqt, id, tur, hisob, qayerga, kategoriya, summa, valyuta, qarzNomi, qarzTuri, izoh }], soni }
   // ID: ilovadagi yaratilish tartibi bo'yicha raqam (Y-000001 yozuv, Q-000001 qarz, T-000001 qarz to'lovi); davr tanlashga bog'liq emas.
@@ -805,25 +958,25 @@
     var c = eksportDavri(davr), hn = {}, kn = {}, qatorlar = [];
     (malumot.hisoblar || []).forEach(function (x) { hn[x.id] = x.nom; });
     (malumot.kategoriyalar || []).forEach(function (x) { kn[x.id] = x.nom; });
-    var yozuvlar = (malumot.yozuvlar || []).slice().sort(function (a, b) { return eksportTartib((a.yaratilgan || '') + ' ' + a.id, (b.yaratilgan || '') + ' ' + b.id); });
+    var yozuvlar = (malumot.yozuvlar || []).slice().sort(function (a, b) { return eksportTartib(eksportKaliti(a), eksportKaliti(b)); });
     yozuvlar.forEach(function (y, i) {
       if (!davrdami(y.sana, c)) return;
       var o = y.tur === 'otkazma';
-      qatorlar.push({ sana: y.sana, vaqt: yozuvVaqti(y), ord: (y.yaratilgan || '') + ' ' + y.id, id: eksportRaqam('Y', i + 1), tur: EKSPORT_TURI[y.tur] || y.tur,
+      qatorlar.push({ sana: y.sana, vaqt: yozuvVaqti(y), ord: eksportKaliti(y), id: eksportRaqam('Y', i + 1), tur: EKSPORT_TURI[y.tur] || y.tur,
         hisob: hn[y.hisob_id] || '', qayerga: o ? (hn[y.qabul_hisob_id] || '') : '', kategoriya: o ? '' : (kn[y.kategoriya_id] || ''),
         summa: y.summa, valyuta: 'UZS', qarzNomi: '', qarzTuri: '', izoh: y.izoh || '' });
     });
-    var qarzlar = (malumot.qarzlar || []).slice().sort(function (a, b) { return eksportTartib((a.yaratilgan || '') + ' ' + a.id, (b.yaratilgan || '') + ' ' + b.id); }), tn = 0;
+    var qarzlar = (malumot.qarzlar || []).slice().sort(function (a, b) { return eksportTartib(eksportKaliti(a), eksportKaliti(b)); }), tn = 0;
     qarzlar.forEach(function (z, i) {
       var turi = z.yonalish === 'berdim' ? 'Berilgan' : 'Olingan';
       if (davrdami(z.sana, c)) {
-        qatorlar.push({ sana: z.sana, vaqt: z.vaqt || '00:00', ord: (z.yaratilgan || '') + ' ' + z.id, id: eksportRaqam('Q', i + 1), tur: 'Qarz', hisob: hn[z.hisob_id] || '', qayerga: '', kategoriya: '',
+        qatorlar.push({ sana: z.sana, vaqt: z.vaqt || '00:00', ord: eksportKaliti(z), id: eksportRaqam('Q', i + 1), tur: 'Qarz', hisob: hn[z.hisob_id] || '', qayerga: '', kategoriya: '',
           summa: z.summa, valyuta: 'UZS', qarzNomi: z.shaxs || '', qarzTuri: turi, izoh: z.izoh || '' });
       }
-      (z.tolovlar || []).slice().sort(function (a, b) { return eksportTartib(a.sana + ' ' + (a.vaqt || '') + ' ' + a.id, b.sana + ' ' + (b.vaqt || '') + ' ' + b.id); }).forEach(function (t) {
+      (z.tolovlar || []).slice().sort(function (a, b) { return eksportTartib(a.sana + ' ' + (a.vaqt || '') + ' ' + (a.eski_id !== undefined ? a.eski_id : a.id), b.sana + ' ' + (b.vaqt || '') + ' ' + (b.eski_id !== undefined ? b.eski_id : b.id)); }).forEach(function (t) {
         tn++;
         if (!davrdami(t.sana, c)) return;
-        qatorlar.push({ sana: t.sana, vaqt: t.vaqt || '00:00', ord: t.sana + ' ' + (t.vaqt || '') + ' ' + t.id, id: eksportRaqam('T', tn), tur: 'Qarz to\'lovi', hisob: hn[t.hisob_id] || '', qayerga: '', kategoriya: '',
+        qatorlar.push({ sana: t.sana, vaqt: t.vaqt || '00:00', ord: t.sana + ' ' + (t.vaqt || '') + ' ' + (t.eski_id !== undefined ? t.eski_id : t.id), id: eksportRaqam('T', tn), tur: 'Qarz to\'lovi', hisob: hn[t.hisob_id] || '', qayerga: '', kategoriya: '',
           summa: t.summa, valyuta: 'UZS', qarzNomi: z.shaxs || '', qarzTuri: turi, izoh: '' });
       });
     });
@@ -1294,6 +1447,8 @@
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     ZAXIRA_ESLATMA_KUNI: ZAXIRA_ESLATMA_KUNI, sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraNomi: zaxiraNomi, zaxiraniTekshir: zaxiraniTekshir, zaxiraHolati: zaxiraHolati,
     TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
+    uuidYarat: uuidYarat, uuidTogrimi: uuidTogrimi, uuidgaOtkazish: uuidgaOtkazish, malumotniYangilash: malumotniYangilash, tolovlarniBirlashtir: tolovlarniBirlashtir,
+    yerelKalitmi: yerelKalitmi, jonliQarz: jonliQarz, jonlilar: jonlilar, YEREL_KALITLAR: YEREL_KALITLAR,
     csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, eksport: eksport, eksportCSV: eksportCSV, EKSPORT_SARLAVHA: EKSPORT_SARLAVHA,
     oyKalitiSur: oyKalitiSur, oqimOylari: oqimOylari, tarixOylari: tarixOylari, oyJami: oyJami, qarzSatrlari: qarzSatrlari, qarzSatrlariniSuz: qarzSatrlariniSuz, tarixGuruhlari: tarixGuruhlari,
     HISOB_TURLARI: HISOB_TURLARI, HISOB_TURI_NOMI: HISOB_TURI_NOMI, HISOB_RANGLARI: HISOB_RANGLARI, HISOB_BELGISI: HISOB_BELGISI, belgiTaxmin: belgiTaxmin, hisobTuriTaxmin: hisobTuriTaxmin,

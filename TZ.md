@@ -1,6 +1,6 @@
 # TZ: Chuntak AI — shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 19 (13.10.2026)
+Hujjat versiyasi: 20 (14.10.2026)
 
 ## 1. Maqsad
 
@@ -172,6 +172,8 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Yangilanish:** ilova versiyasi o'zgarganda (sahifa ochilganda, ilovaga qaytilganda, internet qaytganda va har 30 daqiqada tekshiriladi) yangi worker o'rnatiladi va pastda **"Yangi versiya tayyor" + "Yangilash"** paneli chiqadi (tugma kamida 44 px). "Yangilash" bosilganda yangi versiya faollashadi va ilova bir marta qayta yuklanadi; bosilmaguncha ochiq ilova eski versiyada ishlayveradi. Sahifa allaqachon yangi versiyada ochilgan bo'lsa, panel chiqmaydi (jimgina faollashadi). Ma'lumot yangilanishda o'zgarmaydi.
 - **Joylash:** GitHub Pages (HTTPS); hamma yo'llar nisbiy, shuning uchun pastki yo'lda ham (`…github.io/<repo>/`) ishlaydi. Kompyuterda sinash: `python3 -m http.server 8000` (README).
 
+- **Yangilanishdan oldingi nusxa (S3):** "Zaxira va eksport" ekranida karta: sana, sonlar; "Faylga yuklab olish", "Shu nusxani tiklash" (tasdiq bilan), "Nusxani o'chirish".
+
 ### F11. PIN-kod bilan himoya (2-versiya, bajarildi)
 - **Sozlash:** "Menyu" → "Xavfsizlik" ekrani: "PIN-kod bilan ochish" almashtirgichi (toggle): **yoqish** (4 raqamli PIN ikki marta kiritiladi), **o'chirish** (avval joriy PIN so'raladi); yoqilganda "PIN-kodni o'zgartirish" qatori (avval joriy PIN, keyin yangisi ikki marta). Faqat 4 raqam. Bekor qilinsa holat o'zgarmaydi.
 - **Saqlash:** PIN ochiq holda saqlanmaydi: tasodifiy tuz (salt) bilan PBKDF2-HMAC-SHA-256 (Web Crypto, 100 000 aylanish) xeshi saqlanadi (`tuz`, `xesh`, `iteratsiya`). Yozuv IndexedDB ning `sozlamalar` to'plamida alohida kalit (`pin`) bilan turadi. **Zaxira fayliga PIN kirmaydi** (yasashda tashlab ketiladi, tiklashda fayl ichidagi `pin` yozuvi e'tiborga olinmaydi) va **tiklash mavjud PIN ni o'chirmaydi**. Qurilmada faqat "PIN yoqilgan" bayrog'i (`moliya-pin-bor`) nusxalanadi.
@@ -179,7 +181,7 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Urinishlar:** noto'g'ri PIN da "Qolgan urinish: N"; **5 marta noto'g'ri bo'lsa 30 soniya kutish** (tugmalar o'chadi, sekundlar sanaladi). Urinishlar soni va kutish vaqti saqlanadi: sahifani qayta yuklash kutishni bekor qilmaydi. To'g'ri PIN hisoblagichni nolga qaytaradi.
 - **"PINni unutdim":** ikki bosqichli tasdiq: (1) ogohlantirish — PIN tiklanmaydi, davom etilsa BARCHA ma'lumot shu qurilmadan o'chadi, zaxira (JSON) bo'lsa o'chirgandan keyin "Zaxiradan tiklash" orqali qaytarish mumkin; (2) "Ishonchingiz komilmi?" — "Hammasini o'chirish". Har bosqichda "Bekor qilish". Tasdiqdan keyin butun baza o'chiriladi (PIN va qurilma sozlamalari ham), ilova bo'sh holatda (tayyor "Naqd pul" va kategoriyalar bilan) qayta ochiladi.
 - **Cheklov (ochiq aytiladi):** 4 raqamli PIN faqat boshqa odamning tasodifiy ochishidan himoya qiladi. Qurilma xotirasiga kira oladigan texnik hujumchi 10 000 ta variantni (urinish cheklovisiz) sinab ko'rishi mumkin. Ma'lumot shifrlanmaydi.
-- **Ma'lumot tuzilishi:** sxema versiyasi o'zgarmaydi (6), migratsiya kerak emas: yangi maydonlar `sozlamalar` ichidagi alohida `pin` yozuvida, mavjud yozuvlarga tegilmaydi.
+- **Ma'lumot tuzilishi:** PIN qo'shilganda sxema o'zgarmagan (keyin S3 da 7 bo'ldi), migratsiya kerak emas: yangi maydonlar `sozlamalar` ichidagi alohida `pin` yozuvida, mavjud yozuvlarga tegilmaydi.
 
 ## 5. 1-versiyaga kirmaydigan narsalar
 
@@ -234,13 +236,15 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 | Kategoriya | id, nom, tur (daromad / xarajat), rang, belgi (kalit), arxivlangan |
 | Byudjet | kategoriya_id (yoki "umumiy"), oylik_limit |
 | Qarz | id, yaratilgan, yonalish (berdim / oldim), shaxs, summa, hisob_id, sana, vaqt, muddat (bo'sh yoki sana), izoh, tolovlar [{id, sana, vaqt, summa, hisob_id}], yopilgan |
-| Sozlamalar | sxema_versiyasi (hozir 6), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi), tema (`qurilma` / `yorug` / `qorongi`) |
+| Sozlamalar | sxema_versiyasi (hozir 7), oxirgi_zaxira_sanasi, balans_yashirin (true / false: Asosiy sahifadagi ko'z belgisi), tema (`qurilma` / `yorug` / `qorongi`) |
 
 - Zaxira fayli shu to'plamlarning hammasini va `sxema_versiyasi` ni o'z ichiga oladi.
 - **Eksport jadvali** (saqlanmaydi, har safar yasaladi; ma'lumot tuzilishi o'zgarmaydi, sxema 5): Sana va vaqt, ID, Tur, Hisob, Qayerga, Kategoriya, Summa, Valyuta, Qarz nomi, Qarz turi, Izoh — F9 ga qarang.
 - Keyingi versiyalarda tuzilish o'zgarsa, eski zaxira fayllari avtomatik yangi tuzilishga o'tkaziladi.
 - **Sxema versiyalari:** 1 — dastlabki tuzilish; 2 — yozuvga `vaqt` (`HH:MM`) qo'shildi; 4 — sozlamalarga `balans_yashirin` qo'shildi; 3 — qarzlar: to'lovlar qarz ichida (`tolovlar`, har to'lovda `id`), qarzda `vaqt`, `muddat`, `izoh`, `yopilgan` majburiy maydonlar. To'lovlar alohida to'plam emas, qarzning ichida saqlanadi: qarz o'chirilsa, to'lovlari ham ketadi va ular bir butun sifatida zaxiraga tushadi.
 - **Sxema 6:** sozlamalarga `tema` (standart `qurilma`).
+- **Sxema 7 (S3, sinxronlashga tayyorlov):** barcha ID lar UUID (hisob, kategoriya, yozuv, qarz, qarz to'lovi, byudjet qatori `id`; sozlama kaliti o'zgarmaydi); barcha bog'lanish maydonlari (`hisob_id`, `qabul_hisob_id`, `kategoriya_id`, `qarz_id`, byudjetdagi `kategoriya_id`) yangi UUID larga o'tadi; har qatorga `updated_at` (har o'zgarishda yangilanadi) va `deleted` (boshida `false`) qo'shiladi; eski ID `eski_id` maydonida saqlanadi (faqat mahalliy, eksportdagi "Y-000123" tartibi o'zgarmasligi uchun). O'chirish mantiqiy: qator qoladi, `deleted = true`; o'chirilgan qator ilovada, balansda, hisobotda, byudjetda, qidiruvda va eksportda ko'rinmaydi; zaxira faylida saqlanadi. Hisob/kategoriya arxivlash bu bilan bog'liq emas. Balans va qoldiq saqlanmaydi.
+- **Migratsiya 6 → 7:** bitta tranzaksiyada; yarim yo'lda to'xtasa hech narsa o'zgarmaydi va keyingi ochilganda qayta uriniladi. Boshlashdan oldin joriy holat `sozlamalar` ichida `migratsiya-zaxira` yozuviga avtomatik saqlanadi (ichki yozuv; zaxira fayliga va eksportga tushmaydi, tiklashda saqlanib qoladi). Eski (6 dan past) zaxira fayllari tiklanganda ham UUID beriladi.
 - **Ko'chirish (5 → 6):** sozlamalarga `tema: "qurilma"` qo'shiladi (allaqachon to'g'ri qiymat bo'lsa, o'zgarmaydi). Boshqa hech narsaga tegilmaydi va hech narsa o'chirilmaydi; boshqa ko'chirishlar bilan bitta tranzaksiyada bajariladi, takror ishlasa ham ma'lumot buzilmaydi. Zaxira faylida `tema` bo'lmasa (eski zaxira), tiklashda `qurilma` qo'yiladi; noma'lum qiymat bo'lsa fayl rad etiladi.
 - **Sxema 5:** kategoriyaga `belgi`; hisobga `tur` (karta / bank / naqd / boshqa), `belgi`, `rang`, `oxirgi4`.
 - **Ko'chirish (4 → 5):** kategoriyalarga nomiga qarab mos belgi qo'yiladi (topilmasa umumiy belgi). Hisoblarga tur beriladi: nomida "naqd" bo'lsa Naqd pul, bo'lmasa Karta (tur allaqachon to'g'ri bo'lsa, o'zgarmaydi); turga mos belgi va rang qo'yiladi, `oxirgi4` bo'sh. Hech narsa o'chirilmaydi, takror ishlasa ma'lumot buzilmaydi; bitta tranzaksiyada boshqa ko'chirishlar bilan birga bajariladi. Zaxira faylida bu maydonlar bo'lmasa (eski zaxira), tiklashda xuddi shu qoida bo'yicha to'ldiriladi; maydon noto'g'ri bo'lsa (noma'lum tur, `oxirgi4` 4 raqam emas, belgi matn emas), fayl rad etiladi.
@@ -404,3 +408,4 @@ Quyidagilar taxmin asosida yozilgan. Boshqacha bo'lishi kerak bo'lsa, qurishdan 
 2. Ilova nomi tanlanmagan. 10-bosqichgacha nom va belgi kerak bo'ladi.
 3. Kategoriyalar ro'yxati taxminiy.
 4. Zaxira eslatmasi muddati 14 kun deb olingan.
+- S3: eski (6) bazani ochganda hamma raqam (soni, hisob balansi, kategoriya jami, byudjet, qarz qoldig'i, eksport ID lari) aynan bir xil; migratsiya to'xtatilsa ma'lumot buzilmaydi; eski zaxira UUID bilan tiklanadi; o'chirilgan qator hisobga kirmaydi; PIN, tema, S2 sessiyasi saqlanadi.

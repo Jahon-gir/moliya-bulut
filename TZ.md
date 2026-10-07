@@ -1,6 +1,6 @@
 # TZ: Chuntak AI — shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 21 (15.10.2026)
+Hujjat versiyasi: 22 (16.10.2026)
 
 ## 1. Maqsad
 
@@ -281,7 +281,7 @@ Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"
 4. **Qarzlar:** F8 (jami, har qarz kartasi, arxiv belgisi, qarz qo'shish).
 5. **Ko'proq:** faqat Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4).
 6. **Menyu** (Asosiy sahifaning chap yuqori burchagidagi ☰ tugmasi, kamida 44 px, `aria-label="Menyu"`; ichki ekran, yuqorida "Orqaga" tugmasi Asosiyga qaytaradi). Ikki kartochka:
-   1. **Asosiy sozlamalar:** **Profil va sinxronlash** (Google bilan ixtiyoriy kirish va qo'lda "Ma'lumotni serverga yuklash"; `TZ-sinxronlash.md`), **Xavfsizlik** (ichiga kiradi: F11) va **Mavzu** (Qurilma bo'yicha / Yorug' / Qorong'i; tanlov shu yerning o'zida darhol qo'llanadi).
+   1. **Asosiy sozlamalar:** **Profil va sinxronlash** (Google bilan ixtiyoriy kirish va sinxronlash: birinchi sinxron, avtomatik yuborish va tortib olish, holat; `TZ-sinxronlash.md`, 15-band), **Xavfsizlik** (ichiga kiradi: F11) va **Mavzu** (Qurilma bo'yicha / Yorug' / Qorong'i; tanlov shu yerning o'zida darhol qo'llanadi).
    2. **Boshqa:** **Zaxira va eksport** (F9) va **Bosh ekranga o'rnatish** (yo'riqnoma, F10).
    Pastda kulrang matn: "Chuntak AI · versiya X.Y.Z".
    **Xavfsizlik** ekrani: "PIN-kod bilan ochish" almashtirgichi va (yoqilganda) "PIN-kodni o'zgartirish" qatori (F11). PIN, mavzu, zaxira va o'rnatish yo'riqnomasi "Ko'proq" da yo'q.

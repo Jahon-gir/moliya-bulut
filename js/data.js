@@ -29,6 +29,10 @@
   var db = null;
   var joriyNom = DB_NOMI;   // hozir ochiq bazaning nomi (sinovlarda boshqa nom bo'lishi mumkin)
   var PIN_KALITI = 'pin';   // sozlamalar ichidagi PIN yozuvining kaliti: zaxiraga KIRMAYDI va tiklashda saqlanib qoladi
+  var SINXRON_KALITI = 'sinxron', NAVBAT_KALITI = 'sinxron-navbat';   // sozlamalar ichidagi mahalliy yozuvlar (S5): sinxron holati va serverga yuborilmagan o'zgarishlar navbati (zaxiraga KIRMAYDI)
+  var kuzatuvchilar = [];
+  function ozgarishKuzat(f) { kuzatuvchilar.push(f); }
+  function ozgarishXabari() { kuzatuvchilar.slice().forEach(function (f) { try { f(); } catch (e) { /* ahamiyatsiz */ } }); }
   var ICHKI_NUSXA_KALITI = 'migratsiya-zaxira';   // sozlamalar ichida: sxema yangilanishidan oldingi ma'lumot nusxasi (zaxiraga KIRMAYDI, tiklashda saqlanadi)
 
   // Noyob id yaratish: har doim UUID (v4)
@@ -63,7 +67,7 @@
   // Qarzning o'chirilgan to'lovlari ham ko'rinmaydi. To'liq (o'chirilganlar bilan) ro'yxat — hammasiniOqish() (zaxira uchun).
   function hammasi(toplam) {
     return amal(toplam, 'readonly', function (s) { return s.getAll(); }).then(function (r) {
-      return Calc.jonlilar(toplam, toplam === 'sozlamalar' ? r.filter(function (x) { return x.kalit !== ICHKI_NUSXA_KALITI && x.kalit !== 'yuklash'; }) : r);
+      return Calc.jonlilar(toplam, toplam === 'sozlamalar' ? r.filter(function (x) { return x.kalit !== ICHKI_NUSXA_KALITI && x.kalit !== 'yuklash' && x.kalit !== SINXRON_KALITI && x.kalit !== NAVBAT_KALITI; }) : r);
     });
   }
   function olish(toplam, kalit) {
@@ -82,8 +86,8 @@
       if (toplam === 'sozlamalar' && Calc.yerelKalitmi(qiymat)) { amal(toplam, 'readwrite', function (s) { s.put(qiymat); }).then(resolve, reject); return; }
       var q = Object.assign({}, qiymat);
       if (kalitMaydoni === 'id' && !q.id) q.id = yangiId();
-      var tx = db.transaction(toplam, 'readwrite'), s = tx.objectStore(toplam);
-      tx.oncomplete = function () { resolve(); };
+      var tx = db.transaction(toplam === 'sozlamalar' ? ['sozlamalar'] : [toplam, 'sozlamalar'], 'readwrite'), s = tx.objectStore(toplam);
+      tx.oncomplete = function () { resolve(); ozgarishXabari(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error); };
       var so = s.get(q[kalitMaydoni]);
@@ -95,6 +99,7 @@
         q.updated_at = hozir;
         if (toplam === 'qarzlar') q.tolovlar = Calc.tolovlarniBirlashtir(mavjud && mavjud.tolovlar, q.tolovlar, hozir, yangiId);
         s.put(q);
+        navbatgaYoz(tx, toplam, q[kalitMaydoni], hozir);   // serverga yuborish navbati: shu tranzaksiyada (yozuv va navbat birga saqlanadi yoki birga bekor bo'ladi)
       };
     });
   }
@@ -104,17 +109,34 @@
   function ochirish(toplam, kalit) {
     if (toplam === 'sozlamalar' && Calc.yerelKalitmi({ kalit: kalit })) return haqiqiyOchirish(toplam, kalit);
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(toplam, 'readwrite'), s = tx.objectStore(toplam);
-      tx.oncomplete = function () { resolve(); };
+      var tx = db.transaction(toplam === 'sozlamalar' ? ['sozlamalar'] : [toplam, 'sozlamalar'], 'readwrite'), s = tx.objectStore(toplam);
+      tx.oncomplete = function () { resolve(); ozgarishXabari(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error); };
       var so = s.get(kalit);
       so.onsuccess = function () {
         var x = so.result;
         if (!x) return;
-        s.put(Object.assign({}, x, { deleted: true, updated_at: new Date().toISOString() }));
+        var hozir = new Date().toISOString();
+        s.put(Object.assign({}, x, { deleted: true, updated_at: hozir }));
+        navbatgaYoz(tx, toplam, kalit, hozir);
       };
     });
+  }
+  // Serverga yuborish navbati (S5). Faqat sinxron yoqilgan bo'lsa (sinxron yozuvida navbat = true) yoziladi. Navbat — o'zgargan qatorlarning
+  // KALITLARI (qator mazmuni emas): yuborish paytida bazadan oxirgi holati o'qiladi, shuning uchun bir qator ko'p marta o'zgarsa ham bir marta yuboriladi.
+  // Qiymat — qatorning updated_at i: yuborilgandan keyin navbatdan shu qiymat bo'yicha olinadi (yuborish paytida yana o'zgargan qator navbatda qoladi).
+  function navbatgaYoz(tx, toplam, kalit, vaqt) {
+    var s = tx.objectStore('sozlamalar');
+    s.get(SINXRON_KALITI).onsuccess = function (e) {
+      if (!e.target.result || e.target.result.navbat !== true) return;
+      s.get(NAVBAT_KALITI).onsuccess = function (e2) {
+        var n = e2.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} };
+        n.qatorlar = n.qatorlar || {};
+        (n.qatorlar[toplam] = n.qatorlar[toplam] || {})[kalit] = vaqt;
+        s.put(n);
+      };
+    };
   }
   function haqiqiyOchirish(toplam, kalit) { return amal(toplam, 'readwrite', function (s) { s.delete(kalit); }); }
 
@@ -239,10 +261,13 @@
 
   // Hamma to'plamni zaxiradagi ma'lumot bilan ALMASHTIRADI. Hammasi BITTA tranzaksiyada: biror joyda xato bo'lsa,
   // tranzaksiya bekor qilinadi va mavjud ma'lumot aynan avvalgidek qoladi (yarim holat bo'lmaydi).
-  function almashtirish(malumot) {
+  // opts (sinxron uchun): navbatsiz — navbatga tegilmaydi/tozalanadi; navbat — shu navbat yoziladi; yerel — shu mahalliy yozuvlar (kalit bo'yicha) yoziladi.
+  // Hech bir opts berilmasa (oddiy tiklash): sinxron yoqilgan bo'lsa, tiklangan HAMMA qator serverga yuboriladigan o'zgarish sifatida navbatga qo'yiladi (TZ-sinxronlash.md 6.10).
+  function almashtirish(malumot, opts) {
+    opts = opts || {};
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(Object.keys(TOPLAMLAR), 'readwrite');
-      tx.oncomplete = function () { resolve(); };
+      tx.oncomplete = function () { resolve(); ozgarishXabari(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
       try {
@@ -253,9 +278,20 @@
             var yerelSorovi = s.getAll();
             yerelSorovi.onsuccess = function () {
               var yerel = yerelSorovi.result.filter(function (x) { return Calc.yerelKalitmi(x); });
+              var sinxronYozuvi = yerel.filter(function (x) { return x.kalit === SINXRON_KALITI; })[0];
               s.clear();
               (malumot[t] || []).forEach(function (x) { if (x && !Calc.yerelKalitmi(x)) s.put(x); });
-              yerel.forEach(function (x) { s.put(x); });
+              var yozilgan = {};
+              (opts.yerel || []).forEach(function (x) { yozilgan[x.kalit] = true; s.put(x); });
+              var navbat = null;
+              if (opts.navbat) navbat = { kalit: NAVBAT_KALITI, qatorlar: opts.navbat, ochirish: {} };
+              else if (!opts.navbatsiz && sinxronYozuvi && sinxronYozuvi.navbat === true) navbat = { kalit: NAVBAT_KALITI, qatorlar: butunNavbat(malumot), ochirish: {} };
+              yerel.forEach(function (x) {
+                if (yozilgan[x.kalit]) return;
+                if (x.kalit === NAVBAT_KALITI && (navbat || opts.navbatsiz)) return;   // navbat almashtiriladi yoki tozalanadi
+                s.put(x);
+              });
+              if (navbat) s.put(navbat);
             };
             return;
           }
@@ -263,6 +299,124 @@
           (malumot[t] || []).forEach(function (x) { s.put(x); });
         });
       } catch (e) { try { tx.abort(); } catch (e2) { /* allaqachon bekor */ } reject(e); }
+    });
+  }
+
+  // Ma'lumotdagi HAMMA qator navbat shaklida: { jadval: { kalit: updated_at } }
+  function butunNavbat(m) {
+    var n = {};
+    ['hisoblar', 'kategoriyalar', 'yozuvlar', 'byudjetlar', 'qarzlar'].forEach(function (t) {
+      n[t] = {}; (m[t] || []).forEach(function (x) { n[t][x[TOPLAMLAR[t]]] = x.updated_at; });
+    });
+    n.sozlamalar = {}; (m.sozlamalar || []).forEach(function (x) { if (x && x.kalit === 'asosiy') n.sozlamalar.asosiy = x.updated_at; });
+    return n;
+  }
+
+  // ---- Sinxronlash uchun past darajali amallar (S5). Ularni faqat js/sinxron.js chaqiradi ----
+  function navbatniOl() { return olish('sozlamalar', NAVBAT_KALITI).then(function (n) { return n || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} }; }); }
+
+  // Navbatdagi qatorlarning hozirgi holatini o'qiydi (bitta tranzaksiyada). kalitlar: { jadval: [kalit, ...] }. Natija: { jadval: [qator, ...] }
+  function qatorlarniOqish(kalitlar) {
+    return new Promise(function (resolve, reject) {
+      var natija = {}, nomlar = Object.keys(kalitlar).filter(function (t) { return TOPLAMLAR[t]; });
+      if (!nomlar.length) { resolve(natija); return; }
+      var tx = db.transaction(nomlar, 'readonly');
+      nomlar.forEach(function (t) {
+        natija[t] = [];
+        kalitlar[t].forEach(function (k) { tx.objectStore(t).get(k).onsuccess = function (e) { if (e.target.result) natija[t].push(e.target.result); }; });
+      });
+      tx.oncomplete = function () { resolve(natija); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error); };
+    });
+  }
+
+  // Yuborilgan qatorlarni navbatdan oladi: faqat qiymat (updated_at) hali o'zgarmagan bo'lsa (yuborish paytida yana o'zgartirilgan qator navbatda qoladi).
+  // yuborilgan: { jadval: { kalit: updated_at } }; ochirilgan: { jadval: [id, ...] } (serverda o'chirildi deb belgilangan id lar)
+  function navbatdanOlish(yuborilgan, ochirilgan) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['sozlamalar'], 'readwrite'), s = tx.objectStore('sozlamalar');
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error); };
+      s.get(NAVBAT_KALITI).onsuccess = function (e) {
+        var n = e.target.result;
+        if (!n) return;
+        Object.keys(yuborilgan || {}).forEach(function (t) {
+          Object.keys(yuborilgan[t]).forEach(function (k) { if (n.qatorlar && n.qatorlar[t] && n.qatorlar[t][k] === yuborilgan[t][k]) delete n.qatorlar[t][k]; });
+          if (n.qatorlar && n.qatorlar[t] && !Object.keys(n.qatorlar[t]).length) delete n.qatorlar[t];
+        });
+        Object.keys(ochirilgan || {}).forEach(function (t) {
+          if (n.ochirish && n.ochirish[t]) n.ochirish[t] = n.ochirish[t].filter(function (id) { return ochirilgan[t].indexOf(id) < 0; });
+          if (n.ochirish && n.ochirish[t] && !n.ochirish[t].length) delete n.ochirish[t];
+        });
+        s.put(n);
+      };
+    });
+  }
+
+  // Yuborib bo'lmaydigan (buzuq) qatorni navbatdan oladi (qiymat bo'yicha); qolganlar yuboriladi
+  function navbatdanTashlash(jadval, kalit, qiymat) { var y = {}; y[jadval] = {}; y[jadval][kalit] = qiymat; return navbatdanOlish(y); }
+
+  // Serverdan kelgan qatorlarni mahalliy bazaga qo'llaydi (BITTA tranzaksiya; navbat ro'yxati shu tranzaksiyada o'qiladi, shuning uchun
+  // foydalanuvchi shu paytda qilgan o'zgarish tortilgan qator ustiga yozilib ketmaydi). Navbatga hech narsa QO'SHILMAYDI (bu o'zgarish serverdan keldi).
+  // Natija: { yozildi, ziddiyat, tomb: [{ jadval, id }] }
+  function tortilganlarniYozish(jadval, qatorlar, yaqinda) {
+    return new Promise(function (resolve, reject) {
+      var storeNomi = jadval === 'qarz_tolovlari' ? 'qarzlar' : jadval;
+      var tx = db.transaction([storeNomi, 'sozlamalar'], 'readwrite'), st = tx.objectStore(storeNomi), sz = tx.objectStore('sozlamalar');
+      var natija = { yozildi: 0, ziddiyat: 0, tomb: [] }, navbat = null, navbatOzgardi = false;
+      tx.oncomplete = function () { resolve(natija); };   // ozgarishXabari chaqirilmaydi: bu mahalliy o'zgarish emas (qayta yuborishni boshlamasin)
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Tortib olish bekor qilindi')); };
+      sz.get(NAVBAT_KALITI).onsuccess = function (e) {
+        navbat = e.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} };
+        var kut = (navbat.qatorlar && navbat.qatorlar[storeNomi]) || {};
+        function keyingi(i) {
+          if (i >= qatorlar.length) {
+            if (navbatOzgardi) sz.put(navbat);
+            return;
+          }
+          var r = qatorlar[i], kalit = jadval === 'qarz_tolovlari' ? r.qarz_id : jadval === 'byudjetlar' ? (r.kategoriya_id === null || r.kategoriya_id === undefined ? 'umumiy' : r.kategoriya_id) : r.id;
+          st.get(kalit).onsuccess = function (e2) {
+            var h = SinxronSof.tortilganniQollash(jadval, e2.target.result, r, { kutilmoqda: kut, yaqinda: yaqinda || {} });
+            if (h.ziddiyat) natija.ziddiyat++;
+            if (h.yoz) { st.put(h.yoz); natija.yozildi++; }
+            if (h.tomb.length) {
+              navbat.ochirish = navbat.ochirish || {};
+              navbat.ochirish[jadval] = (navbat.ochirish[jadval] || []).concat(h.tomb.filter(function (id) { return (navbat.ochirish[jadval] || []).indexOf(id) < 0; }));
+              h.tomb.forEach(function (id) { natija.tomb.push({ jadval: jadval, id: id }); });
+              if (h.yoz && jadval === 'byudjetlar' && navbat.qatorlar.byudjetlar) delete navbat.qatorlar.byudjetlar[kalit];   // almashtirilgan mahalliy qator endi yo'q: uni yuborish kerak emas
+              navbatOzgardi = true;
+            }
+            keyingi(i + 1);
+          };
+        }
+        keyingi(0);
+      };
+    });
+  }
+
+  // Birinchi sinxron "Faqat shu qurilmadagini yuborish": hamma qator navbatga qo'yiladi, sozlamalar qatorining id si serverdagiga tenglashtiriladi,
+  // sinxron yozuvi yoziladi. Hammasi bitta tranzaksiyada.
+  function hammasiniNavbatga(yozuv, asosiyId) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(Object.keys(TOPLAMLAR), 'readwrite');
+      tx.oncomplete = function () { resolve(); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      var m = {}, kutilgan = Object.keys(TOPLAMLAR).length;
+      Object.keys(TOPLAMLAR).forEach(function (t) {
+        tx.objectStore(t).getAll().onsuccess = function (e) {
+          m[t] = t === 'sozlamalar' ? e.target.result.filter(function (x) { return !Calc.yerelKalitmi(x); }) : e.target.result;
+          if (--kutilgan) return;
+          var sz = tx.objectStore('sozlamalar'), hozir = new Date().toISOString();
+          var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
+          if (asosiy && asosiyId && asosiy.id !== asosiyId) { asosiy = Object.assign({}, asosiy, { id: asosiyId, updated_at: hozir }); sz.put(asosiy); m.sozlamalar = [asosiy]; }
+          sz.put(yozuv);
+          sz.put({ kalit: NAVBAT_KALITI, qatorlar: butunNavbat(m), ochirish: {} });
+        };
+      });
     });
   }
 
@@ -283,6 +437,8 @@
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
+    ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
+    tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
     hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI
   };
 })(typeof window !== 'undefined' ? window : this);

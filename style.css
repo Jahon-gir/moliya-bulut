@@ -707,3 +707,13 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .yuklash-progress { margin-top: 10px; font-size: 14px; }
 .yuklash-natija { margin-top: 6px; }
 .yuklash-karta .xato-matn { white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Sinxronlash (S5) */
+.sinxron-belgi { display: block; width: 100%; min-height: 44px; margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--chiziq); border-radius: 12px; background: var(--karta); color: var(--xira); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.sinxron-belgi.xato { color: var(--xarajat); border-color: var(--xarajat); }
+.sinxron-belgi.internet { color: var(--xira); }
+.sinxron-karta .sinxron-holat { margin: 0 0 8px; font-weight: 600; }
+.sinxron-karta .asosiy-tugma, .sinxron-karta .ikkinchi-tugma { margin-top: 6px; }
+.sinxron-karta .xato-matn, .xato-matn#sinxron-xato { white-space: pre-line; overflow-wrap: anywhere; }
+.sinxron-taqqos { margin: 8px 0; }
+.sinxron-taqqos .yozuv-nom { margin: 4px 0; }

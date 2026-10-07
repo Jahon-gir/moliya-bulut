@@ -140,14 +140,22 @@ var Yuklash = (function () {
     });
   }
 
-  function tashla(e, jadval) { var x = new Error(xatoMatni(e, jadval)); x.server = true; throw x; }
+  // Texnik kod (ekranda "kod: ..." ko'rinadi): xato sababini skrinshotdan aniq bilish uchun
+  function xatoKodi(e, status) {
+    var m = String((e && e.message) || e || '').toLowerCase();
+    if (e && e.code) return 'PG_' + e.code;
+    if (status && status >= 400) return 'HTTP_' + status;
+    if (m.indexOf('fetch') >= 0 || m.indexOf('network') >= 0 || m.indexOf('failed to') >= 0 || m.indexOf('abort') >= 0 || m.indexOf('timeout') >= 0 || m.indexOf('load failed') >= 0) return 'NETWORK';
+    return e && e.name ? 'JS_' + e.name : 'UNKNOWN';
+  }
+  function tashla(e, jadval, status) { var x = new Error(xatoMatni(e, jadval)); x.server = true; x.kod = xatoKodi(e, status); throw x; }
 
   // Serverdagi qatorlar soni (faqat o'zingizniki: RLS). Natija: { hisoblar: n, ... }
   function serverSoni(c) {
     var n = {};
     return JADVALLAR.reduce(function (p, j) {
       return p.then(function () {
-        return c.from(j).select('id', { count: 'exact', head: true }).then(function (r) { if (r.error) tashla(r.error, j); n[j] = r.count || 0; }, function (e) { tashla(e, j); });
+        return c.from(j).select('id', { count: 'exact', head: true }).then(function (r) { if (r.error) tashla(r.error, j, r.status); n[j] = r.count || 0; }, function (e) { tashla(e, j); });
       });
     }, Promise.resolve()).then(function () { return n; });
   }
@@ -157,7 +165,7 @@ var Yuklash = (function () {
     var ids = [];
     function sahifa(b) {
       return c.from(j).select('id').order('id').range(b, b + 999).then(function (r) {
-        if (r.error) tashla(r.error, j);
+        if (r.error) tashla(r.error, j, r.status);
         (r.data || []).forEach(function (x) { ids.push(x.id); });
         return (r.data || []).length === 1000 ? sahifa(b + 1000) : ids;
       }, function (e) { tashla(e, j); });
@@ -208,7 +216,7 @@ var Yuklash = (function () {
               return bolaklash(r[j], BOLAK).reduce(function (q, bolak) {
                 return q.then(function () {
                   return c.from(j).upsert(bolak, { onConflict: 'id' }).then(function (res) {
-                    if (res.error) tashla(res.error, j);
+                    if (res.error) tashla(res.error, j, res.status);
                     bajarildi += bolak.length;
                     if (opts.progress) opts.progress(bajarildi, jamiSoni, j);
                   }, function (e) { tashla(e, j); });
@@ -229,7 +237,7 @@ var Yuklash = (function () {
 
   return {
     JADVALLAR: JADVALLAR, NOMLAR: NOMLAR, BOLAK: BOLAK, KALIT: KALIT,
-    qatorlar: qatorlar, soni: soni, jami: jami, tekshir: tekshir, tekshirRoyxat: tekshirRoyxat, serverSoni: serverSoni, serverIdlari: serverIdlari, mijoz: mijoz, tashla: tashla, bolaklash: bolaklash, xatoMatni: xatoMatni,
+    qatorlar: qatorlar, soni: soni, jami: jami, tekshir: tekshir, tekshirRoyxat: tekshirRoyxat, xatoKodi: xatoKodi, serverSoni: serverSoni, serverIdlari: serverIdlari, mijoz: mijoz, tashla: tashla, bolaklash: bolaklash, xatoMatni: xatoMatni,
     sozlash: sozlash, holatOl: holatOl, yubor: yubor, band: function () { return yurmoqda; }
   };
 })();

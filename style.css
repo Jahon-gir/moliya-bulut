@@ -725,3 +725,13 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 #ochir-soz { display: block; width: 100%; min-height: 44px; margin: 6px 0 10px; padding: 8px 12px; border: 1px solid var(--chiziq); border-radius: 12px; background: var(--fon); color: var(--matn); font: inherit; }
 .xavf-karta .xavfli-tugma, #ochir-tugma { margin-bottom: 0; }
 #ochir-tugma:disabled { opacity: .5; }
+
+/* S8: rozilik matni, tasdiq oynasi */
+.rozilik-matn { margin: 0 0 8px; }
+.rozilik-matn p { margin: 0 0 4px; }
+.rozilik-havola { color: var(--asosiy); font-weight: 600; }
+.profil-karta .xavfli-tugma { margin-top: 8px; margin-bottom: 0; }
+.tasdiq-qator { display: flex; gap: 8px; margin: 12px 0 8px; }
+.tasdiq-qator button { flex: 1; min-height: 48px; }
+.qizil-tugma { border: 0; border-radius: 12px; background: var(--xarajat); color: #fff; font: inherit; font-weight: 700; cursor: pointer; padding: 0 14px; }
+.qizil-tugma:disabled { opacity: .6; cursor: default; }

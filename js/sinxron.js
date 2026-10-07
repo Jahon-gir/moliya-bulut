@@ -16,34 +16,62 @@ var Sinxron = (function () {
   var KAMIDA_MS = 8000;         // fokus/internet hodisalarida ketma-ket tsikllar orasidagi eng kam masofa
   var sozlama = {};
 
-  var holat = { tur: 'boshlanmagan', soni: 0, oxirgi: null, xato: '', ziddiyat: 0, rad: [], ishlayapti: false, yangilandi: 0 };
+  var holat = { tur: 'boshlanmagan', tayyor: false, rozilik: false, jarayon: '', soni: 0, oxirgi: null, xato: '', ziddiyat: 0, rad: [], ishlayapti: false, yangilandi: 0 };
   var kuzatuvchilar = [], tortildiKuzatuvchilar = [];
   var yaqinda = {}, oldingiYaqinda = {};       // oxirgi tsikllarda o'zimiz yuborgan qator id lari ("aks-sado" to'qnashuv emas)
-  var band = null, birinchiBand = false, qayta = false, xatoKod = '', rejaSoati = null, davrSoati = null, boshlandi = false, oxirgiBoshlanish = 0, xatoMatni = '', xatoTuri = '';
+  var oxirgiKirishId = null, band = null, birinchiBand = false, avtoBand = false, tanlovTahlili = null, oxirgiFaollik = Date.now(), tikSoni = 0, rpcHolati = undefined, qayta = false, xatoKod = '', rejaSoati = null, davrSoati = null, boshlandi = false, oxirgiBoshlanish = 0, xatoMatni = '', xatoTuri = '';
 
   function sozla(s) { sozlama = s || {}; }
   function uid() { return sozlama.foydalanuvchi ? sozlama.foydalanuvchi() : (typeof Kirish !== 'undefined' && Kirish.holat().kirgan ? Kirish.holat().id : ''); }
   function xabarla() { kuzatuvchilar.slice().forEach(function (f) { try { f(holat); } catch (e) { /* ahamiyatsiz */ } }); }
   function kuzat(f) { kuzatuvchilar.push(f); return function () { kuzatuvchilar = kuzatuvchilar.filter(function (x) { return x !== f; }); }; }
   function tortildiKuzat(f) { tortildiKuzatuvchilar.push(f); }
-  function tashlash() { yaqinda = {}; oldingiYaqinda = {}; xatoMatni = ''; xatoTuri = ''; holat.rad = []; holat.ziddiyat = 0; holat.oxirgi = null; }   // sinovlarda qurilma almashganda
+  function tashlash() { yaqinda = {}; oldingiYaqinda = {}; xatoMatni = ''; xatoTuri = ''; xatoKod = ''; tanlovTahlili = null; avtoBand = false; rpcHolati = undefined; tikSoni = 0; holat.jarayon = ''; holat.rad = []; holat.ziddiyat = 0; holat.oxirgi = null; }   // sinovlarda qurilma almashganda
 
   // ---------------- Holat ----------------
   function yozuvOl() { return Data.olish('sozlamalar', Data.SINXRON_KALITI); }
+  // ---- Rozilik (S8): "Google bilan kirish" tugmasini bosish = rozilik. Faqat shu akkaunt uchun bir marta saqlanadi (mahalliy yozuv, zaxiraga kirmaydi) ----
+  var ROZILIK_BELGISI = 'moliya-rozilik-kutilmoqda';   // "moliya-" bilan boshlanadi: "PINni unutdim" to'liq tozalashi uni ham o'chiradi
+  function rozilikOl() { return Data.olish('sozlamalar', 'rozilik'); }
+  function rozilikBelgisiniQoy() { try { localStorage.setItem(ROZILIK_BELGISI, String(Date.now())); } catch (e) { /* ahamiyatsiz */ } }
+  function rozilikBelgisiniOl() {
+    try { var t = Number(localStorage.getItem(ROZILIK_BELGISI)); localStorage.removeItem(ROZILIK_BELGISI); return !!t && Date.now() - t < 30 * 60000; } catch (e) { return false; }
+  }
+  function rozilikYoz(id) { return Data.saqlash('sozlamalar', { kalit: 'rozilik', user_id: id, vaqt: new Date().toISOString() }); }
+  // Kirish tugmasi bosilgach (Google dan qaytganda) belgi akkaunt bilan bog'lanadi. Natija: shu akkaunt uchun rozilik bor-yo'qligi
+  function rozilikniQayd() {
+    var id = uid();
+    if (!id) return Promise.resolve(false);
+    return rozilikOl().then(function (r) {
+      if (r && r.user_id === id) { rozilikBelgisiniOl(); return true; }
+      if (rozilikBelgisiniOl()) return rozilikYoz(id).then(function () { return true; });
+      return false;
+    });
+  }
+  // Eski kirgan foydalanuvchi (rozilik yozuvi yo'q) "Roziman" tugmasini bossa
+  function rozilikBer() { var id = uid(); if (!id) return Promise.resolve(false); return rozilikYoz(id).then(function () { return holatniYangila(); }).then(function () { return avtomatik(); }); }
+
   function yozuvYoz(r) { return Data.saqlash('sozlamalar', Object.assign({ kalit: Data.SINXRON_KALITI }, r)); }
 
   // Holatni bazadan hisoblaydi va ko'rsatkichni yangilaydi. Natija: sinxron yozuvi (yoki null)
   function holatniYangila() {
-    return Promise.all([yozuvOl(), Data.navbatniOl()]).then(function (r) {
-      var rec = r[0] || null, soni = SinxronSof.navbatSoni(r[1]), id = uid();
+    return Promise.all([yozuvOl(), Data.navbatniOl(), rozilikOl()]).then(function (r) {
+      var rec = r[0] || null, soni = SinxronSof.navbatSoni(r[1]), id = uid(), roz = r[2];
       holat.soni = soni;
       holat.oxirgi = rec && rec.oxirgi_vaqt ? rec.oxirgi_vaqt : null;
       holat.rad = rec && rec.rad ? rec.rad : [];
       holat.ziddiyat = rec && rec.ziddiyat ? rec.ziddiyat : 0;
       holat.xato = xatoMatni; holat.kod = xatoKod;
+      holat.tayyor = tayyorMi(rec, id); holat.rozilik = !!(roz && roz.user_id === id);
       if (!id) holat.tur = 'yoq';
-      else if (rec && rec.user_id && rec.user_id !== id) holat.tur = 'boshqa-akkaunt';
-      else if (!rec || !rec.tayyor) holat.tur = 'boshlanmagan';
+      else if (!tayyorMi(rec, id)) {
+        // Birinchi sinxron shu akkaunt uchun hali tugamagan. Rozilik yo'q: "yoqilmagan" (yoki boshqa akkaunt). Rozilik bor: avtomatik boshlanmoqda / tanlov kerak / xato
+        if (!roz || roz.user_id !== id) holat.tur = rec && rec.user_id && rec.user_id !== id ? 'boshqa-akkaunt' : 'boshlanmagan';
+        else if (holat.ishlayapti || avtoBand) holat.tur = 'ishlayapti';
+        else if (tanlovTahlili) holat.tur = 'tanlov';
+        else if (xatoMatni) holat.tur = xatoTuri === 'internet' ? 'internet-yoq' : 'xato';
+        else holat.tur = 'boshlanmoqda';
+      }
       else if (holat.ishlayapti) holat.tur = 'ishlayapti';
       else if (xatoMatni) holat.tur = xatoTuri === 'internet' ? 'internet-yoq' : 'xato';
       else if (typeof navigator !== 'undefined' && navigator.onLine === false && soni > 0) holat.tur = 'internet-yoq';
@@ -80,16 +108,32 @@ var Sinxron = (function () {
 
   var TORTISH_TARTIBI = ['hisoblar', 'kategoriyalar', 'yozuvlar', 'byudjetlar', 'qarzlar', 'qarz_tolovlari'];   // sozlamalar tortilmaydi: tema va h.k. har qurilmada alohida
 
-  function tort(c, rec) {
+  // Serverdagi sinxron_holati() (supabase/005): har jadvalning eng oxirgi o'zgarish vaqti BITTA so'rovda. Bo'lmasa (null) — eski usul (har jadvalga so'rov).
+  function serverHolati(c) {
+    if (rpcHolati === false) return Promise.resolve(null);
+    return c.rpc('sinxron_holati').then(function (res) {
+      if (res.error) { if (res.status === 404 || res.error.code === 'PGRST202') rpcHolati = false; return null; }   // funksiya yo'q: shu seans davomida qayta so'ralmaydi
+      rpcHolati = true;
+      return res.data || null;
+    }, function () { return null; });
+  }
+
+  // majbur = true: har jadval tekshiriladi (ilova ochilganda va har 10-tsiklda: kechikib yozilgan qator o'tib ketmasin). Aks holda faqat o'zgargan jadvallar tortiladi.
+  function tort(c, rec, majbur) {
     var jami = { yozildi: 0, ziddiyat: 0 }, kursor = Object.assign({}, rec.kursor || {}), ozgardi = false;
     var ctxYaqinda = Object.assign({}, oldingiYaqinda, yaqinda);
-    return TORTISH_TARTIBI.reduce(function (p, j) {
-      return p.then(function () {
-        return jadvalniTort(c, j, kursor[j], function (qatorlar) {
-          return Data.tortilganlarniYozish(j, qatorlar, ctxYaqinda).then(function (h) { jami.yozildi += h.yozildi; jami.ziddiyat += h.ziddiyat; });
-        }).then(function (maks) { if (maks && maks !== kursor[j]) { kursor[j] = maks; ozgardi = true; } });
-      });
-    }, Promise.resolve()).then(function () {
+    return (majbur ? Promise.resolve(null) : serverHolati(c)).then(function (sh) {
+      return TORTISH_TARTIBI.reduce(function (p, j) {
+        return p.then(function () {
+          if (sh && kursor[j]) {                                   // serverdagi eng oxirgi vaqt bizning kursorimizdan yangi emas: bu jadvalda yangilik yo'q
+            if (!sh[j] || Date.parse(sh[j]) <= Date.parse(kursor[j])) return;
+          } else if (sh && !sh[j] && !kursor[j]) return;           // serverda bu jadval bo'sh
+          return jadvalniTort(c, j, kursor[j], function (qatorlar) {
+            return Data.tortilganlarniYozish(j, qatorlar, ctxYaqinda).then(function (h) { jami.yozildi += h.yozildi; jami.ziddiyat += h.ziddiyat; });
+          }).then(function (maks) { if (maks && maks !== kursor[j]) { kursor[j] = maks; ozgardi = true; } });
+        });
+      }, Promise.resolve());
+    }).then(function () {
       if (!ozgardi && !jami.ziddiyat) return jami;
       return yozuvOl().then(function (yangi) {
         yangi = Object.assign({}, yangi || rec, { kursor: Object.assign({}, (yangi && yangi.kursor) || {}, kursor) });
@@ -211,7 +255,7 @@ var Sinxron = (function () {
       oxirgiBoshlanish = Date.now();
       holat.ishlayapti = true; xabarla();
       var c, tortilgan = 0;
-      return Promise.resolve().then(function () { c = Yuklash.mijoz(); return tort(c, rec); }).then(function (t) {
+      return Promise.resolve().then(function () { c = Yuklash.mijoz(); tikSoni++; return tort(c, rec, ['ochildi', 'qolda', 'internet', 'kirish', 'qayta'].indexOf(sabab) >= 0 || tikSoni % 10 === 0); }).then(function (t) {
         tortilgan = t.yozildi;
         return yubor(c, opts.progress);
       }).then(function (y) {
@@ -240,6 +284,30 @@ var Sinxron = (function () {
     rejaSoati = setTimeout(function () { rejaSoati = null; yurgiz('ozgarish'); }, kechikish === undefined ? KECHIKISH_MS : kechikish);
   }
 
+  // Fon tortishi faqat ilova ko'rinib turganda va internet bor paytda: sahifa yashirin bo'lsa vaqt belgisi ham to'xtatiladi (batareya).
+  // Foydalanuvchi 3 daqiqadan ko'p tegmasa, tekshiruv 5 daqiqada bir marta (so'rovlar kamayadi).
+  function faollik() { oxirgiFaollik = Date.now(); }
+  function davrniBoshla() {
+    if (davrSoati || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
+    davrSoati = setInterval(function () {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      var bosh = Date.now() - oxirgiFaollik > (sozlama.boshVaqt !== undefined ? sozlama.boshVaqt : 180000), oraliq = bosh ? (sozlama.sekinDavr || 300000) : (sozlama.davr || DAVR_MS);
+      if (Date.now() - oxirgiBoshlanish >= oraliq - 1000) yurgiz('vaqt');
+    }, sozlama.tik || 15000);
+  }
+  function davrniToxtat() { if (davrSoati) { clearInterval(davrSoati); davrSoati = null; } }
+
+  // Kirgan (yoki kirish qaytgan) paytda: rozilikni akkauntga bog'lab, sinxron tayyor bo'lsa tsikl, bo'lmasa avtomatik birinchi sinxron
+  function kirishdan() {
+    if (!uid()) return holatniYangila();
+    return rozilikniQayd().then(function () { return holatniYangila(); }).then(function (rec) {
+      if (tayyorMi(rec, uid())) return yurgiz('kirish');
+      if (tanlovTahlili || xatoMatni || avtoBand) return null;   // tanlov kutilmoqda yoki xato: foydalanuvchi "Qayta urinish" bosadi (har hodisada qaytadan urinilmaydi)
+      return avtomatik();
+    });
+  }
+
   // Ilova ishga tushganda bir marta chaqiriladi (baza tayyor bo'lgach)
   function boshlash() {
     if (boshlandi) return Promise.resolve();
@@ -248,16 +316,23 @@ var Sinxron = (function () {
       if (!uid()) return;
       holatniYangila().then(function (rec) { if (tayyorMi(rec, uid())) rejalash(); });
     });
-    if (typeof Kirish !== 'undefined') Kirish.kuzat(function () { holatniYangila().then(function (rec) { if (tayyorMi(rec, uid())) yurgiz('kirish'); }); });
+    // Kirish hodisalari (token yangilanishi ham hodisa beradi) tsiklni qayta-qayta boshlamasin: faqat kirgan akkaunt O'ZGARGANDA (kirish, chiqish, boshqa akkaunt)
+    if (typeof Kirish !== 'undefined') Kirish.kuzat(function () { var id = uid(); if (id === oxirgiKirishId) return; oxirgiKirishId = id; kirishdan(); });
     function yangiTsikl(sabab) { if (Date.now() - oxirgiBoshlanish >= KAMIDA_MS) yurgiz(sabab); }
-    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') yangiTsikl('fokus'); });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') { faollik(); davrniBoshla(); yangiTsikl('fokus'); } else davrniToxtat();
+      });
+      ['pointerdown', 'keydown', 'touchstart'].forEach(function (h) { document.addEventListener(h, faollik, { passive: true, capture: true }); });
+    }
     if (typeof window !== 'undefined') {
-      window.addEventListener('focus', function () { yangiTsikl('fokus'); });
-      window.addEventListener('online', function () { xatoMatni = ''; xatoTuri = ''; yurgiz('internet'); });
+      window.addEventListener('focus', function () { faollik(); yangiTsikl('fokus'); });
+      window.addEventListener('online', function () { xatoMatni = ''; xatoTuri = ''; xatoKod = ''; yozuvOl().then(function (rec) { return tayyorMi(rec, uid()) ? yurgiz('internet') : kirishdan(); }); });
       window.addEventListener('offline', function () { holatniYangila(); });
     }
-    davrSoati = setInterval(function () { if (typeof document === 'undefined' || document.visibilityState === 'visible') yangiTsikl('vaqt'); }, sozlama.davr || DAVR_MS);
-    return holatniYangila().then(function (rec) { if (tayyorMi(rec, uid())) return yurgiz('ochildi'); });
+    davrniBoshla();
+    oxirgiKirishId = uid();
+    return holatniYangila().then(function (rec) { if (tayyorMi(rec, uid())) return yurgiz('ochildi'); return kirishdan(); });
   }
 
   // ---------------- Birinchi sinxron ----------------
@@ -402,6 +477,7 @@ var Sinxron = (function () {
       }
       return { ok: false, tur: 'xato', kod: 'UNKNOWN_VARIANT', xato: 'Noma\'lum variant' };
     }).then(function (n) {
+      if (n.ok) tanlovTahlili = null;
       if (n.ok && variant !== 'olish' && variant !== 'server') return yurgiz('qolda', { progress: function (a, b) { progress('Yuborilmoqda: ' + a + ' / ' + b); } }).then(function (t) {
         if (t && t.ok === false && t.tur !== 'tayyor-emas') { n.ogohlantirish = t.xato; }
         return n;
@@ -416,7 +492,7 @@ var Sinxron = (function () {
   // HAQIQATAN o'chadi va akkaunti ham o'chadi. Keyin shu qurilmadagi sessiya yopiladi va sinxron holati (navbat, kursor) o'chiriladi.
   // MAHALLIY MA'LUMOT (hisoblar, yozuvlar va h.k.) O'CHMAYDI. Natija: { ok, hisobot, ogohlantirish } yoki { ok: false, tur, xato, kod }.
   function sinxronHolatiniTozala() {
-    return [Data.SINXRON_KALITI, Data.NAVBAT_KALITI, 'yuklash'].reduce(function (p, k) { return p.then(function () { return Data.haqiqiyOchirish('sozlamalar', k); }); }, Promise.resolve())
+    return [Data.SINXRON_KALITI, Data.NAVBAT_KALITI, 'yuklash', 'rozilik'].reduce(function (p, k) { return p.then(function () { return Data.haqiqiyOchirish('sozlamalar', k); }); }, Promise.resolve())
       .then(function () { tashlash(); holat.soni = 0; holat.tur = 'yoq'; holat.xato = ''; xabarla(); });
   }
   function hisobniOchirish() {
@@ -438,11 +514,54 @@ var Sinxron = (function () {
     });
   }
 
-  function qayta_urinish() { xatoMatni = ''; xatoTuri = ''; return yurgiz('qolda'); }
+  // ---------------- Avtomatik birinchi sinxron (S8) ----------------
+  // Kirish roziligi (Google tugmasi) bo'lgan akkaunt kirgan zahoti ishlaydi. Ikki tomon solishtiriladi:
+  //   ikkalasi bo'sh (tayyor "Naqd pul" va kategoriyalar bo'sh hisoblanadi) -> yoqiladi; qurilmada bor, server bo'sh -> yuklanadi;
+  //   qurilma bo'sh, serverda bor -> tortiladi; ikkalasida ham bor -> TANLOV (foydalanuvchi tanlaydi: zaxira va tushuntirish bilan). Jimgina hech narsa o'chirilmaydi.
+  // Natija: { ok: true, tur: 'tayyor' | variant } | { ok: false, tur: 'tanlov', tahlil } | { ok: false, tur: 'rozilik-yoq' | 'kirmagan' | 'xato' | 'internet' | 'band', xato, kod }
+  function avtomatik() {
+    var id = uid();
+    if (!id) return Promise.resolve({ ok: false, tur: 'kirmagan' });
+    if (avtoBand || birinchiBand) return Promise.resolve({ ok: false, tur: 'band', kod: 'SYNC_LOCKED', xato: 'Sinxronlash hozir davom etmoqda.' });
+    avtoBand = true;
+    function tugat(n) { avtoBand = false; holat.jarayon = ''; return holatniYangila().then(function () { return n; }); }
+    return Promise.all([yozuvOl(), rozilikOl()]).then(function (r) {
+      var rec = r[0], roz = r[1];
+      if (tayyorMi(rec, id)) return tugat({ ok: true, tur: 'tayyor' });
+      if (!roz || roz.user_id !== id) return tugat({ ok: false, tur: 'rozilik-yoq' });
+      if (typeof navigator !== 'undefined' && navigator.onLine === false && !sozlama.internetniTekshirma) {
+        xatoTuri = 'internet'; xatoKod = 'NETWORK_OFFLINE'; xatoMatni = 'Internet yo\'q. Internet qaytganda sinxronlash o\'zi boshlanadi.';
+        return tugat({ ok: false, tur: 'internet', kod: xatoKod, xato: xatoMatni });
+      }
+      xatoMatni = ''; xatoTuri = ''; xatoKod = ''; tanlovTahlili = null;
+      holat.jarayon = 'Server bilan solishtirilmoqda…'; holatniYangila();
+      return tahlil().then(function (t) {
+        if (t.tur === 'xato') { xatoMatni = t.xato; xatoKod = t.kod || 'UNKNOWN'; xatoTuri = internetXatomi(t.xato) ? 'internet' : 'xato'; return tugat({ ok: false, tur: xatoTuri, xato: t.xato, kod: xatoKod }); }
+        // Ikkalasida ham ma'lumot bor, YOKI bu qurilmadagi ma'lumot boshqa akkaunt bilan sinxronlangan edi (u hozirgi akkauntga o'z-o'zidan yuborilmaydi): foydalanuvchi tanlaydi
+        if (t.tur === 'tanlov' || (t.boshqaAkkaunt && t.tur === 'yuklash')) { tanlovTahlili = t; return tugat({ ok: false, tur: 'tanlov', tahlil: t }); }
+        avtoBand = false;   // birinchi() o'z qulfini oladi
+        return birinchi(t.tur, { progress: function (m) { holat.jarayon = m; xabarla(); } }).then(function (n) {
+          if (!n.ok) {
+            if (n.tur === 'bor') return avtomatik();   // yuklash paytida serverda ma'lumot paydo bo'ldi: qayta solishtiriladi
+            xatoMatni = n.xato; xatoKod = n.kod || n.tur; xatoTuri = internetXatomi(n.xato) ? 'internet' : 'xato';
+          }
+          holat.jarayon = ''; if (n.ok) n = Object.assign({ tur: n.variant }, n);
+          return holatniYangila().then(function () { return n; });
+        });
+      });
+    }).catch(function (e) { xatoMatni = nomaxsus(e); xatoKod = kodOl(e); xatoTuri = internetXatomi(xatoMatni) ? 'internet' : 'xato'; return tugat({ ok: false, tur: xatoTuri, xato: xatoMatni, kod: xatoKod }); });
+  }
+
+  // "Qayta urinish": birinchi sinxron tugamagan bo'lsa — uni qayta boshlaydi, aks holda oddiy tsikl
+  function qayta_urinish() {
+    xatoMatni = ''; xatoTuri = ''; xatoKod = '';
+    return yozuvOl().then(function (rec) { return tayyorMi(rec, uid()) ? yurgiz('qolda') : avtomatik(); });
+  }
 
   return {
     sozla: sozla, kuzat: kuzat, tortildiKuzat: tortildiKuzat, boshlash: boshlash, holat: function () { return holat; }, holatniYangila: holatniYangila,
-    hisobniOchirish: hisobniOchirish, yurgiz: yurgiz, qaytaUrinish: qayta_urinish, tahlil: tahlil, birinchi: birinchi, tashlash: tashlash, band: function () { return !!band; },
+    rozilikBelgisiniQoy: rozilikBelgisiniQoy, rozilikniQayd: rozilikniQayd, rozilikBer: rozilikBer, avtomatik: avtomatik, tanlovTahlili: function () { return tanlovTahlili; }, tanlovniTozala: function () { tanlovTahlili = null; return holatniYangila(); }, davrniBoshla: davrniBoshla, davrniToxtat: davrniToxtat,
+    hisobniOchirish: hisobniOchirish, yurgiz: yurgiz, qaytaUrinish: qayta_urinish, tahlil: tahlil, birinchi: birinchi, tashlash: tashlash, band: function () { return !!band || birinchiBand || avtoBand; },
     kutayotgan: function () { return holat.soni; }, sanash: sanash, OVERLAP_MS: OVERLAP_MS
   };
 })();

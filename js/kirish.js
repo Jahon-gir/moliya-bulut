@@ -200,8 +200,11 @@ var Kirish = (function () {
     });
   }
   // Serverdan "401" kelganda (soat noto'g'ri yoki token yo'lda eskirdi): tokenni majburan yangilab, bir marta qayta urinish uchun
+  var oxirgiYangilash = 0;
   function tokenYangila() {
     if (!mijoz) return Promise.resolve(null);
+    if (Date.now() - oxirgiYangilash < 20000) return Promise.resolve(null);   // doimiy 401 da server bir necha soniyada qayta-qayta so'ralmasin
+    oxirgiYangilash = Date.now();
     return mijoz.refreshSession().then(function (r) { return r && r.data && r.data.session ? r.data.session.access_token : null; }, function () { return null; });
   }
 

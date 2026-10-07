@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mahalliy PostgreSQL da 001–004 fayllarni sinash (Supabase TAQLIDI, haqiqiy Supabase emas).
+# Mahalliy PostgreSQL da 001–006 fayllarni sinash (Supabase TAQLIDI, haqiqiy Supabase emas).
 # Ishlatish:  bash supabase/mahalliy_sinov.sh        (psql va ishlab turgan PostgreSQL kerak; DB: chuntak_sinov)
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -14,5 +14,8 @@ echo "--- 003_hisobni_ochirish.sql (1-marta) ---"; "${PSQL[@]}" -f 003_hisobni_o
 echo "--- 003_hisobni_ochirish.sql (2-marta) ---"; "${PSQL[@]}" -f 003_hisobni_ochirish.sql && echo "OK"
 echo "--- 004_hisobni_ochirish_testi.sql ---"
 "${PSQL[@]}" -A -F ' | ' -f 004_hisobni_ochirish_testi.sql
+echo "--- 005_sinxron_xizmat.sql (1-marta, 2-marta) ---"; "${PSQL[@]}" -f 005_sinxron_xizmat.sql && "${PSQL[@]}" -f 005_sinxron_xizmat.sql && echo "OK"
+echo "--- 006_sinxron_xizmat_testi.sql ---"
+"${PSQL[@]}" -A -F ' | ' -f 006_sinxron_xizmat_testi.sql
 echo "--- Sinovdan keyin bazada qolgan sinov qatorlari (0 bo'lishi kerak) ---"
 "${PSQL[@]}" -A -t -c "select (select count(*) from auth.users) || ' ta foydalanuvchi, ' || (select count(*) from public.hisoblar) || ' ta hisob, ' || (select count(*) from public.yozuvlar) || ' ta yozuv'"

@@ -128,8 +128,9 @@ var SinxronSof = (function () {
   // L — mahalliy to'liq ma'lumot (o'chirilganlar bilan), S — serverdan (serverdanMalumot). Natija: { malumot, navbat, hisobot }.
   // - Hamma qator saqlanadi (hech narsa o'chmaydi). Bir xil ID: serverdagisi.
   // - Hisob/kategoriya: ikkala tomonda bir xil NOM (harf kattaligi, bo'shliq va apostrofga e'tiborsiz) bo'lsa va mazmun bir xil bo'lsa (tur, boshlang'ich
-  //   qoldiq) — bitta bo'ladi (serverdagisi), mahalliy yozuvlar unga ulanadi. Nomi bir xil, lekin mazmuni boshqa bo'lsa — ikkalasi qoladi, mahalliysi
-  //   nomiga " (shu qurilma)" qo'shiladi (balans o'zgarmasligi uchun).
+  //   qoldiq) — bitta bo'ladi (serverdagisi), mahalliy yozuvlar unga ulanadi. Mahalliy hisobning boshlang'ich qoldig'i 0 bo'lsa (tayyor "Naqd pul" kabi)
+  //   u har doim serverdagi bir xil nomli hisobga qo'shiladi (jami balans o'zgarmaydi). Nomi bir xil, lekin ikkala tomonda boshqa noldan farqli qoldiq bo'lsa —
+  //   ikkalasi qoladi, mahalliysi nomiga " (shu qurilma)" qo'shiladi (balans o'zgarmasligi uchun).
   // - Byudjet: bir kategoriyaga ikkala tomonda chegara bo'lsa — serverdagisi qoladi (soni hisobotda).
   // - Sozlamalar: qurilmaning o'z qiymatlari saqlanadi, serverdagi qatorning id si olinadi.
   // navbat: serverga yuborilishi kerak qatorlar { jadval: { kalit: updated_at } }.
@@ -159,7 +160,7 @@ var SinxronSof = (function () {
         hisobot.faqat_mahalliy[j] = (hisobot.faqat_mahalliy[j] || 0) + 1;
       });
     }
-    dedup('hisoblar', function (x) { return Calc.nomKaliti(x.nom); }, function (l, s) { return l.tur === s.tur && l.boshlangich_qoldiq === s.boshlangich_qoldiq && (l.arxivlangan === true) === (s.arxivlangan === true); });
+    dedup('hisoblar', function (x) { return Calc.nomKaliti(x.nom); }, function (l, s) { return l.tur === s.tur && (l.boshlangich_qoldiq === s.boshlangich_qoldiq || l.boshlangich_qoldiq === 0) && (l.arxivlangan === true) === (s.arxivlangan === true); });
     dedup('kategoriyalar', function (x) { return x.tur + '|' + Calc.nomKaliti(x.nom); }, function (l, s) { return (l.arxivlangan === true) === (s.arxivlangan === true); });
 
     function havola(j, v) { return v && xarita[j][v] ? xarita[j][v] : v; }
@@ -242,6 +243,8 @@ var SinxronSof = (function () {
       case 'internet-yoq': return 'Internet yo\'q' + (h.soni ? ' (' + h.soni + ' ta o\'zgarish kutmoqda)' : '');
       case 'xato': return 'Xato' + (h.soni ? ' (' + h.soni + ' ta o\'zgarish kutmoqda)' : '');
       case 'boshlanmagan': return 'Sinxronlash yoqilmagan';
+      case 'boshlanmoqda': return 'Sinxronlash boshlanmoqda…';
+      case 'tanlov': return 'Birinchi sinxronlash: tanlash kerak';
       case 'boshqa-akkaunt': return 'Boshqa akkaunt: sinxronlash to\'xtatilgan';
       default: return '';
     }

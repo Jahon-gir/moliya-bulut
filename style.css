@@ -668,3 +668,24 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
   .pin-raqam { width: 60px; height: 60px; font-size: 24px; }
   .pin-izoh { margin-bottom: 8px; }
 }
+
+/* Menyu ekrani: ☰ tugmasi, Xavfsizlik almashtirgichi */
+.asosiy-bosh { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+.asosiy-bosh h1 { margin: 0; }
+.menyu-tugma { background: var(--karta); }
+.mavzu-karta { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--chiziq); }
+.mavzu-sarlavha { margin-bottom: 8px; }
+.almashtirgich-qator { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.almashtirgich-matn { min-width: 0; }
+.almashtirgich-matn .yozuv-izoh { margin-top: 2px; }
+.almashtirgich {
+  position: relative; flex: none; width: 56px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer;
+}
+.almashtirgich::before {
+  content: ''; position: absolute; left: 0; top: 8px; width: 56px; height: 28px; border-radius: 14px; background: var(--chiziq); border: 1px solid var(--xira); box-sizing: border-box;
+}
+.almashtirgich.yoqiq::before { background: var(--asosiy); border-color: var(--asosiy); }
+.almashtirgich-dona { position: absolute; left: 4px; top: 12px; width: 20px; height: 20px; border-radius: 50%; background: var(--karta); border: 1px solid var(--xira); box-sizing: border-box; transition: transform .15s; }
+.almashtirgich.yoqiq .almashtirgich-dona { transform: translateX(28px); border-color: var(--asosiy-matn); background: var(--asosiy-matn); }
+.almashtirgich:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; border-radius: 14px; }
+.pin-karta .yozuv { margin-top: 8px; border-top: 1px solid var(--chiziq); }

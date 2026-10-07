@@ -33,9 +33,9 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.15.0 → 0.15.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.16.0 → 0.16.1), `index.html` va `tests.html` da hammasini birdaniga:
 
-    sed -i 's/0\.14\.0/0.15.1/g' index.html tests.html
+    sed -i 's/0\.14\.0/0.16.1/g' index.html tests.html
 
 `sw.js` ning o'zida versiya yo'q: u o'z manzilidagi `?v=` dan oladi. Agar `js/` ga yangi fayl qo'shsangiz, uni `index.html` ga
 va `sw.js` dagi `royxat()` ga ham qo'shing (`tests.html` mosligini tekshiradi).

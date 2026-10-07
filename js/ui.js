@@ -1459,8 +1459,7 @@
       ['kp-hisobot', 'Hisobot', 'davr, taqqoslash, diagrammalar', hisobotEkrani],
       ['kp-byudjet', 'Byudjet', 'oylik chegaralar', byudjetEkrani],
       ['kp-hisoblar', 'Hisoblar', faolHisoblar().length + ' ta', hisoblarEkrani],
-      ['kp-kategoriyalar', 'Kategoriyalar', malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }).length + ' ta', kategoriyalarEkrani],
-      ['kp-zaxira', 'Zaxira va eksport', malumot.zaxiraSanasi ? 'oxirgi: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) : 'zaxira yo\'q', zaxiraEkrani]
+      ['kp-kategoriyalar', 'Kategoriyalar', malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }).length + ' ta', kategoriyalarEkrani]
     ].forEach(function (m) {
       var q = tugma(undefined, 'yozuv', function () { ochish(m[3], false); });
       q.id = m[0];
@@ -1469,9 +1468,27 @@
       k.appendChild(q);
     });
     bloklar.push(k);
-    var m = karta();
-    m.classList.add('mavzu-karta');
-    m.appendChild(el('h2', 'Mavzu'));
+    return bloklar;
+  }
+
+  // ---- "Menyu" ekrani (Asosiy sahifadagi ☰ tugmasi): sozlamalar va boshqa ----
+  function menyuQatori(id, nom, izoh, bosilganda) {
+    var q = tugma(undefined, 'yozuv', bosilganda);
+    q.id = id;
+    q.appendChild(el('div', nom, 'yozuv-nom'));
+    q.appendChild(el('div', (izoh ? izoh + ' ' : '') + '›', 'yozuv-izoh'));
+    return q;
+  }
+
+  function menyuEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Menyu')];
+    // 1) Asosiy sozlamalar: Xavfsizlik, Mavzu
+    var s = karta();
+    s.classList.add('menyu-sozlamalar');
+    s.appendChild(el('h2', 'Asosiy sozlamalar'));
+    s.appendChild(menyuQatori('mn-xavfsizlik', 'Xavfsizlik', Pin.yoqilgan() ? 'PIN-kod yoqilgan' : 'PIN-kod o\'chiq', function () { ochish(xavfsizlikEkrani, false); }));
+    var m = el('div', undefined, 'mavzu-karta');
+    m.appendChild(el('div', 'Mavzu', 'yozuv-nom mavzu-sarlavha'));
     var tanlov = el('div', undefined, 'tanlov mavzu-tanlov');
     tanlov.setAttribute('role', 'group');
     tanlov.setAttribute('aria-label', 'Mavzu');
@@ -1482,37 +1499,71 @@
       tanlov.appendChild(b);
     });
     m.appendChild(tanlov);
-    bloklar.push(m);
-    // PIN-kod: yoqish, o'zgartirish, o'chirish
-    var pk = karta();
-    pk.classList.add('pin-karta');
-    pk.appendChild(el('h2', 'PIN-kod'));
-    var pinYoqilgan = Pin.yoqilgan();
-    pk.appendChild(el('p', pinYoqilgan ? 'PIN-kod yoqilgan: ilova ochilganda va 1 daqiqadan ko\'p fonda turgandan keyin so\'raladi. PIN-kod zaxira fayliga kirmaydi.' : 'Telefoningizni boshqa odam ochsa ham, ma\'lumotingizni ko\'ra olmasligi uchun 4 raqamli PIN-kod qo\'ying.', 'xira'));
-    function pinAmali(rejim, id, matn, klass) {
-      var b = tugma(matn, klass, function () { Pin.sozlash(rejim).then(function (ok) { if (ok) { qisqaXabar(rejim === 'yoqish' ? 'PIN-kod yoqildi' : rejim === 'ozgartirish' ? 'PIN-kod o\'zgartirildi' : 'PIN-kod o\'chirildi'); chizish(koproqMenyusi(), true); } }); });
-      b.id = id;
-      pk.appendChild(b);
-    }
-    if (pinYoqilgan) { pinAmali('ozgartirish', 'pin-ozgartirish', 'PIN-kodni o\'zgartirish', 'ikkinchi-tugma'); pinAmali('ochirish', 'pin-ochirish', 'PIN-kodni o\'chirish', 'ikkinchi-tugma'); }
-    else pinAmali('yoqish', 'pin-yoqish', 'PIN-kodni yoqish', 'asosiy-tugma');
-    bloklar.push(pk);
-    // Bosh ekranga o'rnatish (o'rnatilgan bo'lsa ko'rsatilmaydi)
-    if (typeof Pwa !== 'undefined' && !Pwa.ornatilgan()) {
-      var o = karta();
-      o.classList.add('ornatish-karta');
-      o.appendChild(el('h2', 'Bosh ekranga o\'rnatish'));
-      if (Pwa.ornatishMumkin()) {
-        o.appendChild(el('p', ILOVA.nom + ' ni telefon bosh ekraniga o\'rnating: o\'z belgisi bilan, brauzer panelisiz ochiladi va internetsiz ishlaydi.', 'xira'));
-        var ot = tugma('O\'rnatish', 'asosiy-tugma', function () { Pwa.ornatish().then(function () { chizish(koproqMenyusi(), true); }); });
-        ot.id = 'ornatish-tugma';
-        o.appendChild(ot);
-      } else {
-        o.appendChild(el('p', Pwa.ios() ? 'Safari\'da "Ulashish" tugmasini bosing, so\'ng "Bosh ekranga qo\'shish" ni tanlang.' : 'Brauzer menyusidan "Ilovani o\'rnatish" yoki "Bosh ekranga qo\'shish" ni tanlang.', 'xira ornatish-yoriqnoma'));
-      }
-      bloklar.push(o);
-    }
+    s.appendChild(m);
+    bloklar.push(s);
+    // 2) Boshqa: Zaxira va eksport, Bosh ekranga o'rnatish
+    var o = karta();
+    o.classList.add('menyu-boshqa');
+    o.appendChild(el('h2', 'Boshqa'));
+    o.appendChild(menyuQatori('mn-zaxira', 'Zaxira va eksport', malumot.zaxiraSanasi ? 'oxirgi: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) : 'zaxira yo\'q', function () { ochish(zaxiraEkrani, false); }));
+    o.appendChild(menyuQatori('mn-ornatish', 'Bosh ekranga o\'rnatish', '', function () { ochish(ornatishEkrani, false); }));
+    bloklar.push(o);
     bloklar.push(el('p', ILOVA.nom + ' · versiya ' + VERSIYA, 'versiya'));
+    return bloklar;
+  }
+
+  // "Xavfsizlik": PIN-kod bilan ochish (yoqish/o'chirish) va PIN-kodni o'zgartirish (mantiq js/pin.js da, o'zgarmagan)
+  function xavfsizlikEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Xavfsizlik')];
+    var k = karta();
+    k.classList.add('pin-karta');
+    var yoqilgan = Pin.yoqilgan();
+    var qator = el('div', undefined, 'almashtirgich-qator');
+    var matn = el('div', undefined, 'almashtirgich-matn');
+    matn.appendChild(el('div', 'PIN-kod bilan ochish', 'yozuv-nom'));
+    matn.appendChild(el('div', yoqilgan ? 'Ilova ochilganda va 1 daqiqadan ko\'p fonda turgandan keyin PIN-kod so\'raladi. PIN-kod zaxira fayliga kirmaydi.' : 'Telefoningizni boshqa odam ochsa ham, ma\'lumotingizni ko\'ra olmasligi uchun 4 raqamli PIN-kod qo\'ying.', 'yozuv-izoh'));
+    qator.appendChild(matn);
+    var sw = tugma(undefined, 'almashtirgich' + (yoqilgan ? ' yoqiq' : ''), function () {
+      var rejim = yoqilgan ? 'ochirish' : 'yoqish';
+      Pin.sozlash(rejim).then(function (ok) { if (ok) { qisqaXabar(rejim === 'yoqish' ? 'PIN-kod yoqildi' : 'PIN-kod o\'chirildi'); chizish(xavfsizlikEkrani(), true); } });
+    });
+    sw.id = 'pin-almashtirgich';
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-checked', String(yoqilgan));
+    sw.setAttribute('aria-label', 'PIN-kod bilan ochish');
+    sw.appendChild(el('span', undefined, 'almashtirgich-dona'));
+    qator.appendChild(sw);
+    k.appendChild(qator);
+    if (yoqilgan) {
+      var oz = tugma(undefined, 'yozuv', function () {
+        Pin.sozlash('ozgartirish').then(function (ok) { if (ok) { qisqaXabar('PIN-kod o\'zgartirildi'); chizish(xavfsizlikEkrani(), true); } });
+      });
+      oz.id = 'pin-ozgartirish';
+      oz.appendChild(el('div', 'PIN-kodni o\'zgartirish', 'yozuv-nom'));
+      oz.appendChild(el('div', '›', 'yozuv-izoh'));
+      k.appendChild(oz);
+    }
+    bloklar.push(k);
+    return bloklar;
+  }
+
+  // "Bosh ekranga o'rnatish": yo'riqnoma (brauzer o'rnatishni taklif qilsa — tugma ham)
+  function ornatishEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Bosh ekranga o\'rnatish')];
+    var o = karta();
+    o.classList.add('ornatish-karta');
+    if (typeof Pwa !== 'undefined' && Pwa.ornatilgan()) {
+      o.appendChild(el('p', ILOVA.nom + ' allaqachon o\'rnatilgan.', 'xira'));
+    } else if (typeof Pwa !== 'undefined' && Pwa.ornatishMumkin()) {
+      o.appendChild(el('p', ILOVA.nom + ' ni telefon bosh ekraniga o\'rnating: o\'z belgisi bilan, brauzer panelisiz ochiladi va internetsiz ishlaydi.', 'xira'));
+      var ot = tugma('O\'rnatish', 'asosiy-tugma', function () { Pwa.ornatish().then(function () { chizish(ornatishEkrani(), true); }); });
+      ot.id = 'ornatish-tugma';
+      o.appendChild(ot);
+    } else {
+      var ios = typeof Pwa !== 'undefined' && Pwa.ios();
+      o.appendChild(el('p', ios ? 'Safari\'da "Ulashish" tugmasini bosing, so\'ng "Bosh ekranga qo\'shish" ni tanlang.' : 'Brauzer menyusidan "Ilovani o\'rnatish" yoki "Bosh ekranga qo\'shish" ni tanlang.', 'xira ornatish-yoriqnoma'));
+    }
+    bloklar.push(o);
     return bloklar;
   }
 
@@ -1535,6 +1586,7 @@
     filtr: [['path', { d: 'M3 5h18l-7 8.5V20l-4-2v-4.5L3 5z', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linejoin': 'round' }]],
     almashuv: [['path', { d: 'M7 7h11l-3-3M17 17H6l3 3', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     qarz: [['circle', { cx: 12, cy: 12, r: 8.5, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }], ['path', { d: 'M9 12.5l2.2 2.2L15.5 9.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    menyu: [['path', { d: 'M4 7h16M4 12h16M4 17h16', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round' }]],
     keyingi: [['path', { d: 'M9 5l7 7-7 7', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     koz: [['path', { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linejoin': 'round' }], ['circle', { cx: 12, cy: 12, r: 3, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }]],
     kozYopiq: [['path', { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linejoin': 'round' }], ['path', { d: 'M4 4l16 16', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round' }]],
@@ -2713,7 +2765,7 @@
     Tema.qollash(tema);
     return Data.olish('sozlamalar', 'asosiy').then(function (z) {
       return Data.saqlash('sozlamalar', Object.assign({ kalit: 'asosiy', sxema_versiyasi: Data.SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: null }, z || {}, { tema: tema }));
-    }).then(function () { malumot.tema = tema; chizish(koproqMenyusi(), true); })
+    }).then(function () { malumot.tema = tema; chizish(menyuEkrani(), true); })
       .catch(function (x) { qisqaXabar('Saqlab bo\'lmadi: ' + x); });
   }
 
@@ -2962,8 +3014,19 @@
     return k;
   }
 
+  // Asosiy sahifa sarlavhasi: chap yuqorida ☰ ("Menyu" ekrani) va "Asosiy"
+  function asosiyBosh() {
+    var q = el('div', undefined, 'asosiy-bosh');
+    var m = belgiTugmasi('menyu', 'Menyu', function () { ochish(menyuEkrani, false); }, 'menyu-tugma');
+    m.id = 'menyu-tugma';
+    m.setAttribute('aria-haspopup', 'true');
+    q.appendChild(m);
+    q.appendChild(el('h1', 'Asosiy'));
+    return q;
+  }
+
   function asosiyBolimi() {
-    return [el('h1', 'Asosiy'), balansKartasi(), oqimKartasi(), tezQoshishKartasi(), hisoblarKartasi(), kategoriyalarKartasi(), byudjetlarKartasi(), qarzlarKartasi(), zaxiraKartasi()];
+    return [asosiyBosh(), balansKartasi(), oqimKartasi(), tezQoshishKartasi(), hisoblarKartasi(), kategoriyalarKartasi(), byudjetlarKartasi(), qarzlarKartasi(), zaxiraKartasi()];
   }
 
   // ---- Bo'limlar ----

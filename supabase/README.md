@@ -11,6 +11,8 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 | `002_xavfsizlik_testi.sql` | Himoyani tekshiradi: ikkita sinov foydalanuvchi bir-birining ma'lumotini ko'ra olmasligini va h.k. Supabase'da ishga tushiriladi |
 | `003_hisobni_ochirish.sql` | Hisobni va serverdagi ma'lumotni o'chirish funksiyasi (S7). Supabase'da ishga tushiriladi |
 | `004_hisobni_ochirish_testi.sql` | 003 ni tekshiradi: ikkita sinov foydalanuvchi, A o'chirsa B ning ma'lumoti saqlanadi. Supabase'da ishga tushiriladi |
+| `005_sinxron_xizmat.sql` | Fon tortishini yengillashtiruvchi `sinxron_holati()` va 90 kunlik tombstone tozalash `tombstone_tozalash()` + kunlik jadval (pg_cron) (S8). Supabase'da ishga tushiriladi |
+| `006_sinxron_xizmat_testi.sql` | 005 ni tekshiradi (16 tekshiruv). Supabase'da ishga tushiriladi |
 | `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
@@ -47,6 +49,22 @@ Bu bosqich **ilovadagi "Hisobimni va serverdagi ma'lumotimni o'chirish" tugmasi 
 | 004 da "Kutilmagan xato: permission denied for table users" | SQL Editor `postgres` roli bilan ishlashi kerak (odatiy). Rol tanlash bo'lsa, `postgres` ni tanlang |
 | 004 da biror qatorda **O'TMADI** | Ilovada hisobni o'chirish tugmasini ishlatmang va qator matnini menga yuboring |
 | Ilovada "Qatorlarni o'chirib bo'lmadi (kod: PG_55000)" | Funksiya egasi RLS ni chetlab o'ta olmaydi. Hech narsa o'chmaydi. Xato matnini menga yuboring |
+
+## 1-c. Sinxron xizmat funksiyalari va kunlik tozalash (S8): 005 va 006
+
+Bu fayl **ixtiyoriy, lekin tavsiya etiladi**: ilova uni bo'lmasa ham ishlaydi. Nima beradi: (1) fon tortishi har daqiqa 6 ta so'rov o'rniga 1 ta so'rov yuboradi (batareya va so'rovlar tejaladi); (2) 90 kundan oshgan o'chirilgan qatorlar (tombstone) serverdan har kuni o'zi tozalanadi (bepul tarifda hajm 500 MB, shuni tejaydi).
+
+1. SQL Editor → **New query** → `supabase/005_sinxron_xizmat.sql` matnini to'liq nusxalab qo'ying → **Run**.
+2. Pastdagi **Results/Messages** da xabarni o'qing:
+   - `Kunlik tozalash qo'yildi: har kuni 03:15 (UTC)...` — hammasi tayyor.
+   - `pg_cron yoqib bo'lmadi...` — **Database → Extensions** ga o'ting, qidiruvga `pg_cron` yozing va yoqing (Enable), so'ng 005 ni **qayta Run** qiling (qayta ishga tushirish xavfsiz).
+3. Tekshirish: yangi **New query** → `select jobname, schedule, active from cron.job;` → `chuntak-tombstone-tozalash | 15 3 * * * | true` qatori chiqishi kerak.
+4. Sinov: **New query** → `supabase/006_sinxron_xizmat_testi.sql` → **Run** → `JAMI: 16 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov hech narsa saqlamaydi.
+5. Qo'lda bir marta tozalash (ixtiyoriy): `select public.tombstone_tozalash(90);` — natija nechta qator o'chganini ko'rsatadi. **Faqat SQL Editor'dan**: ilovadan chaqirib bo'lmaydi.
+
+**Xavfsizlik:** `tombstone_tozalash` ga faqat jadval egasi (pg_cron, SQL Editor) kira oladi; `authenticated` va `anon` ga EXECUTE yo'q. U faqat 90 kundan eski `deleted = true` qatorlarni o'chiradi va ularga bog'langan tirik yoki yangi o'chirilgan qator bo'lsa tegmaydi (tashqi kalit buzilmaydi). `sinxron_holati` faqat kirgan foydalanuvchining o'z qatorlarini ko'radi (RLS).
+
+**Cheklov:** 90 kundan ortiq internetsiz qolgan qurilma boshqa qurilmada o'chirilgan qatorni "tirik" deb saqlab qolishi mumkin (u qator qurilmada qoladi, serverga qaytarilmaydi, o'zgartirilmaguncha).
 
 ## 2. Qanday tekshirish (qo'shimcha)
 

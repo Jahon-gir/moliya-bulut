@@ -13,7 +13,7 @@ Bu loyiha: shaxsiy moliya ilovasi (daromad, xarajat, hisoblar, qarzlar, byudjet,
 - Bir vaqtda bitta ish. Foydalanuvchi aytmaguncha keyingisiga o'tma.
 - `TZ.md` da yo'q narsani qo'shma. Noaniq joyda taxmin qilma, so'ra (agar so'rash imkoni bo'lmasa, eng sodda variantni tanla va hisobotda ochiq yoz).
 - Boshqa ilovalarning nomi, belgisi, rasmi, matni va ranglari nusxalanmasin. Belgilarni o'zing chiz (SVG).
-- Har ishdan keyin versiyani oshir (`index.html` dagi versiya va `?v=` havolalari, `sw.js`), shunda telefon yangi fayllarni yuklaydi.
+- Har ishdan keyin versiyani oshir: `index.html` dagi `<meta name="versiya">` va `?v=` havolalari (hamda `tests.html` dagilar; README dagi `sed` buyrug'i). `sw.js` ga tegma: u versiyani o'z manzilidagi `?v=` dan oladi (`pwa.js` uni `index.html` versiyasi bilan ro'yxatdan o'tkazadi). Shunda telefon yangi fayllarni yuklaydi. Yangi fayl qo'shilsa, uni `sw.js` dagi `royxat()` ga ham qo'sh.
 
 ## 3. Sinov tartibi (tezlik va tejash uchun)
 

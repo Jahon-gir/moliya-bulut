@@ -1480,6 +1480,10 @@
     return q;
   }
 
+  function profilQatoriIzohi() {
+    var kh = Kirish.holat(), st = Sinxron.holat().tur;
+    return kh.kirgan ? (kh.email || kh.ism) + (st === 'tayyor' || st === 'kutilmoqda' ? ' · ' + sinxronMatni() : '') : 'kirilmagan';
+  }
   function menyuEkrani() {
     var bloklar = [orqagaTugmasi(), el('h1', 'Menyu')];
     // 1) Asosiy sozlamalar: Xavfsizlik, Mavzu
@@ -1487,7 +1491,7 @@
     s.classList.add('menyu-sozlamalar');
     s.appendChild(el('h2', 'Asosiy sozlamalar'));
     var kh = Kirish.holat();
-    s.appendChild(menyuQatori('mn-profil', 'Profil va sinxronlash', kh.kirgan ? (kh.email || kh.ism) + (Sinxron.holat().tur === 'tayyor' || Sinxron.holat().tur === 'kutilmoqda' ? ' · ' + sinxronMatni() : '') : 'kirilmagan', function () { ochish(profilEkrani, false); }));
+    s.appendChild(menyuQatori('mn-profil', 'Profil va sinxronlash', profilQatoriIzohi(), function () { ochish(profilEkrani, false); }));
     s.appendChild(menyuQatori('mn-xavfsizlik', 'Xavfsizlik', Pin.yoqilgan() ? 'PIN-kod yoqilgan' : 'PIN-kod o\'chiq', function () { ochish(xavfsizlikEkrani, false); }));
     var m = el('div', undefined, 'mavzu-karta');
     m.appendChild(el('div', 'Mavzu', 'yozuv-nom mavzu-sarlavha'));
@@ -1538,7 +1542,11 @@
       matn.appendChild(em);
       bosh.appendChild(matn);
       k.appendChild(bosh);
-      k.appendChild(el('p', 'Kirdingiz. Ma\'lumotlaringiz shu qurilmada saqlanadi; sinxronlashni yoqsangiz, serverga ham nusxalanadi.', 'xira'));
+      // Odam adashib boshqa Google akkaunt bilan kirgan bo'lishi mumkin: qaysi akkauntdaligi aniq ko'rinadi
+      var akk = el('p', 'Siz shu akkauntdasiz: ' + (h.email || h.ism), 'profil-asosiy');
+      akk.id = 'profil-akkaunt';
+      k.appendChild(akk);
+      k.appendChild(el('p', '"Chiqish" faqat shu qurilmadan chiqadi: ma\'lumot qurilmada qoladi.', 'xira'));
       var chiq = tugma('Chiqish', 'ikkinchi-tugma', function () {
         var kutayotgan = Sinxron.kutayotgan();
         if (kutayotgan > 0 && !window.confirm('Serverga hali yuborilmagan ' + kutayotgan + ' ta o\'zgarish bor. Chiqsangiz ular shu qurilmada saqlanadi (o\'chmaydi), lekin qayta kirib sinxronlaguncha serverga o\'tmaydi.\n\nChiqilsinmi?')) return;
@@ -1547,14 +1555,34 @@
       });
       chiq.id = 'chiqish';
       k.appendChild(chiq);
+      var och = tugma('Hisobni o\'chirish', 'xavfli-tugma', function () { hisobniOchirishOynasi(); });
+      och.id = 'hisob-ochirish';
+      k.appendChild(och);
     } else {
       if (hisobOchirildiMatni) k.appendChild(el('p', hisobOchirildiMatni, 'profil-asosiy hisob-ochirildi'));
       k.appendChild(el('p', 'Kirish ixtiyoriy. Kirmasangiz ham ilova hozirgidek ishlaydi.', 'profil-asosiy'));
-      k.appendChild(el('p', 'Google bilan kirsangiz, keyingi yangilanishlarda ma\'lumotingizni boshqa qurilmada ko\'rish va telefon yo\'qolsa qaytarib olish mumkin bo\'ladi. Hozircha ma\'lumot faqat shu qurilmada saqlanadi, serverga yuborilmaydi.', 'xira'));
+      // Rozilik matni: "Google bilan kirish" tugmasini bosish = shunga rozilik
+      var rozilik = el('div', undefined, 'rozilik-matn');
+      rozilik.id = 'rozilik-matn';
+      rozilik.appendChild(el('p', 'Google bilan kirsangiz:', 'yozuv-nom'));
+      [
+        'ma\'lumotlaringiz (hisoblar, yozuvlar, qarzlar va boshqalar) serverga saqlanadi va boshqa qurilmalaringizda ham ko\'rinadi;',
+        'ularni faqat siz, o\'z akkauntingiz bilan ko\'rasiz;',
+        'serverda ma\'lumot shifrlanmagan: ilova dasturchisi texnik jihatdan ko\'ra oladi;',
+        'istalgan vaqtda "Hisobni o\'chirish" bilan serverdagi hammasini o\'chira olasiz.'
+      ].forEach(function (m) { rozilik.appendChild(el('p', '• ' + m, 'xira')); });
+      var mh = el('p', undefined, 'xira');
+      mh.appendChild(document.createTextNode('Kirish tugmasini bosish — shunga rozilik. '));
+      var ma = el('a', 'Maxfiylik va foydalanish shartlari', 'rozilik-havola');
+      ma.id = 'rozilik-havola'; ma.href = 'maxfiylik.html'; ma.target = '_blank'; ma.rel = 'noopener';
+      mh.appendChild(ma);
+      rozilik.appendChild(mh);
+      k.appendChild(rozilik);
       var kir = tugma(h.kirmoqda ? 'Google ga o\'tilmoqda…' : 'Google bilan kirish', 'asosiy-tugma', function () {
         if (navigator.onLine === false) { xato.textContent = xatoKodBilan('Internet yo\'q. Kirish uchun internetga ulaning (ilovaning o\'zi internetsiz ishlayveradi).', 'NETWORK_OFFLINE'); qisqaXabar('Internet yo\'q: kirish uchun internetga ulaning'); return; }
         kir.disabled = true;
         kir.textContent = 'Tekshirilmoqda…';
+        Sinxron.rozilikBelgisiniQoy();   // tugmani bosish = rozilik: Google dan qaytgach shu akkaunt uchun bir marta saqlanadi
         Kirish.googleBilanKirish().then(function (n) {
           if (n.ok) return;   // sahifa Google ga o'tmoqda
           kir.disabled = false;
@@ -1569,13 +1597,13 @@
     }
     k.appendChild(xato);
     bloklar.push(k);
-    if (h.kirgan) { hisobOchirildiMatni = ''; bloklar.push(sinxronKartasi(h)); bloklar.push(hisobOchirishKartasi()); }
+    if (h.kirgan) { hisobOchirildiMatni = ''; bloklar.push(sinxronKartasi(h)); }
     bloklar.push(maxfiylikKartasi());
     return bloklar;
   }
 
   // ---- Sinxronlash (S5): holat, birinchi sinxron (yuklash / olish / tanlov), "Hozir sinxronlash" ----
-  var sinxronUI = { band: false, progress: '', xato: '', natija: '', tahlil: null, imzo: '' };
+  var sinxronUI = { tanlovKorsatilgan: null, band: false, progress: '', xato: '', natija: '', tahlil: null, imzo: '' };
   function sanoqMatni(n) { return n.hisoblar + ' ta hisob, ' + n.yozuvlar + ' ta yozuv, ' + n.qarzlar + ' ta qarz'; }
   function sinxronMatni() {
     var h = Sinxron.holat();
@@ -1586,11 +1614,11 @@
     var h = Sinxron.holat(), q = function (id) { return document.getElementById(id); };
     var m = q('sinxron-holat'), p = q('sinxron-progress'), x = q('sinxron-xato'), n = q('sinxron-natija'), b = q('sinxron-belgi');
     if (m) m.textContent = sinxronMatni();
-    if (p) p.textContent = sinxronUI.progress;
+    if (p) p.textContent = sinxronUI.progress || (h.ishlayapti || h.tur === 'boshlanmoqda' ? h.jarayon : '') || '';
     if (x) x.textContent = (h.tur === 'xato' || h.tur === 'internet-yoq') && h.xato ? xatoKodBilan(h.xato, h.kod) : sinxronUI.xato;
     if (n) n.textContent = sinxronUI.natija;
     if (b) { b.textContent = '☁ ' + sinxronMatni(); b.className = 'sinxron-belgi' + (h.tur === 'xato' ? ' xato' : h.tur === 'internet-yoq' ? ' internet' : ''); }
-    ['sinxron-boshlash', 'sinxron-hozir', 'sinxron-qayta'].forEach(function (id) { var t = q(id); if (t) t.disabled = sinxronUI.band || h.ishlayapti; });
+    ['sinxron-roziman', 'sinxron-tanlash', 'sinxron-hozir', 'sinxron-qayta'].forEach(function (id) { var t = q(id); if (t) t.disabled = sinxronUI.band || h.ishlayapti; });
   }
   // Asosiy sahifadagi kichik holat belgisi (faqat kirgan foydalanuvchiga): bosilsa Profil ochiladi
   function sinxronBelgisi() {
@@ -1603,22 +1631,23 @@
   }
   // Kartaning "shakli" (qaysi tugmalar bor): faqat shakl o'zgarsa kartani qayta chizamiz, aks holda faqat matnlar yangilanadi (tugma bosilayotganda miltillamasin)
   function sinxronImzosi() {
-    var h = Sinxron.holat(), tayyor = h.tur !== 'boshlanmagan' && h.tur !== 'boshqa-akkaunt' && h.tur !== 'yoq';
-    return [Kirish.holat().kirgan, h.tur === 'boshqa-akkaunt', tayyor, h.tur === 'xato' || h.tur === 'internet-yoq', !!h.ziddiyat, (h.rad || []).length].join('|');
+    var h = Sinxron.holat();
+    return [Kirish.holat().kirgan, h.tayyor, h.rozilik, h.tur === 'tanlov', h.tur === 'xato' || h.tur === 'internet-yoq', !!h.ziddiyat, (h.rad || []).length].join('|');
   }
   function sinxronKartasi(h) {
     sinxronUI.imzo = sinxronImzosi();
-    var holat = Sinxron.holat(), tayyor = holat.tur !== 'boshlanmagan' && holat.tur !== 'boshqa-akkaunt' && holat.tur !== 'yoq';
+    var holat = Sinxron.holat();
     var k = karta();
     k.classList.add('sinxron-karta');
     k.appendChild(el('h2', 'Sinxronlash'));
     var m = el('p', sinxronMatni(), 'sinxron-holat');
     m.id = 'sinxron-holat';
     k.appendChild(m);
-    if (tayyor) {
+    var xatoli = holat.tur === 'xato' || holat.tur === 'internet-yoq';
+    if (holat.tayyor) {
       k.appendChild(el('p', 'O\'zgarishlaringiz internet bor paytda avtomatik serverga yuboriladi, boshqa qurilmadagi o\'zgarishlar avtomatik olinadi. Internet yo\'q bo\'lsa o\'zgarishlar shu qurilmada saqlanadi va ulanganda yuboriladi.', 'xira'));
       var hozir = tugma('Hozir sinxronlash', 'asosiy-tugma', function () {
-        if (navigator.onLine === false) { sinxronUI.xato = 'Internet yo\'q. O\'zgarishlar saqlanadi va internet qaytganda avtomatik yuboriladi.'; sinxronMatnlari(); return; }
+        if (navigator.onLine === false) { sinxronUI.xato = xatoKodBilan('Internet yo\'q. O\'zgarishlar saqlanadi va internet qaytganda avtomatik yuboriladi.', 'NETWORK_OFFLINE'); sinxronMatnlari(); return; }
         sinxronUI.xato = ''; sinxronUI.natija = ''; sinxronUI.progress = 'Sinxronlanmoqda…'; sinxronMatnlari();
         Sinxron.yurgiz('qolda', { progress: function (a, b) { sinxronUI.progress = 'Yuborilmoqda: ' + a + ' / ' + b; sinxronMatnlari(); } }).then(function (n) {
           sinxronUI.progress = '';
@@ -1628,19 +1657,28 @@
       });
       hozir.id = 'sinxron-hozir';
       k.appendChild(hozir);
-      if (holat.tur === 'xato' || holat.tur === 'internet-yoq') {
-        var qayta = tugma('Qayta urinish', 'ikkinchi-tugma', function () { sinxronUI.xato = ''; Sinxron.qaytaUrinish().then(function () { sinxronMatnlari(); }); });
-        qayta.id = 'sinxron-qayta';
-        k.appendChild(qayta);
-      }
       if (holat.ziddiyat) k.appendChild(el('p', 'To\'qnashuv: ' + holat.ziddiyat + ' ta qatorni boshqa qurilma ham o\'zgartirgan edi. Qoida: oxirgi yuborilgan o\'zgarish saqlanadi (zaxira faylingiz bor).', 'xira'));
       if (holat.rad && holat.rad.length) k.appendChild(el('p', 'Serverga yuborilmagan ' + holat.rad.length + ' ta qator (serverdagi qoidalarga mos emas): ' + holat.rad.slice(0, 3).map(function (r) { return Yuklash.NOMLAR[r.jadval] + ' — ' + r.sabab; }).join('; ') + '. Ularni tahrirlab, qayta saqlang.', 'xato-matn'));
+    } else if (!holat.rozilik) {
+      // Rozilik yo'q (eski kirish yoki boshqa akkaunt): avtomatik boshlanmaydi, avval rozilik so'raladi
+      k.appendChild(el('p', holat.tur === 'boshqa-akkaunt' ? 'Bu qurilmadagi ma\'lumot boshqa akkaunt bilan sinxronlangan edi. Hozirgi akkaunt bilan sinxronlash uchun rozilik kerak.' : 'Sinxronlash yoqilmagan. Yoqsangiz, ma\'lumotlaringiz serverga saqlanadi va boshqa qurilmalaringizda ham ko\'rinadi; ularni faqat siz ko\'rasiz; serverda ma\'lumot shifrlanmagan va dasturchi texnik jihatdan ko\'ra oladi.', 'xira'));
+      var roz = tugma('Roziman, sinxronlashni yoqish', 'asosiy-tugma', function () { sinxronUI.xato = ''; Sinxron.rozilikBer().then(function () { sinxronMatnlari(); }); });
+      roz.id = 'sinxron-roziman';
+      k.appendChild(roz);
+    } else if (holat.tur === 'tanlov') {
+      k.appendChild(el('p', 'Ham shu qurilmada, ham serverda ma\'lumot bor. Qaysi birini saqlashni o\'zingiz tanlaysiz: hech narsa o\'zingizdan so\'rashsiz o\'chirilmaydi.', 'xira'));
+      var tanla = tugma('Tanlash', 'asosiy-tugma', function () { sinxronUI.tahlil = Sinxron.tanlovTahlili(); ochish(sinxronTanlovEkrani, false); });
+      tanla.id = 'sinxron-tanlash';
+      k.appendChild(tanla);
+    } else if (xatoli) {
+      k.appendChild(el('p', 'Birinchi sinxronlash tugamadi. Hech narsa o\'chmadi.', 'xira'));
     } else {
-      if (holat.tur === 'boshqa-akkaunt') k.appendChild(el('p', 'Bu qurilmadagi ma\'lumot boshqa akkaunt bilan sinxronlangan edi. Hozirgi akkaunt bilan sinxronlash uchun pastdagi tugmani bosing: avval ikki tomon solishtiriladi va nima bo\'lishi aytiladi.', 'xira'));
-      else k.appendChild(el('p', 'Sinxronlashni yoqsangiz, ma\'lumotlaringiz xavfsiz serverga nusxalanadi va boshqa qurilmada (telefon, kompyuter) kirgach ko\'rinadi. Telefon yo\'qolsa, kirib hammasini qaytarib olasiz. Yoqishdan oldin nima bo\'lishi aytiladi va zaxira fayli yuklab beriladi.', 'xira'));
-      var bosh = tugma('Sinxronlashni boshlash', 'asosiy-tugma', function () { sinxronniBoshlash(h); });
-      bosh.id = 'sinxron-boshlash';
-      k.appendChild(bosh);
+      k.appendChild(el('p', 'Birinchi sinxronlash o\'zi boshlanadi: ikki tomon solishtiriladi va hech narsa o\'zingizdan so\'rashsiz o\'chirilmaydi.', 'xira'));
+    }
+    if (xatoli) {
+      var qayta = tugma('Qayta urinish', 'ikkinchi-tugma', function () { sinxronUI.xato = ''; Sinxron.qaytaUrinish().then(function () { sinxronMatnlari(); }); });
+      qayta.id = 'sinxron-qayta';
+      k.appendChild(qayta);
     }
     var p = el('div', undefined, 'yuklash-progress'); p.id = 'sinxron-progress'; p.setAttribute('role', 'status'); p.setAttribute('aria-live', 'polite');
     var n = el('div', undefined, 'yuklash-natija'); n.id = 'sinxron-natija';
@@ -1652,35 +1690,6 @@
 
   var MAXFIYLIK_MATNI = 'Ma\'lumotlaringiz xavfsiz serverga (Supabase) nusxalanadi. Sizning akkauntingizdan boshqa hech kim ko\'ra olmaydi.\n\n' +
     'Halol ogohlantirish: ma\'lumot serverda shifrlanmagan holda saqlanadi, shuning uchun ilova dasturchisi (men) texnik jihatdan ma\'lumotlar bazasini ko\'ra olaman. PIN-kod serverga yuborilmaydi.';
-
-  // Birinchi sinxron: ikki tomon solishtiriladi va holatga qarab tushunarli tasdiq/tanlov ko'rsatiladi
-  function sinxronniBoshlash(h) {
-    if (sinxronUI.band) return;
-    sinxronUI.xato = ''; sinxronUI.natija = ''; sinxronUI.progress = '';
-    if (navigator.onLine === false) { sinxronUI.xato = 'Internet yo\'q. Sinxronlashni boshlash uchun internetga ulaning (ilovaning o\'zi internetsiz ishlayveradi).'; sinxronMatnlari(); return; }
-    sinxronUI.band = true; sinxronUI.progress = 'Server tekshirilmoqda…'; sinxronMatnlari();
-    Sinxron.tahlil().then(function (t) {
-      sinxronUI.progress = '';
-      if (t.tur === 'xato') { sinxronUI.xato = xatoKodBilan(t.xato, t.kod); return; }
-      sinxronUI.tahlil = t;
-      var ogoh = t.boshqaAkkaunt ? '\n\n⚠ Bu qurilmadagi ma\'lumot boshqa akkaunt bilan sinxronlangan edi. Davom etsangiz, u hozirgi akkauntga yuboriladi.' : '';
-      if (t.tur === 'bosh-bosh') return sinxronBajar('bosh-bosh', false);
-      if (t.tur === 'yuklash' && t.davom) {
-        if (!window.confirm('Sinxronlashni boshlash\n\nServerda bu qurilmaning oldingi yuklashi bor (' + sanoqMatni(t.server) + '). U tugallanadi va sinxronlash yoqiladi: shundan keyin o\'zgarishlar avtomatik yuboriladi.\n\nBoshlashdan oldin joriy holatning zaxira fayli avtomatik yuklab beriladi.' + ogoh + '\n\nDavom etilsinmi?')) return;
-        return sinxronBajar('yuklash', true);
-      }
-      if (t.tur === 'yuklash') {
-        if (!window.confirm('Sinxronlashni boshlash\n\nShu qurilmada: ' + sanoqMatni(t.mahalliy) + '. Serverda hali hech narsa yo\'q: hammasi serverga nusxalanadi.\n\n' + MAXFIYLIK_MATNI + '\n\nBoshlashdan oldin joriy holatning zaxira fayli avtomatik yuklab beriladi. Shundan keyin o\'zgarishlar avtomatik yuboriladi.' + ogoh + '\n\nDavom etilsinmi?')) return;
-        return sinxronBajar('yuklash', true);
-      }
-      if (t.tur === 'olish') {
-        if (!window.confirm('Sinxronlashni boshlash\n\nServerda sizning ma\'lumotingiz bor: ' + sanoqMatni(t.server) + '.\n\nBu qurilmada hali ma\'lumot yo\'q (faqat tayyor "Naqd pul" hisobi va kategoriyalar). Serverdagi ma\'lumot shu qurilmaga olinadi. Shundan keyin o\'zgarishlar avtomatik sinxronlanadi.' + ogoh + '\n\nDavom etilsinmi?')) return;
-        return sinxronBajar('olish', false);
-      }
-      ochish(sinxronTanlovEkrani, false);   // ikkala tomonda ham ma'lumot bor
-    }).catch(function (e) { sinxronUI.progress = ''; sinxronUI.xato = xatoKodBilan('Boshlab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.', 'UI_' + ((e && e.name) || 'ERROR')); })
-      .then(function () { sinxronUI.band = false; sinxronMatnlari(); });
-  }
 
   function sinxronNatijaMatni(n) {
     if (n.variant === 'birlashtirish') {
@@ -1699,7 +1708,7 @@
     // Zaxira fayli Sinxron ichida, qulf olingandan va server tekshirilgandan keyin (bir marta) yuklab beriladi
     return Sinxron.birinchi(variant, { progress: function (matn) { sinxronUI.progress = matn; sinxronMatnlari(); }, zaxira: zaxira ? function () { return zaxiraniOlish(true, 'zaxira-sinxrondan-oldin'); } : undefined }).then(function (n) {
       sinxronUI.progress = '';
-      if (!n.ok && n.tur === 'bor') { sinxronUI.xato = ''; setTimeout(function () { sinxronniBoshlash(); }, 0); return; }   // yuklash paytida serverda ma'lumot paydo bo'ldi: ikki tomon qayta solishtiriladi (tanlov ekrani)
+      if (!n.ok && n.tur === 'bor') { sinxronUI.xato = ''; setTimeout(function () { Sinxron.qaytaUrinish(); }, 0); return; }   // yuklash paytida serverda ma'lumot paydo bo'ldi: ikki tomon qayta solishtiriladi (tanlov ekrani)
       if (!n.ok) { sinxronUI.xato = xatoKodBilan(n.xato, n.kod || n.tur) + (n.buzuq ? '\n' + n.buzuq.join('\n') : ''); return; }
       sinxronUI.natija = sinxronNatijaMatni(n) + (n.ogohlantirish ? '\nEslatma: ' + n.ogohlantirish : '');
       qisqaXabar('Sinxronlash yoqildi', undefined, 5000);
@@ -1714,8 +1723,24 @@
   function sinxronTanlovEkrani() {
     var t = sinxronUI.tahlil;
     var bloklar = [orqagaTugmasi(), el('h1', 'Birinchi sinxronlash')];
-    if (!t) { bloklar.push(el('p', 'Avval Profil ekranidan "Sinxronlashni boshlash" ni bosing.', 'xira')); return bloklar; }
+    if (!t) t = Sinxron.tanlovTahlili();
+    if (!t) { bloklar.push(el('p', 'Hozir tanlash kerak emas.', 'xira')); return bloklar; }
     var k = karta();
+    if (t.tur === 'yuklash') {
+      // Bu qurilmadagi ma'lumot BOSHQA akkaunt bilan sinxronlangan edi, hozirgi akkauntning serveri esa bo'sh: o'z-o'zidan yuborilmaydi
+      k.appendChild(el('p', 'Bu qurilmadagi ma\'lumot (' + sanoqMatni(t.mahalliy) + ') boshqa akkaunt bilan sinxronlangan edi. Hozirgi akkauntingizning serverida hali hech narsa yo\'q. Shu ma\'lumot hozirgi akkauntga ham saqlansinmi?', 'yozuv-nom'));
+      k.appendChild(el('p', MAXFIYLIK_MATNI, 'xira'));
+      bloklar.push(k);
+      var hha = tugma('Ha, shu akkauntga saqlash', 'asosiy-tugma', function () { sinxronBajar('yuklash', true); });
+      hha.id = 'tanlov-yuklash';
+      var yoq = tugma('Yo\'q, chiqish', 'ikkinchi-tugma', function () { Kirish.chiqish().then(function () { stek.pop(); chizish(profilEkrani(), false); qisqaXabar('Chiqdingiz'); }); });
+      yoq.id = 'tanlov-chiqish';
+      var kk = karta(); kk.appendChild(hha); kk.appendChild(yoq); bloklar.push(kk);
+      var xx = el('div', undefined, 'xato-matn'); xx.id = 'sinxron-xato'; xx.setAttribute('role', 'alert'); bloklar.push(xx);
+      var pp = el('div', undefined, 'yuklash-progress'); pp.id = 'sinxron-progress'; pp.setAttribute('role', 'status'); pp.setAttribute('aria-live', 'polite'); bloklar.push(pp);
+      setTimeout(sinxronMatnlari, 0);
+      return bloklar;
+    }
     k.appendChild(el('p', 'Ham shu qurilmada, ham serverda ma\'lumot bor. Qaysi birini saqlashni tanlang. Tanlashdan oldin joriy holatning zaxira fayli avtomatik yuklab beriladi, hech narsa jimgina o\'chirilmaydi.'));
     var s = el('div', undefined, 'sinxron-taqqos');
     s.appendChild(el('div', 'Shu qurilmada: ' + sanoqMatni(t.mahalliy), 'yozuv-nom'));
@@ -1750,7 +1775,6 @@
 
   // ---- Maxfiylik va hisobni o'chirish (S7) ----
   var hisobOchirildiMatni = '';
-  var OCHIRISH_SOZI = 'O\'CHIRISH';
   function maxfiylikKartasi() {
     var k = karta();
     k.appendChild(el('h2', 'Maxfiylik'));
@@ -1763,81 +1787,54 @@
     k.appendChild(a);
     return k;
   }
-  function hisobOchirishKartasi() {
-    var k = karta();
-    k.classList.add('xavf-karta');
-    k.appendChild(el('h2', 'Hisobni o\'chirish'));
-    k.appendChild(el('p', 'Serverdagi hamma ma\'lumotingiz va kirish akkauntingiz butunlay o\'chiriladi. Shu qurilmadagi ma\'lumot saqlanadi.', 'xira'));
-    var t = tugma('Hisobimni va serverdagi ma\'lumotimni o\'chirish', 'xavfli-tugma', function () { ochish(hisobOchirishEkrani, true); });
-    t.id = 'hisob-ochirish';
-    k.appendChild(t);
-    return k;
-  }
-  // Ikki bosqichli tasdiq: (1) so'zni yozish, (2) oxirgi tasdiq oynasi. Zaxira fayli avtomatik yuklab beriladi.
-  function hisobOchirishEkrani() {
-    var bloklar = [orqagaTugmasi(), el('h1', 'Hisobni o\'chirish')];
-    var k = karta();
-    k.appendChild(el('p', 'Nima bo\'ladi:', 'yozuv-nom'));
-    [
-      'Serverdagi hamma ma\'lumotingiz (hisoblar, kategoriyalar, yozuvlar, byudjetlar, qarzlar, to\'lovlar, sozlamalar) BUTUNLAY o\'chiriladi. Qaytarib bo\'lmaydi.',
-      'Kirish akkauntingiz serverdan o\'chiriladi.',
-      'Shu qurilmadagi ma\'lumot O\'CHMAYDI: ilova avvalgidek, kirmasdan ishlayveradi.',
-      'Boshqa qurilmalarda ham sinxronlash to\'xtaydi (u yerdagi ma\'lumot ham o\'chmaydi).',
-      'Boshlashdan oldin zaxira fayli (JSON) avtomatik yuklab beriladi.',
-      'Internet kerak.'
-    ].forEach(function (m) { k.appendChild(el('p', '• ' + m, 'xira')); });
-    var kutayotgan = Sinxron.kutayotgan();
-    if (kutayotgan > 0) {
-      k.appendChild(el('p', 'Serverga hali yuborilmagan ' + kutayotgan + ' ta o\'zgarish bor. Ular shu qurilmada saqlanadi, lekin serverda baribir hammasi o\'chadi. Xohlasangiz, avval yuborib oling (shunda ularning nusxasi zaxira faylida ham bo\'ladi).', 'xato-matn'));
-      var yub = tugma('Avval yuborib olish', 'ikkinchi-tugma', function () {
-        yub.disabled = true; xato.textContent = ''; holat.textContent = 'Yuborilmoqda…';
-        Sinxron.yurgiz('qolda').then(function (n) { holat.textContent = ''; if (!n.ok && n.xato) xato.textContent = xatoKodBilan(n.xato, n.kod); else { qisqaXabar('Yuborildi'); chizish(hisobOchirishEkrani(), false); } yub.disabled = false; });
+  // Hisobni o'chirish: tasdiq oynasi (nima o'chadi, nima saqlanadi), "Bekor qilish" va qizil "O'chirish". Zaxira fayli avtomatik yuklab beriladi.
+  function hisobniOchirishOynasi() {
+    pastkiOyna('Hisobni o\'chirish', function (oyna, yop) {
+      oyna.appendChild(el('p', 'O\'chadi: serverdagi hisobingiz (akkaunt) va serverdagi hamma ma\'lumotingiz (hisoblar, kategoriyalar, yozuvlar, byudjetlar, qarzlar, to\'lovlar, sozlamalar). Qaytarib bo\'lmaydi.', 'yozuv-nom'));
+      oyna.appendChild(el('p', 'Saqlanadi: shu qurilmadagi ma\'lumot. Ilova kirmasdan avvalgidek ishlayveradi. Boshqa qurilmalarda ham sinxronlash to\'xtaydi, ularda ma\'lumot qoladi.', 'xira'));
+      oyna.appendChild(el('p', 'Boshlashdan oldin zaxira fayli (JSON) avtomatik yuklab beriladi. Internet kerak.', 'xira'));
+      var holat = el('div', undefined, 'yuklash-progress'); holat.id = 'ochir-holat'; holat.setAttribute('role', 'status'); holat.setAttribute('aria-live', 'polite');
+      var xato = el('div', undefined, 'xato-matn'); xato.id = 'ochir-xato'; xato.setAttribute('role', 'alert');
+      var kutayotgan = Sinxron.kutayotgan();
+      if (kutayotgan > 0) {
+        oyna.appendChild(el('p', 'Serverga hali yuborilmagan ' + kutayotgan + ' ta o\'zgarish bor. Ular shu qurilmada saqlanadi, lekin serverda baribir hammasi o\'chadi. Xohlasangiz, avval yuborib oling (shunda ularning nusxasi zaxira faylida ham bo\'ladi).', 'xato-matn'));
+        var yub = tugma('Avval yuborib olish', 'ikkinchi-tugma', function () {
+          yub.disabled = true; xato.textContent = ''; holat.textContent = 'Yuborilmoqda…';
+          Sinxron.yurgiz('qolda').then(function (n) { holat.textContent = ''; yub.disabled = false; if (!n.ok && n.xato) xato.textContent = xatoKodBilan(n.xato, n.kod); else { qisqaXabar('Yuborildi'); yop(); hisobniOchirishOynasi(); } });
+        });
+        yub.id = 'ochir-yuborish';
+        oyna.appendChild(yub);
+      }
+      var qator = el('div', undefined, 'tasdiq-qator');
+      var bekor = tugma('Bekor qilish', 'ikkinchi-tugma', function () { yop(); });
+      bekor.id = 'ochir-bekor';
+      var tasdiq = tugma('O\'chirish', 'qizil-tugma', function () {
+        xato.textContent = '';
+        if (navigator.onLine === false) { xato.textContent = xatoKodBilan('Internet yo\'q. Hisobni o\'chirish uchun internetga ulaning (hech narsa o\'chmadi).', 'NETWORK_OFFLINE'); return; }
+        tasdiq.disabled = true; bekor.disabled = true; holat.textContent = 'Server tekshirilmoqda…';
+        Kirish.serverBormi().then(function (bor) {
+          if (!bor) return { ok: false, tur: 'internet', kod: 'NETWORK', xato: 'Serverga ulanib bo\'lmadi. Internetni tekshirib, qayta urinib ko\'ring (hech narsa o\'chmadi).' };
+          holat.textContent = 'Zaxira tayyorlanmoqda…';
+          return zaxiraniOlish(true, 'zaxira-hisobni-ochirishdan-oldin').then(function () {   // zaxira saqlanmasa, hech narsa o'chirilmaydi
+            holat.textContent = 'Serverdagi ma\'lumot o\'chirilmoqda…';
+            return Sinxron.hisobniOchirish();
+          }, function (e) { return { ok: false, tur: 'xato', kod: 'BACKUP_FAILED', xato: 'Zaxira faylini saqlab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Hech narsa o\'chirilmadi.' }; });
+        }).then(function (n) {
+          holat.textContent = '';
+          if (!n.ok) { xato.textContent = xatoKodBilan(n.xato, n.kod || n.tur); tasdiq.disabled = false; bekor.disabled = false; return; }
+          hisobOchirildiMatni = 'Hisob o\'chirildi. Serverdagi ma\'lumot va akkaunt o\'chirildi. Shu qurilmadagi ma\'lumot saqlanib qoldi.' + (n.ogohlantirish ? ' ' + n.ogohlantirish : '');
+          qisqaXabar('Hisob o\'chirildi', undefined, 6000);
+          yop(false);
+          if (stek.length && stek[stek.length - 1].yasash === profilEkrani) chizish(profilEkrani(), false);
+        }).catch(function (e) { holat.textContent = ''; xato.textContent = xatoKodBilan('O\'chirib bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.', 'UI_' + ((e && e.name) || 'ERROR')); tasdiq.disabled = false; bekor.disabled = false; });
       });
-      yub.id = 'ochir-yuborish';
-      k.appendChild(yub);
-    }
-    var yorliq = el('label', 'Tasdiqlash uchun ' + OCHIRISH_SOZI + ' so\'zini yozing:', 'xira');
-    yorliq.setAttribute('for', 'ochir-soz');
-    k.appendChild(yorliq);
-    var kiritish = el('input');
-    kiritish.id = 'ochir-soz';
-    kiritish.type = 'text';
-    kiritish.autocomplete = 'off';
-    kiritish.setAttribute('autocapitalize', 'characters');
-    kiritish.setAttribute('aria-label', 'Tasdiqlash so\'zi');
-    k.appendChild(kiritish);
-    var holat = el('div', undefined, 'yuklash-progress'); holat.id = 'ochir-holat'; holat.setAttribute('role', 'status'); holat.setAttribute('aria-live', 'polite');
-    var xato = el('div', undefined, 'xato-matn'); xato.id = 'ochir-xato'; xato.setAttribute('role', 'alert');
-    var tugmasi = tugma('Hisobni o\'chirish', 'xavfli-tugma', function () {
-      if (Calc.nomKaliti(kiritish.value) !== Calc.nomKaliti(OCHIRISH_SOZI)) return;
-      xato.textContent = '';
-      if (navigator.onLine === false) { xato.textContent = xatoKodBilan('Internet yo\'q. Hisobni o\'chirish uchun internetga ulaning (hech narsa o\'chmadi).', 'NETWORK_OFFLINE'); return; }
-      if (!window.confirm('OXIRGI TASDIQ\n\nServerdagi hamma ma\'lumotingiz va akkauntingiz butunlay o\'chiriladi. Qaytarib bo\'lmaydi.' + (Sinxron.kutayotgan() ? '\n\nServerga yuborilmagan ' + Sinxron.kutayotgan() + ' ta o\'zgarish bor (ular shu qurilmada qoladi).' : '') + '\n\nShu qurilmadagi ma\'lumot saqlanadi. Zaxira fayli avtomatik yuklab beriladi.\n\nO\'chirilsinmi?')) return;
-      tugmasi.disabled = true; kiritish.disabled = true; holat.textContent = 'Server tekshirilmoqda…';
-      Kirish.serverBormi().then(function (bor) {
-        if (!bor) return { ok: false, tur: 'internet', kod: 'NETWORK', xato: 'Serverga ulanib bo\'lmadi. Internetni tekshirib, qayta urinib ko\'ring (hech narsa o\'chmadi).' };
-        holat.textContent = 'Zaxira tayyorlanmoqda…';
-        return zaxiraniOlish(true, 'zaxira-hisobni-ochirishdan-oldin').then(function () {   // zaxira saqlanmasa, hech narsa o'chirilmaydi
-          holat.textContent = 'Serverdagi ma\'lumot o\'chirilmoqda…';
-          return Sinxron.hisobniOchirish();
-        }, function (e) { return { ok: false, tur: 'xato', kod: 'BACKUP_FAILED', xato: 'Zaxira faylini saqlab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Hech narsa o\'chirilmadi.' }; });
-      }).then(function (n) {
-        holat.textContent = '';
-        if (!n.ok) { xato.textContent = xatoKodBilan(n.xato, n.kod || n.tur); tugmasi.disabled = false; kiritish.disabled = false; return; }
-        hisobOchirildiMatni = 'Hisob o\'chirildi. Serverdagi ma\'lumot va akkaunt o\'chirildi. Shu qurilmadagi ma\'lumot saqlanib qoldi.' + (n.ogohlantirish ? ' ' + n.ogohlantirish : '');
-        qisqaXabar('Hisob o\'chirildi', undefined, 6000);
-        stek.pop();
-        chizish(profilEkrani(), false);
-      }).catch(function (e) { holat.textContent = ''; xato.textContent = xatoKodBilan('O\'chirib bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.', 'UI_' + ((e && e.name) || 'ERROR')); tugmasi.disabled = false; kiritish.disabled = false; });
-    });
-    tugmasi.id = 'ochir-tugma';
-    tugmasi.disabled = true;
-    kiritish.addEventListener('input', function () { tugmasi.disabled = Calc.nomKaliti(kiritish.value) !== Calc.nomKaliti(OCHIRISH_SOZI); });
-    k.appendChild(tugmasi);
-    k.appendChild(holat);
-    k.appendChild(xato);
-    bloklar.push(k);
-    return bloklar;
+      tasdiq.id = 'ochir-tasdiq';
+      qator.appendChild(bekor);
+      qator.appendChild(tasdiq);
+      oyna.appendChild(qator);
+      oyna.appendChild(holat);
+      oyna.appendChild(xato);
+    }, 'hisob-ochirish-oynasi');
   }
 
   // "Xavfsizlik": PIN-kod bilan ochish (yoqish/o'chirish) va PIN-kodni o'zgartirish (mantiq js/pin.js da, o'zgarmagan)
@@ -3479,18 +3476,31 @@
 
   // Kirish: PIN va baza tayyor bo'lishini kutmaydi (Google'dan qaytgan kodni darhol qayta ishlash uchun); ma'lumotga tegmaydi
   Kirish.boshlash();
-  Kirish.kuzat(function () {
+  var kirishImzosi = '';
+  Kirish.kuzat(function (h) {
+    // Token yangilanishi ham hodisa beradi: ekran faqat ko'rinadigan narsa (kirgan, email, xato, "o'tilmoqda") o'zgarganda qayta chiziladi
+    var imzo = [h.kirgan, h.email, h.xato, h.kirmoqda].join('|');
+    if (imzo === kirishImzosi) return;
+    kirishImzosi = imzo;
     var oxirgiEkran = stek[stek.length - 1];
     if (oxirgiEkran && (oxirgiEkran.yasash === profilEkrani || oxirgiEkran.yasash === menyuEkrani)) chizish(oxirgiEkran.yasash(), true);
   });
 
   // Sinxron holati o'zgarsa: ko'rinib turgan ekran yangilanadi (Profil/Menyu qayta chiziladi, belgi matni almashadi). Serverdan yangi ma'lumot kelsa, ro'yxatlar yangilanadi.
   Sinxron.kuzat(function (h) {
-    if (h.tur === 'tayyor' || h.tur === 'kutilmoqda') sinxronUI.xato = '';   // muvaffaqiyatli sinxrondan keyin eski xato xabari qolmasin
+    if (h.tur === 'tayyor' || h.tur === 'kutilmoqda') sinxronUI.xato = '';
+    var tt = Sinxron.tanlovTahlili();
+    if (h.tur === 'tanlov' && tt && sinxronUI.tanlovKorsatilgan !== tt) {   // birinchi sinxron "tanlov" topdi: Profil ochiq bo'lsa, tanlov ekrani o'zi ochiladi
+      sinxronUI.tanlovKorsatilgan = tt;
+      var top = stek[stek.length - 1];
+      if (top && top.yasash === profilEkrani && !sinxronUI.band) { sinxronUI.tahlil = tt; ochish(sinxronTanlovEkrani, false); return; }
+    }   // muvaffaqiyatli sinxrondan keyin eski xato xabari qolmasin
     var oxirgiEkran = stek[stek.length - 1];
     if (h.tur === 'ishlayapti') sinxronUI.natija = '';
-    if (oxirgiEkran && oxirgiEkran.yasash === menyuEkrani) chizish(oxirgiEkran.yasash(), true);
-    else if (oxirgiEkran && oxirgiEkran.yasash === profilEkrani && !sinxronUI.band && sinxronUI.imzo !== sinxronImzosi()) chizish(oxirgiEkran.yasash(), true);
+    if (oxirgiEkran && oxirgiEkran.yasash === menyuEkrani) {   // Menyu qayta chizilmaydi (bosilayotgan qator almashib ketmasin): faqat Profil qatorining matni yangilanadi
+      var q = document.querySelector('#mn-profil .yozuv-izoh');
+      if (q) q.textContent = profilQatoriIzohi() + ' ›';
+    } else if (oxirgiEkran && oxirgiEkran.yasash === profilEkrani && !sinxronUI.band && sinxronUI.imzo !== sinxronImzosi()) chizish(oxirgiEkran.yasash(), true);
     sinxronMatnlari();
   });
   Sinxron.tortildiKuzat(function () { yuklash().then(function () { yangilash(); }); });

@@ -1,7 +1,43 @@
 # Chuntak AI
 
 Shaxsiy moliya ilovasi (telefon uchun veb-ilova, PWA): xarajat, daromad, qarz, byudjet va hisobotlar.
-Ma'lumot faqat qurilmada saqlanadi, hech qayerga yuborilmaydi. Texnik topshiriq: `TZ.md`.
+Ma'lumot qurilma brauzerida (IndexedDB) saqlanadi va ilova **kirmasdan ham to'liq ishlaydi**. Google bilan kirsangiz (rozilik bilan),
+ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxronlash). Texnik topshiriq: `TZ.md`, sinxronlash: `TZ-sinxronlash.md`.
+
+## Qanday ishlatish (ilova egasi uchun)
+
+1. **Kirmasdan:** ilovani oching va ishlating. Hech narsa serverga ketmaydi.
+2. **Sinxronlashni yoqish:** Menyu (☰) → Profil va sinxronlash → "Google bilan kirish". Tugmani bosish — tugma ustidagi rozilik matniga rozilik.
+   Kirgan zahoti birinchi sinxron o'zi ishlaydi: ikkalasi bo'sh bo'lsa yoqiladi; qurilmada bor, server bo'sh bo'lsa yuklanadi; qurilma bo'sh (faqat
+   tayyor "Naqd pul" va kategoriyalar), serverda bor bo'lsa tortiladi; ikkalasida ham bor bo'lsa **tanlov ekrani** chiqadi (Birlashtirish / Faqat
+   serverdagini olish / Faqat shu qurilmadagini yuborish; avval zaxira fayli yuklanadi).
+3. **Keyin:** o'zgarishlar avtomatik yuboriladi, boshqa qurilmadagilari avtomatik olinadi. Asosiy ekran va Profilda holat: "Sinxronlangan",
+   "Kutilmoqda (N ta o'zgarish)", "Internet yo'q", "Xato" (sabab "(kod: ...)" bilan va "Qayta urinish").
+4. **Chiqish** faqat shu qurilmadan chiqadi (ma'lumot qoladi). **Hisobni o'chirish** serverdagi akkaunt va hamma ma'lumotni o'chiradi (shu qurilmadagi ma'lumot qoladi; avval zaxira fayli yuklanadi).
+5. **Zaxira** (Menyu → Zaxira va eksport) sinxronlash o'rnini bosmaydi: vaqti-vaqti bilan JSON zaxira oling.
+6. **Telefon yo'qolsa / almashsa:** yangi qurilmada ilovani oching, shu Google bilan kiring: serverdagi ma'lumot o'zi qaytadi.
+
+## Tuzilma
+
+| Papka/fayl | Nima |
+|---|---|
+| `index.html`, `style.css`, `manifest.json`, `sw.js` | Ilova sahifasi, uslub, PWA, service worker (kesh; IndexedDB ga tegmaydi) |
+| `js/calc.js`, `js/data.js` | Hisob-kitob qoidalari (sof), mahalliy baza (IndexedDB `moliya`, sxema 7, navbat) |
+| `js/ui.js`, `js/glidirak.js`, `js/diagramma.js`, `js/tema.js`, `js/pin*.js`, `js/pwa.js` | Ekranlar va ular bilan bog'liq narsalar |
+| `js/kirish.js`, `js/sinxron-sof.js`, `js/sinxron.js`, `js/yuklash.js` | Google bilan kirish, sinxron qoidalari (sof), sinxron tsikli va birinchi sinxron, serverga yuborish yordamchilari |
+| `js/vendor/` | Ichki kutubxonalar (`@supabase/auth-js`, `@supabase/postgrest-js`, MIT); CDN yo'q |
+| `supabase/` | Serverdagi baza: SQL fayllar (001–006), testlar, `README.md` (qadamma-qadam) |
+| `maxfiylik.html` | Maxfiylik va foydalanish shartlari (alohida ochiq sahifa) |
+| `tests.html` | Avtomatik birlik testlari (brauzerda) |
+
+## Ma'lum cheklovlar
+
+- **To'qnashuv:** bir qator ikki qurilmada o'zgartirilsa, serverga OXIRGI YETIB BORGAN o'zgarish saqlanadi (maydonlar alohida birlashtirilmaydi). Tafsilot: `TZ-sinxronlash.md`, 15-band.
+- **Takror nomlar:** ikki qurilmada bir vaqtda bir xil nomli hisob/kategoriya qo'shilsa, ikkita bo'lib qoladi (ma'lumot yo'qolmaydi; ortiqchasini arxivlang).
+- **Shifrlanmagan:** serverdagi ma'lumot shifrlanmagan; dasturchi texnik jihatdan ko'ra oladi (maxfiylik sahifasida ochiq aytilgan).
+- Zaxiradan tiklashda zaxirada yo'q, lekin serverda bor qatorlar o'chirilmaydi va qaytib keladi.
+- O'chirilgan qatorlar serverda 90 kun saqlanadi, keyin tozalanadi (`supabase/005_sinxron_xizmat.sql`; pg_cron kerak).
+- Boshqa qurilmada hisob o'chirilsa, bu qurilmada "akkaunt o'chirilgan" xabari chiqadi: chiqib, qayta kiring.
 
 Ilova nomi `js/ilova.js` dagi `ILOVA` o'zgaruvchisida **bitta joyda** turadi (ilova ichidagi matnlar, sahifa sarlavhasi, fayl nomlari
 shundan olinadi). `manifest.json` va `index.html` statik fayl bo'lgani uchun o'zgaruvchini o'qiy olmaydi: nomni o'zgartirsangiz,
@@ -33,11 +69,11 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.21.0 → 0.21.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.22.0 → 0.22.1), `index.html` va `tests.html` da hammasini birdaniga:
 
-    sed -i 's/0\.14\.0/0.21.0/g' index.html tests.html
+    sed -i 's/0\.22\.0/0.22.1/g' index.html tests.html
 
-`sw.js` ning o'zida versiya yo'q: u o'z manzilidagi `?v=` dan oladi. Agar `js/` ga yangi fayl qo'shsangiz, uni `index.html` ga
+`sw.js` ning o'zida versiya yo'q: u o'z manzilidagi `?v=` dan oladi (alohida o'zgartirish kerak emas). Agar `js/` ga yangi fayl qo'shsangiz, uni `index.html` ga
 va `sw.js` dagi `royxat()` ga ham qo'shing (`tests.html` mosligini tekshiradi).
 
 ## Ilova belgisi

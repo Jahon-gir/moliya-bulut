@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -79,7 +79,7 @@ Serverda tekshiriladigan qoidalar faqat TZ.md 7-bandidagi tuzilmadan: tur qiymat
 
 ## 7. Ekranlar
 
-- "Menyu" (☰, Asosiy sahifaning chap yuqori burchagi) → "Asosiy sozlamalar" kartochkasida "Profil va sinxronlash" qatori (u ochadigan ekranda): kirmagan holatda "Kirish" tugmasi va qisqa izoh; kirgan holatda email, sinxron holati, "Hozir sinxronlash", "Chiqish", "Serverdagi ma'lumotni o'chirish".
+- "Menyu" (☰, Asosiy sahifaning chap yuqori burchagi) → "Asosiy sozlamalar" kartochkasida "Profil va sinxronlash" qatori (u ochadigan ekranda): kirmagan holatda rozilik matni va "Google bilan kirish" (tugmani bosish = rozilik); kirgan holatda "Siz shu akkauntdasiz: email", "Chiqish" (faqat shu qurilmadan), "Hisobni o'chirish" (tasdiq oynasi), sinxron holati, "Hozir sinxronlash" (va xatoda "Qayta urinish"). Birinchi sinxron kirgan zahoti o'zi ishlaydi (17-band).
 - Kirish oynasi: email maydoni (kod yuboriladi), "Google bilan kirish", maxfiylik izohi.
 - Asosiy sahifada kichik sinxron holat belgisi.
 - Barcha ekranlar 360 pikselda, yorug' va qorong'i rejimda; tugmalar 44 pikseldan kichik emas.
@@ -98,7 +98,7 @@ Har bosqich alohida pull request, oldingisi tekshirilgandan keyin keyingisiga o'
 | S5 ✅ | Ikki tomonlama sinxronlash: yuborish navbati, tortib olish, to'qnashuv, o'chirish, holat ko'rsatkichi | Claude Code | Ikki qurilmada yozuv qo'shish, tahrirlash, o'chirish bir-biriga o'tadi | **Bajarildi (0.20.0)**, 15-bandga qarang |
 | S6 ✅ | Boshqa qurilmada birinchi kirish (tanlov oynasi), internetsiz rejim va qaytganda yuborish | Claude Code | Samolyot rejimida yozilgan yozuv internet qaytgach serverga o'tadi | **Bajarildi (0.21.0)**: asosiy qismi S5 da; bo'shliqlar 16-bandda |
 | S7 ✅ | Hisobni va serverdagi ma'lumotni o'chirish, maxfiylik matni, xato holatlari | Claude Code | O'chirgandan keyin serverda hech narsa qolmaydi, mahalliy ma'lumot saqlanadi | **Bajarildi (0.21.0)**, 16-bandga qarang |
-| S8 | Yakuniy sinov va hujjat yangilash | Claude Code va foydalanuvchi | 9-band mezonlari |
+| S8 ✅ | Yakuniy sinov va hujjat yangilash | Claude Code va foydalanuvchi | 9-band mezonlari | **Bajarildi (0.22.0)**: avtomatik birinchi sinxron, rozilik, hisobni o'chirish yangi ko'rinishda, 90 kunlik tozalash; mezonlar jadvali 17-bandda. Haqiqiy serverdagi sinovlar foydalanuvchi uchun |
 
 ## 9. Qabul mezonlari
 
@@ -198,3 +198,41 @@ Har bosqich alohida pull request, oldingisi tekshirilgandan keyin keyingisiga o'
 - **Server:** `supabase/003_hisobni_ochirish.sql` (funksiya `public.hisobni_ochirish()`: parametrsiz, faqat `auth.uid()`, SECURITY DEFINER, bo'sh search_path, EXECUTE faqat authenticated; qatorlarni HAQIQATAN o'chiradi, keyin akkauntni) va `004_hisobni_ochirish_testi.sql` (18 tekshiruv: A o'chirsa B saqlanadi, anon va kirmagan o'chira olmaydi). Foydalanuvchi SQL Editor'da qo'lda ishga tushiradi (`supabase/README.md`, 1-b).
 - **Xato matnlari:** barcha sinxron, o'chirish va kirish xatolarida qisqa texnik kod (NETWORK, NETWORK_OFFLINE, HTTP_*, PG_*, AUTH_*, SYNC_LOCKED, BACKUP_FAILED, DATA_INVALID, NOT_SIGNED_IN, UI_*, JS_*).
 - **Cheklov:** boshqa qurilmadagi token hisob o'chirilgandan keyin ham ~1 soat amalda bo'lishi mumkin, lekin server akkaunt yo'qligi uchun yozishni rad etadi (bu holat yuqoridagi 3-xabar bilan ko'rsatiladi).
+
+## 17. S8 natijasi (yakuniy bosqich, 0.22.0)
+
+**Avtomatik birinchi sinxron.** "Google bilan kirish" tugmasi ustida rozilik matni (nima saqlanadi va boshqa qurilmalarda ko'rinadi, faqat siz ko'rasiz, shifrlanmagan va dasturchi texnik jihatdan ko'ra oladi, hisobni o'chirish mumkin, Maxfiylik havolasi). Tugmani bosish = rozilik: belgi qurilmada saqlanadi, Google dan qaytgach akkauntga bog'lanadi va **shu akkaunt uchun bir marta** mahalliy yozuvda (`rozilik`; zaxiraga kirmaydi) turadi. Alohida "Sinxronlashni boshlash" tugmasi olib tashlandi (faqat rozilik yozuvi yo'q eski kirgan foydalanuvchi uchun "Roziman, sinxronlashni yoqish"). Kirgan zahoti ikki tomon solishtiriladi: ikkalasi bo'sh — yoqiladi; qurilmada bor, server bo'sh — yuklanadi; qurilma bo'sh, serverda bor — tortiladi; ikkalasida ham bor — **tanlov ekrani** (zaxira fayli va tushuntirish bilan; Profil ochiq bo'lsa ekran o'zi ochiladi). Hech narsa jimgina o'chirilmaydi.
+- **"Bo'sh" qurilma:** ilova birinchi ochilganda yaratgan standart ma'lumot (bitta "Naqd pul" hisobi, qoldig'i 0; standart kategoriyalar) "bo'sh" hisoblanadi: foydalanuvchining yozuvi, qarzi, byudjeti, boshqa hisobi, o'zgargan qoldiq yoki o'zgargan/arxivlangan kategoriya bo'lsa — "ma'lumot bor". Bo'sh qurilmada serverdagi ma'lumot to'g'ridan-to'g'ri tortiladi (standartlar serverdagilari bilan almashadi, takror bo'lmaydi). "Birlashtirish"da bir xil nomli (nom va tur bo'yicha) hisob/kategoriya bitta bo'ladi; mahalliy hisobning boshlang'ich qoldig'i 0 bo'lsa, u serverdagi bir xil nomli hisobga qo'shiladi (jami balans o'zgarmaydi).
+- **Boshqa akkaunt:** bu qurilmadagi ma'lumot boshqa akkaunt bilan sinxronlangan bo'lsa va hozirgi akkauntning serveri bo'sh bo'lsa, ma'lumot o'z-o'zidan YUBORILMAYDI: "Ha, shu akkauntga saqlash" / "Yo'q, chiqish" tanlovi chiqadi. Serverda ma'lumot bo'lsa — oddiy tanlov ekrani (ogohlantirish bilan).
+- **To'xtash:** chiqish (sessiya yo'q), hisobni o'chirish (sinxron holati, navbat va rozilik o'chadi) va rozilik yo'q holatda avtomatik sinxron ishlamaydi.
+- **Uzilgan birinchi sinxron:** sahifa yangilansa (shu jumladan "Yangi versiya tayyor" → "Yangilash"), ilova yopilsa yoki internet uzilsa, keyingi ochilishda avtomatik davom etadi (yuklash — qolgan joyidan; takror yo'q). "Yangilash" bosilganda sinxron ketayotgan bo'lsa, u tugashi (15 soniyagacha) kutiladi.
+- **Xatoda** faqat "Qayta urinish" tugmasi va sabab "(kod: ...)" bilan.
+
+**Profil:** "Siz shu akkauntdasiz: email" (adashib boshqa Google akkaunt bilan kirmaslik uchun); ikkita alohida tugma: "Chiqish" va "Hisobni o'chirish". Hisobni o'chirish: tasdiq oynasi (nima o'chadi: serverdagi akkaunt va hamma ma'lumot; nima saqlanadi: shu qurilmadagi ma'lumot), "Bekor qilish" va qizil "O'chirish"; zaxira fayli avtomatik, yuborilmagan o'zgarish ogohlantirishi va xato kodlari avvalgidek ("O'CHIRISH" so'zini yozdirish olib tashlandi).
+
+**Tortish tezligi va batareya:** fon tortishi faqat sahifa ko'rinib turganda va internet bor paytda (sahifa yashirinsa vaqt belgisi to'xtatiladi); foydalanuvchi 3 daqiqa tegmasa, tekshiruv 5 daqiqada bir marta. Bo'sh turganda har tsikl: `supabase/005_sinxron_xizmat.sql` o'rnatilgan bo'lsa **1 ta so'rov** (`rpc sinxron_holati`), faqat o'zgargan jadval tortiladi; o'rnatilmagan bo'lsa **6 ta GET**. Ilova ochilganda, "Hozir sinxronlash" va har 10-tsiklda hamma jadval tekshiriladi. Yuborish: faqat o'zgargan qatorlar (bo'laklar ≤300). Internet yo'q yoki sahifa yashirin bo'lsa so'rov ketmaydi. Kirish hodisalari (token yangilanishi) tsiklni qayta-qayta boshlamaydi (S8 da shunday to'fon topilib tuzatildi: akkaunt boshqa qurilmada o'chirilganda 401 → token yangilash → tsikl → 401 ... aylanasi; endi tsikl faqat akkaunt o'zgarganda boshlanadi, token yangilash 20 soniyada bir martadan ko'p emas).
+
+**Tombstone tozalash (6-band 4):** S1–S7 da BAJARILMAGAN edi (faqat o'chirish ruxsati bor edi). S8 da qo'shildi: `public.tombstone_tozalash(90)` (faqat jadval egasi) + pg_cron kunlik 03:15 UTC (`005_sinxron_xizmat.sql`, qadamlar `supabase/README.md` 1-c). Bog'langan ota qatorlar (hisob, kategoriya, qarz) unga bog'langan qator bor ekan o'chirilmaydi. Mahalliy PostgreSQL 16 da 16/16 tekshiruv o'tdi; haqiqiy Supabase'da foydalanuvchi ishga tushiradi.
+
+**Takror nomlar (12-band 4, ochiq savol):** hozirgi holat: ikki qurilmada bir vaqtda bir xil nomli YANGI hisob/kategoriya qo'shilsa, ikkalasi qoladi (ikkita bir xil nomli), ma'lumot yo'qolmaydi va buzilmaydi (testlangan). Birinchi sinxronda "Birlashtirish" bir xil nomlilarni bitta qiladi. Doimiy sinxronda avtomatik birlashtirish qilinmadi (yangi imkoniyat; noto'g'ri birlashtirish xavfi bor): foydalanuvchi ortiqchasini arxivlaydi.
+
+**Boshqa o'zaro ta'sirlar (tekshirildi):** sessiya muddati (token yangilanmasa: internet bor-yo'qligi ajratiladi; 401 da bir marta yangilash), internetsiz ochish (saqlangan akkaunt ko'rinadi, o'zgarishlar navbatda, so'rov ketmaydi), PWA "Yangilash" (sinxron tugashini kutadi; birinchi sinxron uzilsa davom etadi).
+
+### 9-band mezonlari: holat jadvali
+
+| № | Mezon | Holat | Qanday tekshirildi |
+|---|---|---|---|
+| 1 | A ning ma'lumotini B ko'ra, o'zgartira, o'chira olmaydi (to'g'ridan-to'g'ri server so'rovi bilan ham) | O'tdi (mahalliy PostgreSQL); Supabase'da foydalanuvchi | `002_xavfsizlik_testi.sql` 75/75, `004` 18/18, `006` 16/16 mahalliy PostgreSQL 16 da (ikkita sinov foydalanuvchi, RLS, anon rad etiladi). Haqiqiy Supabase'da bu fayllarni foydalanuvchi ishga tushiradi |
+| 2 | Kirmasdan ilova hozirgidek to'liq ishlaydi | O'tdi | Hamma e2e (S2, menyu, PIN, PWA, eksport, migratsiya) kirmasdan; kirmagan holatda serverga so'rov yo'qligi tekshirilgan; birlik testi: kirmagan uchun tsikl ishlamaydi |
+| 3 | 5 yozuv, 1 o'tkazma, 1 qarz — ikkinchi qurilmada hammasi, balans va qoldiqlar bir xil | O'tdi (taqlid server) | Birlik testi "9-band/3": ikki alohida mahalliy baza, raqamlar JSON bilan aynan teng |
+| 4 | Ikkinchi qurilmada tahrirlash va o'chirish ikkinchisida ham | O'tdi (taqlid) | Birlik testlari (ikki qurilma, qarz to'lovi) va brauzer testi (3 ta alohida brauzer konteksti) |
+| 5 | Samolyot rejimida yozilgan yozuv internet qaytgach serverga o'tadi, ikki marta yozilmaydi | O'tdi (taqlid) | Birlik (navbat ilova qayta ochilgandan keyin ham, uzilishdan keyin dublikatsiz) va brauzer (`offline` rejim, `online` hodisasi) testlari |
+| 6 | Bir yozuv ikki qurilmada turlicha o'zgartirilsa, oxirgisi yutadi, ma'lumot buzilmaydi | O'tdi (taqlid) | Birlik testi (yuborilmagan mahalliy o'zgarish ustiga yozilmaydi, to'qnashuv sanaladi); qoida 15-bandda |
+| 7 | Telefon almashtirish: yangi qurilmada kirgach hamma ma'lumot qaytadi | O'tdi (taqlid) | Birlik va brauzer: baza tozalanib, qayta kirishda raqamlar aynan bir xil; "bo'sh qurilma" standart ma'lumot bilan tanlovsiz tortiladi |
+| 8 | Eski zaxira fayli (1-sxemadan hozirgigacha) tiklanadi va keyin sinxronlanadi | O'tdi (taqlid); shu bilan birga 1–6 sxema fayllari oldingi bosqichlarda | Birlik: 1-sxema fayli tiklanadi → sinxron → ikkinchi qurilmada raqamlar bir xil; 3, 4, 5, 6 sxema fayllari S3 testlarida |
+| 9 | Mavjud ma'lumot migratsiyadan keyin raqamma-raqam bir xil | O'tdi | S3: 2 500 yozuvli eski (0.17.0) bazada balans, kategoriya jami, byudjet, qarz, eksport ID lari aynan teng (birlik va brauzer testlari) |
+| 10 | 5 000 yozuv birinchi yuklash < 60 s; oddiy sinxron < 3 s | Taqlid serverda o'tdi; **haqiqiy tarmoqda sinalmadi** | Birlik testi: 5 000 yozuv va bitta o'zgarish vaqti o'lchanadi. Haqiqiy tezlik internetga va Supabase hududiga bog'liq: foydalanuvchi o'lchaydi |
+| 11 | Kodda va repozitoriyda maxfiy kalit yo'q | O'tdi | Avtomatik qidiruv testi (`service_role`, `sb_secret_`, JWT, parol) va qo'lda `grep`; faqat ochiq (publishable) kalit |
+| 12 | Serverdagi ma'lumotni o'chirish ishlaydi | O'tdi (mahalliy PostgreSQL + taqlid); Supabase'da foydalanuvchi | `004` 18/18 (A o'chirsa B saqlanadi); brauzer testi: tasdiq oynasi, zaxira, mahalliy ma'lumot saqlanadi, qayta kirishda bo'sh server |
+
+**Haqiqiy serverda faqat foydalanuvchi sina oladigan narsalar:** (a) `001`, `002`, `003`, `004`, `005`, `006` ni Supabase SQL Editor'da ishga tushirish va natijalarni ko'rish; (b) pg_cron yoqilishi va `cron.job` da kunlik topshiriq; (c) Google bilan haqiqiy kirish (telefon PWA'sida ham: iPhone/Android), Google Cloud Branding dagi maxfiylik manzili; (d) ikki haqiqiy qurilma orasida sinxron tezligi (5 000 yozuv, oddiy sinxron); (e) `delete from auth.users` ning funksiya ichidan haqiqiy Supabase'da ishlashi (ikkinchi sinov akkaunti bilan); (f) uzoq muddatli (soatlab/kunlab) oflayn va haqiqiy token muddati tugashi.

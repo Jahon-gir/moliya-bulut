@@ -29,7 +29,12 @@ var Pwa = (function () {
     b.addEventListener('click', function () {
       b.disabled = true;
       b.textContent = 'Yangilanmoqda…';
-      try { worker.postMessage({ tur: 'yangilash' }); } catch (e) { location.reload(); }
+      // Sinxronlash (birinchi sinxron yoki tsikl) ketayotgan bo'lsa, u tugashini (ko'pi bilan 15 soniya) kutamiz: yarim yo'lda qayta yuklanmasin
+      var t0 = Date.now();
+      (function kut() {
+        if (typeof Sinxron !== 'undefined' && Sinxron.band() && Date.now() - t0 < 15000) { setTimeout(kut, 300); return; }
+        try { worker.postMessage({ tur: 'yangilash' }); } catch (e) { location.reload(); }
+      })();
     });
     p.appendChild(m);
     p.appendChild(b);

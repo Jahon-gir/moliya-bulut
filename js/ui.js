@@ -1486,6 +1486,8 @@
     var s = karta();
     s.classList.add('menyu-sozlamalar');
     s.appendChild(el('h2', 'Asosiy sozlamalar'));
+    var kh = Kirish.holat();
+    s.appendChild(menyuQatori('mn-profil', 'Profil va sinxronlash', kh.kirgan ? (kh.email || kh.ism) : 'kirilmagan', function () { ochish(profilEkrani, false); }));
     s.appendChild(menyuQatori('mn-xavfsizlik', 'Xavfsizlik', Pin.yoqilgan() ? 'PIN-kod yoqilgan' : 'PIN-kod o\'chiq', function () { ochish(xavfsizlikEkrani, false); }));
     var m = el('div', undefined, 'mavzu-karta');
     m.appendChild(el('div', 'Mavzu', 'yozuv-nom mavzu-sarlavha'));
@@ -1509,6 +1511,61 @@
     o.appendChild(menyuQatori('mn-ornatish', 'Bosh ekranga o\'rnatish', '', function () { ochish(ornatishEkrani, false); }));
     bloklar.push(o);
     bloklar.push(el('p', ILOVA.nom + ' · versiya ' + VERSIYA, 'versiya'));
+    return bloklar;
+  }
+
+  // "Profil va sinxronlash" (S2): Google bilan kirish/chiqish. Kirish ixtiyoriy; ma'lumot hali serverga yuborilmaydi.
+  function profilEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Profil va sinxronlash')];
+    var h = Kirish.holat();
+    var k = karta();
+    k.classList.add('profil-karta');
+    var xato = el('div', h.xato, 'xato-matn');
+    xato.id = 'kirish-xato';
+    xato.setAttribute('role', 'alert');
+    if (h.kirgan) {
+      var bosh = el('div', undefined, 'profil-bosh');
+      var bosh1 = (h.ism || h.email || '?').trim().charAt(0).toUpperCase();
+      var rasm = el('span', bosh1, 'profil-harf');
+      rasm.setAttribute('aria-hidden', 'true');
+      bosh.appendChild(rasm);
+      var matn = el('div', undefined, 'profil-matn');
+      var ism = el('div', h.ism || h.email, 'yozuv-nom');
+      ism.id = 'profil-ism';
+      matn.appendChild(ism);
+      var em = el('div', h.email, 'yozuv-izoh');
+      em.id = 'profil-email';
+      matn.appendChild(em);
+      bosh.appendChild(matn);
+      k.appendChild(bosh);
+      k.appendChild(el('p', 'Kirdingiz. Ma\'lumotlaringiz hozircha serverga yuborilmaydi: ular faqat shu qurilmada saqlanadi. Sinxronlash keyingi yangilanishlarda qo\'shiladi.', 'xira'));
+      var chiq = tugma('Chiqish', 'ikkinchi-tugma', function () {
+        chiq.disabled = true;
+        Kirish.chiqish().then(function (n) { qisqaXabar(n.serverdaQolgan ? 'Chiqdingiz (internet yo\'q edi: server tomonda sessiya qolishi mumkin)' : 'Chiqdingiz'); });
+      });
+      chiq.id = 'chiqish';
+      k.appendChild(chiq);
+    } else {
+      k.appendChild(el('p', 'Kirish ixtiyoriy. Kirmasangiz ham ilova hozirgidek ishlaydi.', 'profil-asosiy'));
+      k.appendChild(el('p', 'Google bilan kirsangiz, keyingi yangilanishlarda ma\'lumotingizni boshqa qurilmada ko\'rish va telefon yo\'qolsa qaytarib olish mumkin bo\'ladi. Hozircha ma\'lumot faqat shu qurilmada saqlanadi, serverga yuborilmaydi.', 'xira'));
+      var kir = tugma(h.kirmoqda ? 'Google ga o\'tilmoqda…' : 'Google bilan kirish', 'asosiy-tugma', function () {
+        if (navigator.onLine === false) { xato.textContent = 'Internet yo\'q. Kirish uchun internetga ulaning (ilovaning o\'zi internetsiz ishlayveradi).'; qisqaXabar('Internet yo\'q: kirish uchun internetga ulaning'); return; }
+        kir.disabled = true;
+        kir.textContent = 'Tekshirilmoqda…';
+        Kirish.googleBilanKirish().then(function (n) {
+          if (n.ok) return;   // sahifa Google ga o'tmoqda
+          kir.disabled = false;
+          kir.textContent = 'Google bilan kirish';
+          xato.textContent = n.internetYoq ? 'Serverga ulanib bo\'lmadi. Internetni tekshirib, qayta urinib ko\'ring (ilovaning o\'zi internetsiz ishlayveradi).' : (n.xato || 'Kirib bo\'lmadi.');
+        });
+      });
+      kir.id = 'google-kirish';
+      kir.disabled = !!h.kirmoqda;
+      k.appendChild(kir);
+      if (navigator.onLine === false) k.appendChild(el('p', 'Hozir internet yo\'q: kirish uchun internetga ulaning.', 'xira'));
+    }
+    k.appendChild(xato);
+    bloklar.push(k);
     return bloklar;
   }
 
@@ -3114,10 +3171,25 @@
     });
   }
 
+  // Kirish: PIN va baza tayyor bo'lishini kutmaydi (Google'dan qaytgan kodni darhol qayta ishlash uchun); ma'lumotga tegmaydi
+  Kirish.boshlash();
+  Kirish.kuzat(function () {
+    var oxirgiEkran = stek[stek.length - 1];
+    if (oxirgiEkran && (oxirgiEkran.yasash === profilEkrani || oxirgiEkran.yasash === menyuEkrani)) chizish(oxirgiEkran.yasash(), true);
+  });
+
   Data.boshlash().then(Pin.boshlash).then(yuklash).then(function () {
     var oxirgi = 'bosh';
     try { oxirgi = sessionStorage.getItem('bolim') || 'bosh'; } catch (e) { /* ahamiyatsiz */ }
     korsat(oxirgi);
+    // Google'dan qaytgan bo'lsa: natija (kirildi yoki xato) ko'rinadigan ekranni ochamiz
+    Kirish.tayyor().then(function () {
+      if (!Kirish.qaytishniOl()) return;
+      var h = Kirish.holat();
+      ochish(menyuEkrani, false);
+      ochish(profilEkrani, false);
+      qisqaXabar(h.kirgan ? 'Kirdingiz: ' + (h.email || h.ism) : (h.xato || 'Kirish tugamadi'), undefined, 6000);
+    });
   }).catch(function (xato) {
     ekran.textContent = '';
     var k = karta();

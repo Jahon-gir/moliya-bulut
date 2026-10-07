@@ -16,7 +16,7 @@ function royxat() {
   var v = '?v=' + VERSIYA;
   return ['./', 'index.html', 'manifest.json', 'style.css' + v,
     'js/ilova.js' + v, 'js/tema.js' + v, 'js/pin-erta.js' + v, 'js/belgilar.js' + v, 'js/calc.js' + v, 'js/xlsx.js' + v, 'js/data.js' + v,
-    'js/glidirak.js' + v, 'js/diagramma.js' + v, 'js/pin.js' + v, 'js/pwa.js' + v, 'js/ui.js' + v,
+    'js/glidirak.js' + v, 'js/diagramma.js' + v, 'js/pin.js' + v, 'js/vendor/supabase-auth.min.js' + v, 'js/kirish.js' + v, 'js/pwa.js' + v, 'js/ui.js' + v,
     'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
 }
 

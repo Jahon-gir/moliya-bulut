@@ -15,15 +15,16 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.16.0"></script>
-  <script src="js/tema.js?v=0.16.0"></script>
-  <script src="js/belgilar.js?v=0.16.0"></script>
-  <script src="js/calc.js?v=0.16.0"></script>
-  <script src="js/xlsx.js?v=0.16.0"></script>
-  <script src="js/data.js?v=0.16.0"></script>
-  <script src="js/diagramma.js?v=0.16.0"></script>
-  <script src="js/pin.js?v=0.16.0"></script>
-  <script src="js/pwa.js?v=0.16.0"></script>
+  <script src="js/ilova.js?v=0.17.0"></script>
+  <script src="js/tema.js?v=0.17.0"></script>
+  <script src="js/belgilar.js?v=0.17.0"></script>
+  <script src="js/calc.js?v=0.17.0"></script>
+  <script src="js/xlsx.js?v=0.17.0"></script>
+  <script src="js/data.js?v=0.17.0"></script>
+  <script src="js/diagramma.js?v=0.17.0"></script>
+  <script src="js/pin.js?v=0.17.0"></script>
+  <script src="js/kirish.js?v=0.17.0"></script>
+  <script src="js/pwa.js?v=0.17.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1799,6 +1800,50 @@
           teng(t[0].indexOf('js/pin-erta.js') > 0 && t[0].indexOf('js/pin-erta.js') < t[0].indexOf('<body'), true); teng(t[0].indexOf('js/pin.js') < t[0].indexOf('js/ui.js'), true);
           teng(/localStorage\.setItem\([^)]*pin\b/i.test(t[1]), false); teng(t[1].indexOf("crypto.subtle") > 0 && t[1].indexOf('PBKDF2') > 0 && t[1].indexOf('SHA-256') > 0, true);
           teng(t[2].indexOf("'moliya-pin-bor'") > 0 && t[2].indexOf('pin-qulf') > 0, true);
+        });
+      });
+
+      // --- S2: Google orqali kirish (js/kirish.js) ---
+      test('Kirish: qaytish manzili ilovaning o\'z manzili (index.html siz, pastki yo\'l bilan)', function () {
+        teng(Kirish.qaytishManzili('http://localhost:8000', '/'), 'http://localhost:8000/'); teng(Kirish.qaytishManzili('http://localhost:8000', '/index.html'), 'http://localhost:8000/');
+        teng(Kirish.qaytishManzili('https://x.github.io', '/moliya-bulut/'), 'https://x.github.io/moliya-bulut/'); teng(Kirish.qaytishManzili('https://x.github.io', '/moliya-bulut/index.html'), 'https://x.github.io/moliya-bulut/');
+      });
+      test('Kirish: manzildagi qaytish belgilari (kod, xato) aniqlanadi', function () {
+        var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
+        var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
+        var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.17.0', '').qaytdi, false);
+        teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
+      });
+      test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
+        var m = Kirish.foydalanuvchiMalumoti({ email: 'ali@example.com', user_metadata: { full_name: 'Ali Valiyev' } }); teng(m.ism, 'Ali Valiyev'); teng(m.email, 'ali@example.com');
+        teng(Kirish.foydalanuvchiMalumoti({ email: 'ali@example.com', user_metadata: { name: 'Ali' } }).ism, 'Ali');
+        var n = Kirish.foydalanuvchiMalumoti({ email: 'vali@example.com', user_metadata: {} }); teng(n.ism, 'vali'); teng(n.email, 'vali@example.com');
+        teng(Kirish.foydalanuvchiMalumoti(null), null); teng(Kirish.foydalanuvchiMalumoti({}).ism, '');
+      });
+      test('Kirish: xato xabarlari o\'zbekcha va tushunarli (inglizcha texnik matn ko\'rsatilmaydi)', function () {
+        teng(Kirish.xatoMatni('access_denied'), 'Kirish bekor qilindi.'); teng(/Serverga ulanib bo'lmadi/.test(Kirish.xatoMatni(new Error('Failed to fetch'))), true);
+        teng(/Kirish tugamadi/.test(Kirish.xatoMatni(new Error('PKCE code verifier not found in storage'))), true); teng(/ruxsat etilmagan/.test(Kirish.xatoMatni('redirect_to not allowed')), true);
+        teng(/Noma'lum/.test(Kirish.xatoMatni('')), true); teng(/^[A-Za-z ]+$/.test(Kirish.xatoMatni('qandaydir noma\'lum xato')), false);
+      });
+      test('Kirish: kodda faqat ochiq kalit; maxfiy kalit (service_role), Google Client Secret, parol yo\'q; kutubxona ichki nusxa va keshda', function () {
+        return Promise.all([matnOl('js/kirish.js'), matnOl('index.html'), matnOl('sw.js'), matnOl('js/vendor/LICENSE-supabase-auth.txt')]).then(function (t) {
+          teng(Kirish.OCHIQ_KALIT.indexOf('sb_publishable_'), 0); teng(Kirish.SUPABASE_MANZIL, 'https://cqajcalwisdnsvadekxy.supabase.co');
+          var kodsiz = t[0].replace(/\/\/[^\n]*/g, '');
+          teng(/service_role|client_secret|sb_secret_|eyJ[A-Za-z0-9_-]{20,}|password\s*[:=]/i.test(kodsiz), false);
+          teng(/sb_publishable_/.test(kodsiz), true);
+          teng(/<script src="js\/vendor\/supabase-auth\.min\.js\?v=/.test(t[1]) && t[1].indexOf('supabase-auth.min.js') < t[1].indexOf('js/kirish.js') && t[1].indexOf('js/kirish.js') < t[1].indexOf('js/ui.js'), true);   // tashqi CDN emas, ichki nusxa
+          teng(/https?:\/\/[^"']*(cdn|unpkg|jsdelivr)/i.test(t[1]), false);
+          teng(t[2].indexOf("'js/vendor/supabase-auth.min.js' + v") > 0 && t[2].indexOf("'js/kirish.js' + v") > 0, true);   // oflayn uchun oldindan keshlanadi
+          teng(/MIT License/.test(t[3]), true);
+        });
+      });
+      test('Kirish: kirish ixtiyoriy — jadvallarga tegmaydi, IndexedDB ga tegmaydi; sessiya qurilmada (moliya- kaliti)', function () {
+        return matnOl('js/kirish.js').then(function (t) {
+          var kodsiz = t.replace(/\/\/[^\n]*/g, '');
+          teng(/indexedDB|\.from\(|rest\/v1|\.rpc\(/.test(kodsiz), false);
+          teng(Kirish.SAQLASH_KALITI.indexOf('moliya-'), 0);   // "PINni unutdim" to'liq tozalashi sessiyani ham o'chiradi
+          teng(/flowType: 'pkce'/.test(kodsiz) && /persistSession: true/.test(kodsiz) && /autoRefreshToken: true/.test(kodsiz), true);
         });
       });
 

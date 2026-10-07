@@ -2722,6 +2722,39 @@
     bloklar.push(k);
     bloklar.push(xatoQutisi);
 
+    // Sxema yangilanishidan oldingi avtomatik nusxa: yuklab olish, tiklash, o'chirish
+    if (malumot.migratsiyaNusxa) {
+      var mn = malumot.migratsiyaNusxa, mk = karta();
+      mk.classList.add('migratsiya-karta');
+      mk.appendChild(el('h2', 'Yangilanishdan oldingi nusxa'));
+      var mv = Calc.hozir(new Date(mn.vaqt));
+      mk.appendChild(el('p', 'Ilova ma\'lumot tuzilishini yangilaganda (' + Calc.sanaKorsat(mv.sana) + ' ' + mv.vaqt + ') o\'zi avtomatik nusxa saqladi' +
+        (mn.soni && mn.soni.yozuvlar !== undefined ? ': ' + mn.soni.yozuvlar + ' ta yozuv, ' + mn.soni.hisoblar + ' ta hisob, ' + mn.soni.qarzlar + ' ta qarz' : '') +
+        '. Yangilanishdan keyin biror narsa noto\'g\'ri ko\'rinsa, shu nusxani tiklashingiz mumkin. Hamma narsa joyida bo\'lsa, nusxani o\'chirib joyni bo\'shatishingiz mumkin.', 'xira'));
+      function nusxaniOl() { return Data.olish('sozlamalar', Data.ICHKI_NUSXA_KALITI).then(function (x) { if (!x || !x.fayl) throw new Error('Nusxa topilmadi'); return x.fayl; }); }
+      var mYuk = tugma('Faylga yuklab olish', 'ikkinchi-tugma', function () {
+        nusxaniOl().then(function (f) { faylYuklash(Calc.zaxiraNomi(new Date(), 'zaxira-yangilanishdan-oldin'), JSON.stringify(f), 'application/json'); qisqaXabar('Nusxa yuklab olindi'); })
+          .catch(function (x) { xatoChiqar('Nusxani olib bo\'lmadi: ' + (x && x.message ? x.message : x)); });
+      });
+      mYuk.id = 'mig-yuklash';
+      mk.appendChild(mYuk);
+      var mTik = tugma('Shu nusxani tiklash', 'ikkinchi-tugma', function () {
+        xatoQutisi.hidden = true;
+        nusxaniOl().then(function (f) { zaxiradanTiklash(new Blob([JSON.stringify(f)], { type: 'application/json' }), xatoChiqar); })
+          .catch(function (x) { xatoChiqar('Nusxani olib bo\'lmadi: ' + (x && x.message ? x.message : x)); });
+      });
+      mTik.id = 'mig-tiklash';
+      mk.appendChild(mTik);
+      var mOch = tugma('Nusxani o\'chirish', 'xavfli-tugma', function () {
+        if (!window.confirm('Yangilanishdan oldingi nusxa o\'chirilsinmi? Ma\'lumotingizga tegilmaydi, faqat shu qo\'shimcha nusxa o\'chadi.')) return;
+        Data.haqiqiyOchirish('sozlamalar', Data.ICHKI_NUSXA_KALITI).then(function () { malumot.migratsiyaNusxa = null; qisqaXabar('Nusxa o\'chirildi'); chizish(zaxiraEkrani(), true); })
+          .catch(function (x) { xatoChiqar('O\'chirib bo\'lmadi: ' + x); });
+      });
+      mOch.id = 'mig-ochirish';
+      mk.appendChild(mOch);
+      bloklar.push(mk);
+    }
+
     // Excel uchun eksport (CSV)
     var e = karta();
     e.appendChild(el('h2', 'Excel uchun eksport'));
@@ -3162,8 +3195,10 @@
       malumot.hisoblar = r[0].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
       malumot.yozuvlar = r[2];
       malumot.kategoriyalar = r[1].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
-      return Data.olish('sozlamalar', 'asosiy');
-    }).then(function (sozlama) {
+      return Promise.all([Data.olish('sozlamalar', 'asosiy'), Data.olish('sozlamalar', Data.ICHKI_NUSXA_KALITI)]);
+    }).then(function (r) {
+      var sozlama = r[0], nusxa = r[1];
+      malumot.migratsiyaNusxa = nusxa ? { vaqt: nusxa.vaqt, eskiSxema: nusxa.eski_sxema, soni: nusxa.fayl && nusxa.fayl.soni ? nusxa.fayl.soni : {} } : null;   // sxema yangilanishidan oldingi avtomatik nusxa (bo'lsa)
       malumot.zaxiraSanasi = sozlama ? sozlama.oxirgi_zaxira_sanasi || null : null;
       malumot.balansYashirin = !!(sozlama && sozlama.balans_yashirin === true);
       malumot.tema = Tema.togrimi(sozlama && sozlama.tema) ? sozlama.tema : 'qurilma';

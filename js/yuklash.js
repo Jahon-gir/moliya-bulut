@@ -16,35 +16,16 @@ var Yuklash = (function () {
   var yurmoqda = false, sozlama = {};
 
   // ---------------- Sof yordamchilar (DOM'siz; tests.html da sinaladi) ----------------
-  function ayrim(x) { return x === undefined || x === null || x === '' ? null : x; }
-
   // Mahalliy ma'lumot (Data.hammasiniOqish, o'chirilgan qatorlar bilan) -> serverdagi jadval qatorlari.
   // Yuborilmaydi: eski_id, updated_at (serverda belgilanadi), balans (saqlanmaydi), PIN va boshqa mahalliy yozuvlar.
   function qatorlar(m) {
     var r = {};
-    r.hisoblar = (m.hisoblar || []).map(function (x) {
-      return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, nom: x.nom, tur: x.tur, belgi: x.belgi, rang: x.rang, oxirgi4: x.oxirgi4 || '', boshlangich_qoldiq: x.boshlangich_qoldiq === undefined ? 0 : x.boshlangich_qoldiq, arxivlangan: x.arxivlangan === true };
-    });
-    r.kategoriyalar = (m.kategoriyalar || []).map(function (x) {
-      return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, nom: x.nom, tur: x.tur, rang: x.rang, belgi: x.belgi, arxivlangan: x.arxivlangan === true };
-    });
-    r.yozuvlar = (m.yozuvlar || []).map(function (x) {
-      return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, tur: x.tur, summa: x.summa, sana: x.sana, vaqt: x.vaqt || '00:00', hisob_id: x.hisob_id, qabul_hisob_id: ayrim(x.qabul_hisob_id), kategoriya_id: ayrim(x.kategoriya_id), izoh: x.izoh || '' };
-    });
-    r.byudjetlar = (m.byudjetlar || []).map(function (x) {
-      return { id: x.id, deleted: x.deleted === true, kategoriya_id: x.kategoriya_id === 'umumiy' ? null : ayrim(x.kategoriya_id), oylik_limit: x.oylik_limit };   // "umumiy" = serverda NULL
-    });
-    r.qarzlar = (m.qarzlar || []).map(function (x) {
-      return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, yonalish: x.yonalish, shaxs: x.shaxs, summa: x.summa, hisob_id: x.hisob_id, sana: x.sana, vaqt: x.vaqt || '00:00', muddat: ayrim(x.muddat), izoh: x.izoh || '', yopilgan: x.yopilgan === true };
-    });
+    ['hisoblar', 'kategoriyalar', 'yozuvlar', 'byudjetlar'].forEach(function (j) { r[j] = (m[j] || []).map(function (x) { return SinxronSof.serverQatori(j, x); }); });
+    r.qarzlar = (m.qarzlar || []).map(function (x) { return SinxronSof.serverQatori('qarzlar', x); });
     r.qarz_tolovlari = [];
-    (m.qarzlar || []).forEach(function (q) {
-      (q.tolovlar || []).forEach(function (t) {
-        r.qarz_tolovlari.push({ id: t.id, deleted: t.deleted === true, qarz_id: q.id, sana: t.sana, vaqt: t.vaqt || '00:00', summa: t.summa, hisob_id: t.hisob_id });
-      });
-    });
+    (m.qarzlar || []).forEach(function (q) { (q.tolovlar || []).forEach(function (t) { r.qarz_tolovlari.push(SinxronSof.tolovQatori(q.id, t)); }); });
     var a = (m.sozlamalar || []).filter(function (x) { return x && x.kalit === 'asosiy'; })[0];
-    r.sozlamalar = a ? [{ id: a.id, deleted: a.deleted === true, sxema_versiyasi: a.sxema_versiyasi, oxirgi_zaxira_sanasi: ayrim(a.oxirgi_zaxira_sanasi), balans_yashirin: a.balans_yashirin === true, tema: a.tema || 'qurilma' }] : [];
+    r.sozlamalar = a ? [SinxronSof.serverQatori('sozlamalar', a)] : [];
     return r;
   }
 
@@ -53,10 +34,12 @@ var Yuklash = (function () {
 
   // Serverga yuborishdan OLDIN tekshiruv (hech narsa yuborilmaydi): serverdagi cheklovlarga mos kelmaydigan qatorlar ro'yxati.
   // Bitta buzuq qator butun so'rovni (bo'lakni) rad ettirmasligi uchun avval hammasi tekshiriladi.
-  function tekshir(r) {
-    var xatolar = [];
-    function xato(j, i, x, sabab) { xatolar.push(NOMLAR[j] + ' #' + (i + 1) + (x && x.id ? ' (' + String(x.id).slice(0, 8) + '…)' : '') + ': ' + sabab); }
+  // opts.havolasiz — faqat bitta qator ichidagi tekshiruv (bog'langan qatorlar shu to'plamda bo'lmasligi mumkin: navbatdan yuborishda)
+  function tekshirRoyxat(r, opts) {
+    var xatolar = [], havolasiz = !!(opts && opts.havolasiz);
+    function xato(j, i, x, sabab) { xatolar.push({ jadval: j, id: x && x.id, sabab: sabab, matn: NOMLAR[j] + ' #' + (i + 1) + (x && x.id ? ' (' + String(x.id).slice(0, 8) + '…)' : '') + ': ' + sabab }); }
     var ids = {};
+    function bor(j, id) { return havolasiz || !!ids[j][id]; }
     JADVALLAR.forEach(function (j) { ids[j] = {}; (r[j] || []).forEach(function (x) { if (x.id) ids[j][x.id] = true; }); });
     var butun = function (v) { return typeof v === 'number' && isFinite(v) && Math.floor(v) === v; };
     var musbat = function (v) { return butun(v) && v > 0 && v <= MAKS_SUMMA; };
@@ -87,27 +70,27 @@ var Yuklash = (function () {
           else if (!musbat(x.summa)) xato(j, i, x, 'summa musbat butun son emas');
           else if (!sana(x.sana) || !vaqt(x.vaqt)) xato(j, i, x, 'sana yoki vaqt noto\'g\'ri');
           else if (!vaqtYaratilgan(x.yaratilgan)) xato(j, i, x, 'yaratilgan vaqti noto\'g\'ri');
-          else if (!ids.hisoblar[x.hisob_id]) xato(j, i, x, 'hisobga havola uzilgan');
+          else if (!bor('hisoblar', x.hisob_id)) xato(j, i, x, 'hisobga havola uzilgan');
           else if (x.tur === 'otkazma') {
             if (!x.qabul_hisob_id || x.kategoriya_id !== null || x.qabul_hisob_id === x.hisob_id) xato(j, i, x, 'o\'tkazma tuzilmasi noto\'g\'ri');
-            else if (!ids.hisoblar[x.qabul_hisob_id]) xato(j, i, x, 'qabul qiluvchi hisobga havola uzilgan');
+            else if (!bor('hisoblar', x.qabul_hisob_id)) xato(j, i, x, 'qabul qiluvchi hisobga havola uzilgan');
           } else if (x.qabul_hisob_id !== null || !x.kategoriya_id) xato(j, i, x, 'kategoriya majburiy');
-          else if (!ids.kategoriyalar[x.kategoriya_id]) xato(j, i, x, 'kategoriyaga havola uzilgan');
+          else if (!bor('kategoriyalar', x.kategoriya_id)) xato(j, i, x, 'kategoriyaga havola uzilgan');
         } else if (j === 'byudjetlar') {
           if (!musbat(x.oylik_limit)) xato(j, i, x, 'chegara musbat butun son emas');
-          else if (x.kategoriya_id !== null && !ids.kategoriyalar[x.kategoriya_id]) xato(j, i, x, 'kategoriyaga havola uzilgan');
+          else if (x.kategoriya_id !== null && !bor('kategoriyalar', x.kategoriya_id)) xato(j, i, x, 'kategoriyaga havola uzilgan');
         } else if (j === 'qarzlar') {
           if (['berdim', 'oldim'].indexOf(x.yonalish) < 0) xato(j, i, x, 'yo\'nalish noto\'g\'ri');
           else if (!matn(x.shaxs)) xato(j, i, x, 'shaxs nomi bo\'sh');
           else if (!musbat(x.summa)) xato(j, i, x, 'summa musbat butun son emas');
           else if (!sana(x.sana) || !vaqt(x.vaqt) || (x.muddat !== null && !sana(x.muddat))) xato(j, i, x, 'sana, vaqt yoki muddat noto\'g\'ri');
           else if (!vaqtYaratilgan(x.yaratilgan)) xato(j, i, x, 'yaratilgan vaqti noto\'g\'ri');
-          else if (!ids.hisoblar[x.hisob_id]) xato(j, i, x, 'hisobga havola uzilgan');
+          else if (!bor('hisoblar', x.hisob_id)) xato(j, i, x, 'hisobga havola uzilgan');
         } else if (j === 'qarz_tolovlari') {
           if (!musbat(x.summa)) xato(j, i, x, 'summa musbat butun son emas');
           else if (!sana(x.sana) || !vaqt(x.vaqt)) xato(j, i, x, 'sana yoki vaqt noto\'g\'ri');
-          else if (!ids.qarzlar[x.qarz_id]) xato(j, i, x, 'qarzga havola uzilgan');
-          else if (!ids.hisoblar[x.hisob_id]) xato(j, i, x, 'hisobga havola uzilgan');
+          else if (!bor('qarzlar', x.qarz_id)) xato(j, i, x, 'qarzga havola uzilgan');
+          else if (!bor('hisoblar', x.hisob_id)) xato(j, i, x, 'hisobga havola uzilgan');
         } else if (j === 'sozlamalar') {
           if (!butun(x.sxema_versiyasi) || x.sxema_versiyasi < 1) xato(j, i, x, 'sxema versiyasi noto\'g\'ri');
           else if (['qurilma', 'yorug', 'qorongi'].indexOf(x.tema) < 0) xato(j, i, x, 'tema noto\'g\'ri');
@@ -117,6 +100,7 @@ var Yuklash = (function () {
     });
     return xatolar;
   }
+  function tekshir(r, opts) { return tekshirRoyxat(r, opts).map(function (x) { return x.matn; }); }
 
   function bolaklash(royxat, n) { var b = []; for (var i = 0; i < royxat.length; i += n) b.push(royxat.slice(i, i + n)); return b; }
 
@@ -125,7 +109,7 @@ var Yuklash = (function () {
     var m = String((x && (x.message || x.details)) || x || '').toLowerCase(), kod = String((x && x.code) || '');
     var joy = jadval ? ' (' + NOMLAR[jadval] + ')' : '';
     if (!m && !kod) return 'Noma\'lum xato' + joy + '.';
-    if (m.indexOf('fetch') >= 0 || m.indexOf('network') >= 0 || m.indexOf('failed to') >= 0 || m.indexOf('abort') >= 0 || m.indexOf('timeout') >= 0 || m.indexOf('load failed') >= 0) return 'Internet uzildi yoki server javob bermadi' + joy + '. Internetni tekshirib, qayta bosing: yuklash qolgan joyidan davom etadi.';
+    if (m.indexOf('fetch') >= 0 || m.indexOf('network') >= 0 || m.indexOf('failed to') >= 0 || m.indexOf('abort') >= 0 || m.indexOf('timeout') >= 0 || m.indexOf('load failed') >= 0) return 'Internet uzildi yoki server javob bermadi' + joy + '. Internetni tekshirib, qayta urinib ko\'ring: qolgan joyidan davom etadi.';
     if (kod === 'PGRST301' || kod === 'PGRST303' || m.indexOf('jwt') >= 0 || String(x && x.status) === '401') return 'Kirish muddati tugagan. Chiqib, qayta kiring.';
     if (kod === '42P01' || kod === 'PGRST205' || m.indexOf('does not exist') >= 0 || m.indexOf('could not find the table') >= 0) return 'Serverda jadvallar topilmadi' + joy + '. Supabase\'da supabase/001_sxema.sql ishga tushirilganini tekshiring.';
     if (kod === '42501' || m.indexOf('row-level security') >= 0 || m.indexOf('permission denied') >= 0) return 'Server ruxsat bermadi' + joy + '. Qayta kirib ko\'ring.';
@@ -245,7 +229,7 @@ var Yuklash = (function () {
 
   return {
     JADVALLAR: JADVALLAR, NOMLAR: NOMLAR, BOLAK: BOLAK, KALIT: KALIT,
-    qatorlar: qatorlar, soni: soni, jami: jami, tekshir: tekshir, bolaklash: bolaklash, xatoMatni: xatoMatni,
+    qatorlar: qatorlar, soni: soni, jami: jami, tekshir: tekshir, tekshirRoyxat: tekshirRoyxat, serverSoni: serverSoni, serverIdlari: serverIdlari, mijoz: mijoz, tashla: tashla, bolaklash: bolaklash, xatoMatni: xatoMatni,
     sozlash: sozlash, holatOl: holatOl, yubor: yubor, band: function () { return yurmoqda; }
   };
 })();

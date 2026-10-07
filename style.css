@@ -689,3 +689,14 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .almashtirgich.yoqiq .almashtirgich-dona { transform: translateX(28px); border-color: var(--asosiy-matn); background: var(--asosiy-matn); }
 .almashtirgich:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; border-radius: 14px; }
 .pin-karta .yozuv { margin-top: 8px; border-top: 1px solid var(--chiziq); }
+
+/* Profil va sinxronlash (S2) */
+.profil-karta .profil-asosiy { font-weight: 600; margin: 0 0 8px; }
+.profil-bosh { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.profil-harf {
+  flex: none; width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: var(--asosiy-matn); background: var(--asosiy);
+}
+.profil-matn { min-width: 0; }
+.profil-matn .yozuv-nom, .profil-matn .yozuv-izoh { overflow-wrap: anywhere; }
+.profil-karta .asosiy-tugma, .profil-karta .ikkinchi-tugma { margin-top: 4px; }

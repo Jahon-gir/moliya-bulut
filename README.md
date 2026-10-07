@@ -33,9 +33,9 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.16.0 → 0.16.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.17.0 → 0.17.1), `index.html` va `tests.html` da hammasini birdaniga:
 
-    sed -i 's/0\.14\.0/0.16.1/g' index.html tests.html
+    sed -i 's/0\.14\.0/0.17.1/g' index.html tests.html
 
 `sw.js` ning o'zida versiya yo'q: u o'z manzilidagi `?v=` dan oladi. Agar `js/` ga yangi fayl qo'shsangiz, uni `index.html` ga
 va `sw.js` dagi `royxat()` ga ham qo'shing (`tests.html` mosligini tekshiradi).
@@ -51,3 +51,13 @@ va `sw.js` dagi `royxat()` ga ham qo'shing (`tests.html` mosligini tekshiradi).
 Repozitoriya sozlamalarida Settings → Pages → "Deploy from a branch" → `main` / `/ (root)`. Service worker faqat HTTPS da
 ishlaydi (GitHub Pages HTTPS beradi). Barcha yo'llar nisbiy, shuning uchun ilova `https://<nom>.github.io/<repo>/` kabi
 pastki yo'lda ham ishlaydi.
+
+## Google bilan kirish (Supabase)
+
+Kirish ixtiyoriy: kirmasdan ilova to'liq ishlaydi. Ochiq (publishable) kalit va loyiha manzili `js/kirish.js` da turadi; **maxfiy kalit
+(`service_role`), Google Client Secret va parollar repozitoriyga hech qachon yozilmaydi.**
+
+Supabase sozlamasi (bir marta): Authentication → URL Configuration → **Redirect URLs** ga qo'shing:
+`http://localhost:8000/` (kompyuterda sinash uchun) va joylangan manzil (`https://<nom>.github.io/moliya-bulut/`).
+
+Kutubxona `js/vendor/supabase-auth.min.js` (ichki nusxa, MIT; kerak bo'lsa qayta yig'ish: `bash tools/supabase-auth-yasash.sh`).

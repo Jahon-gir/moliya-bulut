@@ -15,14 +15,15 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.14.0"></script>
-  <script src="js/tema.js?v=0.14.0"></script>
-  <script src="js/belgilar.js?v=0.14.0"></script>
-  <script src="js/calc.js?v=0.14.0"></script>
-  <script src="js/xlsx.js?v=0.14.0"></script>
-  <script src="js/data.js?v=0.14.0"></script>
-  <script src="js/diagramma.js?v=0.14.0"></script>
-  <script src="js/pwa.js?v=0.14.0"></script>
+  <script src="js/ilova.js?v=0.15.0"></script>
+  <script src="js/tema.js?v=0.15.0"></script>
+  <script src="js/belgilar.js?v=0.15.0"></script>
+  <script src="js/calc.js?v=0.15.0"></script>
+  <script src="js/xlsx.js?v=0.15.0"></script>
+  <script src="js/data.js?v=0.15.0"></script>
+  <script src="js/diagramma.js?v=0.15.0"></script>
+  <script src="js/pin.js?v=0.15.0"></script>
+  <script src="js/pwa.js?v=0.15.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1738,6 +1739,68 @@
           .then(function () { return Data.boshlash(SINOV_BAZA); });
       });
 
+
+      // --- PIN-kod (F11): xeshlash, urinishlar, zaxiraga kirmaydi ---
+      test('PIN: format (aynan 4 raqam); xesh tuz bilan, 64 belgili hex, bir xil kirishga bir xil, tuz boshqa bo\'lsa boshqa', function () {
+        teng(Pin.formatTogrimi('1234'), true); teng(Pin.formatTogrimi('0000'), true); ['123', '12345', 'abcd', '12 4', '', null, 1234].forEach(function (x) { teng(Pin.formatTogrimi(x), false); });
+        var t1 = '00112233445566778899aabbccddeeff', t2 = 'ffeeddccbbaa99887766554433221100';
+        return Promise.all([Pin.xeshlash('1234', t1, 1000), Pin.xeshlash('1234', t1, 1000), Pin.xeshlash('1234', t2, 1000), Pin.xeshlash('1235', t1, 1000)]).then(function (x) {
+          teng(/^[0-9a-f]{64}$/.test(x[0]), true); teng(x[0], x[1]); teng(x[0] !== x[2], true); teng(x[0] !== x[3], true); teng(x[0].indexOf('1234'), -1);
+        });
+      });
+      test('PIN: yozuvda PIN ochiq holda yo\'q (faqat tuz va xesh); to\'g\'ri PIN o\'tadi, noto\'g\'ri va noto\'g\'ri formatli o\'tmaydi', function () {
+        return Pin.yangiYozuv('4821').then(function (y) {
+          teng(Object.keys(y).sort().join(), 'bloklash_gacha,iteratsiya,kalit,tuz,xato,xesh'); teng(y.kalit, 'pin'); teng(y.iteratsiya, Pin.ITERATSIYA); teng(/^[0-9a-f]{32}$/.test(y.tuz), true);
+          teng(Object.keys(y).every(function (k) { return y[k] !== '4821' && String(y[k]) !== '4821'; }), true);
+          return Pin.yangiYozuv('4821').then(function (y2) { teng(y.tuz !== y2.tuz && y.xesh !== y2.xesh, true);   // har safar yangi tuz
+            return Promise.all([Pin.tekshir('4821', y), Pin.tekshir('4822', y), Pin.tekshir('482', y), Pin.tekshir('', y), Pin.tekshir('4821', null)]); });
+        }).then(function (r) { teng(r.join(), 'true,false,false,false,false'); });
+      });
+      test('PIN: 5 marta noto\'g\'ri — 30 soniya kutish; to\'g\'ri kiritish hisoblagichni nolga qaytaradi; kutish tugagach yana urinsa bo\'ladi', function () {
+        var y = { kalit: 'pin', tuz: 'a', xesh: 'b', iteratsiya: 1, xato: 0, bloklash_gacha: 0 }, T = 1000000;
+        for (var i = 1; i <= 4; i++) { y = Pin.urinishdan(y, false, T); teng(y.xato, i); teng(Pin.qolganKutish(y, T), 0); teng(Pin.qolganUrinish(y), 5 - i); }
+        var b = Pin.urinishdan(y, false, T); teng(b.xato, 0); teng(b.bloklash_gacha, T + 30000); teng(Pin.qolganKutish(b, T), 30000); teng(Pin.qolganKutish(b, T + 29999), 1); teng(Pin.qolganKutish(b, T + 30000), 0); teng(Pin.qolganKutish(b, T + 99999), 0);
+        var ok = Pin.urinishdan(y, true, T); teng(ok.xato, 0); teng(ok.bloklash_gacha, 0); teng(y.xato, 4);   // asl obyekt o'zgarmaydi
+        var yana = Pin.urinishdan(b, false, T + 30001); teng(yana.xato, 1); teng(Pin.qolganKutish(yana, T + 30001), 0);
+        teng(Pin.KUTISH_MS, 30000); teng(Pin.URINISH_CHEGARASI, 5);
+      });
+      test('PIN: fondan qaytganda 1 daqiqadan keyin qayta so\'raladi (59 soniya — yo\'q, 60 soniya — ha)', function () {
+        teng(Pin.FON_CHEGARASI_MS, 60000); teng(Pin.qaytaQulflash(1000, 1000 + 59999), false); teng(Pin.qaytaQulflash(1000, 1000 + 60000), true); teng(Pin.qaytaQulflash(1000, 1000 + 600000), true); teng(Pin.qaytaQulflash(null, 99999999), false);
+      });
+      test('PIN: zaxira fayliga KIRMAYDI (yasashda ham, tiklashda ham e\'tiborga olinmaydi); yozuv soni mos', function () {
+        var m = zMalumot(); m.sozlamalar = m.sozlamalar.concat([{ kalit: 'pin', tuz: 'aa', xesh: 'bb', iteratsiya: 1, xato: 0, bloklash_gacha: 0 }]);
+        var f = Calc.zaxiraYasash(m, 6, new Date()); teng(JSON.stringify(f).indexOf('"pin"'), -1); teng(JSON.stringify(f).indexOf('xesh'), -1); teng(f.sozlamalar.length, 1); teng(f.soni.sozlamalar, 1);
+        var g = JSON.parse(JSON.stringify(f)); g.sozlamalar.push({ kalit: 'pin', tuz: 'zzz', xesh: 'yyy' }); g.soni.sozlamalar = 2;   // begona/eski fayl ichida PIN bo'lsa
+        var r = Calc.zaxiraniTekshir(JSON.stringify(g), 6, Z_HOZIR); teng(r.xato, undefined); teng(r.malumot.sozlamalar.length, 1); teng(r.malumot.sozlamalar[0].kalit, 'asosiy'); teng(JSON.stringify(r.malumot).indexOf('yyy'), -1);
+      });
+      test('PIN (baza): yozuv sozlamalarda turadi, hammasiniOqish (zaxira) uni ko\'rsatmaydi, tiklash (almashtirish) uni saqlab qoladi, bazani o\'chirish hammasini tozalaydi', function () {
+        var PIN_BAZA = 'moliya-pin-sinov', pinYozuv = { kalit: 'pin', tuz: 'aa', xesh: 'bb', iteratsiya: 1, xato: 2, bloklash_gacha: 0 }, asl;
+        Data.yopish();
+        return new Promise(function (res) { var q = indexedDB.deleteDatabase(PIN_BAZA); q.onsuccess = q.onerror = q.onblocked = res; })
+          .then(function () { return Data.boshlash(PIN_BAZA); })
+          .then(function () { return Data.saqlash('sozlamalar', pinYozuv); })
+          .then(function () { return Promise.all([Data.hammasiniOqish(), Data.hammasi('sozlamalar')]); })
+          .then(function (r) {
+            teng(r[0].sozlamalar.every(function (x) { return x.kalit !== 'pin'; }), true); teng(r[0].sozlamalar.length, 1); teng(r[1].length, 2); asl = r[0];
+            var yangiM = JSON.parse(JSON.stringify(asl)); yangiM.sozlamalar[0].tema = 'yorug'; return Data.almashtirish(yangiM);   // tiklash
+          })
+          .then(function () { return Data.hammasi('sozlamalar'); })
+          .then(function (s) { teng(s.length, 2); teng(s.filter(function (x) { return x.kalit === 'pin'; })[0].xesh, 'bb'); teng(s.filter(function (x) { return x.kalit === 'asosiy'; })[0].tema, 'yorug');
+            var yoqPin = JSON.parse(JSON.stringify(asl)); yoqPin.sozlamalar.push({ kalit: 'pin', tuz: 'x', xesh: 'hujum' }); return Data.almashtirish(yoqPin); })   // zaxira ichidagi "pin" ham yozilmaydi
+          .then(function () { return Data.olish('sozlamalar', 'pin'); })
+          .then(function (p) { teng(p.xesh, 'bb'); return Data.bazaniOchirish(); })
+          .then(function () { return Data.boshlash(PIN_BAZA); })   // qayta ochilganda bo'sh baza: tayyor hisob va kategoriyalar, PIN yo'q
+          .then(function () { return Promise.all([Data.olish('sozlamalar', 'pin'), Data.hammasi('hisoblar'), Data.hammasi('yozuvlar')]); })
+          .then(function (r) { teng(r[0], undefined); teng(r[1].length, 1); teng(r[2].length, 0); return Data.bazaniOchirish(); })
+          .then(function () { return Data.boshlash(SINOV_BAZA); });
+      });
+      test('PIN: index.html da pin-erta.js <head> ichida (sahifa chizilishidan oldin), pin.js ui.js dan oldin; pin.js PIN ni qurilma xotirasiga ochiq yozmaydi', function () {
+        return Promise.all([matnOl('index.html'), matnOl('js/pin.js'), matnOl('js/pin-erta.js')]).then(function (t) {
+          teng(t[0].indexOf('js/pin-erta.js') > 0 && t[0].indexOf('js/pin-erta.js') < t[0].indexOf('<body'), true); teng(t[0].indexOf('js/pin.js') < t[0].indexOf('js/ui.js'), true);
+          teng(/localStorage\.setItem\([^)]*pin\b/i.test(t[1]), false); teng(t[1].indexOf("crypto.subtle") > 0 && t[1].indexOf('PBKDF2') > 0 && t[1].indexOf('SHA-256') > 0, true);
+          teng(t[2].indexOf("'moliya-pin-bor'") > 0 && t[2].indexOf('pin-qulf') > 0, true);
+        });
+      });
 
       // --- 10-bosqich: PWA (nom, manifest, belgilar, service worker) ---
       function matnOl(url) { return fetch(url, { cache: 'no-store' }).then(function (r) { teng(r.ok, true); return r.text(); }); }

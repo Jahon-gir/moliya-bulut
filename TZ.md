@@ -1,6 +1,6 @@
 # TZ: Chuntak AI — shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 16 (10.10.2026)
+Hujjat versiyasi: 17 (11.10.2026)
 
 ## 1. Maqsad
 
@@ -172,6 +172,15 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Yangilanish:** ilova versiyasi o'zgarganda (sahifa ochilganda, ilovaga qaytilganda, internet qaytganda va har 30 daqiqada tekshiriladi) yangi worker o'rnatiladi va pastda **"Yangi versiya tayyor" + "Yangilash"** paneli chiqadi (tugma kamida 44 px). "Yangilash" bosilganda yangi versiya faollashadi va ilova bir marta qayta yuklanadi; bosilmaguncha ochiq ilova eski versiyada ishlayveradi. Sahifa allaqachon yangi versiyada ochilgan bo'lsa, panel chiqmaydi (jimgina faollashadi). Ma'lumot yangilanishda o'zgarmaydi.
 - **Joylash:** GitHub Pages (HTTPS); hamma yo'llar nisbiy, shuning uchun pastki yo'lda ham (`…github.io/<repo>/`) ishlaydi. Kompyuterda sinash: `python3 -m http.server 8000` (README).
 
+### F11. PIN-kod bilan himoya (2-versiya, bajarildi)
+- **Sozlash:** "Ko'proq" → "PIN-kod" bo'limi: **yoqish** (4 raqamli PIN kiritiladi va takrorlanadi), **o'zgartirish** (avval joriy PIN), **o'chirish** (joriy PIN so'raladi). Faqat 4 raqam.
+- **Saqlash:** PIN ochiq holda saqlanmaydi: tasodifiy tuz (salt) bilan PBKDF2-HMAC-SHA-256 (Web Crypto, 100 000 aylanish) xeshi saqlanadi (`tuz`, `xesh`, `iteratsiya`). Yozuv IndexedDB ning `sozlamalar` to'plamida alohida kalit (`pin`) bilan turadi. **Zaxira fayliga PIN kirmaydi** (yasashda tashlab ketiladi, tiklashda fayl ichidagi `pin` yozuvi e'tiborga olinmaydi) va **tiklash mavjud PIN ni o'chirmaydi**. Qurilmada faqat "PIN yoqilgan" bayrog'i (`moliya-pin-bor`) nusxalanadi.
+- **Qulf:** ilova ochilganda va fondan qaytganda (fonda 1 daqiqa yoki undan ko'p turgan bo'lsa) PIN so'raladi. Qulf ekrani butun ekranni yopadi; ilova ichi PIN kiritilguncha chizilmaydi (`<head>` dagi `js/pin-erta.js` sahifa chizilishidan oldin yashiradi, ichki qism `inert`). Ekran: nom, 4 nuqta, katta raqam tugmalari (72 px, past ekranda 60 px; hammasi kamida 44 px), o'chirish tugmasi, `aria-label`; klaviaturadan ham kiritiladi; yorug' va qorong'i rejimda.
+- **Urinishlar:** noto'g'ri PIN da "Qolgan urinish: N"; **5 marta noto'g'ri bo'lsa 30 soniya kutish** (tugmalar o'chadi, sekundlar sanaladi). Urinishlar soni va kutish vaqti saqlanadi: sahifani qayta yuklash kutishni bekor qilmaydi. To'g'ri PIN hisoblagichni nolga qaytaradi.
+- **"PINni unutdim":** ikki bosqichli tasdiq: (1) ogohlantirish — PIN tiklanmaydi, davom etilsa BARCHA ma'lumot shu qurilmadan o'chadi, zaxira (JSON) bo'lsa o'chirgandan keyin "Zaxiradan tiklash" orqali qaytarish mumkin; (2) "Ishonchingiz komilmi?" — "Hammasini o'chirish". Har bosqichda "Bekor qilish". Tasdiqdan keyin butun baza o'chiriladi (PIN va qurilma sozlamalari ham), ilova bo'sh holatda (tayyor "Naqd pul" va kategoriyalar bilan) qayta ochiladi.
+- **Cheklov (ochiq aytiladi):** 4 raqamli PIN faqat boshqa odamning tasodifiy ochishidan himoya qiladi. Qurilma xotirasiga kira oladigan texnik hujumchi 10 000 ta variantni (urinish cheklovisiz) sinab ko'rishi mumkin. Ma'lumot shifrlanmaydi.
+- **Ma'lumot tuzilishi:** sxema versiyasi o'zgarmaydi (6), migratsiya kerak emas: yangi maydonlar `sozlamalar` ichidagi alohida `pin` yozuvida, mavjud yozuvlarga tegilmaydi.
+
 ## 5. 1-versiyaga kirmaydigan narsalar
 
 - Bir nechta valyuta, takroriy to'lovlar, PIN-kod, zakot kalkulyatori (2-versiya).
@@ -266,7 +275,7 @@ Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"
 2. **Tarix:** F3.
 3. **Qo'shish (+):** o'rtadagi katta tugma. Bosilsa pastdan "Yangi yozuv yaratish" oynasi chiqadi: "Tranzaksiya qo'shish" (birinchi, 5 qadamli yozuv oynasi, F2) va "Qarz qo'shish" (qarz oynasi, F8).
 4. **Qarzlar:** F8 (jami, har qarz kartasi, arxiv belgisi, qarz qo'shish).
-5. **Ko'proq:** Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4), Zaxira va eksport (F9), **Mavzu** (Qurilma bo'yicha / Yorug' / Qorong'i), ilova versiyasi.
+5. **Ko'proq:** Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4), Zaxira va eksport (F9), **Mavzu**, **PIN-kod** (F11) (Qurilma bo'yicha / Yorug' / Qorong'i), ilova versiyasi.
 
 Ilova faqat shu ekranlarni o'z ichiga oladi: valyuta kurslari, sodiqlik kartalari, maqsadlar va reklama kartalari yo'q.
 
@@ -341,6 +350,7 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Eksport: haqiqiy .xlsx (bitta varaq "Eksport", 11 ustun aynan tartibda, sana-vaqt katagi, Summa raqam, qotirilgan sarlavha, filtr, formula himoyasi) va xuddi shu ustunli CSV; barcha matn o'zbekcha; davr: hammasi/oy/yil; davrda yozuv yo'q bo'lsa fayl yuklanmaydi; 5 000 yozuv < 2 soniya; fayl openpyxl bilan ochib tekshiriladi.
 - Belgilar va hisob turlari: kategoriya va hisob belgisi hamma joyda ko'rinadi; takror yoki bo'sh kategoriya nomi rad etiladi; karta uchun faqat oxirgi 4 raqam saqlanadi; Hisoblar filtri turi bo'yicha ishlaydi; Asosiydagi oy strelkalari kelajakka o'tmaydi va Naqd pul oqimi bilan bir oyni ko'rsatadi; son belgisi oy/tur o'zgarganda yangilanadi.
 - PWA: `manifest.json` (nom "Chuntak AI", qisqa "Chuntak"), 192/512 va maskable belgilar mavjud va o'lchami to'g'ri; service worker IndexedDB ga tegmaydi; birinchi ochilgandan keyin hamma bo'lim internetsiz ishlaydi (yozuv qo'shish ham); yangi versiya chiqqanda "Yangilash" paneli chiqadi va bosilganda ilova yangilanadi, eski kesh o'chadi, ma'lumot joyida; o'rnatilmay qolgan yangilanish eski versiyani buzmaydi; Cache Storage xatosida ilova tarmoq orqali ishlayveradi; nom o'zgargani bazani o'zgartirmaydi; 360 pikselda yorug' va qorong'i rejimda panel va kartalar to'g'ri ko'rinadi.
+- PIN-kod: yoqish/o'zgartirish/o'chirish; PIN xesh (tuz bilan) ko'rinishida, zaxiraga kirmaydi va tiklash uni o'chirmaydi; ochilganda va fonda 1 daqiqadan keyin so'raladi, ilova ichi PIN kiritilguncha ko'rinmaydi; 5 xato — 30 soniya kutish (qayta yuklash bekor qilmaydi); "PINni unutdim" ikki tasdiqdan keyin butun ma'lumotni o'chiradi; tugmalar kamida 44 px; 360 pikselda yorug' va qorong'i rejimda to'g'ri.
 - Mavzu: tanlov darhol qo'llanadi (sahifa qayta yuklanmaydi), qayta ochilganda saqlangan (chaqnashsiz), brauzer rangi (theme-color) mos; sozlamalarda saqlanadi, zaxiraga kiradi va tiklanadi; eski zaxira (maydonsiz) "Qurilma bo'yicha" bo'ladi; noto'g'ri qiymat rad etiladi; Asosiy, Tarix, Qarzlar, Ko'proq, Hisobot va yozuv qo'shish oynasi 360 pikselda ikkala mavzuda o'qiladi.
 - Eski (5-versiya) bazani ochganda hech narsa o'chmaydi, sozlamalarga faqat `tema` qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi).
 - Eski (4-versiya) bazani ochganda hech narsa o'chmaydi, kategoriya va hisoblarga faqat yangi maydonlar qo'shiladi (migratsiya eski bazaning nusxasida sinab ko'riladi); zaxira olish va tiklash yangi maydonlar bilan ishlaydi, eski zaxiralar ham tiklanadi.
@@ -353,7 +363,7 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 **2-versiya** (serversiz, 1-versiya ustiga quriladi):
 - Bir nechta valyuta: har bir hisobning o'z valyutasi, kurs qo'lda kiritiladi.
 - Takroriy to'lovlar: oylik maosh, ijara, internet kabi yozuvlar belgilangan kunda avtomatik qo'shiladi.
-- PIN-kod bilan himoya.
+- ~~PIN-kod bilan himoya~~ (bajarildi: F11).
 - Zakot kalkulyatori.
 - Jamg'arma maqsadlari.
 
@@ -368,7 +378,7 @@ Bu versiyalar boshlanishidan oldin har biri uchun alohida TZ yoziladi.
 ## 13. Muhim eslatmalar
 
 - **Ma'lumot xavfsizligi.** Ma'lumot faqat shu qurilmaning brauzer xotirasida turadi. Brauzer ma'lumotlari tozalansa yoki ilova o'chirilsa, yozuvlar yo'qoladi. Shuning uchun zaxira (F9) va uning eslatmasi majburiy.
-- **Maxfiylik.** 1-versiyada PIN-kod yo'q: telefonni ochgan odam ilovani ham ochadi.
+- **Maxfiylik.** PIN-kod ixtiyoriy (F11): yoqilmagan bo'lsa, telefonni ochgan odam ilovani ham ochadi. PIN yoqilgan bo'lsa ham ma'lumot shifrlanmaydi.
 - **Nom va dizayn.** Ilova o'z nomi va o'z ko'rinishiga ega bo'ladi. Boshqa ilovalarning nomi, logotipi va dizayni ko'chirilmaydi.
 
 ## 14. Claude Code uchun ish qoidalari

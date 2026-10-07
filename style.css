@@ -631,3 +631,40 @@ html[data-tema="qorongi"] .tanlov-qator.birinchi { background: rgba(43, 181, 143
 .yangilash-paneli button:disabled { opacity: .7; cursor: default; }
 .yangilash-paneli button:focus-visible { outline: 3px solid var(--matn); outline-offset: 2px; }
 [id^="kp-"] .yozuv-nom { white-space: nowrap; word-break: normal; }   /* "Hisobot" so'zi 360 pikselda bo'linmasin */
+
+/* PIN-kod */
+html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
+.pin-ekran {
+  position: fixed; inset: 0; z-index: 300; overflow-y: auto; background: var(--fon); color: var(--matn);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.pin-ichki { width: 100%; max-width: 320px; margin: 0 auto; text-align: center; }
+.pin-sarlavha { font-size: 22px; margin: 0 0 6px; }
+.pin-izoh { margin: 0 0 14px; color: var(--xira); min-height: 1.4em; }
+.pin-nuqtalar { display: flex; justify-content: center; gap: 16px; margin: 0 0 8px; }
+.pin-nuqta { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--xira); background: transparent; }
+.pin-nuqta.to-ldi { background: var(--asosiy); border-color: var(--asosiy); }
+.pin-xato { min-height: 2.8em; margin: 0 0 6px; color: var(--xarajat); font-weight: 600; font-size: 14px; }
+.pin-tugmalar { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; justify-content: center; margin: 0 0 12px; }
+.pin-raqam {
+  width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--chiziq); background: var(--karta); color: var(--matn);
+  font: inherit; font-size: 28px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.pin-raqam svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pin-raqam:active:not(:disabled) { background: var(--asosiy); color: var(--asosiy-matn); }
+.pin-raqam:disabled { opacity: .45; cursor: default; }
+.pin-raqam:focus-visible, .pin-matn-tugma:focus-visible, .pin-asosiy:focus-visible, .pin-ikkinchi:focus-visible, .pin-xavfli:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.pin-past { display: flex; justify-content: center; }
+.pin-matn-tugma { min-height: 44px; padding: 0 16px; border: 0; background: transparent; color: var(--asosiy); font: inherit; font-weight: 600; cursor: pointer; }
+.pin-ogoh { text-align: left; margin: 0 0 12px; line-height: 1.45; }
+.pin-juft { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.pin-asosiy, .pin-ikkinchi, .pin-xavfli { min-height: 48px; border-radius: 12px; font: inherit; font-weight: 700; cursor: pointer; border: 2px solid var(--asosiy); }
+.pin-asosiy { background: var(--asosiy); color: var(--asosiy-matn); }
+.pin-ikkinchi { background: transparent; color: var(--asosiy); }
+.pin-xavfli { background: var(--xarajat); border-color: var(--xarajat); color: #fff; }
+.pin-xavfli:disabled, .pin-ikkinchi:disabled { opacity: .6; cursor: default; }
+@media (max-height: 640px) {
+  .pin-tugmalar { grid-template-columns: repeat(3, 60px); gap: 8px; }
+  .pin-raqam { width: 60px; height: 60px; font-size: 24px; }
+  .pin-izoh { margin-bottom: 8px; }
+}

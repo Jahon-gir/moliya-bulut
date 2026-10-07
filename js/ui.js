@@ -1483,6 +1483,20 @@
     });
     m.appendChild(tanlov);
     bloklar.push(m);
+    // PIN-kod: yoqish, o'zgartirish, o'chirish
+    var pk = karta();
+    pk.classList.add('pin-karta');
+    pk.appendChild(el('h2', 'PIN-kod'));
+    var pinYoqilgan = Pin.yoqilgan();
+    pk.appendChild(el('p', pinYoqilgan ? 'PIN-kod yoqilgan: ilova ochilganda va 1 daqiqadan ko\'p fonda turgandan keyin so\'raladi. PIN-kod zaxira fayliga kirmaydi.' : 'Telefoningizni boshqa odam ochsa ham, ma\'lumotingizni ko\'ra olmasligi uchun 4 raqamli PIN-kod qo\'ying.', 'xira'));
+    function pinAmali(rejim, id, matn, klass) {
+      var b = tugma(matn, klass, function () { Pin.sozlash(rejim).then(function (ok) { if (ok) { qisqaXabar(rejim === 'yoqish' ? 'PIN-kod yoqildi' : rejim === 'ozgartirish' ? 'PIN-kod o\'zgartirildi' : 'PIN-kod o\'chirildi'); chizish(koproqMenyusi(), true); } }); });
+      b.id = id;
+      pk.appendChild(b);
+    }
+    if (pinYoqilgan) { pinAmali('ozgartirish', 'pin-ozgartirish', 'PIN-kodni o\'zgartirish', 'ikkinchi-tugma'); pinAmali('ochirish', 'pin-ochirish', 'PIN-kodni o\'chirish', 'ikkinchi-tugma'); }
+    else pinAmali('yoqish', 'pin-yoqish', 'PIN-kodni yoqish', 'asosiy-tugma');
+    bloklar.push(pk);
     // Bosh ekranga o'rnatish (o'rnatilgan bo'lsa ko'rsatilmaydi)
     if (typeof Pwa !== 'undefined' && !Pwa.ornatilgan()) {
       var o = karta();
@@ -3037,7 +3051,7 @@
     });
   }
 
-  Data.boshlash().then(yuklash).then(function () {
+  Data.boshlash().then(Pin.boshlash).then(yuklash).then(function () {
     var oxirgi = 'bosh';
     try { oxirgi = sessionStorage.getItem('bolim') || 'bosh'; } catch (e) { /* ahamiyatsiz */ }
     korsat(oxirgi);

@@ -27,6 +27,8 @@
   ];
 
   var db = null;
+  var joriyNom = DB_NOMI;   // hozir ochiq bazaning nomi (sinovlarda boshqa nom bo'lishi mumkin)
+  var PIN_KALITI = 'pin';   // sozlamalar ichidagi PIN yozuvining kaliti: zaxiraga KIRMAYDI va tiklashda saqlanib qoladi
 
   // Noyob id yaratish
   function yangiId() {
@@ -156,6 +158,7 @@
 
   // nom — faqat sinov uchun (alohida baza ochish)
   function boshlash(nom) {
+    joriyNom = nom || DB_NOMI;
     return ochish(nom).then(function (d) {
       db = d;
       return boshlangichMalumot();
@@ -167,7 +170,7 @@
   function hammasiniOqish() {
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(Object.keys(TOPLAMLAR), 'readonly'), natija = {};
-      Object.keys(TOPLAMLAR).forEach(function (t) { tx.objectStore(t).getAll().onsuccess = function (e) { natija[t] = e.target.result; }; });
+      Object.keys(TOPLAMLAR).forEach(function (t) { tx.objectStore(t).getAll().onsuccess = function (e) { natija[t] = t === 'sozlamalar' ? e.target.result.filter(function (x) { return x.kalit !== PIN_KALITI; }) : e.target.result; }; });   // PIN zaxiraga kirmaydi
       tx.oncomplete = function () { resolve(natija); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error); };
@@ -185,6 +188,16 @@
       try {
         Object.keys(TOPLAMLAR).forEach(function (t) {
           var s = tx.objectStore(t);
+          if (t === 'sozlamalar') {
+            // PIN yozuvi zaxirada yo'q: tiklash uni o'chirmasin (xuddi shu tranzaksiyada o'qib, qayta yoziladi)
+            var pinSorovi = s.get(PIN_KALITI);
+            pinSorovi.onsuccess = function () {
+              s.clear();
+              (malumot[t] || []).forEach(function (x) { if (x && x.kalit !== PIN_KALITI) s.put(x); });
+              if (pinSorovi.result) s.put(pinSorovi.result);
+            };
+            return;
+          }
           s.clear();
           (malumot[t] || []).forEach(function (x) { s.put(x); });
         });
@@ -194,10 +207,21 @@
 
   function yopish() { if (db) { db.close(); db = null; } }
 
+  // Butun bazani o'chiradi ("PINni unutdim"): keyingi ochilishda ilova bo'sh holatda (tayyor "Naqd pul" va kategoriyalar bilan) boshlanadi
+  function bazaniOchirish() {
+    return new Promise(function (resolve, reject) {
+      yopish();
+      var so = indexedDB.deleteDatabase(joriyNom);
+      so.onsuccess = function () { resolve(); };
+      so.onerror = function () { reject(so.error); };
+      so.onblocked = function () { reject(new Error('Boshqa oynada ochiq. Ilovaning boshqa oynalarini yoping va qayta urinib ko\'ring')); };
+    });
+  }
+
   global.Data = {
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
-    hammasiniOqish: hammasiniOqish, almashtirish: almashtirish
+    hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, PIN_KALITI: PIN_KALITI
   };
 })(typeof window !== 'undefined' ? window : this);

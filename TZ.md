@@ -1,6 +1,6 @@
 # TZ: Chuntak AI — shaxsiy moliya ilovasi
 
-Hujjat versiyasi: 17 (11.10.2026)
+Hujjat versiyasi: 18 (12.10.2026)
 
 ## 1. Maqsad
 
@@ -139,7 +139,7 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Arxivlangan hisob:** hisobni arxivlashda unga bog'langan hali yopilmagan qarzlar bo'lsa, tasdiqlash oynasida ogohlantirish chiqadi (qarzlar saqlanadi). Arxivdagi hisobga bog'langan qarzda "⚠ Hisob arxivda" belgisi ko'rinadi, yangi to'lov uchun faol hisob taklif qilinadi.
 
 ### F9. Zaxira va eksport
-- Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi. Hammasi "Ko'proq" → "Zaxira va eksport" ekranida. Oxirgi zaxira sanasi va "summalarni yashirish" holati sozlamalarda saqlanadi va zaxiraga kiradi.
+- Ma'lumotlar faqat foydalanuvchining qurilmasida saqlanadi, hech qayerga yuborilmaydi. Hammasi "Menyu" → "Zaxira va eksport" ekranida. Oxirgi zaxira sanasi va "summalarni yashirish" holati sozlamalarda saqlanadi va zaxiraga kiradi.
 - **Zaxira nusxa olish:** barcha ma'lumot (hisoblar, yozuvlar (`vaqt` bilan), kategoriyalar, byudjetlar, qarzlar (to'lovlari bilan), sozlamalar) bitta JSON faylga saqlanadi. Fayl nomida sana va vaqt: `chuntak-zaxira-2026-10-05-2130.json`. Fayl `ilova: "moliya"`, `sxema_versiyasi`, `zaxira_vaqti` va har to'plamning soni (`soni`, fayl butunligini tekshirish uchun) bilan boshlanadi. Zaxira olingach "oxirgi zaxira sanasi" (`YYYY-MM-DD`) yangilanadi; fayl ichida ham shu sana turadi.
 - **Zaxiradan tiklash:** JSON fayl tanlanadi. Tartib: (1) fayl to'liq tekshiriladi — mavjud ma'lumotga TEGILMAYDI; (2) tasdiq oynasi: fayldagi sonlar, mavjud ma'lumot almashtirilishi haqida ogohlantirish; (3) joriy holatning zaxirasi avtomatik yuklab beriladi (`chuntak-zaxira-tiklashdan-oldin-…json`); (4) ma'lumot BITTA tranzaksiyada almashtiriladi: xato bo'lsa hech narsa o'zgarmaydi (yarim holat bo'lmaydi).
 - **Rad etiladi** (xabar chiqadi, mavjud ma'lumot o'zgarmaydi): bo'sh fayl, JSON emas yoki yarim/kesilgan fayl, boshqa ilova fayli, sxema versiyasi yo'q yoki ilovadan yangiroq, to'plam yetishmaydi yoki `soni` mos emas, buzuq yozuv (noto'g'ri tur, summa — musbat butun son bo'lishi kerak, sana, vaqt), mavjud bo'lmagan hisob yoki kategoriyaga havola, kategoriya turi yozuv turiga mos emas, takroriy `id`, qarzdagi to'lovlar yig'indisi qarz summasidan oshgani, faol hisob yo'qligi.
@@ -162,7 +162,7 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 ### F10. Telefonga o'rnatish va internetsiz ishlash
 - **Nom:** ilova nomi **"Chuntak AI"**, qisqa nomi **"Chuntak"**. Nom `js/ilova.js` dagi `ILOVA` o'zgaruvchisida bitta joyda turadi (ilova ichidagi matnlar, sahifa sarlavhasi, fayl nomlari: `chuntak-zaxira-…json`, `chuntak-eksport-…`). Statik fayllar (`manifest.json`: `name`, `short_name`; `index.html`: `<title>`, `apple-mobile-web-app-title`) o'zgaruvchini o'qiy olmaydi, shuning uchun ularning bir xilligi testda tekshiriladi. "Ko'proq" bo'limidagi versiya qatori: "Chuntak AI · versiya X.Y.Z". Oldingi nom ishlatilmaydi.
 - **Ma'lumotga ta'sir yo'q:** nom o'zgargani ma'lumotlar bazasining nomiga (`moliya`), zaxira faylidagi ichki belgiga (`ilova: "moliya"`) va qurilmadagi sozlama kalitlariga tegmaydi: yozuvlar yo'qolmaydi, eski zaxira fayllari tiklanadi.
-- **O'rnatish:** `manifest.json` (`display: standalone`, `start_url` va `scope` nisbiy `./`, `lang: uz`). Bosh ekranga o'rnatilgach o'z belgisi bilan, brauzer paneli ko'rinmaydigan holda ochiladi. "Ko'proq" ichida "Bosh ekranga o'rnatish" kartasi: brauzer o'rnatish so'rovini bersa — "O'rnatish" tugmasi, aks holda qisqa yo'riqnoma (iPhone: "Ulashish" → "Bosh ekranga qo'shish"). O'rnatilgan bo'lsa karta ko'rinmaydi.
+- **O'rnatish:** `manifest.json` (`display: standalone`, `start_url` va `scope` nisbiy `./`, `lang: uz`). Bosh ekranga o'rnatilgach o'z belgisi bilan, brauzer paneli ko'rinmaydigan holda ochiladi. "Menyu" → "Bosh ekranga o'rnatish" ekrani: brauzer o'rnatish so'rovini bersa — "O'rnatish" tugmasi, aks holda qisqa yo'riqnoma (iPhone: "Ulashish" → "Bosh ekranga qo'shish"). O'rnatilgan bo'lsa karta ko'rinmaydi.
 - **Belgi:** o'zimiz chizgan oddiy chiziqli SVG (`icons/icon.svg`: chuntak/xalta va "ch" harflari). PNG: 192 va 512 piksel, 192 va 512 maskable, 180 apple-touch (`tools/ikonka-yasash.js` bilan SVG dan yasaladi).
 - **Rang va ochilish ekrani:** brauzer tepasidagi rang (`theme-color`) mavzuga mos (F11 / "Mavzu"); manifestda `theme_color` va `background_color` yorug' mavzu foni (`#f4f6f5`). Manifest bitta rang beradi, shuning uchun qorong'i qurilmada ochilish ekrani yorug' bo'lishi mumkin (brauzer cheklovi).
 - **Service worker (`sw.js`):** faqat Cache Storage bilan ishlaydi, IndexedDB ga HECH QACHON tegmaydi. Keshlash xatosi ma'lumotni buzmaydi: kesh bilan ishlashda har qanday xatoda so'rov oddiy tarmoq orqali bajariladi.
@@ -173,7 +173,7 @@ Ilova uch versiyada quriladi. Bu hujjat **1-versiyani to'liq** tavsiflaydi. 2 va
 - **Joylash:** GitHub Pages (HTTPS); hamma yo'llar nisbiy, shuning uchun pastki yo'lda ham (`…github.io/<repo>/`) ishlaydi. Kompyuterda sinash: `python3 -m http.server 8000` (README).
 
 ### F11. PIN-kod bilan himoya (2-versiya, bajarildi)
-- **Sozlash:** "Ko'proq" → "PIN-kod" bo'limi: **yoqish** (4 raqamli PIN kiritiladi va takrorlanadi), **o'zgartirish** (avval joriy PIN), **o'chirish** (joriy PIN so'raladi). Faqat 4 raqam.
+- **Sozlash:** "Menyu" → "Xavfsizlik" ekrani: "PIN-kod bilan ochish" almashtirgichi (toggle): **yoqish** (4 raqamli PIN ikki marta kiritiladi), **o'chirish** (avval joriy PIN so'raladi); yoqilganda "PIN-kodni o'zgartirish" qatori (avval joriy PIN, keyin yangisi ikki marta). Faqat 4 raqam. Bekor qilinsa holat o'zgarmaydi.
 - **Saqlash:** PIN ochiq holda saqlanmaydi: tasodifiy tuz (salt) bilan PBKDF2-HMAC-SHA-256 (Web Crypto, 100 000 aylanish) xeshi saqlanadi (`tuz`, `xesh`, `iteratsiya`). Yozuv IndexedDB ning `sozlamalar` to'plamida alohida kalit (`pin`) bilan turadi. **Zaxira fayliga PIN kirmaydi** (yasashda tashlab ketiladi, tiklashda fayl ichidagi `pin` yozuvi e'tiborga olinmaydi) va **tiklash mavjud PIN ni o'chirmaydi**. Qurilmada faqat "PIN yoqilgan" bayrog'i (`moliya-pin-bor`) nusxalanadi.
 - **Qulf:** ilova ochilganda va fondan qaytganda (fonda 1 daqiqa yoki undan ko'p turgan bo'lsa) PIN so'raladi. Qulf ekrani butun ekranni yopadi; ilova ichi PIN kiritilguncha chizilmaydi (`<head>` dagi `js/pin-erta.js` sahifa chizilishidan oldin yashiradi, ichki qism `inert`). Ekran: nom, 4 nuqta, katta raqam tugmalari (72 px, past ekranda 60 px; hammasi kamida 44 px), o'chirish tugmasi, `aria-label`; klaviaturadan ham kiritiladi; yorug' va qorong'i rejimda.
 - **Urinishlar:** noto'g'ri PIN da "Qolgan urinish: N"; **5 marta noto'g'ri bo'lsa 30 soniya kutish** (tugmalar o'chadi, sekundlar sanaladi). Urinishlar soni va kutish vaqti saqlanadi: sahifani qayta yuklash kutishni bekor qilmaydi. To'g'ri PIN hisoblagichni nolga qaytaradi.
@@ -216,7 +216,7 @@ Claude Code bu ro'yxatdagi narsalarni so'ralmaguncha qo'shmasligi kerak.
 - **Sana:** saqlashda `YYYY-MM-DD`, ko'rsatishda `KK.OO.YYYY`. Qurilmaning mahalliy vaqti ishlatiladi.
 - **Vaqt (soat):** saqlashda `HH:MM` (24 soatlik, masalan `07:05`, `21:00`), qurilmaning mahalliy vaqti. Tekshiruv daqiqa aniqligida.
 - **Ekran:** avvalo telefon uchun chiziladi (kengligi 360 pikseldan). Kompyuterda ham to'g'ri ko'rinadi. Tugmalar barmoq bilan bosishga qulay (kamida 44 piksel).
-- **Ko'rinish va mavzu:** "Ko'proq" → "Mavzu" bo'limi: **Qurilma bo'yicha** (standart; qurilma sozlamasiga ergashadi), **Yorug'**, **Qorong'i**. Tanlov darhol qo'llanadi (sahifa qayta yuklanmaydi), sozlamalarda (`tema`) saqlanadi va zaxiraga kiradi.
+- **Ko'rinish va mavzu:** "Menyu" → "Asosiy sozlamalar" kartochkasidagi "Mavzu" bo'limi: **Qurilma bo'yicha** (standart; qurilma sozlamasiga ergashadi), **Yorug'**, **Qorong'i**. Tanlov darhol qo'llanadi (sahifa qayta yuklanmaydi), sozlamalarda (`tema`) saqlanadi va zaxiraga kiradi.
   - **Chaqnashsiz boshlash:** `js/tema.js` `<head>` ichida, sahifa chizilishidan oldin yuklanadi va tanlovni `<html data-tema>` ga qo'yadi (tanlov tez boshlash uchun qurilmada ham nusxalanadi; asosiy joyi — sozlamalar). Shuning uchun ilova ochilganda oq yoki qora chaqnash bo'lmaydi.
   - **Ranglar:** barcha ranglar CSS o'zgaruvchilarida; qorong'i qiymatlar ham qurilma rejimida, ham `data-tema="qorongi"` da qo'llanadi (diagramma ranglari ham). Aniq tanlov qurilma rejimidan ustun.
   - **Brauzer rangi:** `<meta name="theme-color">` ikkita (yorug'/qorong'i, media sharti bilan); aniq tanlovda ikkalasi tanlangan mavzu foni rangiga o'rnatiladi.
@@ -261,7 +261,7 @@ Barcha yozuvlarda noyob `id` va `yaratilgan` (vaqt belgisi) maydonlari bo'ladi.
 
 ## 9. Ekranlar
 
-Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"** (o'rtada, katta), **Qarzlar**, **Ko'proq**. Hamma tugma kamida 44 piksel. Oxirgi tanlangan bo'lim eslab qolinadi; ichki ekranlarda "Orqaga" oldingi ekranga qaytaradi (Hisobot va Byudjet ichki ekran: Asosiy yoki Ko'proq dan ochiladi, "Orqaga" ochilgan joyga qaytaradi).
+Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"** (o'rtada, katta), **Qarzlar**, **Ko'proq**. Hamma tugma kamida 44 piksel. Oxirgi tanlangan bo'lim eslab qolinadi; ichki ekranlarda "Orqaga" oldingi ekranga qaytaradi (Hisobot va Byudjet ichki ekran: Asosiy yoki Ko'proq dan ochiladi, "Orqaga" ochilgan joyga qaytaradi; "Menyu" Asosiydagi ☰ tugmasidan ochiladi).
 
 1. **Asosiy** (tepadan pastga):
    1. **Umumiy balans kartasi:** ko'z belgisi (bosilsa Asosiydagi summalar — balans, naqd pul oqimi, hisoblar, byudjet va qarz summalari, doira diagramma — "••••" bo'ladi; holat sozlamalarda saqlanadi va zaxiraga kiradi), "N ta hisob" va "Boshqarish" (hisoblar ekraniga). N — faol (arxivlanmagan) hisoblar soni.
@@ -275,7 +275,12 @@ Pastda beshta tugmali navigatsiya (chapdan o'ngga): **Asosiy**, **Tarix**, **"+"
 2. **Tarix:** F3.
 3. **Qo'shish (+):** o'rtadagi katta tugma. Bosilsa pastdan "Yangi yozuv yaratish" oynasi chiqadi: "Tranzaksiya qo'shish" (birinchi, 5 qadamli yozuv oynasi, F2) va "Qarz qo'shish" (qarz oynasi, F8).
 4. **Qarzlar:** F8 (jami, har qarz kartasi, arxiv belgisi, qarz qo'shish).
-5. **Ko'proq:** Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4), Zaxira va eksport (F9), **Mavzu**, **PIN-kod** (F11) (Qurilma bo'yicha / Yorug' / Qorong'i), ilova versiyasi.
+5. **Ko'proq:** faqat Hisobot (F5, F6), Byudjet (F7), Hisoblar, Kategoriyalar (F4).
+6. **Menyu** (Asosiy sahifaning chap yuqori burchagidagi ☰ tugmasi, kamida 44 px, `aria-label="Menyu"`; ichki ekran, yuqorida "Orqaga" tugmasi Asosiyga qaytaradi). Ikki kartochka:
+   1. **Asosiy sozlamalar:** **Xavfsizlik** (ichiga kiradi: F11) va **Mavzu** (Qurilma bo'yicha / Yorug' / Qorong'i; tanlov shu yerning o'zida darhol qo'llanadi).
+   2. **Boshqa:** **Zaxira va eksport** (F9) va **Bosh ekranga o'rnatish** (yo'riqnoma, F10).
+   Pastda kulrang matn: "Chuntak AI · versiya X.Y.Z".
+   **Xavfsizlik** ekrani: "PIN-kod bilan ochish" almashtirgichi va (yoqilganda) "PIN-kodni o'zgartirish" qatori (F11). PIN, mavzu, zaxira va o'rnatish yo'riqnomasi "Ko'proq" da yo'q.
 
 Ilova faqat shu ekranlarni o'z ichiga oladi: valyuta kurslari, sodiqlik kartalari, maqsadlar va reklama kartalari yo'q.
 
@@ -342,6 +347,7 @@ Eslatma: yozuv vaqti hozirdan keyin bo'lmagani uchun, sinov ma'lumotini oyning 4
 - Diagrammalar chegara holatlarida to'g'ri: davrda yozuv yo'q, faqat bitta kategoriya, 15 ta kategoriya, juda katta va juda kichik summalar, manfiy qoldiq; 5 000 yozuv bilan 1 soniyadan tez; 360 piksel kenglikda gorizontal aylantirishsiz, yorug' va qorong'i rejimda.
 - Qarzning sanasi va soati hozirdan keyin bo'lsa, qarz saqlanmaydi (21:00 mumkin, 21:01 mumkin emas); to'lov sanasi va soati ham shunday. Qaytarish muddati kelajakda bo'lishi mumkin.
 - Navigatsiya: pastki menyu Asosiy, Tarix, "+", Qarzlar, Ko'proq (tugmalar kamida 44 px); oxirgi bo'lim eslab qolinadi; Hisobot va Byudjet "Ko'proq" ichida va "Orqaga" bilan qaytiladi.
+- Menyu: Asosiydagi ☰ (kamida 44 px, `aria-label="Menyu"`) "Menyu" ekranini ochadi; "Asosiy sozlamalar" (Xavfsizlik, Mavzu) va "Boshqa" (Zaxira va eksport, Bosh ekranga o'rnatish) kartochkalari, pastda versiya qatori; "Xavfsizlik" ekranida PIN almashtirgichi (yoqish/o'chirish/o'zgartirish avvalgi mantiq bilan); "Ko'proq" da faqat Hisobot, Byudjet, Hisoblar, Kategoriyalar; PIN qulfi, zaxira, mavzu avvalgidek ishlaydi; sxema o'zgarmagan; 360 pikselda yorug' va qorong'i rejimda to'g'ri.
 - Asosiy: ko'z belgisi summalarni "••••" qiladi va holat qayta ochilganda saqlanib turadi (zaxiraga kiradi); oy tanlagichda kelajak oy yo'q; tez qo'shish kartalari tegishli turni oldindan tanlab ochadi; hisoblar soni hisob qo'shilganda oshadi, arxivlanganda kamayadi; kategoriyalar doirasi 6 tilim + "Boshqalar"; byudjetlar (80% dan oshganlar yoki "Byudjet qo'shish"); qarz kartalari.
 - Tarix: oy yorliqlari (oxirgisi joriy oy), oylik balans/xarajat/daromad Hisobot bilan aynan mos; o'tkazma va qarz amallari ro'yxatda, lekin jamga kirmaydi.
 - "+" tugmasi "Yangi yozuv yaratish" oynasini ochadi (ikki qator, birinchisi "Tranzaksiya qo'shish" fokusda); Esc, yopish belgisi, "Orqaga" va oyna tashqarisi yopadi; qarz oynasidan "Orqaga" tanlov oynasiga qaytaradi; "Yana" → Qarzlar ichidagi "+ Qarz qo'shish" qarz oynasini to'g'ridan-to'g'ri ochadi. Tugmalar kamida 44 piksel, 360 piksel kenglikda yorug' va qorong'i rejimda to'g'ri ko'rinadi.

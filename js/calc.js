@@ -623,7 +623,7 @@
   // malumot: { hisoblar, yozuvlar, kategoriyalar, byudjetlar, qarzlar, sozlamalar }; sxema — joriy sxema versiyasi
   function zaxiraYasash(malumot, sxema, hozirgi) {
     var f = { ilova: 'moliya', sxema_versiyasi: sxema, zaxira_vaqti: (hozirgi || new Date()).toISOString(), soni: {} };
-    ZAXIRA_TOPLAMLARI.forEach(function (t) { f[t] = malumot[t] || []; f.soni[t] = f[t].length; });
+    ZAXIRA_TOPLAMLARI.forEach(function (t) { f[t] = (malumot[t] || []).filter(function (x) { return !(t === 'sozlamalar' && x && x.kalit === 'pin'); }); f.soni[t] = f[t].length; });   // PIN zaxiraga kirmaydi
     return f;
   }
 
@@ -747,7 +747,7 @@
       hisoblar: f.hisoblar.map(function (x) { return hisobniYangilash(x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x); }),
       kategoriyalar: f.kategoriyalar.map(function (x) { return kategoriyaniYangilash(x.arxivlangan === undefined ? Object.assign({}, x, { arxivlangan: false }) : x); }),
       yozuvlar: f.yozuvlar.map(yozuvniYangilash), byudjetlar: f.byudjetlar.slice(), qarzlar: f.qarzlar.map(qarzniYangilash),
-      sozlamalar: f.sozlamalar.slice()
+      sozlamalar: f.sozlamalar.filter(function (x) { return !(x && x.kalit === 'pin'); })   // zaxirada PIN bo'lsa ham e'tiborga olinmaydi
     };
     var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
     if (!asosiy) { asosiy = { kalit: 'asosiy', oxirgi_zaxira_sanasi: null, balans_yashirin: false, tema: 'qurilma' }; m.sozlamalar.push(asosiy); }

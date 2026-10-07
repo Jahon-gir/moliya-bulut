@@ -48,8 +48,20 @@ var Kirish = (function () {
     return 'Kirishda xato chiqdi. Qayta urinib ko\'ring.';
   }
 
+  // Texnik kod (ekranda "kod: ..." ko'rinadi): sababni skrinshotdan aniq bilish uchun
+  function xatoKodi(x) {
+    var m = String((x && (x.message || x.error_description)) || x || '').toLowerCase();
+    if (!m) return 'AUTH_UNKNOWN';
+    if (m.indexOf('access_denied') >= 0 || m.indexOf('denied') >= 0 || m.indexOf('cancel') >= 0) return 'AUTH_DENIED';
+    if (m.indexOf('verifier') >= 0 || m.indexOf('pkce') >= 0) return 'AUTH_PKCE';
+    if (m.indexOf('redirect') >= 0) return 'AUTH_REDIRECT';
+    if (m.indexOf('fetch') >= 0 || m.indexOf('network') >= 0 || m.indexOf('failed to') >= 0) return 'NETWORK';
+    return 'AUTH_UNKNOWN';
+  }
+  function xatoQoy(x) { holat.xatoKodi = xatoKodi(x); return xatoMatni(x); }
+
   // ---------------- Holat ----------------
-  var holat = { mavjud: false, tayyor: false, kirgan: false, id: '', ism: '', email: '', kirmoqda: false, xato: '', qaytdi: false };
+  var holat = { mavjud: false, tayyor: false, kirgan: false, xatoKodi: '', id: '', ism: '', email: '', kirmoqda: false, xato: '', qaytdi: false };
   var mijoz = null, boshlandi = false, tayyorSavdo = null, kuzatuvchilar = [];
 
   function xabarla() { kuzatuvchilar.slice().forEach(function (f) { try { f(holat); } catch (e) { /* ahamiyatsiz */ } }); }
@@ -111,21 +123,21 @@ var Kirish = (function () {
         xabarla();
       });
     } catch (e) {
-      holat.mavjud = false; holat.tayyor = true; holat.xato = xatoMatni(e);
+      holat.mavjud = false; holat.tayyor = true; holat.xato = xatoQoy(e);
       tayyorSavdo = Promise.resolve(holat);
       return tayyorSavdo;
     }
     tayyorSavdo = mijoz.initialize().then(function (r) {
-      if (r && r.error) { holat.xato = xatoMatni(r.error); manzilniTozala(); }
+      if (r && r.error) { holat.xato = xatoQoy(r.error); manzilniTozala(); }
       return mijoz.getSession();
     }).then(function (r) {
       var s = r && r.data && r.data.session;
       if (s && s.user) foydalanuvchiniQo(s.user); else foydalanuvchiniQo(saqlanganFoydalanuvchi());
       // Kod bor edi, lekin sessiya ochilmadi (masalan, kirish boshqa brauzer/oynada boshlangan): sababi ko'rsatiladi
-      if (t.qaytdi && !holat.kirgan && !holat.xato) holat.xato = t.xato ? xatoMatni(t.xato) : xatoMatni('pkce verifier');
+      if (t.qaytdi && !holat.kirgan && !holat.xato) holat.xato = t.xato ? xatoQoy(t.xato) : xatoQoy('pkce verifier');
       if (t.qaytdi && !holat.kirgan) manzilniTozala();
     }).catch(function (e) {
-      holat.xato = xatoMatni(e);
+      holat.xato = xatoQoy(e);
     }).then(function () {
       holat.tayyor = true;
       xabarla();
@@ -149,15 +161,15 @@ var Kirish = (function () {
   // Natija: { ok: true } (brauzer Google ga o'tadi) yoki { ok: false, internetYoq: true } yoki { ok: false, xato }
   function googleBilanKirish() {
     if (!mijoz) return Promise.resolve({ ok: false, xato: 'Kirish hozir mavjud emas.' });
-    holat.xato = '';
+    holat.xato = ''; holat.xatoKodi = '';
     return serverBormi().then(function (bor) {
       if (!bor) return { ok: false, internetYoq: true };
       holat.kirmoqda = true; xabarla();
       return mijoz.signInWithOAuth({ provider: 'google', options: { redirectTo: qaytishManzili(location.origin, location.pathname) } }).then(function (r) {
-        if (r && r.error) { holat.kirmoqda = false; holat.xato = xatoMatni(r.error); xabarla(); return { ok: false, xato: holat.xato }; }
+        if (r && r.error) { holat.kirmoqda = false; holat.xato = xatoQoy(r.error); xabarla(); return { ok: false, xato: holat.xato }; }
         return { ok: true };   // sahifa Google ga o'tmoqda
       });
-    }).catch(function (e) { holat.kirmoqda = false; holat.xato = xatoMatni(e); xabarla(); return { ok: false, xato: holat.xato }; });
+    }).catch(function (e) { holat.kirmoqda = false; holat.xato = xatoQoy(e); xabarla(); return { ok: false, xato: holat.xato }; });
   }
 
   // Chiqish: faqat shu qurilmadagi sessiya (boshqa qurilmalar kirgan holda qoladi). Internet bo'lmasa ham qurilmada chiqiladi.
@@ -178,17 +190,27 @@ var Kirish = (function () {
   }
 
   // Jadval so'rovlari uchun joriy kirish tokeni (muddati tugayotgan bo'lsa kutubxona o'zi yangilaydi). Kirmagan bo'lsa null.
+  // Token yangilanmasa: server umuman javob bermayotgan bo'lsa (internet yo'q) — TARMOQ xatosi tashlanadi ("kirish muddati tugagan" deb noto'g'ri aytilmasin);
+  // server javob berib, token yaroqsiz bo'lsa — null (haqiqatan qayta kirish kerak).
   function tokenOl() {
     if (!mijoz) return Promise.resolve(null);
-    return mijoz.getSession().then(function (r) { var s = r && r.data && r.data.session; return s && s.access_token ? s.access_token : null; }, function () { return null; });
+    return mijoz.getSession().then(function (r) { return r && r.data && r.data.session && r.data.session.access_token ? r.data.session.access_token : null; }, function () { return null; }).then(function (t) {
+      if (t || !saqlanganFoydalanuvchi()) return t;
+      return serverBormi().then(function (bor) { if (!bor) throw new Error('Failed to fetch (token yangilanmadi: internet yo\'q)'); return null; });
+    });
+  }
+  // Serverdan "401" kelganda (soat noto'g'ri yoki token yo'lda eskirdi): tokenni majburan yangilab, bir marta qayta urinish uchun
+  function tokenYangila() {
+    if (!mijoz) return Promise.resolve(null);
+    return mijoz.refreshSession().then(function (r) { return r && r.data && r.data.session ? r.data.session.access_token : null; }, function () { return null; });
   }
 
   function qaytishniOl() { var q = holat.qaytdi; holat.qaytdi = false; return q; }
 
   return {
     SUPABASE_MANZIL: SUPABASE_MANZIL, OCHIQ_KALIT: OCHIQ_KALIT, SAQLASH_KALITI: SAQLASH_KALITI,
-    qaytishManzili: qaytishManzili, manzilTahlili: manzilTahlili, foydalanuvchiMalumoti: foydalanuvchiMalumoti, xatoMatni: xatoMatni,
-    boshlash: boshlash, tokenOl: tokenOl, serverBormi: serverBormi, holat: function () { return holat; }, tayyor: function () { return tayyorSavdo || boshlash(); },
+    qaytishManzili: qaytishManzili, manzilTahlili: manzilTahlili, foydalanuvchiMalumoti: foydalanuvchiMalumoti, xatoMatni: xatoMatni, xatoKodi: xatoKodi,
+    boshlash: boshlash, tokenOl: tokenOl, tokenYangila: tokenYangila, serverBormi: serverBormi, holat: function () { return holat; }, tayyor: function () { return tayyorSavdo || boshlash(); },
     kuzat: kuzat, googleBilanKirish: googleBilanKirish, chiqish: chiqish, qaytishniOl: qaytishniOl
   };
 })();

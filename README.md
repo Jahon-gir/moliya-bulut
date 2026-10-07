@@ -33,9 +33,9 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.20.1 → 0.20.2), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.21.0 → 0.21.1), `index.html` va `tests.html` da hammasini birdaniga:
 
-    sed -i 's/0\.14\.0/0.20.2/g' index.html tests.html
+    sed -i 's/0\.14\.0/0.21.0/g' index.html tests.html
 
 `sw.js` ning o'zida versiya yo'q: u o'z manzilidagi `?v=` dan oladi. Agar `js/` ga yangi fayl qo'shsangiz, uni `index.html` ga
 va `sw.js` dagi `royxat()` ga ham qo'shing (`tests.html` mosligini tekshiradi).
@@ -61,3 +61,7 @@ Supabase sozlamasi (bir marta): Authentication → URL Configuration → **Redir
 `http://localhost:8000/` (kompyuterda sinash uchun) va joylangan manzil (`https://<nom>.github.io/moliya-bulut/`).
 
 Kutubxona `js/vendor/supabase-auth.min.js` (ichki nusxa, MIT; kerak bo'lsa qayta yig'ish: `bash tools/supabase-auth-yasash.sh`). Jadval kutubxonasi (S4, serverga yuklash): `js/vendor/supabase-postgrest.min.js` (`bash tools/supabase-postgrest-yasash.sh`).
+
+## Maxfiylik sahifasi
+
+`maxfiylik.html` — alohida ochiq sahifa (GitHub Pages: `https://jahon-gir.github.io/moliya-bulut/maxfiylik.html`). Google Cloud → Branding dagi "privacy policy" manzili shu bo'lishi kerak.

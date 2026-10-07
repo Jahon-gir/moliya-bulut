@@ -110,6 +110,8 @@ var Yuklash = (function () {
     var joy = jadval ? ' (' + NOMLAR[jadval] + ')' : '';
     if (!m && !kod) return 'Noma\'lum xato' + joy + '.';
     if (m.indexOf('fetch') >= 0 || m.indexOf('network') >= 0 || m.indexOf('failed to') >= 0 || m.indexOf('abort') >= 0 || m.indexOf('timeout') >= 0 || m.indexOf('load failed') >= 0) return 'Internet uzildi yoki server javob bermadi' + joy + '. Internetni tekshirib, qayta urinib ko\'ring: qolgan joyidan davom etadi.';
+    if (m.indexOf('sub claim') >= 0 || m.indexOf('user_not_found') >= 0 || (kod === '23503' && String((x && (x.details || x.message)) || '').indexOf('users') >= 0)) return 'Bu akkaunt serverdan o\'chirilgan (masalan, boshqa qurilmada). Chiqib, qayta kiring.';
+    if (kod === 'PGRST202' || (m.indexOf('could not find the function') >= 0)) return 'Serverda bu funksiya yo\'q: supabase/003_hisobni_ochirish.sql ishga tushirilmagan. Ilova egasiga ayting.';
     if (kod === 'PGRST301' || kod === 'PGRST303' || m.indexOf('jwt') >= 0 || String(x && x.status) === '401') return 'Kirish muddati tugagan. Chiqib, qayta kiring.';
     if (kod === '42P01' || kod === 'PGRST205' || m.indexOf('does not exist') >= 0 || m.indexOf('could not find the table') >= 0) return 'Serverda jadvallar topilmadi' + joy + '. Supabase\'da supabase/001_sxema.sql ishga tushirilganini tekshiring.';
     if (kod === '42501' || m.indexOf('row-level security') >= 0 || m.indexOf('permission denied') >= 0) return 'Server ruxsat bermadi' + joy + '. Qayta kirib ko\'ring.';
@@ -124,17 +126,23 @@ var Yuklash = (function () {
 
   function mijoz() {
     var tokenOl = sozlama.token || function () { return Kirish.tokenOl(); };
+    var tokenYangila = sozlama.yangila || function () { return Kirish.tokenYangila(); };
     var asosiyFetch = sozlama.fetch || function (u, o) { return fetch(u, o); };
     var manzil = sozlama.manzil || Kirish.SUPABASE_MANZIL, kalit = sozlama.kalit || Kirish.OCHIQ_KALIT;
     return new SupabasePostgrest.PostgrestClient(manzil + '/rest/v1', {
       headers: { apikey: kalit },
       fetch: function (url, opts) {
-        return Promise.resolve(tokenOl()).then(function (t) {
+        function yubor(t) {
           if (!t) throw new Error('Kirish muddati tugagan (jwt)');
           var h = new Headers(opts && opts.headers);
           h.set('Authorization', 'Bearer ' + t);
           h.set('apikey', kalit);
           return asosiyFetch(url, Object.assign({}, opts, { headers: h }));
+        }
+        return Promise.resolve(tokenOl()).then(yubor).then(function (res) {
+          // 401: token yo'lda eskirgan yoki qurilma soati noto'g'ri bo'lishi mumkin. Tokenni majburan yangilab, BIR marta qayta uriniladi
+          if (res && res.status === 401) return Promise.resolve(tokenYangila()).then(function (t) { return t ? yubor(t) : res; });
+          return res;
         });
       }
     });

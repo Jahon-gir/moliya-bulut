@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="index, follow">
+  <title>Maxfiylik va foydalanish shartlari — Chuntak AI</title>
+  <style>
+    /* Ilova (style.css) bilan bir xil ranglar; bu sahifa mustaqil: tashqi fayl va kutubxona yo'q */
+    :root { --fon: #f4f6f5; --karta: #ffffff; --matn: #1d2a26; --xira: #66756f; --chiziq: #dde4e1; --asosiy: #0f8b6d; --ogoh: #fff4e0; --ogoh-matn: #5b3b00; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fon: #101614; --karta: #1a2320; --matn: #e6eeea; --xira: #94a39d; --chiziq: #2a3631; --asosiy: #2bb58f; --ogoh: #2d2410; --ogoh-matn: #f1d9a0; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { background: var(--fon); color: var(--matn); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow-wrap: anywhere; }
+    main { max-width: 640px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 24px; margin: 8px 0 4px; }
+    h2 { font-size: 18px; margin: 0 0 8px; }
+    p { margin: 0 0 10px; }
+    ul { margin: 0 0 10px; padding-left: 20px; }
+    li { margin: 0 0 4px; }
+    a { color: var(--asosiy); }
+    .xira { color: var(--xira); font-size: 14px; }
+    .karta { background: var(--karta); border: 1px solid var(--chiziq); border-radius: 14px; padding: 14px; margin: 12px 0; }
+    .ogoh { background: var(--ogoh); color: var(--ogoh-matn); border-color: transparent; }
+    .mazmun { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
+    .mazmun a { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 14px; border: 1px solid var(--chiziq); border-radius: 12px; background: var(--karta); text-decoration: none; }
+    .orqaga { display: inline-block; min-height: 44px; line-height: 44px; }
+  </style>
+</head>
+<body>
+<main>
+  <a class="orqaga" href="./">← Ilovaga qaytish</a>
+  <h1>Maxfiylik va foydalanish shartlari</h1>
+  <p class="xira">Chuntak AI — shaxsiy moliya ilovasi. Oxirgi yangilanish: 2026-yil, oktabr.</p>
+
+  <ul class="mazmun">
+    <li><a href="#maxfiylik">Maxfiylik</a></li>
+    <li><a href="#ochirish">Hisobni o'chirish</a></li>
+    <li><a href="#shartlar">Foydalanish shartlari</a></li>
+    <li><a href="#boglanish">Bog'lanish</a></li>
+  </ul>
+
+  <section id="maxfiylik">
+    <div class="karta">
+      <h2>Qisqacha</h2>
+      <p>Kirmasdan foydalansangiz, ma'lumotingiz <b>faqat telefoningiz (yoki kompyuteringiz) brauzerida</b> turadi va hech qayerga yuborilmaydi. Google bilan kirib, sinxronlashni yoqsangizgina ma'lumotingiz serverga nusxalanadi.</p>
+    </div>
+
+    <div class="karta">
+      <h2>Qanday ma'lumot yig'iladi</h2>
+      <p><b>Kirmasangiz:</b> hech narsa yig'ilmaydi. Hisoblar, yozuvlar va boshqalar faqat qurilmangizdagi brauzer xotirasida saqlanadi.</p>
+      <p><b>Google bilan kirsangiz</b> (Google akkauntingizdan faqat shular olinadi):</p>
+      <ul>
+        <li>akkauntingizdagi ism va email manzil (kirish uchun);</li>
+        <li>akkauntingizning ichki raqami (har kimning ma'lumotini ajratish uchun).</li>
+      </ul>
+      <p><b>Sinxronlashni yoqsangiz</b> serverga quyidagilar nusxalanadi:</p>
+      <ul>
+        <li>hisoblar (nomi, turi, boshlang'ich qoldig'i, kartaning faqat oxirgi 4 raqami — to'liq karta raqami ilovada ham, serverda ham saqlanmaydi);</li>
+        <li>kategoriyalar, byudjet chegaralari;</li>
+        <li>yozuvlar (daromad, xarajat, o'tkazma): summa, sana, vaqt, hisob, kategoriya va <b>sizning izohlaringiz</b>;</li>
+        <li>qarzlar va ularning to'lovlari (shaxs ismi, summa, muddat, izoh);</li>
+        <li>sozlamalar (mavzu, balansni yashirish belgisi).</li>
+      </ul>
+      <p><b>Serverga yuborilmaydi:</b> PIN-kodingiz, balans va jami summalar (ular yozuvlardan qurilmangizda hisoblanadi), ilova ichidagi zaxira nusxalar.</p>
+    </div>
+
+    <div class="karta">
+      <h2>Nima uchun</h2>
+      <p>Faqat bitta maqsad uchun: telefon yo'qolsa yoki almashsa ma'lumotingizni qaytarib olish va telefon bilan kompyuterda bir xil ma'lumotni ko'rish. Ma'lumotingiz boshqa maqsadda ishlatilmaydi.</p>
+    </div>
+
+    <div class="karta">
+      <h2>Qayerda saqlanadi</h2>
+      <p>Serverdagi ma'lumot <b>Supabase</b> xizmatida, Yevropa hududida (Irlandiya) saqlanadi. Har foydalanuvchining ma'lumoti alohida: server qoidalari boshqa foydalanuvchiga uni ko'rish va o'zgartirishga ruxsat bermaydi.</p>
+      <p>Qurilmangizda brauzer xotirasi (IndexedDB), kirish belgisi (sessiya) va ilovaning oflayn ishlashi uchun fayllar nusxasi saqlanadi.</p>
+    </div>
+
+    <div class="karta ogoh">
+      <h2>Halol ogohlantirish: shifrlanmagan</h2>
+      <p>Serverdagi ma'lumot <b>shifrlanmagan holda</b> saqlanadi. Shuning uchun ilova dasturchisi texnik jihatdan ma'lumotlar bazasini ko'ra oladi, Supabase xizmati ham texnik jihatdan unga kira oladi. Dasturchi ma'lumotingizni ko'rmaslikka va boshqalarga bermaslikka va'da beradi (bu va'da, texnik to'siq emas). Agar buni xohlamasangiz, sinxronlashni yoqmang: ilova kirmasdan to'liq ishlaydi.</p>
+    </div>
+
+    <div class="karta">
+      <h2>Uchinchi tomonlar</h2>
+      <p>Ma'lumotingiz sotilmaydi va reklama yoki boshqa maqsadlarda hech kimga berilmaydi. Ilova faqat ikki tashqi xizmat bilan ishlaydi:</p>
+      <ul>
+        <li><b>Google</b> — faqat kirish uchun (sizning roziligingiz bilan ism va emailni beradi);</li>
+        <li><b>Supabase</b> — serverda saqlash va kirishni boshqarish uchun.</li>
+      </ul>
+      <p>Ilovada <b>reklama, kuzatuv va tahlil (analitika) vositalari yo'q</b>; tashqi shrift yoki statistika xizmatlari ham ulanmagan.</p>
+    </div>
+  </section>
+
+  <section id="ochirish">
+    <div class="karta">
+      <h2>Hisobni va ma'lumotni o'chirish</h2>
+      <p>Istalgan vaqtda ilovaning o'zida o'chira olasiz: <b>Menyu → Profil va sinxronlash → "Hisobimni va serverdagi ma'lumotimni o'chirish"</b>. Bu amal:</p>
+      <ul>
+        <li>serverdagi hamma ma'lumotingizni <b>butunlay</b> o'chiradi (qaytarib bo'lmaydi);</li>
+        <li>kirish akkauntingizni serverdan o'chiradi;</li>
+        <li>qurilmangizdagi ma'lumotni <b>o'chirmaydi</b>: u joyida qoladi, ilova avvalgidek kirmasdan ishlaydi;</li>
+        <li>boshqa qurilmalarda sinxronlash to'xtaydi (u yerdagi mahalliy ma'lumot ham qoladi).</li>
+      </ul>
+      <p>O'chirishdan oldin ilova zaxira faylini yuklab beradi. Qurilmadagi ma'lumotni o'chirish uchun brauzer saytlar ma'lumotini tozalash kifoya. Ilovaga kirishga Google akkauntingiz ruxsatini <a href="https://myaccount.google.com/permissions" rel="noopener">Google akkaunt sozlamalaridan</a> ham qaytarib olishingiz mumkin.</p>
+    </div>
+  </section>
+
+  <section id="shartlar">
+    <div class="karta">
+      <h2>Foydalanish shartlari</h2>
+      <ul>
+        <li>Chuntak AI — <b>oddiy shaxsiy hisob yuritish vositasi</b>. U buxgalteriya, soliq, bank yoki moliyaviy maslahat xizmati emas.</li>
+        <li>Ilova <b>kafolatsiz, "qanday bo'lsa shundayligicha"</b> beriladi: uzilishsiz ishlashiga, xatosizligiga va ma'lumot yo'qolmasligiga kafolat berilmaydi.</li>
+        <li><b>Zaxira nusxa olib turing</b> (Menyu → Zaxira va eksport): brauzer xotirasi tozalanishi yoki qurilma yo'qolishi mumkin. Sinxronlash zaxira nusxaning o'rnini bosmaydi.</li>
+        <li>Hisobingiz xavfsizligi (telefon, Google akkaunt va PIN-kod) uchun o'zingiz javobgarsiz.</li>
+        <li>Ilovadan qonunga zid maqsadda foydalanmang va serverga zarar yetkazishga urinmang. Qoidalarni buzgan akkaunt cheklanishi mumkin.</li>
+        <li>Ilova va bu shartlar o'zgarishi mumkin; muhim o'zgarishlar shu sahifada e'lon qilinadi.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="boglanish">
+    <div class="karta">
+      <h2>Bog'lanish</h2>
+      <p>Savol, so'rov yoki shikoyat uchun: <b>bog'lanish: <a href="mailto:jahongirsharkom@gmail.com">jahongirsharkom@gmail.com</a></b></p>
+    </div>
+  </section>
+
+  <p class="xira">Chuntak AI</p>
+</main>
+</body>
+</html>

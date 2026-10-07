@@ -205,7 +205,7 @@ var Sinxron = (function () {
     band = yozuvOl().then(function (rec) {
       if (!tayyorMi(rec, id)) return holatniYangila().then(function () { return { ok: false, tur: 'tayyor-emas' }; });
       if (typeof navigator !== 'undefined' && navigator.onLine === false && !sozlama.internetniTekshirma) {
-        xatoTuri = 'internet'; xatoMatni = 'Internet yo\'q. O\'zgarishlar saqlanadi va internet qaytganda avtomatik yuboriladi.';
+        xatoTuri = 'internet'; xatoKod = 'NETWORK_OFFLINE'; xatoMatni = 'Internet yo\'q. O\'zgarishlar saqlanadi va internet qaytganda avtomatik yuboriladi.';
         return holatniYangila().then(function () { return { ok: false, tur: 'internet-yoq' }; });
       }
       oxirgiBoshlanish = Date.now();
@@ -411,11 +411,38 @@ var Sinxron = (function () {
     });
   }
 
+  // ---------------- Hisobni va serverdagi ma'lumotni o'chirish (S7) ----------------
+  // Serverdagi public.hisobni_ochirish() funksiyasini chaqiradi (supabase/003_hisobni_ochirish.sql): kirgan foydalanuvchining hamma qatori
+  // HAQIQATAN o'chadi va akkaunti ham o'chadi. Keyin shu qurilmadagi sessiya yopiladi va sinxron holati (navbat, kursor) o'chiriladi.
+  // MAHALLIY MA'LUMOT (hisoblar, yozuvlar va h.k.) O'CHMAYDI. Natija: { ok, hisobot, ogohlantirish } yoki { ok: false, tur, xato, kod }.
+  function sinxronHolatiniTozala() {
+    return [Data.SINXRON_KALITI, Data.NAVBAT_KALITI, 'yuklash'].reduce(function (p, k) { return p.then(function () { return Data.haqiqiyOchirish('sozlamalar', k); }); }, Promise.resolve())
+      .then(function () { tashlash(); holat.soni = 0; holat.tur = 'yoq'; holat.xato = ''; xabarla(); });
+  }
+  function hisobniOchirish() {
+    return bandIsh(function () {
+      if (!uid()) return { ok: false, tur: 'kirmagan', kod: 'NOT_SIGNED_IN', xato: 'Avval kiring.' };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false && !sozlama.internetniTekshirma) return { ok: false, tur: 'internet', kod: 'NETWORK_OFFLINE', xato: 'Internet yo\'q. Hisobni o\'chirish uchun internetga ulaning (hech narsa o\'chmadi).' };
+      var c = Yuklash.mijoz(), hisobot = null;
+      return c.rpc('hisobni_ochirish').then(function (res) {
+        if (res.error) Yuklash.tashla(res.error, '', res.status);
+        hisobot = res.data;
+      }, function (e) { Yuklash.tashla(e, ''); }).then(function () {
+        // Server tomoni tugadi (qaytarib bo'lmaydi). Endi mahalliy tozalash: har bir qadam alohida, xato bo'lsa ham keyingisi bajariladi
+        var ogoh = [];
+        var chiq = sozlama.chiqish ? sozlama.chiqish() : (typeof Kirish !== 'undefined' ? Kirish.chiqish() : Promise.resolve());
+        return Promise.resolve(chiq).catch(function () { ogoh.push('Chiqishda xato (kod: SIGNOUT_FAILED): ilovadan qo\'lda chiqing.'); })
+          .then(function () { return sinxronHolatiniTozala(); }).catch(function () { ogoh.push('Sinxron holatini tozalab bo\'lmadi (kod: LOCAL_CLEANUP_FAILED).'); })
+          .then(function () { return { ok: true, hisobot: hisobot, ogohlantirish: ogoh.join(' ') }; });
+      });
+    });
+  }
+
   function qayta_urinish() { xatoMatni = ''; xatoTuri = ''; return yurgiz('qolda'); }
 
   return {
     sozla: sozla, kuzat: kuzat, tortildiKuzat: tortildiKuzat, boshlash: boshlash, holat: function () { return holat; }, holatniYangila: holatniYangila,
-    yurgiz: yurgiz, qaytaUrinish: qayta_urinish, tahlil: tahlil, birinchi: birinchi, tashlash: tashlash, band: function () { return !!band; },
+    hisobniOchirish: hisobniOchirish, yurgiz: yurgiz, qaytaUrinish: qayta_urinish, tahlil: tahlil, birinchi: birinchi, tashlash: tashlash, band: function () { return !!band; },
     kutayotgan: function () { return holat.soni; }, sanash: sanash, OVERLAP_MS: OVERLAP_MS
   };
 })();

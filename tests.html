@@ -15,16 +15,18 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.18.0"></script>
-  <script src="js/tema.js?v=0.18.0"></script>
-  <script src="js/belgilar.js?v=0.18.0"></script>
-  <script src="js/calc.js?v=0.18.0"></script>
-  <script src="js/xlsx.js?v=0.18.0"></script>
-  <script src="js/data.js?v=0.18.0"></script>
-  <script src="js/diagramma.js?v=0.18.0"></script>
-  <script src="js/pin.js?v=0.18.0"></script>
-  <script src="js/kirish.js?v=0.18.0"></script>
-  <script src="js/pwa.js?v=0.18.0"></script>
+  <script src="js/ilova.js?v=0.19.0"></script>
+  <script src="js/tema.js?v=0.19.0"></script>
+  <script src="js/belgilar.js?v=0.19.0"></script>
+  <script src="js/calc.js?v=0.19.0"></script>
+  <script src="js/xlsx.js?v=0.19.0"></script>
+  <script src="js/data.js?v=0.19.0"></script>
+  <script src="js/diagramma.js?v=0.19.0"></script>
+  <script src="js/pin.js?v=0.19.0"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.19.0"></script>
+  <script src="js/kirish.js?v=0.19.0"></script>
+  <script src="js/yuklash.js?v=0.19.0"></script>
+  <script src="js/pwa.js?v=0.19.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -1956,7 +1958,7 @@
           .then(function () { return Data.saqlash('byudjetlar', { kategoriya_id: k, oylik_limit: 5000 }); })
           .then(function () { return Promise.all([jonli(), Data.hammasiniOqish()]); })
           .then(function (r) {
-            var m = r[0]; teng(m.yozuvlar.length, 2); teng(Calc.hisobQoldigi(m.hisoblar[0], m.yozuvlar, m.qarzlar), 0);
+            var m = r[0]; teng(m.yozuvlar.length, 2); teng(Calc.hisobQoldigi(m.hisoblar.filter(function (x) { return x.id === h; })[0], m.yozuvlar, m.qarzlar), 0);
             teng(m.yozuvlar.every(function (y) { return y.deleted === false && typeof y.updated_at === 'string'; }), true); teng(Calc.uuidTogrimi(m.byudjetlar[0].id), true); b0 = m.byudjetlar[0];
             t0 = r[1].yozuvlar.filter(function (y) { return y.id === y2; })[0].updated_at;
             return new Promise(function (res) { setTimeout(res, 15); }).then(function () { return Data.ochirish('yozuvlar', y2); });
@@ -1966,7 +1968,7 @@
             var m = r[0], xom = r[1].yozuvlar.filter(function (y) { return y.id === y2; })[0];
             teng(m.yozuvlar.length, 1); teng(m.yozuvlar[0].id, y1); teng(r[2], undefined); teng(r[3].length, 1);   // ko'rinmaydi
             teng(r[1].yozuvlar.length, 2); teng(xom.deleted, true); teng(xom.summa, 700); teng(xom.updated_at > t0, true);   // bazada qoladi, updated_at yangilangan
-            teng(Calc.hisobQoldigi(m.hisoblar[0], m.yozuvlar, m.qarzlar), 700);   // balansga kirmaydi (1000 - 300)
+            teng(Calc.hisobQoldigi(m.hisoblar.filter(function (x) { return x.id === h; })[0], m.yozuvlar, m.qarzlar), 700);   // balansga kirmaydi (1000 - 300)
             var hb = Calc.hisobot(m.yozuvlar, '2026-10-01', '2026-10-31', ''); teng(hb.xarajat, 300); teng(hb.soni, 1);   // hisobotga kirmaydi
             teng(Calc.byudjetHisobi(m.byudjetlar, m.kategoriyalar, m.yozuvlar, '2026-10-15').chegarali[0].holat.sarflangan, 300);   // byudjetga kirmaydi
             teng(Calc.yozuvlarniSuz(m.yozuvlar, { qidiruv: 'o\'chadi' }).length, 0); teng(Calc.yozuvlarniSuz(m.yozuvlar, { qidiruv: 'qoladi' }).length, 1);   // qidiruvda yo'q
@@ -1978,7 +1980,7 @@
             return Data.saqlash('yozuvlar', { id: y2, yaratilgan: '2026-01-03T00:00:00.000Z', tur: 'xarajat', summa: 700, sana: '2026-10-03', vaqt: '10:00', hisob_id: h, kategoriya_id: k, izoh: 'o\'chadi' });
           })
           .then(function () { return jonli(); })
-          .then(function (m) { teng(m.yozuvlar.length, 2); teng(Calc.hisobQoldigi(m.hisoblar[0], m.yozuvlar, m.qarzlar), 0);
+          .then(function (m) { teng(m.yozuvlar.length, 2); teng(Calc.hisobQoldigi(m.hisoblar.filter(function (x) { return x.id === h; })[0], m.yozuvlar, m.qarzlar), 0);
             // byudjet: olib tashlash mantiqiy, qayta o'rnatilganda id o'zgarmaydi
             return Data.ochirish('byudjetlar', k); })
           .then(function () { return Promise.all([jonli(), Data.hammasiniOqish()]); })
@@ -2129,7 +2131,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.18.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.19.0', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -2698,6 +2700,213 @@
           })
           .then(function (h) { teng(JSON.stringify(h), oldin); })
           .then(sinovBazasiniYopish, function (e) { return sinovBazasiniYopish().then(function () { throw e; }); });
+      });
+
+      // ===== S4: birinchi yuklash (taqlid Supabase bilan; haqiqiy serverga ulanilmaydi) =====
+      var YK_BAZA_FK = { yozuvlar: [['hisob_id', 'hisoblar'], ['qabul_hisob_id', 'hisoblar'], ['kategoriya_id', 'kategoriyalar']], byudjetlar: [['kategoriya_id', 'kategoriyalar']], qarzlar: [['hisob_id', 'hisoblar']], qarz_tolovlari: [['qarz_id', 'qarzlar'], ['hisob_id', 'hisoblar']] };
+      // PostgREST ni taqlid qiladi: tokenni tekshiradi, user_id/created_at/updated_at ni o'zi qo'yadi, noma'lum ustunni (masalan eski_id) rad etadi,
+      // tashqi kalitlarni so'rov oxirida tekshiradi (deferred), upsert (id bo'yicha), HEAD count, range
+      function taqlidServer() {
+        var S = { jadval: {}, sorovlar: [], posts: 0, yiqilish: 0, tashla: null, token: 'jwt-u1' };
+        Yuklash.JADVALLAR.forEach(function (j) { S.jadval[j] = {}; });
+        var RUXSAT = { hisoblar: 'id deleted yaratilgan nom tur belgi rang oxirgi4 boshlangich_qoldiq arxivlangan', kategoriyalar: 'id deleted yaratilgan nom tur rang belgi arxivlangan', yozuvlar: 'id deleted yaratilgan tur summa sana vaqt hisob_id qabul_hisob_id kategoriya_id izoh', byudjetlar: 'id deleted kategoriya_id oylik_limit', qarzlar: 'id deleted yaratilgan yonalish shaxs summa hisob_id sana vaqt muddat izoh yopilgan', qarz_tolovlari: 'id deleted qarz_id sana vaqt summa hisob_id', sozlamalar: 'id deleted sxema_versiyasi oxirgi_zaxira_sanasi balans_yashirin tema' };
+        function javob(kod, tana, sarlavha) { return new Response(tana === undefined ? null : JSON.stringify(tana), { status: kod, headers: Object.assign({ 'content-type': 'application/json' }, sarlavha || {}) }); }
+        S.soni = function (j) { return Object.keys(S.jadval[j]).length; };
+        S.fetch = function (url, init) {
+          return Promise.resolve().then(function () {
+            var u = new URL(url), j = u.pathname.split('/').pop(), m = (init.method || 'GET').toUpperCase(), h = new Headers(init.headers);
+            var tana = m === 'POST' ? JSON.parse(init.body) : null;
+            S.sorovlar.push({ m: m, j: j, soni: tana ? tana.length : 0, tana: tana });
+            if (h.get('authorization') !== 'Bearer ' + S.token || !h.get('apikey')) return javob(401, { code: 'PGRST301', message: 'JWT expired' });
+            if (!S.jadval[j]) return javob(404, { code: 'PGRST205', message: 'Could not find the table \'public.' + j + '\' in the schema cache' });
+            var ids = Object.keys(S.jadval[j]).sort();
+            if (m === 'HEAD') return javob(200, undefined, { 'content-range': (ids.length ? '0-' + (ids.length - 1) : '*') + '/' + ids.length });
+            if (m === 'GET') { var o = +u.searchParams.get('offset') || 0, l = +u.searchParams.get('limit') || 1000; return javob(200, ids.slice(o, o + l).map(function (id) { return { id: id }; })); }
+            S.posts++;
+            if (S.yiqilish && S.posts === S.yiqilish) throw new TypeError('Failed to fetch');
+            var vaqt = new Date().toISOString(), yangi = {}, qoshilgan = [];
+            for (var i = 0; i < tana.length; i++) {
+              var r = tana[i], kalitlar = Object.keys(r);
+              for (var k = 0; k < kalitlar.length; k++) if (RUXSAT[j].split(' ').indexOf(kalitlar[k]) < 0) return javob(400, { code: 'PGRST204', message: 'Could not find the \'' + kalitlar[k] + '\' column of \'' + j + '\' in the schema cache' });
+              if (j === 'yozuvlar' && !(r.summa > 0)) return javob(400, { code: '23514', message: 'new row violates check constraint' });
+              var bor = S.jadval[j][r.id];
+              if (j === 'sozlamalar' && !bor && S.soni(j) > 0) return javob(409, { code: '23505', message: 'duplicate key value violates unique constraint' });
+              yangi[r.id] = Object.assign({}, bor || { user_id: 'u-1', created_at: vaqt }, r, { updated_at: vaqt });
+              qoshilgan.push(yangi[r.id]);
+            }
+            var fk = YK_BAZA_FK[j] || [];
+            for (var a = 0; a < qoshilgan.length; a++) for (var b = 0; b < fk.length; b++) {
+              var q = qoshilgan[a][fk[b][0]];
+              if (q !== null && q !== undefined && !S.jadval[fk[b][1]][q] && !(fk[b][1] === j && yangi[q])) return javob(409, { code: '23503', message: 'violates foreign key constraint' });
+            }
+            Object.keys(yangi).forEach(function (id) { if (S.tashla === j && id === qoshilgan[qoshilgan.length - 1].id) return; S.jadval[j][id] = yangi[id]; });
+            return javob(201);
+          });
+        };
+        return S;
+      }
+      function yukMalumoti(kopaytir) {
+        var m = Calc.uuidgaOtkazish(zMalumot()).malumot, vq = 0;
+        ['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar'].forEach(function (t) { m[t].forEach(function (x) { x.yaratilgan = new Date(Date.UTC(2026, 8, 1, 10, 0, 0, vq++)).toISOString(); }); });   // haqiqiy ma'lumotdagidek ISO vaqt
+        m.yozuvlar[1].deleted = true;                                           // mantiqiy o'chirilgan yozuv ham yuklanadi
+        m.qarzlar[0].tolovlar.push(Object.assign({}, m.qarzlar[0].tolovlar[0], { id: Calc.uuidYarat(), deleted: true, summa: 1 }));   // o'chirilgan to'lov ham
+        var asos = m.yozuvlar.filter(function (y) { return y.tur === 'xarajat' && y.deleted !== true; })[0];
+        for (var i = 0; i < (kopaytir || 0); i++) m.yozuvlar.push(Object.assign({}, asos, { id: Calc.uuidYarat(), summa: 1000 + i }));
+        return m;
+      }
+      function yukSozla(S, token) { Yuklash.sozlash({ fetch: S.fetch, token: function () { return Promise.resolve(token === undefined ? S.token : token); }, manzil: 'https://sinov.invalid', kalit: 'sb_publishable_sinov' }); }
+      function yukBazasi(m, qoshimcha) {
+        return sinovBazasiniOchish().then(function () { return Data.almashtirish(m); }).then(function () { return Data.saqlash('sozlamalar', { kalit: 'pin', xesh: 'maxfiy-xesh', tuz: 'tuz' }); }).then(qoshimcha);
+      }
+      function yukTugat(e) { Yuklash.sozlash({}); return sinovBazasiniYopish().then(function () { if (e) throw e; }); }
+      function yukSinov(nom, fn) { test('S4: ' + nom, function () { var S = taqlidServer(); yukSozla(S); return fn(S).then(function () { return yukTugat(); }, yukTugat); }); }
+
+      test('S4: sxema versiyasi o\'zgarmadi (7), "yuklash" yozuvi mahalliy: zaxira va ko\'rinadigan sozlamalarga kirmaydi', function () {
+        teng(Data.SXEMA_VERSIYASI, 7); teng(Calc.yerelKalitmi({ kalit: 'yuklash' }), true);
+        return yukBazasi(yukMalumoti(0), function () { return Data.saqlash('sozlamalar', { kalit: 'yuklash', user_id: 'u-1', tugagan: 'x' }); })
+          .then(function () { return Promise.all([Data.hammasiniOqish(), Data.hammasi('sozlamalar')]); })
+          .then(function (r) {
+            teng(r[0].sozlamalar.some(function (x) { return x.kalit === 'yuklash' || x.kalit === 'pin'; }), false);
+            teng(r[1].some(function (x) { return x.kalit === 'yuklash'; }), false);
+            teng(JSON.stringify(Calc.zaxiraYasash(r[0], 7, new Date())).indexOf('yuklash'), -1);
+            return Data.almashtirish(yukMalumoti(0));
+          }).then(function () { return Data.olish('sozlamalar', 'yuklash'); })
+          .then(function (x) { teng(!!x && x.user_id === 'u-1', true); })   // tiklash (almashtirish) mahalliy yozuvni o'chirmaydi
+          .then(function () { return yukTugat(); }, yukTugat);
+      });
+      test('S4: qatorlar(): server ustunlariga moslash — eski_id, updated_at, PIN yuborilmaydi; "umumiy" = NULL; to\'lovlar alohida jadvalga; o\'chirilganlar ham', function () {
+        var m = yukMalumoti(0), r = Yuklash.qatorlar(m), n = Yuklash.soni(r);
+        teng(n.hisoblar, m.hisoblar.length); teng(n.yozuvlar, m.yozuvlar.length); teng(n.qarz_tolovlari, m.qarzlar.reduce(function (a, q) { return a + q.tolovlar.length; }, 0)); teng(n.sozlamalar, 1);
+        teng(r.yozuvlar.filter(function (x) { return x.deleted; }).length, 1); teng(r.qarz_tolovlari.filter(function (x) { return x.deleted; }).length, 1);
+        var s = JSON.stringify(r);
+        ['eski_id', 'updated_at', 'user_id', 'created_at', 'xesh', 'pin', 'tolovlar', 'kalit'].forEach(function (k) { teng(s.indexOf('"' + k + '"'), -1); });
+        teng(r.byudjetlar.some(function (b) { return b.kategoriya_id === null; }), true); teng(r.byudjetlar.some(function (b) { return b.kategoriya_id === 'umumiy'; }), false);
+        teng(r.qarz_tolovlari.every(function (t) { return m.qarzlar.some(function (q) { return q.id === t.qarz_id; }); }), true);
+        teng(r.sozlamalar[0].tema, 'qurilma'); teng(r.qarzlar.every(function (q) { return q.muddat === null || /^\d{4}-/.test(q.muddat); }), true);
+        teng(JSON.stringify(Yuklash.tekshir(r)), '[]');
+      });
+      test('S4: tekshir(): serverga mos kelmaydigan qatorlar yuborishdan oldin topiladi (uzilgan havola, summa, ID, o\'tkazma)', function () {
+        function xato(fn, bolak) { var r = Yuklash.qatorlar(yukMalumoti(0)); fn(r); var x = Yuklash.tekshir(r); teng(x.length > 0, true); teng(bolak.test(x.join('|')), true); }
+        xato(function (r) { r.yozuvlar[0].hisob_id = Calc.uuidYarat(); }, /hisobga havola/);
+        xato(function (r) { r.yozuvlar[2].summa = 0; }, /summa/);
+        xato(function (r) { r.hisoblar[0].id = 'h1'; }, /UUID/);
+        xato(function (r) { r.qarz_tolovlari[0].qarz_id = Calc.uuidYarat(); }, /qarzga havola/);
+        xato(function (r) { r.yozuvlar[0].sana = '2026-13-45'; }, /sana/);
+        xato(function (r) { r.yozuvlar.push(Object.assign({}, r.yozuvlar[0])); }, /takroriy/);
+        xato(function (r) { var o = r.yozuvlar.filter(function (y) { return y.tur === 'otkazma'; })[0]; o.qabul_hisob_id = o.hisob_id; }, /o'tkazma/);
+      });
+      yukSinov('bo\'sh serverga yuklash: tartib (hisoblar, kategoriyalar, yozuvlar, byudjetlar, qarzlar, to\'lovlar, sozlamalar), har jadval soni teng, tombstone ham, mahalliy baza o\'zgarmaydi', function (S) {
+        var oldin, m = yukMalumoti(0), tp = [], pr = [];
+        return yukBazasi(m).then(function () { return Data.hammasiniOqish(); }).then(function (x) { oldin = JSON.stringify(x); return Yuklash.yubor({ foydalanuvchi: 'u-1', progress: function (a, b, j) { pr.push([a, b, j]); } }); })
+          .then(function (n) {
+            teng(n.ok, true, n.xato); teng(n.jadvallar.length, 7);
+            n.jadvallar.forEach(function (q) { teng(q.mahalliy, q.server); teng(q.mos, true); teng(S.soni(q.jadval), q.mahalliy); });
+            var tartib = []; S.sorovlar.filter(function (s) { return s.m === 'POST'; }).forEach(function (s) { if (tartib[tartib.length - 1] !== s.j) tartib.push(s.j); });
+            teng(tartib.join(','), 'hisoblar,kategoriyalar,yozuvlar,byudjetlar,qarzlar,qarz_tolovlari,sozlamalar');
+            teng(Object.keys(S.jadval.yozuvlar).filter(function (id) { return S.jadval.yozuvlar[id].deleted; }).length, 1);    // o'chirilgan yozuv serverda ham o'chirilgan belgisi bilan
+            teng(Object.keys(S.jadval.qarz_tolovlari).filter(function (id) { return S.jadval.qarz_tolovlari[id].deleted; }).length, 1);
+            teng(Object.keys(S.jadval.sozlamalar).length, 1); teng(JSON.stringify(S.jadval).indexOf('maxfiy-xesh'), -1);
+            teng(Object.keys(S.jadval.yozuvlar).every(function (id) { return S.jadval.yozuvlar[id].user_id === 'u-1'; }), true);   // user_id ni server qo'ydi (ilova yubormadi)
+            teng(pr[pr.length - 1][0], pr[pr.length - 1][1]); teng(pr[pr.length - 1][1], Yuklash.jami(Yuklash.soni(Yuklash.qatorlar(m))));
+            return Data.hammasiniOqish();
+          }).then(function (x) { teng(JSON.stringify(x), oldin); return Yuklash.holatOl(); })
+          .then(function (h) { teng(h.user_id, 'u-1'); teng(typeof h.tugagan, 'string'); teng(h.soni.yozuvlar, m.yozuvlar.length); });
+      });
+      yukSinov('katta ma\'lumot (5 000 yozuv) bo\'laklab yuboriladi (har so\'rovda 300 tadan oshmaydi), progress to\'g\'ri, 60 soniyadan kam', function (S) {
+        var m = yukMalumoti(5000), pr = [], t0 = performance.now(), jami = Yuklash.jami(Yuklash.soni(Yuklash.qatorlar(m)));
+        return yukBazasi(m).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1', progress: function (a, b) { pr.push(a); teng(b, jami); } }); }).then(function (n) {
+          teng(n.ok, true, n.xato); teng(S.soni('yozuvlar'), m.yozuvlar.length);
+          var posts = S.sorovlar.filter(function (s) { return s.m === 'POST'; });
+          teng(posts.every(function (s) { return s.soni <= Yuklash.BOLAK && s.soni > 0; }), true);
+          teng(posts.filter(function (s) { return s.j === 'yozuvlar'; }).length, Math.ceil(m.yozuvlar.length / Yuklash.BOLAK));
+          teng(pr.every(function (a, i) { return i === 0 || a >= pr[i - 1]; }), true); teng(pr[pr.length - 1], jami);
+          teng(performance.now() - t0 < 60000, true);
+        });
+      });
+      yukSinov('upsert: yuklash ikki marta bajarilsa ham hamma narsa bitta (takror qator yo\'q)', function (S) {
+        var m = yukMalumoti(700), birinchi;
+        return yukBazasi(m).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) { teng(n.ok, true, n.xato); birinchi = Yuklash.soni(S.jadval); birinchi = JSON.stringify(Yuklash.JADVALLAR.map(function (j) { return S.soni(j); })); return Yuklash.yubor({ foydalanuvchi: 'u-1' }); })
+          .then(function (n) { teng(n.ok, true, n.xato); teng(JSON.stringify(Yuklash.JADVALLAR.map(function (j) { return S.soni(j); })), birinchi); });
+      });
+      yukSinov('internet uzilsa: yarim yuklangan, mahalliy ma\'lumot buzilmaydi; qayta bosganda davom etadi va hammasi bitta', function (S) {
+        var m = yukMalumoti(900), oldin;
+        return yukBazasi(m).then(function () { return Data.hammasiniOqish(); }).then(function (x) { oldin = JSON.stringify(x); S.yiqilish = 5; return Yuklash.yubor({ foydalanuvchi: 'u-1' }); })
+          .then(function (n) {
+            teng(n.ok, false); teng(n.tur, 'xato'); teng(/Internet uzildi/.test(n.xato), true, n.xato); teng(/davom etadi/.test(n.xato), true);
+            var qisman = Yuklash.jami(Yuklash.JADVALLAR.reduce(function (a, j) { a[j] = S.soni(j); return a; }, {}));
+            teng(qisman > 0 && qisman < Yuklash.jami(Yuklash.soni(Yuklash.qatorlar(m))), true);
+            teng(Yuklash.band(), false);
+            return Data.hammasiniOqish();
+          }).then(function (x) { teng(JSON.stringify(x), oldin); return Yuklash.holatOl(); })
+          .then(function (h) { teng(!!h && !h.tugagan, true); S.yiqilish = 0; return Yuklash.yubor({ foydalanuvchi: 'u-1' }); })
+          .then(function (n) { teng(n.ok, true, n.xato); n.jadvallar.forEach(function (q) { teng(q.server, q.mahalliy); teng(S.soni(q.jadval), q.mahalliy); }); return Data.hammasiniOqish(); })
+          .then(function (x) { teng(JSON.stringify(x), oldin); });
+      });
+      yukSinov('serverda boshqa ma\'lumot bor: HECH NARSA yuborilmaydi va o\'zgarmaydi, "keyingi bosqichda hal qilinadi" deydi', function (S) {
+        var m = yukMalumoti(0), begona = Calc.uuidYarat();
+        S.jadval.hisoblar[begona] = { id: begona, nom: 'Boshqa qurilma', user_id: 'u-1' };
+        var oldin = JSON.stringify(S.jadval);
+        return yukBazasi(m).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) {
+          teng(n.ok, false); teng(n.tur, 'bor'); teng(/Serverda allaqachon ma'lumot bor/.test(n.xato), true); teng(/keyingi bosqichda hal qilinadi/.test(n.xato), true);
+          teng(S.sorovlar.filter(function (s) { return s.m === 'POST'; }).length, 0); teng(JSON.stringify(S.jadval), oldin);
+          return Yuklash.holatOl();
+        }).then(function (h) { teng(h, null); });
+      });
+      yukSinov('serverda ma\'lumot bor va bu bizning oldingi yuklash emas (mahalliy yozuv yo\'q yoki boshqa foydalanuvchiniki): to\'xtaydi, hech narsa yozilmaydi', function (S) {
+        var m = yukMalumoti(0), oz = Yuklash.qatorlar(m);
+        oz.hisoblar.forEach(function (h) { S.jadval.hisoblar[h.id] = Object.assign({ user_id: 'u-1' }, h); });   // serverda aynan bizning ID lar, lekin mahalliy "yuklash" yozuvi yo'q
+        var oldin = JSON.stringify(S.jadval);
+        return yukBazasi(m).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) {
+          teng(n.tur, 'bor'); teng(JSON.stringify(S.jadval), oldin);
+          return Data.saqlash('sozlamalar', { kalit: 'yuklash', user_id: 'boshqa-odam', boshlangan: 'x', tugagan: null });
+        }).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) { teng(n.tur, 'bor'); teng(JSON.stringify(S.jadval), oldin); teng(S.sorovlar.filter(function (s) { return s.m === 'POST'; }).length, 0); });
+      });
+      yukSinov('buzuq mahalliy qator (uzilgan havola): hech narsa yuborilmaydi, aniq xabar', function (S) {
+        var m = yukMalumoti(0); m.yozuvlar[0].hisob_id = Calc.uuidYarat();
+        return yukBazasi(m).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) {
+          teng(n.ok, false); teng(n.tur, 'buzuq'); teng(/Hech narsa yuborilmadi/.test(n.xato), true); teng(n.buzuq.length > 0, true); teng(S.sorovlar.length, 0);
+        });
+      });
+      yukSinov('tekshiruv: server qatorni jimgina tashlab yuborsa — "mos emas", qaysi jadval farq qilgani ko\'rsatiladi', function (S) {
+        S.tashla = 'yozuvlar';
+        return yukBazasi(yukMalumoti(0)).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) {
+          teng(n.ok, false); teng(n.tur, 'mos-emas'); teng(/Yozuvlar \d+\/\d+/.test(n.xato), true, n.xato);
+          teng(n.jadvallar.filter(function (q) { return !q.mos; }).map(function (q) { return q.jadval; }).join(), 'yozuvlar');
+          return Yuklash.holatOl();
+        }).then(function (h) { teng(!h.tugagan, true); });   // tugagan deb belgilanmaydi
+      });
+      yukSinov('kirish muddati tugagan / token yo\'q / server rad etdi: tushunarli xabar, hech narsa yozilmaydi', function (S) {
+        var m = yukMalumoti(0);
+        return yukBazasi(m).then(function () { yukSozla(S, null); return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) {
+          teng(n.ok, false); teng(/Kirish muddati tugagan/.test(n.xato), true, n.xato); teng(S.sorovlar.length, 0);
+          yukSozla(S, 'eskirgan-token'); return Yuklash.yubor({ foydalanuvchi: 'u-1' });
+        }).then(function (n) { teng(n.ok, false); teng(/Kirish muddati tugagan/.test(n.xato), true, n.xato); Yuklash.JADVALLAR.forEach(function (j) { teng(S.soni(j), 0); }); });
+      });
+      yukSinov('jadvallar yaratilmagan bo\'lsa (S1 SQL ishga tushirilmagan): tushunarli xabar', function (S) {
+        delete S.jadval.hisoblar;
+        return yukBazasi(yukMalumoti(0)).then(function () { return Yuklash.yubor({ foydalanuvchi: 'u-1' }); }).then(function (n) { teng(n.ok, false); teng(/001_sxema\.sql/.test(n.xato), true, n.xato); });
+      });
+      yukSinov('yuklash ikki marta bir vaqtda boshlanmaydi', function (S) {
+        return yukBazasi(yukMalumoti(0)).then(function () {
+          var a = Yuklash.yubor({ foydalanuvchi: 'u-1' }), b = Yuklash.yubor({ foydalanuvchi: 'u-1' });
+          return Promise.all([a, b]);
+        }).then(function (r) { teng(r[0].ok, true, r[0].xato); teng(r[1].tur, 'band'); });
+      });
+      test('S4: xatoMatni: internet, kirish, jadval yo\'q, ruxsat, qoida buzilishi', function () {
+        teng(/Internet uzildi/.test(Yuklash.xatoMatni({ message: 'TypeError: Failed to fetch' }, 'yozuvlar')), true);
+        teng(/Yozuvlar/.test(Yuklash.xatoMatni({ message: 'Failed to fetch' }, 'yozuvlar')), true);
+        teng(/Kirish muddati/.test(Yuklash.xatoMatni({ code: 'PGRST301', message: 'JWT expired' })), true);
+        teng(/001_sxema/.test(Yuklash.xatoMatni({ code: '42P01', message: 'relation "x" does not exist' })), true);
+        teng(/ruxsat bermadi/.test(Yuklash.xatoMatni({ code: '42501', message: 'new row violates row-level security policy' })), true);
+        teng(/qabul qilmadi/.test(Yuklash.xatoMatni({ code: '23514', message: 'check' })), true);
+        teng(typeof Yuklash.xatoMatni(null), 'string');
+      });
+      test('S4: kodda maxfiy kalit yo\'q: faqat ochiq (publishable) kalit', function () {
+        return Promise.all(['js/yuklash.js', 'js/kirish.js', 'js/ui.js'].map(function (f) { return fetch(f).then(function (r) { return r.text(); }); })).then(function (t) {
+          var s = t.join('\n');
+          teng(/service_role/i.test(s.replace(/service_role[^\n]*(HECH|hech|yozilmaydi|ishlatilmaydi)[^\n]*/g, '')) && /sb_secret_|eyJhbGciOi/.test(s), false);
+          teng(/sb_secret_|eyJhbGciOi/.test(s), false);
+        });
       });
 
       var ul = document.getElementById('natija');

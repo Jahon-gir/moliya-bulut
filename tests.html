@@ -15,20 +15,20 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.20.0"></script>
-  <script src="js/tema.js?v=0.20.0"></script>
-  <script src="js/belgilar.js?v=0.20.0"></script>
-  <script src="js/calc.js?v=0.20.0"></script>
-  <script src="js/xlsx.js?v=0.20.0"></script>
-  <script src="js/sinxron-sof.js?v=0.20.0"></script>
-  <script src="js/data.js?v=0.20.0"></script>
-  <script src="js/diagramma.js?v=0.20.0"></script>
-  <script src="js/pin.js?v=0.20.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.20.0"></script>
-  <script src="js/kirish.js?v=0.20.0"></script>
-  <script src="js/yuklash.js?v=0.20.0"></script>
-  <script src="js/sinxron.js?v=0.20.0"></script>
-  <script src="js/pwa.js?v=0.20.0"></script>
+  <script src="js/ilova.js?v=0.20.1"></script>
+  <script src="js/tema.js?v=0.20.1"></script>
+  <script src="js/belgilar.js?v=0.20.1"></script>
+  <script src="js/calc.js?v=0.20.1"></script>
+  <script src="js/xlsx.js?v=0.20.1"></script>
+  <script src="js/sinxron-sof.js?v=0.20.1"></script>
+  <script src="js/data.js?v=0.20.1"></script>
+  <script src="js/diagramma.js?v=0.20.1"></script>
+  <script src="js/pin.js?v=0.20.1"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.20.1"></script>
+  <script src="js/kirish.js?v=0.20.1"></script>
+  <script src="js/yuklash.js?v=0.20.1"></script>
+  <script src="js/sinxron.js?v=0.20.1"></script>
+  <script src="js/pwa.js?v=0.20.1"></script>
   <script>
     (function () {
       var testlar = [];
@@ -2133,7 +2133,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.20.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.20.1', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -2717,6 +2717,7 @@
         S.soni = function (j) { return Object.keys(S.jadval[j]).length; };
         S.fetch = function (url, init) {
           return Promise.resolve().then(function () {
+            if (S.kechikish) return new Promise(function (r) { setTimeout(r, S.kechikish); }).then(function () { S.kechikish = 0; return S.fetch(url, init); });
             if (S.oflayn) throw new TypeError('Failed to fetch');
             var u = new URL(url), j = u.pathname.split('/').pop(), m = (init.method || 'GET').toUpperCase(), h = new Headers(init.headers);
             var tana = m === 'POST' || m === 'PATCH' ? JSON.parse(init.body) : null;
@@ -3221,6 +3222,42 @@
         return sxMalumot(3).then(function (x) { A = x; return Sinxron.birinchi('yuklash'); }).then(function () { return sxYozuv(A.h1, A.k1, 5, 'x1'); }).then(function () { yukSozla(S, null); return Sinxron.yurgiz('qolda'); })
           .then(function (n) { teng(n.ok, false); teng(/Kirish muddati tugagan/.test(n.xato), true); teng(Sinxron.holat().tur, 'xato'); teng(Sinxron.holat().soni, 1); yukSozla(S); return Sinxron.qaytaUrinish(); })
           .then(function (n) { teng(n.ok, true, n.xato); teng(Sinxron.holat().tur, 'tayyor'); teng(Sinxron.holat().soni, 0); });
+      });
+
+      // ---- 0.20.1: "Sinxronlash hozir davom etmoqda" xatosi (fon tsikli birinchi sinxronni to'sib qo'yardi) ----
+      function sxIkkala2(S) {   // server: A ning ma'lumoti; B (sinxron yoqilmagan): o'zining ma'lumoti (2 hisob, 4 yozuv, 1 qarz)
+        return sxMalumot(15).then(function () { return Sinxron.birinchi('yuklash'); }).then(function (n) { teng(n.ok, true, n.xato); return sxQurilma(SX_B, true); })
+          .then(function () { return sxMalumot(4); });
+      }
+      sxSinov('0.20.1: tanlovdan keyin fon tsikli (fokus) boshlansa ham "Faqat serverdagini olish" bajariladi; zaxira BIR marta; kod yo\'q', function (S) {
+        var zaxira = 0;
+        return sxIkkala2(S).then(function () { return Sinxron.tahlil(); }).then(function (t) { teng(t.tur, 'tanlov');
+          Sinxron.yurgiz('fokus'); Sinxron.yurgiz('fokus');                                          // confirm oynasi yopilgach brauzer "focus" hodisasini beradi
+          return Sinxron.birinchi('server', { zaxira: function () { zaxira++; } }); })
+          .then(function (n) { teng(n.ok, true, n.xato); teng(zaxira, 1); teng(Sinxron.holat().tur, 'tayyor'); return jonli(); }).then(function (m) { teng(m.yozuvlar.length, 15); });
+      });
+      sxSinov('0.20.1: fon tsikli sekin ketayotgan bo\'lsa birinchi sinxron uni KUTADI (xato bermaydi)', function (S) {
+        return sxMalumot(3).then(function () { return sxTayyor(); }).then(function () { S.kechikish = 120; var c = Sinxron.yurgiz('fokus'); return Sinxron.birinchi('bosh-bosh').then(function (n) { teng(n.ok, true, n.xato); return c; }); });
+      });
+      sxSinov('0.20.1: ikki marta ketma-ket bosish: ikkinchisi aniq "kod: SYNC_LOCKED" oladi, birinchisi buzilmaydi; qulf har doim olinadi', function (S) {
+        return sxIkkala2(S).then(function () {
+          var a = Sinxron.birinchi('server', { zaxira: function () {} }), b = Sinxron.birinchi('server', { zaxira: function () {} });
+          return Promise.all([a, b]);
+        }).then(function (r) { teng(r[0].ok, true, r[0].xato); teng(r[1].tur, 'band'); teng(r[1].kod, 'SYNC_LOCKED'); teng(Sinxron.band(), false); return Sinxron.yurgiz('qolda'); }).then(function (n) { teng(n.ok, true, n.xato); });
+      });
+      sxSinov('0.20.1: oldingi urinish xato bilan tugasa (internet uzildi): qulf olinadi, zaxira YUKLANMAYDI, mahalliy o\'zgarmaydi, qayta urinish ishlaydi va zaxira bir marta', function (S) {
+        var zaxira = 0, oldin;
+        return sxIkkala2(S).then(function () { return Data.hammasiniOqish(); }).then(function (x) { oldin = JSON.stringify(x); return Sinxron.tahlil(); })
+          .then(function () { S.oflayn = true; return Sinxron.birinchi('server', { zaxira: function () { zaxira++; } }); })
+          .then(function (n) { teng(n.ok, false); teng(n.kod, 'NETWORK'); teng(zaxira, 0); teng(Sinxron.band(), false); return Data.hammasiniOqish(); })
+          .then(function (x) { teng(JSON.stringify(x), oldin); S.oflayn = false; return Sinxron.birinchi('server', { zaxira: function () { zaxira++; } }); })
+          .then(function (n) { teng(n.ok, true, n.xato); teng(zaxira, 1); });
+      });
+      sxSinov('0.20.1: sahifa yangilanib (xotira tozalanib) qayta urinsa ham ishlaydi; xato kodlari (PG_, HTTP_, BACKUP_FAILED)', function (S) {
+        return sxIkkala2(S).then(function () { return Sinxron.tahlil(); }).then(function () { Data.yopish(); Sinxron.tashlash(); return Data.boshlash(SX_B); })   // sahifa yangilandi
+          .then(function () { return Sinxron.tahlil(); }).then(function (t) { teng(t.tur, 'tanlov'); return Sinxron.birinchi('server', { zaxira: function () { throw new Error('disk to\'la'); } }); })
+          .then(function (n) { teng(n.ok, false); teng(n.kod, 'BACKUP_FAILED'); teng(/Hech narsa o'zgarmadi/.test(n.xato), true); return Sinxron.birinchi('server', { zaxira: function () {} }); })
+          .then(function (n) { teng(n.ok, true, n.xato); teng(Yuklash.xatoKodi({ code: '23503', message: 'x' }), 'PG_23503'); teng(Yuklash.xatoKodi({ message: 'x' }, 409), 'HTTP_409'); teng(Yuklash.xatoKodi(new TypeError('Failed to fetch')), 'NETWORK'); });
       });
 
       var ul = document.getElementById('natija');

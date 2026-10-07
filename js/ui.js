@@ -1585,7 +1585,7 @@
     var m = q('sinxron-holat'), p = q('sinxron-progress'), x = q('sinxron-xato'), n = q('sinxron-natija'), b = q('sinxron-belgi');
     if (m) m.textContent = sinxronMatni();
     if (p) p.textContent = sinxronUI.progress;
-    if (x) x.textContent = (h.tur === 'xato' || h.tur === 'internet-yoq') && h.xato ? h.xato : sinxronUI.xato;
+    if (x) x.textContent = (h.tur === 'xato' || h.tur === 'internet-yoq') && h.xato ? xatoKodBilan(h.xato, h.kod) : sinxronUI.xato;
     if (n) n.textContent = sinxronUI.natija;
     if (b) { b.textContent = '☁ ' + sinxronMatni(); b.className = 'sinxron-belgi' + (h.tur === 'xato' ? ' xato' : h.tur === 'internet-yoq' ? ' internet' : ''); }
     ['sinxron-boshlash', 'sinxron-hozir', 'sinxron-qayta'].forEach(function (id) { var t = q(id); if (t) t.disabled = sinxronUI.band || h.ishlayapti; });
@@ -1620,7 +1620,7 @@
         sinxronUI.xato = ''; sinxronUI.natija = ''; sinxronUI.progress = 'Sinxronlanmoqda…'; sinxronMatnlari();
         Sinxron.yurgiz('qolda', { progress: function (a, b) { sinxronUI.progress = 'Yuborilmoqda: ' + a + ' / ' + b; sinxronMatnlari(); } }).then(function (n) {
           sinxronUI.progress = '';
-          if (!n.ok && n.xato) sinxronUI.xato = n.xato;
+          if (!n.ok && n.xato) sinxronUI.xato = xatoKodBilan(n.xato, n.kod);
           sinxronMatnlari();
         });
       });
@@ -1659,7 +1659,7 @@
     sinxronUI.band = true; sinxronUI.progress = 'Server tekshirilmoqda…'; sinxronMatnlari();
     Sinxron.tahlil().then(function (t) {
       sinxronUI.progress = '';
-      if (t.tur === 'xato') { sinxronUI.xato = t.xato; return; }
+      if (t.tur === 'xato') { sinxronUI.xato = xatoKodBilan(t.xato, t.kod); return; }
       sinxronUI.tahlil = t;
       var ogoh = t.boshqaAkkaunt ? '\n\n⚠ Bu qurilmadagi ma\'lumot boshqa akkaunt bilan sinxronlangan edi. Davom etsangiz, u hozirgi akkauntga yuboriladi.' : '';
       if (t.tur === 'bosh-bosh') return sinxronBajar('bosh-bosh', false);
@@ -1676,7 +1676,7 @@
         return sinxronBajar('olish', false);
       }
       ochish(sinxronTanlovEkrani, false);   // ikkala tomonda ham ma'lumot bor
-    }).catch(function (e) { sinxronUI.progress = ''; sinxronUI.xato = 'Boshlab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.'; })
+    }).catch(function (e) { sinxronUI.progress = ''; sinxronUI.xato = xatoKodBilan('Boshlab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.', 'UI_' + ((e && e.name) || 'ERROR')); })
       .then(function () { sinxronUI.band = false; sinxronMatnlari(); });
   }
 
@@ -1694,19 +1694,19 @@
   // Tanlangan variantni bajaradi. zaxira = true bo'lsa avval joriy holatning zaxira fayli yuklab beriladi
   function sinxronBajar(variant, zaxira) {
     sinxronUI.band = true; sinxronUI.xato = ''; sinxronUI.natija = ''; sinxronUI.progress = 'Boshlanmoqda…'; sinxronMatnlari();
-    var avval = zaxira ? zaxiraniOlish(true, 'zaxira-sinxrondan-oldin') : Promise.resolve();
-    return avval.then(function () {
-      return Sinxron.birinchi(variant, { progress: function (matn) { sinxronUI.progress = matn; sinxronMatnlari(); } });
-    }).then(function (n) {
+    // Zaxira fayli Sinxron ichida, qulf olingandan va server tekshirilgandan keyin (bir marta) yuklab beriladi
+    return Sinxron.birinchi(variant, { progress: function (matn) { sinxronUI.progress = matn; sinxronMatnlari(); }, zaxira: zaxira ? function () { return zaxiraniOlish(true, 'zaxira-sinxrondan-oldin'); } : undefined }).then(function (n) {
       sinxronUI.progress = '';
       if (!n.ok && n.tur === 'bor') { sinxronUI.xato = ''; setTimeout(function () { sinxronniBoshlash(); }, 0); return; }   // yuklash paytida serverda ma'lumot paydo bo'ldi: ikki tomon qayta solishtiriladi (tanlov ekrani)
-      if (!n.ok) { sinxronUI.xato = n.xato + (n.buzuq ? '\n' + n.buzuq.join('\n') : ''); return; }
+      if (!n.ok) { sinxronUI.xato = xatoKodBilan(n.xato, n.kod || n.tur) + (n.buzuq ? '\n' + n.buzuq.join('\n') : ''); return; }
       sinxronUI.natija = sinxronNatijaMatni(n) + (n.ogohlantirish ? '\nEslatma: ' + n.ogohlantirish : '');
       qisqaXabar('Sinxronlash yoqildi', undefined, 5000);
       return yuklash().then(function () { yangilash(); });
-    }).catch(function (e) { sinxronUI.progress = ''; sinxronUI.xato = 'Bajarib bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.'; })
-      .then(function () { sinxronUI.band = false; sinxronMatnlari(); if (stek.length && stek[stek.length - 1].yasash === sinxronTanlovEkrani) { stek.pop(); } if (stek.length && stek[stek.length - 1].yasash === profilEkrani) chizish(profilEkrani(), false); });
+    }).catch(function (e) { sinxronUI.progress = ''; sinxronUI.xato = xatoKodBilan('Bajarib bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.', 'UI_' + ((e && e.name) || 'ERROR')); })
+      .then(function () { sinxronUI.band = false; sinxronMatnlari(); if (stek.length && stek[stek.length - 1].yasash === sinxronTanlovEkrani && !sinxronUI.xato) { stek.pop(); } if (stek.length && stek[stek.length - 1].yasash === profilEkrani) chizish(profilEkrani(), false); });
   }
+  // Xato matniga qisqa texnik kod qo'shadi (skrinshotdan sababni aniq bilish uchun)
+  function xatoKodBilan(matn, kod) { return matn + (kod ? '\n(kod: ' + kod + ')' : ''); }
 
   // Ikkala tomonda ham ma'lumot bor: uch variant, har birining oqibati oddiy tilda
   function sinxronTanlovEkrani() {

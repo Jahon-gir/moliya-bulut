@@ -49,7 +49,7 @@ var Kirish = (function () {
   }
 
   // ---------------- Holat ----------------
-  var holat = { mavjud: false, tayyor: false, kirgan: false, ism: '', email: '', kirmoqda: false, xato: '', qaytdi: false };
+  var holat = { mavjud: false, tayyor: false, kirgan: false, id: '', ism: '', email: '', kirmoqda: false, xato: '', qaytdi: false };
   var mijoz = null, boshlandi = false, tayyorSavdo = null, kuzatuvchilar = [];
 
   function xabarla() { kuzatuvchilar.slice().forEach(function (f) { try { f(holat); } catch (e) { /* ahamiyatsiz */ } }); }
@@ -62,6 +62,7 @@ var Kirish = (function () {
   function foydalanuvchiniQo(u) {
     var m = foydalanuvchiMalumoti(u);
     holat.kirgan = !!m;
+    holat.id = m && u.id ? u.id : '';
     holat.ism = m ? m.ism : '';
     holat.email = m ? m.email : '';
   }
@@ -176,12 +177,18 @@ var Kirish = (function () {
     });
   }
 
+  // Jadval so'rovlari uchun joriy kirish tokeni (muddati tugayotgan bo'lsa kutubxona o'zi yangilaydi). Kirmagan bo'lsa null.
+  function tokenOl() {
+    if (!mijoz) return Promise.resolve(null);
+    return mijoz.getSession().then(function (r) { var s = r && r.data && r.data.session; return s && s.access_token ? s.access_token : null; }, function () { return null; });
+  }
+
   function qaytishniOl() { var q = holat.qaytdi; holat.qaytdi = false; return q; }
 
   return {
     SUPABASE_MANZIL: SUPABASE_MANZIL, OCHIQ_KALIT: OCHIQ_KALIT, SAQLASH_KALITI: SAQLASH_KALITI,
     qaytishManzili: qaytishManzili, manzilTahlili: manzilTahlili, foydalanuvchiMalumoti: foydalanuvchiMalumoti, xatoMatni: xatoMatni,
-    boshlash: boshlash, holat: function () { return holat; }, tayyor: function () { return tayyorSavdo || boshlash(); },
+    boshlash: boshlash, tokenOl: tokenOl, serverBormi: serverBormi, holat: function () { return holat; }, tayyor: function () { return tayyorSavdo || boshlash(); },
     kuzat: kuzat, googleBilanKirish: googleBilanKirish, chiqish: chiqish, qaytishniOl: qaytishniOl
   };
 })();

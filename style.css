@@ -700,3 +700,10 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .profil-matn { min-width: 0; }
 .profil-matn .yozuv-nom, .profil-matn .yozuv-izoh { overflow-wrap: anywhere; }
 .profil-karta .asosiy-tugma, .profil-karta .ikkinchi-tugma { margin-top: 4px; }
+
+/* Serverga yuklash (S4) */
+.yuklash-karta .yuklash-oxirgi { margin: 0 0 8px; font-weight: 600; }
+.yuklash-karta .asosiy-tugma { margin-top: 4px; }
+.yuklash-progress { margin-top: 10px; font-size: 14px; }
+.yuklash-natija { margin-top: 6px; }
+.yuklash-karta .xato-matn { white-space: pre-line; overflow-wrap: anywhere; }

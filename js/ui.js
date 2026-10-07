@@ -1538,7 +1538,7 @@
       matn.appendChild(em);
       bosh.appendChild(matn);
       k.appendChild(bosh);
-      k.appendChild(el('p', 'Kirdingiz. Ma\'lumotlaringiz hozircha serverga yuborilmaydi: ular faqat shu qurilmada saqlanadi. Sinxronlash keyingi yangilanishlarda qo\'shiladi.', 'xira'));
+      k.appendChild(el('p', 'Kirdingiz. Ma\'lumotlaringiz faqat shu qurilmada saqlanadi; serverga faqat pastdagi tugma bilan, qo\'lda yuklanadi.', 'xira'));
       var chiq = tugma('Chiqish', 'ikkinchi-tugma', function () {
         chiq.disabled = true;
         Kirish.chiqish().then(function (n) { qisqaXabar(n.serverdaQolgan ? 'Chiqdingiz (internet yo\'q edi: server tomonda sessiya qolishi mumkin)' : 'Chiqdingiz'); });
@@ -1566,7 +1566,73 @@
     }
     k.appendChild(xato);
     bloklar.push(k);
+    if (h.kirgan) bloklar.push(yuklashKartasi(h));
     return bloklar;
+  }
+
+  // Serverga birinchi yuklash (S4): faqat qo'lda, bir marta. Ikki tomonlama sinxronlash va avtomatik yuborish hali yo'q (S5).
+  var yuklashHolati = { ishlayapti: false, progress: '', natija: null, xato: '' };
+  function yuklashMatnlari() {
+    var e = document.getElementById('yuklash-progress'), n = document.getElementById('yuklash-natija'), x = document.getElementById('yuklash-xato'), t = document.getElementById('yuklash-tugma');
+    if (e) e.textContent = yuklashHolati.progress;
+    if (x) x.textContent = yuklashHolati.xato;
+    if (n) {
+      n.textContent = '';
+      if (yuklashHolati.natija) yuklashHolati.natija.forEach(function (q) { n.appendChild(el('div', q.nom + ': ' + q.server + '/' + q.mahalliy + (q.mos ? ' ✓' : ' ✗ mos emas'), q.mos ? 'yozuv-izoh' : 'xato-matn')); });
+    }
+    if (t) { t.disabled = yuklashHolati.ishlayapti; t.textContent = yuklashHolati.ishlayapti ? 'Yuklanmoqda…' : 'Ma\'lumotni serverga yuklash'; }
+  }
+  function oxirgiYuklashMatni(vaqtISO) { var q = Calc.hozir(new Date(vaqtISO)); return 'Oxirgi yuklash: ' + Calc.sanaKorsat(q.sana) + ' ' + q.vaqt; }
+  function yuklashKartasi(h) {
+    var k = karta();
+    k.classList.add('yuklash-karta');
+    k.appendChild(el('h2', 'Serverga yuklash'));
+    var oxirgi = el('p', 'Hali yuklanmagan.', 'yuklash-oxirgi');
+    oxirgi.id = 'yuklash-oxirgi';
+    k.appendChild(oxirgi);
+    Yuklash.holatOl().then(function (x) { if (x && x.tugagan) oxirgi.textContent = oxirgiYuklashMatni(x.tugagan); else if (x && x.boshlangan) oxirgi.textContent = 'Oldingi yuklash tugamagan. Tugmani qayta bossangiz, qolgan joyidan davom etadi.'; });
+    k.appendChild(el('p', 'Ma\'lumotlaringiz xavfsiz serverga nusxalanadi. Keyingi o\'zgarishlar hozircha avtomatik yuborilmaydi.', 'xira'));
+    var t = tugma('Ma\'lumotni serverga yuklash', 'asosiy-tugma', function () { yuklashniBoshlash(h); });
+    t.id = 'yuklash-tugma';
+    k.appendChild(t);
+    var p = el('div', undefined, 'yuklash-progress'); p.id = 'yuklash-progress'; p.setAttribute('role', 'status'); p.setAttribute('aria-live', 'polite');
+    var n = el('div', undefined, 'yuklash-natija'); n.id = 'yuklash-natija';
+    var x = el('div', undefined, 'xato-matn'); x.id = 'yuklash-xato'; x.setAttribute('role', 'alert');
+    k.appendChild(p); k.appendChild(n); k.appendChild(x);
+    setTimeout(yuklashMatnlari, 0);
+    return k;
+  }
+  function yuklashniBoshlash(h) {
+    if (yuklashHolati.ishlayapti) return;
+    yuklashHolati.natija = null; yuklashHolati.xato = ''; yuklashHolati.progress = '';
+    if (navigator.onLine === false) { yuklashHolati.xato = 'Internet yo\'q. Yuklash uchun internetga ulaning (ilovaning o\'zi internetsiz ishlayveradi).'; yuklashMatnlari(); return; }
+    var qatorSoni = (malumot.yozuvlar.length + malumot.hisoblar.length + malumot.kategoriyalar.length + malumot.qarzlar.length);
+    var tasdiq = 'Ma\'lumotni serverga yuklash\n\n' +
+      'Ma\'lumotlaringiz (hisoblar, kategoriyalar, yozuvlar, byudjetlar, qarzlar va ularning to\'lovlari: taxminan ' + qatorSoni + ' ta qator) xavfsiz serverga (Supabase) nusxalanadi. Sizning akkauntingizdan boshqa hech kim ko\'ra olmaydi.\n\n' +
+      'Halol ogohlantirish: ma\'lumot serverda shifrlanmagan holda saqlanadi, shuning uchun ilova dasturchisi (men) texnik jihatdan ma\'lumotlar bazasini ko\'ra olaman. PIN-kod serverga yuborilmaydi.\n\n' +
+      'Boshlashdan oldin joriy holatning zaxira fayli avtomatik yuklab beriladi. Telefondagi ma\'lumot o\'zgarmaydi. Serverda allaqachon ma\'lumot bo\'lsa, hech narsa yuborilmaydi va o\'chirilmaydi.\n\nDavom etilsinmi?';
+    yuklashHolati.ishlayapti = true; yuklashHolati.progress = 'Server tekshirilmoqda…'; yuklashMatnlari();
+    Kirish.serverBormi().then(function (bor) {
+      if (!bor) { yuklashHolati.xato = 'Serverga ulanib bo\'lmadi. Internetni tekshirib, qayta urinib ko\'ring.'; yuklashHolati.progress = ''; return; }
+      yuklashHolati.progress = '';
+      if (!window.confirm(tasdiq)) return;
+      return zaxiraniOlish(true, 'zaxira-yuklashdan-oldin').then(function () {
+        yuklashHolati.progress = 'Yuklanmoqda: 0 / …';
+        yuklashMatnlari();
+        return Yuklash.yubor({ foydalanuvchi: h.id, progress: function (a, b, j) { yuklashHolati.progress = 'Yuklanmoqda: ' + a + ' / ' + b + ' (' + Yuklash.NOMLAR[j] + ')'; yuklashMatnlari(); } });
+      }).then(function (n) {
+        yuklashHolati.progress = '';
+        if (n.jadvallar) yuklashHolati.natija = n.jadvallar;
+        if (n.ok) {
+          yuklashHolati.progress = 'Yuklandi. Serverdagi qatorlar soni mahalliy bilan teng.';
+          var o = document.getElementById('yuklash-oxirgi'); if (o) o.textContent = oxirgiYuklashMatni(n.vaqt);
+          qisqaXabar('Ma\'lumot serverga yuklandi', undefined, 5000);
+        } else yuklashHolati.xato = n.xato + (n.buzuq ? '\n' + n.buzuq.join('\n') : '');
+      });
+    }).catch(function (e) {
+      yuklashHolati.progress = '';
+      yuklashHolati.xato = 'Yuklab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.';
+    }).then(function () { yuklashHolati.ishlayapti = false; yuklashMatnlari(); });
   }
 
   // "Xavfsizlik": PIN-kod bilan ochish (yoqish/o'chirish) va PIN-kodni o'zgartirish (mantiq js/pin.js da, o'zgarmagan)
@@ -2645,7 +2711,7 @@
   }
 
   // Joriy holatning to'liq zaxirasi (JSON). Muvaffaqiyatli bo'lsa va oldin=false bo'lsa, oxirgi zaxira sanasi yangilanadi.
-  function zaxiraniOlish(oldinTiklash) {
+  function zaxiraniOlish(oldinTiklash, nomBelgisi) {
     return Data.hammasiniOqish().then(function (m) {
       var bugun = Calc.bugun();
       if (!oldinTiklash) {
@@ -2655,7 +2721,7 @@
           : m.sozlamalar.concat([{ kalit: 'asosiy', sxema_versiyasi: Data.SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: bugun }]);
       }
       var fayl = Calc.zaxiraYasash(m, Data.SXEMA_VERSIYASI, new Date());
-      faylYuklash(Calc.zaxiraNomi(new Date(), oldinTiklash ? 'zaxira-tiklashdan-oldin' : 'zaxira'), JSON.stringify(fayl), 'application/json');
+      faylYuklash(Calc.zaxiraNomi(new Date(), oldinTiklash ? (nomBelgisi || 'zaxira-tiklashdan-oldin') : 'zaxira'), JSON.stringify(fayl), 'application/json');
       if (oldinTiklash) return fayl;
       var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
       return Data.saqlash('sozlamalar', asosiy).then(function () { malumot.zaxiraSanasi = bugun; return fayl; });

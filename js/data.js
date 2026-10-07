@@ -63,7 +63,7 @@
   // Qarzning o'chirilgan to'lovlari ham ko'rinmaydi. To'liq (o'chirilganlar bilan) ro'yxat — hammasiniOqish() (zaxira uchun).
   function hammasi(toplam) {
     return amal(toplam, 'readonly', function (s) { return s.getAll(); }).then(function (r) {
-      return Calc.jonlilar(toplam, toplam === 'sozlamalar' ? r.filter(function (x) { return x.kalit !== ICHKI_NUSXA_KALITI; }) : r);
+      return Calc.jonlilar(toplam, toplam === 'sozlamalar' ? r.filter(function (x) { return x.kalit !== ICHKI_NUSXA_KALITI && x.kalit !== 'yuklash'; }) : r);
     });
   }
   function olish(toplam, kalit) {

@@ -1618,12 +1618,12 @@
         var st = xmlOl(r.z['xl/styles.xml']), xf = st.getElementsByTagName('cellXfs')[0].getElementsByTagName('xf');
         teng(st.getElementsByTagName('numFmt')[0].getAttribute('formatCode'), 'dd\\.mm\\.yyyy\\ hh:mm'); teng(xf[2].getAttribute('numFmtId'), '164'); teng(xf[3].getAttribute('numFmtId'), '3'); teng(xf[3].getElementsByTagName('alignment')[0].getAttribute('horizontal'), 'right');
         teng(r.q.slice(1).every(function (q) { return q.filter(function (c) { return c.r.charAt(0) === 'G'; })[0].t === null && /^\d+$/.test(q.filter(function (c) { return c.r.charAt(0) === 'G'; })[0].v); }), true);
-        var cols = r.ws.getElementsByTagName('col'); teng(cols[6].getAttribute('style'), '3'); teng(parseFloat(cols[10].getAttribute('width')) > parseFloat(cols[0].getAttribute('width')) * 2, true);   // Izoh kengroq
+        var cols = r.ws.getElementsByTagName('col'); teng(cols[6].getAttribute('style'), '3'); teng(parseFloat(cols[10].getAttribute('width')) >= parseFloat(cols[0].getAttribute('width')), true);   // Izoh eng kengdan biri
       });
       test('xlsx: birinchi qator qalin va rangli fon, qotirilgan (ySplit=1), avtomatik filtr A1:K11', function () {
         var r = xlsxOqish(), st = xmlOl(r.z['xl/styles.xml']), xf1 = st.getElementsByTagName('cellXfs')[0].getElementsByTagName('xf')[1];
         var font = st.getElementsByTagName('fonts')[0].getElementsByTagName('font')[+xf1.getAttribute('fontId')], fill = st.getElementsByTagName('fills')[0].getElementsByTagName('fill')[+xf1.getAttribute('fillId')];
-        teng(font.getElementsByTagName('b').length, 1); teng(fill.getElementsByTagName('fgColor')[0].getAttribute('rgb'), 'FF0F8B6D'); teng(fill.getElementsByTagName('patternFill')[0].getAttribute('patternType'), 'solid');
+        teng(font.getElementsByTagName('b').length, 1); teng(fill.getElementsByTagName('fgColor')[0].getAttribute('rgb'), 'FF263238'); teng(fill.getElementsByTagName('patternFill')[0].getAttribute('patternType'), 'solid');
         var p = r.ws.getElementsByTagName('pane')[0]; teng(p.getAttribute('ySplit'), '1'); teng(p.getAttribute('state'), 'frozen'); teng(p.getAttribute('topLeftCell'), 'A2');
         teng(r.ws.getElementsByTagName('autoFilter')[0].getAttribute('ref'), 'A1:K11'); teng(r.ws.getElementsByTagName('dimension')[0].getAttribute('ref'), 'A1:K11');
         teng(xmlOl(r.z['xl/workbook.xml']).getElementsByTagName('definedName')[0].textContent, 'Eksport!$A$1:$K$11');
@@ -1635,7 +1635,7 @@
         var qat = r.q.slice(1).reverse(); qat.forEach(function (q, i) {
           var c = q.filter(function (x) { return x.r.charAt(0) === 'K'; })[0];
           if (iz[i] === '') { teng(c, undefined); return; }
-          teng(c.t, 's'); teng(c.m, iz[i]); teng(c.s, /^[=+\-@]/.test(iz[i]) ? '4' : null);
+          teng(c.t, 's'); teng(c.m, iz[i]); teng(c.s, /^[=+\-@]/.test(iz[i]) ? '4' : '7');   // 4: himoyali (formula emas), 7: izoh uslubi (o'ralgan matn)
         });
         var xf = xmlOl(r.z['xl/styles.xml']).getElementsByTagName('cellXfs')[0].getElementsByTagName('xf')[4]; teng(xf.getAttribute('quotePrefix'), '1'); teng(xf.getAttribute('numFmtId'), '49');
         // kategoriya/hisob/qarz nomi ham himoyalanadi

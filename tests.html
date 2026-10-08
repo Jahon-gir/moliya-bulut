@@ -3702,8 +3702,8 @@
         });
       });
       test('Import takrorlar: ID bo\'yicha (oldin yuklangan va fayl ichida), sana+summa+kategoriya+izoh bo\'yicha (har mavjud yozuv bir marta), "baribir yuklash", bizning Y-000001 ID lari hisobga olinmaydi', function () {
-        var q = [['Sana', 'ID', 'Summa', 'Kategoriya', 'Izoh'], ['2026-10-01', 'x1', 1000, 'Oziq-ovqat', 'a'], ['2026-10-02', 'x2', 2000, 'Oziq-ovqat', 'b'], ['2026-10-02', 'x2', 2500, 'Oziq-ovqat', 'v'],
-          ['2026-10-03', 'Y-000001', 3000, 'Oziq-ovqat', 'g'], ['2026-10-03', 'Y-000001', 3500, 'Oziq-ovqat', 'd'], ['2026-10-04', null, 4000, 'Oziq-ovqat', 'e'], ['2026-10-04', null, 4000, 'Oziq-ovqat', 'e']];
+        var q = [['Sana', 'ID', 'Summa', 'Kategoriya', 'Izoh', 'Hisob'], ['2026-10-01', 'x1', 1000, 'Oziq-ovqat', 'a', 'Naqd pul'], ['2026-10-02', 'x2', 2000, 'Oziq-ovqat', 'b', 'Naqd pul'], ['2026-10-02', 'x2', 2500, 'Oziq-ovqat', 'v', 'Naqd pul'],
+          ['2026-10-03', 'Y-000001', 3000, 'Oziq-ovqat', 'g', 'Naqd pul'], ['2026-10-03', 'Y-000001', 3500, 'Oziq-ovqat', 'd', 'Naqd pul'], ['2026-10-04', null, 4000, 'Oziq-ovqat', 'e', 'Naqd pul'], ['2026-10-04', null, 4000, 'Oziq-ovqat', 'e', 'Naqd pul']];
         return imFayl(q, true).then(XlsxOqi.oqi).then(function (o) {
           var r = imReja(o); teng(r.jami.yuklanadi, 6); teng(r.jami.takror, 1); teng(r.qatorlar[2].holat, 'takror'); teng(r.qatorlar[2].kod, 'R_TAKROR');   // x2 fayl ichida ikkinchi marta
           r = imReja(o, {}, { tarixIdlar: { x1: true } }); teng(r.qatorlar[0].holat, 'takror'); teng(r.qatorlar[0].sabab.indexOf('ID') >= 0, true); teng(r.jami.takror, 2);
@@ -4036,7 +4036,7 @@
           teng(o.qatorlar.length, 334); var r = imReja(o);
           teng(r.jami.jami, 333); teng(r.jami.xato + r.jami.otkazildi + r.jami.takror, 0, 'hammasi yuklanadi'); teng(r.jami.yuklanadi, 318); teng(r.jami.qarzAmal, 15);
           var h = r.hisoblar.filter(function (g) { return g.ishlatiladi; }); teng(h.length, 6); teng(h.map(function (g) { return g.nom; }).sort().join('|'), I4_HIS.slice().sort().join('|'));
-          teng(h.every(function (g) { return g.yangi && !/UZS|\d{3}/.test(g.nom); }), true); teng(h.some(function (g) { return g.nom === '' || g.nom === '-'; }), false);
+          teng(h.every(function (g) { return g.yangi && !/\d/.test(g.nom); }), true, 'hisob nomida summa yo\'q'); teng(h.some(function (g) { return g.nom === '' || g.nom === '-'; }), false);
           teng(r.hisobOgoh.yangi, 6); teng(r.hisobOgoh.noyob, 6); teng(r.hisobOgoh.katta, false);
           var kk = {}; r.qatorlar.forEach(function (x) { if (x.yozuv && x.yozuv.katG) kk[x.yozuv.katG] = 1; }); teng(Object.keys(kk).length, 29);
           teng(r.jami.tozalangan, 18 / 1 * 1 === 18 ? 18 : 0, 'o\'tkazmalarning TransferedTo qismi tozalandi');
@@ -4057,7 +4057,7 @@
           var jami = Calc.umumiyBalans(m.hisoblar, m.yozuvlar, m.qarzlar); teng(jami - oldin, f.kutilgan.daromad - f.kutilgan.xarajat + f.kutilgan.qarzSof, 'umumiy balans: daromad − xarajat + qarz; o\'tkazmalar 0');
           var ishl = {}; m.yozuvlar.forEach(function (y) { if (y.kategoriya_id) ishl[y.kategoriya_id] = 1; }); teng(Object.keys(ishl).length, 29);
           teng(m.yozuvlar.filter(function (y) { return y.tur === 'otkazma'; }).length, 18); teng(m.yozuvlar.every(function (y) { return y.tur !== 'otkazma' || (y.hisob_id !== y.qabul_hisob_id && !y.kategoriya_id); }), true);
-          teng(m.hisoblar.some(function (h) { return /UZS|\d/.test(h.nom); }), false, 'soxta hisob yo\'q');
+          teng(m.hisoblar.some(function (h) { return /\d/.test(h.nom); }), false, 'soxta hisob yo\'q');
           teng(m.yozuvlar.filter(function (y) { return y.izoh.indexOf('\n') >= 0; }).length > 20, true, 'ko\'p qatorli izoh saqlangan');
           return imYukla(bayt, {});
         }).then(function (x) { teng(x.p.yozuvlar.length + x.p.qarzlar.length + x.p.hisoblar.length, 0); teng(x.r.jami.takror, 333); return Data.boshlash(SINOV_BAZA); });
@@ -4078,7 +4078,7 @@
       test('Nom ichidagi summa o\'tkazma summasiga mos kelmasa — qatorda ogohlantirish; Category va LoanName ham tozalanadi, Comment (izoh) o\'zgarmaydi; NUL va boshqaruv belgilari izohdan olib tashlanadi', function () {
         var q = [IM_SARL,
           ['2026-10-01 10:00:00', 'A1', 'Transfer', 'Uzcar', 'Uzum 999 000,00 UZS', '-', '100 000,00 UZS', '100 000,00 UZS', 'UZS', '100 000,00 UZS', '-', '-', '-', 'Izoh 5 000,00 UZS'],
-          ['2026-10-02 10:00:00', 'A2', 'Manual', 'Uzcar', '-', 'Oziq-ovqat 12 000,00 UZS', { v: '12 000,00 UZS', st: 1 }, '12 000,00 UZS', 'UZS', '12 000,00 UZS', '-', '-', '-', 'Matn\u0000bilan\u0007 belgi'],
+          ['2026-10-02 10:00:00', 'A2', 'Manual', 'Uzcar', '-', 'Oziq-ovqat 12 000,00 UZS', { v: '12 000,00 UZS', st: 1 }, '12 000,00 UZS', 'UZS', '12 000,00 UZS', '-', '-', '-', 'Matn_x0000_bilan_x0007_ belgi'],
           ['2026-10-03 10:00:00', 'A3', 'Loan', 'Uzcar', '-', '-', '5 000,00 UZS', '5 000,00 UZS', 'UZS', '5 000,00 UZS', 'Tez karta 5 000,00 UZS', 'Borrowing', '5 000,00 UZS', '-']];
         return imFayl(q, true).then(XlsxOqi.oqi).then(function (o) {
           var r = imReja(o), k = {}; r.qatorlar.forEach(function (x) { k[x.n] = x; });
@@ -4135,10 +4135,10 @@
           .then(function (t) { teng(t.stek.length, 0); teng(t.oxirgi, null); return Data.boshlash(SINOV_BAZA); });
       });
       test('Soxta hisoblarni tozalash: nomi "… <summa> UZS" bilan tugaydigan, yozuvi yo\'q yoki faqat import yozuvlari bor hisoblar ro\'yxati; yozuvlarni to\'g\'ri hisobga ko\'chirish; tasdiqsiz/yozuvi bor hisobga tegilmaydi; hammasi bitta tranzaksiyada', function () {
-        var A, S1, S2, S3, y1, y2, y3;
-        return imBaza().then(function () { return sxHisob('Uzcar', 1000); }).then(function (h) { A = h; return sxHisob('Uzcar 200 000,00 UZS', 0); }).then(function (h) { S1 = h; return sxHisob('Uzum 5 000,00 UZS', 0); }).then(function (h) { S2 = h; return sxHisob('Bo\'sh 1 000,00 UZS', 0); }).then(function (h) { S3 = h; return sxKat('Oziq', 'xarajat'); })
+        var A, S1, S2, S3, y1, y2, y3, naqd;
+        return imBaza().then(function () { return jonli(); }).then(function (m) { naqd = m.hisoblar[0]; return sxHisob('Uzcar', 1000); }).then(function (h) { A = h; return sxHisob('Uzcar 200 000,00 UZS', 0); }).then(function (h) { S1 = h; return sxHisob('Uzum 5 000,00 UZS', 0); }).then(function (h) { S2 = h; return sxHisob('Bo\'sh 1 000,00 UZS', 0); }).then(function (h) { S3 = h; return sxKat('Oziq', 'xarajat'); })
           .then(function (k) { return Promise.all([sxYozuv(S1, k, 700, 'imp1'), sxYozuv(S2, k, 300, 'oddiy'), sxYozuv(A, k, 100, 'haqiqiy')]); }).then(function (y) {
-            y1 = y[0]; y2 = y[1]; y3 = y[2]; var tr = { id: Data.yangiId(), yaratilgan: new Date().toISOString(), tur: 'otkazma', summa: 50, sana: '2026-10-05', vaqt: '11:00', hisob_id: A.id, qabul_hisob_id: S1.id, kategoriya_id: null, izoh: 'imp2' }; return Data.saqlash('yozuvlar', tr).then(function () { return tr; });
+            y1 = y[0]; y2 = y[1]; y3 = y[2]; var tr = { id: Data.yangiId(), yaratilgan: new Date().toISOString(), tur: 'otkazma', summa: 50, sana: '2026-10-05', vaqt: '11:00', hisob_id: naqd.id, qabul_hisob_id: S1.id, kategoriya_id: null, izoh: 'imp2' }; return Data.saqlash('yozuvlar', tr).then(function () { return tr; });
           }).then(function (tr) {
             return jonli().then(function (m) {
               var imp = {}; imp[y1.id] = true; imp[tr.id] = true;
@@ -4151,14 +4151,14 @@
             });
           }).then(function (n) { teng(n.kochirildi, 1); teng(n.ochirildi, 1); return jonli(); }).then(function (m) {
             teng(m.hisoblar.map(function (h) { return h.nom; }).sort().join('|'), 'Naqd pul|Uzcar|Uzum 5 000,00 UZS'); var uz = m.hisoblar.filter(function (h) { return h.nom === 'Uzcar'; })[0];
-            teng(m.yozuvlar.filter(function (y) { return y.hisob_id === uz.id; }).length, 2, 'import yozuvi va haqiqiy yozuv'); teng(m.yozuvlar.filter(function (y) { return y.qabul_hisob_id === uz.id; }).length, 0); teng(Calc.hisobQoldigi(uz, m.yozuvlar, m.qarzlar), 1000 - 100 - 700, 'qoldiq: boshlang\'ich − xarajatlar');
+            teng(m.yozuvlar.filter(function (y) { return y.hisob_id === uz.id; }).length, 2, 'import yozuvi va haqiqiy yozuv'); teng(m.yozuvlar.filter(function (y) { return y.qabul_hisob_id === uz.id; }).length, 1, 'o\'tkazma qabul tomoni ko\'chdi'); teng(Calc.hisobQoldigi(uz, m.yozuvlar, m.qarzlar), 1000 - 100 - 700 + 50, 'qoldiq: boshlang\'ich − xarajatlar + kirgan o\'tkazma');
             return Data.hammasiniOqish();
           }).then(function (x) { teng(x.hisoblar.filter(function (h) { return h.deleted === true; }).length, 2, 'mantiqiy o\'chirilgan'); return Data.boshlash(SINOV_BAZA); });
       });
       sxSinov('18.4: ~800 o\'zgarishli import (333 qator fayl + 480 qator) bo\'lak-bo\'lak xatosiz sinxronlanadi; so\'rovlar 150 tadan oshmaydi; navbat bo\'shaydi', function (S) {
         var f = im333(), m = zMalumot(); m.yozuvlar = ZKatta(480); m.qarzlar = [];
         var e = Calc.eksport(m, { tur: 'hammasi' }), bayt2 = Xlsx.fayl(e), ikki;
-        return i4Fayl(f).then(function (b) { return imYukla(b, {}); }).then(function () { return imYukla(bayt2, {}); }).then(function () { return Data.navbatniOl(); }).then(function (nv) {
+        return Sinxron.birinchi('yuklash').then(function () { return i4Fayl(f); }).then(function (b) { return imYukla(b, {}); }).then(function () { return imYukla(bayt2, {}); }).then(function () { return Data.navbatniOl(); }).then(function (nv) {
           var soni = 0; Object.keys(nv.qatorlar).forEach(function (t) { soni += Object.keys(nv.qatorlar[t]).length; }); teng(soni > 780, true, 'navbatda ' + soni);
           return Sinxron.yurgiz('qolda');
         }).then(function (n) {
@@ -4169,7 +4169,7 @@
       });
       sxSinov('18.4: serverga mos kelmagan qator butun paketni to\'xtatmaydi: u ajratiladi (kod, jadval, ID), qolganlari yuboriladi; navbat bo\'shaydi; tarmoq xatosi esa avvalgidek navbatni saqlaydi', function (S) {
         var h, k, yoz = [];
-        return sxHisob('Naqd', 0).then(function (x) { h = x; return sxKat('Oziq', 'xarajat'); }).then(function (x) { k = x; var p = Promise.resolve(); for (var i = 0; i < 400; i++) (function (i) { p = p.then(function () { return sxYozuv(h, k, 1000 + i, 'izoh' + i).then(function (y) { yoz.push(y); }); }); })(i); return p; })
+        return Sinxron.birinchi('yuklash').then(function () { return sxHisob('Naqd', 0); }).then(function (x) { h = x; return sxKat('Oziq', 'xarajat'); }).then(function (x) { k = x; var p = Promise.resolve(); for (var i = 0; i < 400; i++) (function (i) { p = p.then(function () { return sxYozuv(h, k, 1000 + i, 'izoh' + i).then(function (y) { yoz.push(y); }); }); })(i); return p; })
           .then(function () { S.rad = function (j, r) { return j === 'yozuvlar' && (r.izoh === 'izoh7' || r.izoh === 'izoh301') ? { code: '23514', status: 400 } : null; }; return Sinxron.yurgiz('qolda'); }).then(function (n) {
             teng(n.ok, true, n.xato); teng(n.rad.length, 2); teng(n.rad.every(function (r) { return r.kod === 'PG_23514' && r.jadval === 'yozuvlar' && r.id && r.tavsif.indexOf('izoh') >= 0; }), true, JSON.stringify(n.rad[0]));
             teng(S.soni('yozuvlar'), 398); var hh = Sinxron.holat(); teng(hh.soni, 0); teng(hh.rad.length, 2); teng(hh.rad[0].kod, 'PG_23514');
@@ -4179,7 +4179,7 @@
       });
       sxSinov('18.4: matnda NUL belgisi bo\'lgan qator (eski importdan) serverda rad etiladi — ajratiladi va qolganlari yuboriladi (bundan oldin sinxron abadiy "Xato" holatida qolardi)', function (S) {
         var h, k;
-        return sxHisob('Naqd', 0).then(function (x) { h = x; return sxKat('Oziq', 'xarajat'); }).then(function (x) { k = x; return sxYozuv(h, k, 1, 'oddiy 1'); }).then(function () { return sxYozuv(h, k, 2, 'NUL\u0000bor'); }).then(function () { return sxYozuv(h, k, 3, 'oddiy 3'); })
+        return Sinxron.birinchi('yuklash').then(function () { return sxHisob('Naqd', 0); }).then(function (x) { h = x; return sxKat('Oziq', 'xarajat'); }).then(function (x) { k = x; return sxYozuv(h, k, 1, 'oddiy 1'); }).then(function () { return sxYozuv(h, k, 2, 'NUL\u0000bor'); }).then(function () { return sxYozuv(h, k, 3, 'oddiy 3'); })
           .then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) {
             teng(n.ok, true, n.xato); teng(n.rad.length, 1); teng(n.rad[0].kod, 'PG_22P05'); teng(S.soni('yozuvlar'), 2); teng(Sinxron.holat().soni, 0);
           });

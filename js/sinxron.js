@@ -193,7 +193,8 @@ var Sinxron = (function () {
       // va xatoli qator(lar) ajratiladi: qolganlari yuboriladi. Tarmoq, kirish (401/403) va server (5xx) xatolari avvalgidek tsiklni to'xtatadi (navbat saqlanadi).
       var qoshimchaSoroq = 60;   // bitta tsiklda bo'lish uchun qo'shimcha so'rovlar chegarasi (hammasi buzuq bo'lsa, so'rovlar to'lib ketmasin)
       function malumotXatosimi(res) {
-        var kod = Yuklash.xatoKodi(res.error, res.status), st = res.status;
+        var kod = Yuklash.xatoKodi(res.error, res.status), st = res.status, m = String((res.error && (res.error.message || res.error.details)) || '').toLowerCase();
+        if (m.indexOf('sub claim') >= 0 || m.indexOf('user_not_found') >= 0 || m.indexOf('jwt') >= 0 || (kod === 'PG_23503' && String((res.error && (res.error.details || res.error.message)) || '').indexOf('users') >= 0)) return false;   // akkaunt o'chirilgan / kirish muddati tugagan: ma'lumot xatosi emas
         return /^PG_(22|23)/.test(kod) || [400, 409, 413, 422].indexOf(st) >= 0 || (/^PG_PGRST1/.test(kod));
       }
       function tavsif(j, q) {

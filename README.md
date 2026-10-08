@@ -14,7 +14,7 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 3. **Keyin:** o'zgarishlar avtomatik yuboriladi, boshqa qurilmadagilari avtomatik olinadi. Asosiy ekran va Profilda holat: "Sinxronlangan",
    "Kutilmoqda (N ta o'zgarish)", "Internet yo'q", "Xato" (sabab "(kod: ...)" bilan va "Qayta urinish").
 4. **Chiqish** faqat shu qurilmadan chiqadi (ma'lumot qoladi). **Hisobni o'chirish** serverdagi akkaunt va hamma ma'lumotni o'chiradi (shu qurilmadagi ma'lumot qoladi; avval zaxira fayli yuklanadi).
-5. **Zaxira** (Menyu → Zaxira va eksport) sinxronlash o'rnini bosmaydi: vaqti-vaqti bilan JSON zaxira oling.
+5. **Excelga yuklab olish** (Menyu) — daromad, xarajat va o'tkazmalar chiroyli .xlsx faylga. **Fayldan yuklash** (Menyu → Profil) — Excel (.xlsx) fayldan yozuvlarni oldindan ko'rib, tasdiqlab yuklash; "Oxirgi yuklashni bekor qilish" bor (TZ-sinxronlash.md, 18-band). JSON zaxira oddiy ko'rinishda yashirin (Menyu pastidagi versiya qatorini 7 marta bosing); u sinxronlash o'rnini bosmaydi.
 6. **Telefon yo'qolsa / almashsa:** yangi qurilmada ilovani oching, shu Google bilan kiring: serverdagi ma'lumot o'zi qaytadi.
 
 ## Tuzilma

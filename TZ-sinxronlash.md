@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 9 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -251,4 +251,24 @@ Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron man
 
 ### 18.2. Fayldan yuklash (Excel import) va chiroyli Excel eksport (0.24.0)
 
-(PR 2 da to'ldiriladi.)
+**Bajarildi (0.24.0).** Profil → "Fayldan yuklash" (faqat Excel `.xlsx`; CSV va eski `.xls` rad etiladi, `IMPORT_FORMAT`).
+
+**Oqim.** Fayl tanlanadi → ustunlar nomidan taxmin qilinadi (sana, summa, tur, kategoriya, hisob, qayerga, izoh, ID, valyuta; har biri ro'yxatdan tuzatiladi) → **oldindan ko'rish** (qator soni, birinchi 10 ta yozuv, xato/takror/o'tkazib yuborilganlar sababi va kodi bilan) → "Yuklash" tasdig'i. Tasdiqlanmaguncha bazaga hech narsa yozilmaydi. Fayl qurilmadan chiqmaydi.
+
+**O'qish.** Tashqi kutubxona yo'q (vendor qo'shilmadi, hajm qo'shilmadi): `js/xlsx-oqi.js` ZIP ni o'zi o'qiydi, siqilgan qismni brauzerning `DecompressionStream` i ochadi (eski brauzerda `IMPORT_BRAUZER`). Katak shrifti rangi (qizil/yashil) `styles.xml` dan o'qiladi; mavzu (theme) ranglari o'qilmaydi.
+
+**Qoidalar** (`js/import-sof.js`, sof, testlanadi):
+- Sarlavhalar katta-kichik harf va bo'shliqqa e'tiborsiz: begona jadval (DateTime, TransactionID, TransactionType, AccountFrom, TransferedTo, Category, EnteredAmount, Amount, TransactionCurrency, AccountChargedAmount, LoanName, LoanType, LoanChargedAmount, Comment) va o'zimizning eksport ustunlari.
+- Summa: matn ("27 640,00 UZS", oddiy/buzilmas bo'shliq, vergul/nuqta kasr va minglik, oxirgi valyuta, qavs/minus) yoki raqam. Kasr eng yaqin butun so'mga yaxlitlanadi va qatorda ogohlantirish chiqadi. 0 yoki o'qilmasa — xato (`R_SUMMA`).
+- Sana: `2026-10-05 09:12:33`, `2026-10-08`, `08.10.2026`, `08/10/2026` (kun birinchi), Excel seriya raqami; vaqt daqiqagacha saqlanadi, bo'lmasa 00:00. Kelajak vaqti — xato (`R_KELAJAK`), noto'g'ri sana — `R_SANA`. Ko'p qatorli izoh o'zgarmaydi.
+- **Tur aniqlash tartibi:** "Tur" ustuni (Daromad/Xarajat/O'tkazma) → foydalanuvchining kategoriya bo'yicha tanlovi → summa manfiy (xarajat) → summa katagi shrifti rangi (qizil — xarajat, yashil — daromad) → kategoriya bo'yicha tanlov (standart: xarajat). Qaysi usul nechta qatorga ishlagani ko'rinishda yoziladi, har kategoriya uchun tuzatish mumkin. "Manual" turni aniqlamaydi.
+- **O'tkazma:** `Transfer` / "O'tkazma" qatori ilovaning o'z o'tkazmasi bo'ladi (qayerdan va qayerga hisob kerak, ikkalasi har xil); aks holda o'tkazib yuboriladi (`R_OTKAZMA`). Qoldiqlar o'tkazma qoidasi bilan hisoblanadi, hisobotga kirmaydi.
+- **Qarz qatorlari** (Tur=Qarz/Qarz to'lovi yoki LoanName/LoanType to'ldirilgan) yuklanmaydi, o'tkazib yuboriladi (`R_QARZ`): qarz yozuvlari alohida tuzilishga ega. Valyuta UZS emas — ogohlantirib o'tkazib yuboriladi (`R_VALYUTA`).
+- **Noma'lum kategoriya/hisob:** nom bo'yicha guruhlanadi, har nom bir marta so'raladi: yangi yaratish yoki mavjudiga biriktirish. Yangi hisobning boshlang'ich qoldig'i 0. Kategoriyasiz qator — "Boshqa"ga, hisobsiz qator — birinchi hisobga.
+- **Takror:** (1) ID bo'yicha (yangi maydon qo'shilmagan: yuklangan ID lar shu qurilmadagi mahalliy `import-tarixi` yozuvida, zaxira va serverga kirmaydi; bizning `Y-000001` ko'rinishidagi tartib raqamlari ID hisoblanmaydi), (2) sana + summa + kategoriya + izoh bo'yicha (har mavjud yozuv faqat bir qatorga mos keladi). Standart: o'tkazib yuborish, foydalanuvchi "baribir yuklash"ni tanlashi mumkin. Bir fayl ikki marta yuklansa ikkilanmaydi.
+
+**Xavfsizlik.** Yuklashdan oldin joriy holatning zaxira fayli avtomatik yuklab beriladi; keyin hamma yozuv, yangi hisob va kategoriyalar **bitta tranzaksiyada** yoziladi (xato bo'lsa hech narsa o'zgarmaydi, `IMPORT_YOZISH`) va oddiy saqlash bilan bir xil maydonlar (`updated_at`, `deleted`) hamda sinxron navbatiga tushadi. Server sxemasi o'zgarmadi, sinxron mantig'iga (navbat, qulf, tortish) tegilmadi: faqat `Data.importYozish` navbat yozuvini oddiy saqlash formatida yozadi. **"Oxirgi yuklashni bekor qilish"** (Profil): yuklangan yozuvlar mantiqiy o'chiriladi, yaratilgan hisob/kategoriya — boshqa joyda ishlatilmasa; ID lar tarixdan chiqadi (`IMPORT_BEKOR`).
+
+**Xato kodlari:** `IMPORT_PARSE` (buzilgan fayl), `IMPORT_EMPTY` (bo'sh), `IMPORT_FORMAT` (xlsx emas / .xls / CSV), `IMPORT_KATTA` (30 MB yoki 50 000 qatordan katta), `IMPORT_BRAUZER`, `IMPORT_YOZISH`, `IMPORT_BEKOR`; qator kodlari: `R_SANA`, `R_SUMMA`, `R_VALYUTA`, `R_KELAJAK`, `R_OTKAZMA`, `R_QARZ`, `R_HISOB`, `R_TAKROR`.
+
+**Excel eksporti (yaxshilandi).** Xarajat summasi qizil, daromad yashil, o'tkazma va qarz oddiy; sarlavha qatori to'q fonda oq qalin matn; ustun kengligi mazmunga moslanadi; ko'p qatorli izoh o'raladi (qator balandligi bilan); sana va summa haqiqiy Excel turida; sarlavhalar o'zbekcha. Aylanish: eksport → toza baza → yuklash → eksport bir xil (testlangan).

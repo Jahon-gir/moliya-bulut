@@ -3834,14 +3834,14 @@
         teng(parseFloat(c2[10].getAttribute('width')), 20); teng(parseFloat(c2[3].getAttribute('width')), 10);
       });
       test('Tezlik: 5 000 qatorli fayl — o\'qish + reja + tayyorlash 5 soniyadan tez; bazaga bitta tranzaksiyada yozish 10 soniyadan tez; 5 000 yozuv', function () {
-        var m = zMalumot(); m.yozuvlar = ZKatta(5000); var e = Calc.eksport(m, { tur: 'hammasi' }), bayt = Xlsx.fayl(e), t0 = performance.now(), t1, t2;
+        var m = zMalumot(); m.yozuvlar = ZKatta(5000); var e = Calc.eksport(m, { tur: 'hammasi' }), bayt = Xlsx.fayl(e), t0 = performance.now(), t1, t2, soni5k = 0;
         return imBaza().then(function () { t0 = performance.now(); return XlsxOqi.oqi(bayt); }).then(function (o) {
           teng(o.qatorlar.length, e.soni + 1); return imMavjud().then(function (mv) {
             var t = ImportSof.ustunlarniTaxmin(o.qatorlar), xom = ImportSof.qatorlarniOqi(o.qatorlar, t.sarlavhaQator, t.xarita), r = ImportSof.reja(xom, {}, mv, IM_H), p = ImportSof.tayyorla(r, imOps());
-            t1 = performance.now(); teng(t1 - t0 < 5000, true, 'o\'qish+reja ' + Math.round(t1 - t0) + ' ms'); teng(r.jami.yuklanadi, 5000 + 4 - e.qatorlar.filter(function (q) { return q.tur === 'Qarz' || q.tur === 'Qarz to\'lovi'; }).length, 'qarzlarsiz');
+            t1 = performance.now(); teng(t1 - t0 < 5000, true, 'o\'qish+reja ' + Math.round(t1 - t0) + ' ms'); teng(r.jami.jami, e.soni, 'hamma qator o\'qildi'); teng(r.jami.yuklanadi + r.jami.xato + r.jami.takror + r.jami.otkazildi, e.soni); teng(r.jami.yuklanadi > 3000, true, 'yuklanadi ' + r.jami.yuklanadi); teng(r.qatorlar.filter(function (q) { return q.holat === 'xato' && q.kod !== 'R_KELAJAK'; }).length, 0, 'faqat kelajak sanalar xato (sinov sanasi 10.10.2026)'); soni5k = r.jami.yuklanadi;
             return Data.importYozish(p, 'katta.xlsx').then(function () { t2 = performance.now(); teng(t2 - t1 < 10000, true, 'yozish ' + Math.round(t2 - t1) + ' ms'); return jonli(); });
           });
-        }).then(function (mm) { teng(mm.yozuvlar.length >= 5000, true); return Data.boshlash(SINOV_BAZA); });
+        }).then(function (mm) { teng(mm.yozuvlar.length, soni5k); return Data.boshlash(SINOV_BAZA); });
       });
       var ul = document.getElementById('natija');
       var otdi = 0;

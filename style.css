@@ -745,3 +745,9 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .salom-google { width: 100%; min-height: 52px; font-size: 18px; margin-top: 8px; }
 .salom-davom { background: none; border: 0; color: var(--xira); text-decoration: underline; min-height: 44px; padding: 8px 12px; margin-top: 12px; font: inherit; font-size: 14px; cursor: pointer; }
 .eslatma-karta { border-left: 4px solid var(--asosiy); }
+
+/* Fayldan yuklash (TZ-sinxronlash §18.2) */
+.import-qator { margin: 6px 0; overflow-wrap: anywhere; }
+.import-muammo { color: var(--xira); margin: 4px 0; overflow-wrap: anywhere; }
+.import-bekor-quti { margin-top: 10px; }
+.import-fayl { overflow-wrap: anywhere; }

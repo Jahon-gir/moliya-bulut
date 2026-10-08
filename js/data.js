@@ -458,31 +458,52 @@
                 if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x.id] = hozir;
               });
             });
-            if (navbatBor) so.put(navbat);
             var t = e3.target.result || { kalit: IMPORT_KALITI, idlar: {}, oxirgi: null };
             t.idlar = t.idlar || {};
+            t.stek = Array.isArray(t.stek) ? t.stek.slice() : (t.oxirgi ? [t.oxirgi] : []);   // yuklashlar steki: har yuklash o'zining bekor qilish yozuvi bilan
             (paket.manbaIdlar || []).forEach(function (id) { t.idlar[id] = true; });
-            t.oxirgi = { vaqt: hozir, fayl: fayl || '', yozuvlar: paket.yozuvlar.map(function (y) { return y.id; }), kategoriyalar: paket.kategoriyalar.map(function (k) { return k.id; }),
-              hisoblar: paket.hisoblar.map(function (h) { return h.id; }), qarzlar: (paket.qarzlar || []).map(function (z) { return z.id; }), manbaIdlar: (paket.manbaIdlar || []).slice() };
-            so.put(t);
+            var oxirgi = { vaqt: hozir, fayl: fayl || '', yozuvlar: paket.yozuvlar.map(function (y) { return y.id; }), kategoriyalar: paket.kategoriyalar.map(function (k) { return k.id; }),
+              hisoblar: paket.hisoblar.map(function (h) { return h.id; }), qarzlar: (paket.qarzlar || []).map(function (z) { return z.id; }), manbaIdlar: (paket.manbaIdlar || []).slice(), hisobEski: {} };
+            // Mavjud hisobning boshlang'ich qoldig'i (faqat foydalanuvchi tasdiqlagan bo'lsa): eski qiymat bekor qilish uchun saqlanadi
+            var kut = 0;
+            function tugat() {
+              if (navbatBor) so.put(navbat);
+              t.stek.push(oxirgi); t.oxirgi = oxirgi;
+              so.put(t);
+            }
+            (paket.hisobYangilash || []).forEach(function (y) {
+              kut++;
+              tx.objectStore('hisoblar').get(y.id).onsuccess = function (e) {
+                var h = e.target.result;
+                if (h && h.deleted !== true) {
+                  oxirgi.hisobEski[y.id] = h.boshlangich_qoldiq;
+                  tx.objectStore('hisoblar').put(Object.assign({}, h, { boshlangich_qoldiq: y.boshlangich_qoldiq, updated_at: hozir }));
+                  if (navbatBor) (navbat.qatorlar.hisoblar = navbat.qatorlar.hisoblar || {})[y.id] = hozir;
+                }
+                if (--kut === 0) tugat();
+              };
+            });
+            if (kut === 0) tugat();
           };
         };
       };
     });
   }
 
-  // Oxirgi yuklashni bekor qilish: yozuvlar mantiqiy o'chiriladi (deleted = true); shu yuklash yaratgan hisob va kategoriyalar — faqat hech narsa ishlatmasa
+  // Oxirgi yuklashni bekor qilish (stekdagi oxirgisi): yozuvlar va qarzlar mantiqiy o'chiriladi (deleted = true); shu yuklash yaratgan hisob va kategoriyalar — faqat hech narsa ishlatmasa;
+  // o'zgartirilgan mavjud hisoblarning boshlang'ich qoldig'i avvalgi qiymatiga qaytadi
   function importBekor() {
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'byudjetlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString(), natija = { yozuvlar: 0, qarzlar: 0, kategoriyalar: 0, hisoblar: 0 };
+      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'byudjetlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString(), natija = { yozuvlar: 0, qarzlar: 0, kategoriyalar: 0, hisoblar: 0, qoldiqlar: 0 };
       tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error || new Error('Bekor qilish to\'xtatildi')); };
       var so = tx.objectStore('sozlamalar');
       so.get(IMPORT_KALITI).onsuccess = function (e0) {
         var tarix = e0.target.result;
-        if (!tarix || !tarix.oxirgi) { tx.abort(); return; }
-        var ox = tarix.oxirgi;
+        var stek = tarix ? (Array.isArray(tarix.stek) ? tarix.stek.slice() : (tarix.oxirgi ? [tarix.oxirgi] : [])) : [];
+        if (!stek.length) { tx.abort(); return; }
+        var ox = stek[stek.length - 1];
         so.get(SINXRON_KALITI).onsuccess = function (e1) {
           var navbatBor = !!(e1.target.result && e1.target.result.navbat === true);
           so.get(NAVBAT_KALITI).onsuccess = function (e2) {
@@ -494,7 +515,7 @@
             tx.objectStore('byudjetlar').getAll().onsuccess = function (e) {
               holat.byudjetlar = e.target.result;
               var ochir = {}, ochirQarz = {}; ox.yozuvlar.forEach(function (id) { ochir[id] = true; }); (ox.qarzlar || []).forEach(function (id) { ochirQarz[id] = true; });
-              function belgila(t, x) { tx.objectStore(t).put(Object.assign({}, x, { deleted: true, updated_at: hozir })); if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x[TOPLAMLAR[t]]] = hozir; }
+              function belgila(t, x, qo) { tx.objectStore(t).put(Object.assign({}, x, qo || { deleted: true }, { updated_at: hozir })); if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x[TOPLAMLAR[t]]] = hozir; }
               var ishlatil = {};
               holat.yozuvlar.forEach(function (y) {
                 if (ochir[y.id]) { if (y.deleted !== true) { belgila('yozuvlar', y); natija.yozuvlar++; } return; }
@@ -507,24 +528,97 @@
               });
               holat.byudjetlar.forEach(function (b) { if (b.deleted !== true) ishlatil[b.kategoriya_id] = 1; });
               var kutilgan = 0;
-              function bitta(t, id) {
+              function bitta(t, id, fn) {
                 kutilgan++;
                 tx.objectStore(t).get(id).onsuccess = function (e) {
                   var x = e.target.result;
-                  if (x && x.deleted !== true && !ishlatil[id]) { belgila(t, x); natija[t]++; }
+                  fn(x);
                   if (--kutilgan === 0) yakun();
                 };
               }
               function yakun() {
                 if (navbatBor) so.put(navbat);
-                var yangi = Object.assign({}, tarix, { idlar: Object.assign({}, tarix.idlar), oxirgi: null });
+                var yangi = Object.assign({}, tarix, { idlar: Object.assign({}, tarix.idlar) });
                 (ox.manbaIdlar || []).forEach(function (id) { delete yangi.idlar[id]; });
+                stek.pop(); yangi.stek = stek; yangi.oxirgi = stek.length ? stek[stek.length - 1] : null;
                 so.put(yangi);
               }
-              (ox.kategoriyalar || []).forEach(function (id) { bitta('kategoriyalar', id); });
-              (ox.hisoblar || []).forEach(function (id) { bitta('hisoblar', id); });
+              (ox.kategoriyalar || []).forEach(function (id) { bitta('kategoriyalar', id, function (x) { if (x && x.deleted !== true && !ishlatil[id]) { belgila('kategoriyalar', x); natija.kategoriyalar++; } }); });
+              (ox.hisoblar || []).forEach(function (id) { bitta('hisoblar', id, function (x) { if (x && x.deleted !== true && !ishlatil[id]) { belgila('hisoblar', x); natija.hisoblar++; } }); });
+              Object.keys(ox.hisobEski || {}).forEach(function (id) { bitta('hisoblar', id, function (x) { if (x && x.deleted !== true && x.boshlangich_qoldiq !== ox.hisobEski[id]) { belgila('hisoblar', x, { boshlangich_qoldiq: ox.hisobEski[id] }); natija.qoldiqlar++; } }); });
               if (kutilgan === 0) yakun();
             };
+          };
+        };
+      };
+    });
+  }
+
+  // Hisoblarni tozalash (soxta/bo'sh hisoblar): har amal alohida tasdiqlangan, hammasi BITTA tranzaksiyada.
+  // amallar: [{ id, kochir: ixtiyoriy nishon hisob ID si }]: kochir bo'lsa, shu hisobning yozuvlari (hisob, o'tkazma qabul tomoni) va qarzlari (qarz hisobi, to'lov hisobi) nishonga ko'chiriladi; keyin hisob mantiqiy o'chadi.
+  // Qarshi himoya: yozuvi bor hisob va nishon ko'rsatilmagan bo'lsa — xato (hech narsa o'zgarmaydi).
+  function hisobTozalash(amallar) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['hisoblar', 'yozuvlar', 'qarzlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString(), natija = { ochirildi: 0, kochirildi: 0 };
+      tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Tozalash to\'xtatildi (hech narsa o\'zgarmadi)')); };
+      var so = tx.objectStore('sozlamalar');
+      so.get(SINXRON_KALITI).onsuccess = function (e1) {
+        var navbatBor = !!(e1.target.result && e1.target.result.navbat === true);
+        so.get(NAVBAT_KALITI).onsuccess = function (e2) {
+          var navbat = e2.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} };
+          navbat.qatorlar = navbat.qatorlar || {};
+          function yoz(t, x) { tx.objectStore(t).put(Object.assign({}, x, { updated_at: hozir })); if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x[TOPLAMLAR[t]]] = hozir; }
+          var H = {}, Y, Q;
+          tx.objectStore('hisoblar').getAll().onsuccess = function (e) { e.target.result.forEach(function (h) { H[h.id] = h; }); };
+          tx.objectStore('yozuvlar').getAll().onsuccess = function (e) { Y = e.target.result; };
+          tx.objectStore('qarzlar').getAll().onsuccess = function (e) {
+            Q = e.target.result;
+            var nishon = {}, dan = {}, xato = null;
+            amallar.forEach(function (a) { dan[a.id] = true; });
+            amallar.forEach(function (a) {
+              if (xato) return;
+              var h = H[a.id];
+              if (!h || h.deleted === true) { xato = 'Hisob topilmadi'; return; }
+              if (a.kochir) {
+                var n = H[a.kochir];
+                if (!n || n.deleted === true || n.arxivlangan || dan[a.kochir] || a.kochir === a.id) { xato = 'Ko\'chirish uchun hisob yaroqsiz'; return; }
+                nishon[a.id] = a.kochir;
+              }
+            });
+            if (xato) { tx.abort(); return; }
+            var bor = {};   // ko'chirilmaydigan hisoblar uchun: yozuvi bormi
+            Y.forEach(function (y) {
+              if (y.deleted === true) return;
+              var h = nishon[y.hisob_id] || y.hisob_id, q = y.qabul_hisob_id ? (nishon[y.qabul_hisob_id] || y.qabul_hisob_id) : y.qabul_hisob_id;
+              if ((nishon[y.hisob_id] || nishon[y.qabul_hisob_id]) && y.tur === 'otkazma' && h === q) { xato = 'Ko\'chirishdan keyin o\'tkazmaning ikkala hisobi bir xil bo\'lib qoladi'; return; }
+              if (dan[y.hisob_id] && !nishon[y.hisob_id]) bor[y.hisob_id] = 1;
+              if (y.qabul_hisob_id && dan[y.qabul_hisob_id] && !nishon[y.qabul_hisob_id]) bor[y.qabul_hisob_id] = 1;
+            });
+            Q.forEach(function (z) {
+              if (z.deleted === true) return;
+              if (dan[z.hisob_id] && !nishon[z.hisob_id]) bor[z.hisob_id] = 1;
+              (z.tolovlar || []).forEach(function (t) { if (t.deleted !== true && dan[t.hisob_id] && !nishon[t.hisob_id]) bor[t.hisob_id] = 1; });
+            });
+            Object.keys(bor).forEach(function (id) { xato = xato || 'Yozuvi bor hisobni (nishon hisobsiz) o\'chirib bo\'lmaydi'; });
+            if (xato) { tx.abort(); return; }
+            Y.forEach(function (y) {
+              if (y.deleted === true) return;
+              var o = false, yangi = Object.assign({}, y);
+              if (nishon[y.hisob_id]) { yangi.hisob_id = nishon[y.hisob_id]; o = true; }
+              if (y.qabul_hisob_id && nishon[y.qabul_hisob_id]) { yangi.qabul_hisob_id = nishon[y.qabul_hisob_id]; o = true; }
+              if (o) yoz('yozuvlar', yangi);
+            });
+            Q.forEach(function (z) {
+              if (z.deleted === true) return;
+              var o = false, yangi = Object.assign({}, z);
+              if (nishon[z.hisob_id]) { yangi.hisob_id = nishon[z.hisob_id]; o = true; }
+              yangi.tolovlar = (z.tolovlar || []).map(function (t) { if (t.deleted !== true && nishon[t.hisob_id]) { o = true; return Object.assign({}, t, { hisob_id: nishon[t.hisob_id], updated_at: hozir }); } return t; });
+              if (o) yoz('qarzlar', yangi);
+            });
+            amallar.forEach(function (a) { yoz('hisoblar', Object.assign({}, H[a.id], { deleted: true })); if (a.kochir) natija.kochirildi++; else natija.ochirildi++; });
+            if (navbatBor) so.put(navbat);
           };
         };
       };
@@ -538,6 +632,6 @@
     ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
     tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
     hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI,
-    importYozish: importYozish, importBekor: importBekor, IMPORT_KALITI: IMPORT_KALITI
+    importYozish: importYozish, importBekor: importBekor, hisobTozalash: hisobTozalash, IMPORT_KALITI: IMPORT_KALITI
   };
 })(typeof window !== 'undefined' ? window : this);

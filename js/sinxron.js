@@ -9,7 +9,7 @@ var Sinxron = (function () {
   var J = SinxronSof.JADVALLAR;
   var OVERLAP_MS = 5000;        // tortishda oxirgi kursordan shuncha orqaga qaytiladi (parallel yozuvlar tartibi buzilsa ham qator o'tib ketmasin; qayta qo'llash zararsiz)
   var SAHIFA = 1000;            // serverdan bir so'rovda ko'pi bilan shuncha qator (PostgREST chegarasi)
-  var YUBOR_BOLAK = 300;        // bir so'rovda yuboriladigan qatorlar
+  var YUBOR_BOLAK = 150;        // bir so'rovda yuboriladigan qatorlar (katta import bo'lak-bo'lak yuboriladi)
   var OCHIRISH_BOLAK = 100;     // "id in (...)" ro'yxati uzun bo'lib ketmasin
   var KECHIKISH_MS = 2500;      // o'zgarishdan keyin yuborishni shuncha kutish (ketma-ket o'zgarishlar bitta so'rovga yig'iladi)
   var DAVR_MS = 60000;          // ilova ochiq turganda tortish davri
@@ -178,7 +178,7 @@ var Sinxron = (function () {
         ruyxat[j] = ruyxat[j].filter(function (x) {
           var b = radId[j + '|' + x.qator.id];
           if (!b) return true;
-          natija.rad.push({ jadval: j, id: x.qator.id, sabab: b.sabab });
+          natija.rad.push({ jadval: j, id: x.qator.id, sabab: b.sabab, kod: 'CLIENT_INVALID', tavsif: '' });
           radNavbat.push({ store: j === 'qarz_tolovlari' ? 'qarzlar' : j, kalit: x.kalit, qiymat: x.qiymat });
           if (j === 'qarz_tolovlari') qarzRad[x.kalit] = true;   // to'lovi buzuq qarz butunlay chetga olinadi (qarz va to'lovlari birga yuboriladi)
           return false;
@@ -189,21 +189,47 @@ var Sinxron = (function () {
     }).then(function () {
       var jamiSoni = J.reduce(function (a, j) { return a + ruyxat[j].length; }, 0), bajarildi = 0;
       if (progress && jamiSoni) progress(0, jamiSoni);
+      // Bo'lak serverning MA'LUMOT qoidalariga to'g'ri kelmagani uchun rad etilsa (PG 22xxx/23xxx, HTTP 400/409/413/422), u teng ikkiga bo'linib qayta yuboriladi
+      // va xatoli qator(lar) ajratiladi: qolganlari yuboriladi. Tarmoq, kirish (401/403) va server (5xx) xatolari avvalgidek tsiklni to'xtatadi (navbat saqlanadi).
+      var qoshimchaSoroq = 60;   // bitta tsiklda bo'lish uchun qo'shimcha so'rovlar chegarasi (hammasi buzuq bo'lsa, so'rovlar to'lib ketmasin)
+      function malumotXatosimi(res) {
+        var kod = Yuklash.xatoKodi(res.error, res.status), st = res.status, m = String((res.error && (res.error.message || res.error.details)) || '').toLowerCase();
+        if (m.indexOf('sub claim') >= 0 || m.indexOf('user_not_found') >= 0 || m.indexOf('jwt') >= 0 || (kod === 'PG_23503' && String((res.error && (res.error.details || res.error.message)) || '').indexOf('users') >= 0)) return false;   // akkaunt o'chirilgan / kirish muddati tugagan: ma'lumot xatosi emas
+        return /^PG_(22|23)/.test(kod) || [400, 409, 413, 422].indexOf(st) >= 0 || (/^PG_PGRST1/.test(kod));
+      }
+      function tavsif(j, q) {
+        if (j === 'yozuvlar') return (q.sana || '') + ' ' + (q.tur || '') + ' ' + (q.summa || '') + (q.izoh ? ' «' + String(q.izoh).slice(0, 30) + '»' : '');
+        if (j === 'hisoblar' || j === 'kategoriyalar') return q.nom || '';
+        if (j === 'qarzlar') return (q.shaxs || '') + ' ' + (q.summa || '');
+        if (j === 'qarz_tolovlari') return (q.sana || '') + ' ' + (q.summa || '');
+        return '';
+      }
+      function muvaffaq(j, bolak) {
+        bajarildi += bolak.length; natija.yuborildi += bolak.length;
+        bolak.forEach(function (x) { yaqinda[x.qator.id] = true; });
+        if (progress) progress(bajarildi, jamiSoni, j);
+        if (j === 'qarzlar' || j === 'qarz_tolovlari') { bolak.forEach(function (x) { qarzUchun[x.kalit] = x.qiymat; }); return; }   // qarz navbatdan to'lovlari bilan birga olinadi
+        var y = {}; y[j] = {}; bolak.forEach(function (x) { y[j][x.kalit] = x.qiymat; });
+        return Data.navbatdanOlish(y);
+      }
+      function bolakniYubor(j, bolak) {
+        return c.from(j).upsert(bolak.map(function (x) { return x.qator; }), { onConflict: 'id' }).then(function (res) {
+          if (!res.error) return muvaffaq(j, bolak);
+          if (!malumotXatosimi(res) || natija.rad.length >= 30) Yuklash.tashla(res.error, j, res.status);
+          if (bolak.length > 1) {
+            if (qoshimchaSoroq-- <= 0) Yuklash.tashla(res.error, j, res.status);
+            var h = Math.ceil(bolak.length / 2);
+            return bolakniYubor(j, bolak.slice(0, h)).then(function () { return bolakniYubor(j, bolak.slice(h)); });
+          }
+          var x = bolak[0], kod = Yuklash.xatoKodi(res.error, res.status);   // bitta qator: ajratiladi
+          natija.rad.push({ jadval: j, id: x.qator.id, sabab: Yuklash.xatoMatni(res.error, j), kod: kod, tavsif: tavsif(j, x.qator) });
+          radNavbat.push({ store: j === 'qarz_tolovlari' ? 'qarzlar' : j, kalit: x.kalit, qiymat: x.qiymat });
+          bajarildi += 1; if (progress) progress(bajarildi, jamiSoni, j);
+        }, function (e) { Yuklash.tashla(e, j); });
+      }
       return J.reduce(function (p, j) {
         return p.then(function () {
-          return bolaklash(ruyxat[j], YUBOR_BOLAK).reduce(function (q, bolak) {
-            return q.then(function () {
-              return c.from(j).upsert(bolak.map(function (x) { return x.qator; }), { onConflict: 'id' }).then(function (res) {
-                if (res.error) Yuklash.tashla(res.error, j, res.status);
-                bajarildi += bolak.length; natija.yuborildi += bolak.length;
-                bolak.forEach(function (x) { yaqinda[x.qator.id] = true; });
-                if (progress) progress(bajarildi, jamiSoni, j);
-                if (j === 'qarzlar' || j === 'qarz_tolovlari') { bolak.forEach(function (x) { qarzUchun[x.kalit] = x.qiymat; }); return; }   // qarz navbatdan to'lovlari bilan birga olinadi
-                var y = {}; y[j] = {}; bolak.forEach(function (x) { y[j][x.kalit] = x.qiymat; });
-                return Data.navbatdanOlish(y);
-              }, function (e) { Yuklash.tashla(e, j); });
-            });
-          }, Promise.resolve());
+          return bolaklash(ruyxat[j], YUBOR_BOLAK).reduce(function (q, bolak) { return q.then(function () { return bolakniYubor(j, bolak); }); }, Promise.resolve());
         });
       }, Promise.resolve());
     }).then(function () {

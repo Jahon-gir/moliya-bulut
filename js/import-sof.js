@@ -23,9 +23,13 @@ var ImportSof = (function () {
   };
 
   function sarlavhaKaliti(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9Ѐ-ӿ]/g, ''); }
+  // Fayldan o'qilgan matndan boshqaruv belgilari (NUL va boshqalar; "\n" va "\t" qoladi) va yarim surrogatlar olib tashlanadi: server matn maydoni ularni rad etadi
+  function toza(m) {
+    return String(m).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').replace(/[\ud800-\udbff](?![\udc00-\udfff])|(^|[^\ud800-\udbff])[\udc00-\udfff]/g, '$1');
+  }
   function hujayraMatni(c) {
     if (!c) return '';
-    if (c.t === 's') return c.v;
+    if (c.t === 's') return toza(c.v);
     if (c.t === 'n') return String(c.v);
     return c.v === undefined || c.v === null ? '' : String(c.v);
   }
@@ -156,6 +160,19 @@ var ImportSof = (function () {
 
   var ESKI_ID = /^[YQT]-\d{6}$/;   // bizning eksportdagi tartib raqami: boshqa bazada boshqa yozuvga to'g'ri kelishi mumkin, shuning uchun takrorni aniqlashda ishlatilmaydi
 
+  // Nomning oxiridagi "<summa> <valyuta>" qismini ajratadi: "TBS salom 400 000,00 UZS" -> { nom: 'TBS salom', summa: 400000, valyuta: 'UZS' }.
+  // Faqat summadan keyin valyuta kodi (3 harf yoki so'm) turgan bo'lsa (kartaning oxirgi 4 raqami "Visa 1234" tegilmaydi) va nom bo'sh qolmasa.
+  var NOM_SUMMA = /^(.*?\S)[\s\u00a0]+([-+]?\d(?:[\d\s\u00a0.,']*\d)?)[\s\u00a0]*([A-Za-z]{3}|so['\u02bb\u02bc\u2018\u2019`]?m|\u0441\u0443\u043c)$/i;
+  function tozaNom(m) {
+    var t = String(m == null ? '' : m).replace(/\s+/g, ' ').trim();
+    if (/^[-\u2013\u2014]+$/.test(t)) t = '';
+    var x = NOM_SUMMA.exec(t);
+    if (!x) return { nom: t, summa: null, valyuta: null, tozalandi: false };
+    var su = summaOqi({ t: 's', v: x[2] + ' ' + x[3] });
+    if (su.xato) return { nom: t, summa: null, valyuta: null, tozalandi: false };
+    return { nom: x[1].trim(), summa: su.son, valyuta: valyutaKodi(x[3]) || String(x[3]).toUpperCase(), tozalandi: true };
+  }
+
   // Qarz qatori yordamchilari. "-" (va "—") bo'sh katak hisoblanadi.
   function tozaMatn(m) { var t = String(m == null ? '' : m).trim(); return /^[-–—]+$/.test(t) ? '' : t; }
   function qarzTuriOqi(s) {   // LoanType / Qarz turi -> 'olingan' | 'berilgan' | null
@@ -181,13 +198,15 @@ var ImportSof = (function () {
       var su = summaOqi(xarita.summa >= 0 ? q[xarita.summa] : null);
       x.turMatn = turMatni(mt(q, 'tur'));
       x.turNomi = mt(q, 'tur');
-      x.kategoriya = mt(q, 'kategoriya');
-      x.hisob = mt(q, 'hisob');
-      x.qayerga = mt(q, 'qayerga');
+      var tk = tozaNom(mt(q, 'kategoriya')), th = tozaNom(mt(q, 'hisob')), tq = tozaNom(mt(q, 'qayerga')), ogohlar = [];
+      x.kategoriya = tk.nom; x.hisob = th.nom; x.qayerga = tq.nom;
+      x.tozalangan = th.tozalandi || tq.tozalandi || tk.tozalandi;
+      x.hisobSumma = th.summa; x.qayergaSumma = tq.summa;
       x.izoh = hujayraMatni(q[xarita.izoh]).replace(/\r\n?/g, '\n').trim();
       if (/^[-–—]+$/.test(x.izoh)) x.izoh = '';
       x.id = mt(q, 'id');
-      var qNom = mt(q, 'qarzNomi'), qTuri = mt(q, 'qarzTuri');
+      var tn = tozaNom(mt(q, 'qarzNomi')), qNom = tn.nom, qTuri = mt(q, 'qarzTuri');
+      if (tn.tozalandi) x.tozalangan = true;
       // Qarz qatori: TransactionType = Loan / Qarz / Qarz to'lovi, yoki qarz nomi va turi ikkalasi to'ldirilgan
       if (x.turMatn === 'qarz' || (qNom && qTuri)) {
         x.qarz = { rol: qarzRoli(x.turNomi), turi: qarzTuriOqi(qTuri), nom: qNom, muddat: null };
@@ -204,6 +223,12 @@ var ImportSof = (function () {
       var val = vk || su.valyuta;
       if (vk && su.valyuta && vk !== su.valyuta) val = vk === 'UZS' ? su.valyuta : vk;
       if (val && val !== 'UZS') { x.xato = 'Valyuta ' + val + ': faqat so\'m (UZS) yuklanadi'; x.kod = 'R_VALYUTA'; x.otkaz = true; r.push(x); continue; }
+      // nom ichidan ajratilgan summa qator summasiga mos kelishi kerak (o'tkazmada: "TransferedTo" ichidagi summa)
+      if (x.turMatn === 'otkazma') {
+        if (x.qayergaSumma !== null && x.qayergaSumma !== x.summa) ogohlar.push('Qabul hisobi nomidagi summa (' + x.qayergaSumma + ') o\'tkazma summasiga (' + x.summa + ') mos kelmadi');
+        if (x.hisobSumma !== null && x.hisobSumma !== x.summa) ogohlar.push('Hisob nomidagi summa (' + x.hisobSumma + ') o\'tkazma summasiga (' + x.summa + ') mos kelmadi');
+      }
+      if (ogohlar.length) x.ogoh = ogohlar.join('; ');
       r.push(x);
     }
     return r;
@@ -254,7 +279,7 @@ var ImportSof = (function () {
     Object.keys(mavjud.yozuvKalitlari || {}).forEach(function (k) { kalitlar[k] = mavjud.yozuvKalitlari[k]; });
     Object.keys(mavjud.qarzKalitlari || {}).forEach(function (k) { qKalitlar[k] = mavjud.qarzKalitlari[k]; });
     var katGuruh = {}, hisobGuruh = {}, turGuruh = {}, katTartib = [], hisobTartib = [], turTartib = [];
-    var jami = { yuklanadi: 0, xato: 0, otkazildi: 0, takror: 0, yaxlit: 0, qarz: 0, qarzAmal: 0, jami: xom.length }, usullar = { tur: 0, belgi: 0, rang: 0, tanlov: 0, otkazma: 0 };
+    var jami = { yuklanadi: 0, xato: 0, otkazildi: 0, takror: 0, yaxlit: 0, ogoh: 0, tozalangan: 0, qarz: 0, qarzAmal: 0, jami: xom.length }, usullar = { tur: 0, belgi: 0, rang: 0, tanlov: 0, otkazma: 0 };
     var natija = [];
     var faolHisob = mavjud.hisoblar || [], faolKat = mavjud.kategoriyalar || [];
 
@@ -265,7 +290,7 @@ var ImportSof = (function () {
         if (t && t.id && faolHisob.some(function (x) { return x.id === t.id; })) id = t.id;
         else if (t && t.yangi && nom) yangi = true;
         else if (mv) id = mv.id;
-        else if (!nom) id = faolHisob.length ? faolHisob[0].id : null;
+        else if (!nom) id = null;   // hisobsiz qator: hech qachon yangi hisob yaratilmaydi va o'zboshimchalik bilan hisobga qo'yilmaydi; foydalanuvchi tanlamasa yuklanmaydi
         else yangi = true;
         g = hisobGuruh[k] = { kalit: k, nom: nom, soni: 0, id: id, yangi: yangi, avto: !!mv };
         hisobTartib.push(g);
@@ -299,7 +324,7 @@ var ImportSof = (function () {
       var hg = hisobGuruhi(x.hisob), op = { n: x.n, s: s, id: x.id, nom: String(q.nom || '').replace(/\s+/g, ' ').trim() || 'Nomsiz qarz', sana: x.sana, vaqt: x.vaqt, summa: x.summa, izoh: x.izoh, muddat: q.muddat, rol: rol, yon: yon, eff: eff, hisobG: hg.kalit };
       s.qarz = true; s.eff = eff; s.id = x.id; s.qarzInfo = { nom: op.nom, sana: x.sana, vaqt: x.vaqt, summa: x.summa, eff: eff, hisobG: hg.kalit, turi: q.turi };
       function rad(sabab, kod) { s.holat = 'xato'; s.sabab = sabab; s.kod = kod; jami.xato++; natija.push(s); }
-      if (hg.id === null && !hg.yangi) { rad('Hisob yo\'q (avval hisob qo\'shing)', 'R_HISOB'); return; }
+      if (hg.id === null && !hg.yangi) { rad(x.hisob ? 'Hisob yo\'q (avval hisob qo\'shing)' : 'Hisob ko\'rsatilmagan ("-" yoki bo\'sh): ko\'rinishda hisobni tanlang', 'R_HISOB'); return; }
       if (Calc.kelajakmi(x.sana, x.vaqt, h)) { rad('Vaqti hozirdan keyin (' + x.sana.split('-').reverse().join('.') + ' ' + x.vaqt + '): kelajakka qarz amali bo\'lmaydi', 'R_KELAJAK'); return; }
       var sabab = null;
       if (x.id && !ESKI_ID.test(x.id)) {
@@ -309,6 +334,7 @@ var ImportSof = (function () {
       var fk = qarzKaliti(eff, op.nom, x.sana, x.summa, nomi(hg));
       if (!sabab && qKalitlar[fk] > 0) { sabab = 'Yo\'nalish, sana, summa, hisob va nom bo\'yicha takror (mavjud qarz amali)'; qKalitlar[fk]--; }
       if (x.yaxlit) { s.ogoh = 'Summa kasrli edi, so\'mga yaxlitlandi'; jami.yaxlit++; }
+      if (x.ogoh) { s.ogoh = (s.ogoh ? s.ogoh + '; ' : '') + x.ogoh; jami.ogoh++; }
       if (sabab) { s.takror = true; s.sabab = sabab; }
       if (sabab && tanlov.takror !== 'yuklash') { s.holat = 'takror'; s.kod = 'R_TAKROR'; jami.takror++; natija.push(s); return; }
       s.holat = 'yuklanadi';
@@ -395,6 +421,7 @@ var ImportSof = (function () {
 
     xom.forEach(function (x) {
       var s = { n: x.n };
+      if (x.tozalangan) jami.tozalangan++;
       if (x.xato) { s.holat = x.otkaz ? 'otkazildi' : 'xato'; s.sabab = x.xato; s.kod = x.kod; jami[s.holat]++; natija.push(s); return; }
       if (x.qarz) { qarzQatori(x, s); return; }
       var tur = null, usul = null, kk = kalit(x.kategoriya);
@@ -421,7 +448,7 @@ var ImportSof = (function () {
         var kg = katGuruhi(tur, x.kategoriya);
         y.katG = kg.kalit; katNomi = nomi(kg);
       }
-      if (hg.id === null && !hg.yangi) { s.holat = 'xato'; s.sabab = 'Hisob yo\'q (avval hisob qo\'shing)'; s.kod = 'R_HISOB'; jami.xato++; natija.push(s); return; }
+      if (hg.id === null && !hg.yangi) { s.holat = 'xato'; s.sabab = x.hisob ? 'Hisob yo\'q (avval hisob qo\'shing)' : 'Hisob ko\'rsatilmagan ("-" yoki bo\'sh): ko\'rinishda hisobni tanlang'; s.kod = 'R_HISOB'; jami.xato++; natija.push(s); return; }
       if (Calc.kelajakmi(x.sana, x.vaqt, h)) { s.holat = 'xato'; s.sabab = 'Vaqti hozirdan keyin (' + x.sana.split('-').reverse().join('.') + ' ' + x.vaqt + '): kelajakka yozuv bo\'lmaydi'; s.kod = 'R_KELAJAK'; jami.xato++; natija.push(s); return; }
       // takror: avval ID bo'yicha, keyin sana + summa + kategoriya + izoh bo'yicha (mavjud yozuvlar bilan: har biri bir marta hisoblanadi)
       var sabab = null;
@@ -433,13 +460,44 @@ var ImportSof = (function () {
       if (!sabab && kalitlar[fk] > 0) { sabab = 'Sana, summa, kategoriya va izoh bo\'yicha takror'; kalitlar[fk]--; }
       s.yozuv = y; s.id = x.id;
       if (x.yaxlit) { s.ogoh = 'Summa kasrli edi, so\'mga yaxlitlandi'; jami.yaxlit++; }
+      if (x.ogoh) { s.ogoh = (s.ogoh ? s.ogoh + '; ' : '') + x.ogoh; jami.ogoh++; }
       if (sabab) { s.takror = true; s.sabab = sabab; }
       if (sabab && tanlov.takror !== 'yuklash') { s.holat = 'takror'; s.kod = 'R_TAKROR'; jami.takror++; }
       else { s.holat = 'yuklanadi'; jami.yuklanadi++; }
       natija.push(s);
     });
     qarzlarniRejala();
-    return { qatorlar: natija, jami: jami, usullar: usullar, kategoriyalar: katTartib, hisoblar: hisobTartib, turGuruhlari: turTartib, qarzlar: qarzNatija.qarzlar, qarzNomlar: qarzNatija.nomlar, qarzTasiri: qarzNatija.tasir };
+    // ---- Hisoblar: ishlatilishi, ta'sir va ixtiyoriy qoldiqni moslash ----
+    var qoldiqTanlov = tanlov.qoldiq || {}, qoldiqMavjud = mavjud.qoldiqlar || {}, ta = {}, ishla = {}, noyobNomlar = {};
+    function T(k) { return ta[k] || (ta[k] = { oddiy: 0, qarz: 0 }); }
+    natija.forEach(function (q) {
+      if (q.holat !== 'yuklanadi' || !q.yozuv) return;
+      var y = q.yozuv; ishla[y.hisobG] = 1;
+      if (y.tur === 'daromad') T(y.hisobG).oddiy += y.summa; else if (y.tur === 'xarajat') T(y.hisobG).oddiy -= y.summa;
+      else { ishla[y.qabulG] = 1; T(y.hisobG).oddiy -= y.summa; T(y.qabulG).oddiy += y.summa; }
+    });
+    qarzNatija.qarzlar.forEach(function (e) { ishla[e.rec.hisob_id] = 1; e.rec.tolovlar.forEach(function (t) { ishla[t.hisob_id] = 1; }); });
+    Object.keys(qarzNatija.tasir).forEach(function (k) { T(k).qarz += qarzNatija.tasir[k]; });
+    xom.forEach(function (x) { if (x.hisob) noyobNomlar[kalit(x.hisob)] = 1; if (x.qayerga) noyobNomlar[kalit(x.qayerga)] = 1; });
+    var yangiHisob = 0;
+    hisobTartib.forEach(function (g) {
+      g.ishlatiladi = !!ishla[g.kalit];
+      if (!g.ishlatiladi) return;
+      var t = ta[g.kalit] || { oddiy: 0, qarz: 0 }, m = g.id ? qoldiqMavjud[g.id] : null;
+      g.oddiy = t.oddiy; g.qarz = t.qarz; g.delta = t.oddiy + t.qarz;
+      g.joriy = m ? m.joriy : 0; g.keyin = g.joriy + g.delta; g.boshlangich = null; g.boshlangichYangi = null; g.qoldiqOgoh = '';
+      if (!g.id) yangiHisob++;
+      var kir = qoldiqTanlov[g.kalit];
+      g.kiritilgan = (typeof kir === 'number' && isFinite(kir) && Math.floor(kir) === kir) ? kir : null;
+      if (g.kiritilgan === null) return;
+      if (!g.id) { g.boshlangich = g.kiritilgan - g.delta; g.keyin = g.kiritilgan; }   // yangi hisob: boshlang'ich = kiritilgan − importdan kelgan jami o'zgarish
+      else if (tanlov.mavjudQoldiq && m) { g.boshlangichYangi = m.boshlangich + g.kiritilgan - g.keyin; g.keyin = g.kiritilgan; }
+      else g.qoldiqOgoh = 'Mavjud hisobning boshlang\'ich qoldig\'i o\'zgarmaydi (tasdiqlanmagan): "keyin" qiymati kiritilganga teng bo\'lmasligi mumkin';
+      if ((g.boshlangich !== null && Math.abs(g.boshlangich) > 999999999999999) || (g.boshlangichYangi !== null && Math.abs(g.boshlangichYangi) > 999999999999999)) { g.boshlangich = null; g.boshlangichYangi = null; g.keyin = g.joriy + g.delta; g.qoldiqOgoh = 'Qoldiq juda katta: e\'tiborga olinmadi'; }
+    });
+    var noyobSoni = Object.keys(noyobNomlar).length;
+    var hisobOgoh = { yangi: yangiHisob, noyob: noyobSoni, katta: yangiHisob > 15 || yangiHisob > noyobSoni };
+    return { qatorlar: natija, jami: jami, usullar: usullar, kategoriyalar: katTartib, hisoblar: hisobTartib, turGuruhlari: turTartib, qarzlar: qarzNatija.qarzlar, qarzNomlar: qarzNatija.nomlar, qarzTasiri: qarzNatija.tasir, hisobOgoh: hisobOgoh };
   }
 
   // Tasdiqlangan rejadan yozilishi kerak bo'lgan qatorlar. ops: { yangiId(), vaqt (Date.now() qiymati), hisobTuri(nom), hisobRang(tur), hisobBelgi(tur), katRang(nom, tur, tartib), katBelgi(nom, tur) }.
@@ -455,7 +513,7 @@ var ImportSof = (function () {
       if (g.id) hid[g.kalit] = g.id;
       else {
         var id = yangiId(), tur = ops.hisobTuri(g.nom);
-        hisoblar.push({ id: id, yaratilgan: iso(hisoblar.length), nom: g.nom, tur: tur, belgi: ops.hisobBelgi(tur), rang: ops.hisobRang(tur), oxirgi4: '', boshlangich_qoldiq: 0, arxivlangan: false });
+        hisoblar.push({ id: id, yaratilgan: iso(hisoblar.length), nom: g.nom, tur: tur, belgi: ops.hisobBelgi(tur), rang: ops.hisobRang(tur), oxirgi4: '', boshlangich_qoldiq: g.boshlangich !== null && g.boshlangich !== undefined ? g.boshlangich : 0, arxivlangan: false });
         hid[g.kalit] = id;
       }
     });
@@ -476,6 +534,9 @@ var ImportSof = (function () {
       if (y.tur === 'otkazma') z.qabul_hisob_id = hid[y.qabulG];
       yozuvlar.push(z);
     }
+    // Mavjud hisobning boshlang'ich qoldig'i (faqat foydalanuvchi tasdiqlagan bo'lsa): eski qiymat bekor qilish uchun saqlanadi
+    var hisobYangilash = [];
+    r.hisoblar.forEach(function (g) { if (g.ishlatiladi && g.id && g.boshlangichYangi !== null && g.boshlangichYangi !== undefined) hisobYangilash.push({ id: g.id, boshlangich_qoldiq: g.boshlangichYangi }); });
     // Qarzlar: ilovaning o'z qarz shaklida (Calc.qarzniYangilash "yopilgan" belgisini qo'yadi), to'lovlar o'z ID si bilan
     (r.qarzlar || []).forEach(function (e, qi) {
       var rec = e.rec, z = Object.assign({}, rec, { id: yangiId(), yaratilgan: iso(10 + qi), hisob_id: hid[rec.hisob_id],
@@ -483,10 +544,32 @@ var ImportSof = (function () {
       qarzlar.push(Calc.qarzniYangilash(z));
     });
     r.qatorlar.forEach(function (q) { if (q.holat === 'yuklanadi' && q.id && !ESKI_ID.test(q.id)) manba.push(q.id); });
-    return { hisoblar: hisoblar, kategoriyalar: kategoriyalar, yozuvlar: yozuvlar, qarzlar: qarzlar, manbaIdlar: manba };
+    return { hisoblar: hisoblar, kategoriyalar: kategoriyalar, yozuvlar: yozuvlar, qarzlar: qarzlar, hisobYangilash: hisobYangilash, manbaIdlar: manba };
+  }
+
+  // "Soxta" hisoblar: nomi "… <summa> <valyuta>" bilan tugaydigan (eski xato import yaratgan) va boshqa yozuvi yo'q yoki faqat import yozuvlari bor hisoblar.
+  // importIdlar: { yozuv/qarz ID: true } (yuklashlar stekidan). Nishon — tozalangan nomdagi haqiqiy hisob (bo'lsa).
+  function soxtaHisoblar(hisoblar, yozuvlar, qarzlar, importIdlar) {
+    importIdlar = importIdlar || {};
+    var faol = (hisoblar || []).filter(function (h) { return !h.arxivlangan; }), r = [];
+    faol.forEach(function (h) {
+      var t = tozaNom(h.nom);
+      if (!t.tozalandi || !t.nom) return;
+      var yo = 0, qo = 0, faqatImport = true;
+      (yozuvlar || []).forEach(function (y) { if (y.hisob_id === h.id || y.qabul_hisob_id === h.id) { yo++; if (!importIdlar[y.id]) faqatImport = false; } });
+      (qarzlar || []).forEach(function (z) {
+        var bor = z.hisob_id === h.id || (z.tolovlar || []).some(function (x) { return x.hisob_id === h.id; });
+        if (bor) { qo++; if (!importIdlar[z.id]) faqatImport = false; }
+      });
+      var nishon = faol.filter(function (x) { return x.id !== h.id && kalit(x.nom) === kalit(t.nom) && !tozaNom(x.nom).tozalandi; })[0] || null;
+      r.push({ hisob: h, tozaNom: t.nom, summa: t.summa, yozuv: yo, qarz: qo, faqatImport: faqatImport, nishon: nishon });
+    });
+    // faqat yozuvi yo'q yoki faqat import yozuvlari bor hisoblar ko'rsatiladi (boshqa yozuvi borlarga tegilmaydi)
+    return r.filter(function (x) { return x.yozuv + x.qarz === 0 || x.faqatImport; });
   }
 
   return {
+    soxtaHisoblar: soxtaHisoblar, tozaNom: tozaNom, toza: toza,
     MAYDONLAR: MAYDONLAR, MAYDON_NOMLARI: MAYDON_NOMLARI, ustunlarniTaxmin: ustunlarniTaxmin, summaOqi: summaOqi, sanaOqi: sanaOqi, turMatni: turMatni, valyutaKodi: valyutaKodi,
     qatorlarniOqi: qatorlarniOqi, reja: reja, tayyorla: tayyorla, mavjudKalitlar: mavjudKalitlar, qarzKalitlari: qarzKalitlari, qarzTuriOqi: qarzTuriOqi, hujayraMatni: hujayraMatni, ESKI_ID: ESKI_ID, seriyadanSana: seriyadanSana
   };

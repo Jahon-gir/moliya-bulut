@@ -751,3 +751,13 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .import-muammo { color: var(--xira); margin: 4px 0; overflow-wrap: anywhere; }
 .import-bekor-quti { margin-top: 10px; }
 .import-fayl { overflow-wrap: anywhere; }
+
+/* Importdagi xatolarni tuzatish (0.26.0) */
+.sinxron-xato-kod { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 20px; font-weight: 700; padding: 10px 12px; margin: 8px 0; background: var(--karta); border: 1px solid var(--chiziq); border-radius: 10px; overflow-wrap: anywhere; }
+.sinxron-xato-sabab { margin: 0 0 8px; }
+.sinxron-xato-oyna .asosiy-tugma, .sinxron-xato-oyna .ikkinchi-tugma { margin-top: 8px; width: 100%; }
+.import-belgi { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; min-height: 44px; }
+.import-belgi input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
+.soxta-qator { padding: 10px 0; border-top: 1px solid var(--chiziq); }
+.soxta-qator:first-child { border-top: 0; }
+.import-keyin { font-weight: 600; }

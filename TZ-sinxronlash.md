@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -237,7 +237,7 @@ Har bosqich alohida pull request, oldingisi tekshirilgandan keyin keyingisiga o'
 
 **Haqiqiy serverda faqat foydalanuvchi sina oladigan narsalar:** (a) `001`, `002`, `003`, `004`, `005`, `006` ni Supabase SQL Editor'da ishga tushirish va natijalarni ko'rish; (b) pg_cron yoqilishi va `cron.job` da kunlik topshiriq; (c) Google bilan haqiqiy kirish (telefon PWA'sida ham: iPhone/Android), Google Cloud Branding dagi maxfiylik manzili; (d) ikki haqiqiy qurilma orasida sinxron tezligi (5 000 yozuv, oddiy sinxron); (e) `delete from auth.users` ning funksiya ichidan haqiqiy Supabase'da ishlashi (ikkinchi sinov akkaunti bilan); (f) uzoq muddatli (soatlab/kunlab) oflayn va haqiqiy token muddati tugashi.
 
-## 18. Kirish ekrani va fayldan yuklash (0.23.0, 0.24.0 va 0.25.0)
+## 18. Kirish ekrani va fayldan yuklash (0.23.0, 0.24.0, 0.25.0 va 0.26.0)
 
 Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron mantig'iga (navbat, qulf, tortish) TEGILMAYDI. Ikkita alohida PR.
 
@@ -291,3 +291,26 @@ Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron man
 9. Excel eksporti qarz amallarini shu ustunlar bilan chiqaradi: "Tur" = Qarz / Qarz to'lovi (`TransactionType = Loan` ning o'zimizdagi ko'rinishi), "Qarz nomi" (`LoanName`), "Qarz turi" = Berilgan / Olingan (`LoanType`), "Hisob" (`AccountFrom`). Qaytarish muddati ham chiqadi ("Qaytarish muddati" ustuni, eksportning oxirgi ustuni; Excelda haqiqiy sana). Eksport → toza baza → yuklash → eksport qarzlar uchun ham bir xil chiqadi.
 
 **Cheklovlar (ochiq aytiladi).** To'lov (qaytarish) izohi saqlanmaydi: ilovadagi to'lovda izoh maydoni yo'q (server sxemasi o'zgartirilmaydi). Qarz yozuvi modeli bitta asosiy summa va qaytarishlardan iborat, shuning uchun bir nom ostida qaytarishdan keyingi yangi Borrowing/Lending yangi qarz yozuvi bo'ladi. Fayl qisman yangilangan bo'lsa (oldin yuklangan qarzga yangi amallar qo'shilgan), yangi amallar alohida qarz yozuvi bo'ladi (ro'yxatda shaxs bo'yicha guruhlanib ko'rinadi).
+
+### 18.4. Importdagi jiddiy xatolarni tuzatish va yaxshilash (0.26.0)
+
+**Maqsad.** Boshqa ilovadan eksport qilingan Excel ni import qilgach, natija o'sha ilovadagi holat bilan bir xil bo'lishi kerak: bir xil hisoblar, yozuvlar, o'tkazmalar, qarzlar. Hech narsa o'zgartirilmaydi va taxmin qilinmaydi.
+
+**Xato 1 — o'tkazma qatorlaridan soxta hisoblar.** Faylda `TransferedTo` (ba'zan `AccountFrom`, `Category`, `LoanName`) katagida nom summa va valyuta bilan birga yozilishi mumkin ("TBS salom 400 000,00 UZS", "Cash UZS 100 000,00 UZS"). Eski import shu butun matnni hisob nomi deb olib, har summa uchun yangi hisob yaratardi. Talablar:
+ a) Oxiridagi "<summa> <valyuta kodi>" qismi (bo'sh joy yoki uzilmas bo'sh joy, vergul/nuqta kasr) ajratib tashlanadi. Faqat summadan keyin valyuta kodi (UZS, USD…) turgan bo'lsa tashlanadi: "Visa 1234" kabi oxirgi 4 raqam o'zgarmaydi. Ajratilgan summa o'tkazma summasiga mos kelmasa — qatorda ogohlantirish.
+ b) Tozalangan nom mavjud hisobga (katta-kichik harf, bo'shliq, apostrof turlariga befarq) moslashadi, aks holda ko'rinishda "yangi hisob".
+ c) Hisob nomi sifatida "-" yoki bo'sh qiymat hech qachon yangi hisob yaratmaydi: hisobsiz qator yuklanmaydi (`R_HISOB`), foydalanuvchi ko'rinishda hisob tanlasagina yuklanadi (avvalgi "birinchi hisobga" taxmini olib tashlandi).
+ d) Ko'rinishda "yangi hisoblar: N ta". N fayldagi noyob (tozalangan) hisob nomlari sonidan ko'p bo'lsa yoki 15 dan oshsa — KATTA OGOHLANTIRISH va yuklash qo'shimcha tasdiq talab qiladi.
+ e) O'tkazma `AccountFrom` dan chiqadi, `TransferedTo` ga kiradi; ikkalasi haqiqiy hisob bo'lishi shart; umumiy balansni o'zgartirmaydi.
+ f) `Category` va `LoanName` ham shunday tozalanadi. `Comment` (izoh) O'ZGARTIRILMAYDI: izohdagi summa foydalanuvchining matni.
+ Fayldan o'qilgan hamma matndan boshqaruv belgilari (NUL va boshqalar) va yarim surrogatlar olib tashlanadi: serverning matn maydoni ularni rad etadi.
+
+**Xato 2 — sinxron "Xato (N ta o'zgarish kutmoqda)".** Import bitta tranzaksiyada yuzlab qator yaratadi; serverga yuborishda bitta rad etilgan qator butun paketni (va keyingi hamma urinishni) to'xtatib qo'yardi. Tuzatish (navbat, qulf, last-write-wins qoidalari o'zgarmagan): yuborish bo'laklab (≤ 150 qator) davom etadi; bo'lak ma'lumot xatosi (PG 22xxx/23xxx, HTTP 400/409/413/422) bilan rad etilsa, u teng ikkiga bo'linib qayta yuboriladi va xatoli qator(lar) ajratiladi: ular navbatdan chiqarilib "rad etilgan" ro'yxatiga kod, jadval, qator ID si va sabab bilan yoziladi; qolgan qatorlar yuboriladi. Tarmoq, kirish (401/403) va server (5xx) xatolari esa avvalgidek butun tsiklni to'xtatadi va navbat saqlanadi.
+
+**Qo'shimcha 1 — xatoni telefonda ko'rish.** Bosh sahifadagi "Xato (N ta o'zgarish kutmoqda)" belgisi bosilganda oyna: xato KODI, qisqa sabab (o'zbekcha), kutayotgan o'zgarishlar soni, rad etilgan qatorlar (kod, jadval, ID), "Qayta urinish" va "Kodni nusxalash" tugmalari.
+
+**Qo'shimcha 2 — hisob qoldiqlarini moslash (ixtiyoriy).** Excelda boshlang'ich qoldiq yo'q. Ko'rinishda har hisob uchun "Boshqa ilovadagi hozirgi qoldiq" kiritish mumkin. Kiritilsa: boshlang'ich = kiritilgan − (importdan kelgan jami o'zgarish: yozuvlar, o'tkazmalar va qarz amallari). Yangi hisobda shu qiymat boshlang'ich qoldiq bo'ladi; mavjud hisobning boshlang'ich qoldig'i faqat alohida tasdiq bilan (belgi) o'zgaradi, sukut bo'yicha o'zgarmaydi. "Hozir → keyin" kiritilgan qiymatga aynan teng chiqadi. Bo'sh qoldirilsa hech narsa o'zgarmaydi (hisob 0 dan hisoblanadi). Majburiy emas.
+
+**Tozalash.**
+ - "Oxirgi yuklashni bekor qilish" import yaratgan YANGI hisob va kategoriyalarni ham (boshqa yozuv bog'lanmagan bo'lsa) olib tashlaydi; o'zgartirilgan boshlang'ich qoldiqlar avvalgi holatga qaytadi. Yuklashlar steki saqlanadi: har yuklash o'zining bekor qilish yozuvi bilan, oxirgisidan boshlab ketma-ket qaytariladi (avval faqat oxirgi yuklashning hisoblari qaytardi, oldingi yuklashlardagilar qolib ketardi).
+ - Hisoblar → "Soxta/bo'sh hisoblarni tozalash": nomi "… <summa> <valyuta>" bilan tugaydigan va yozuvi yo'q yoki faqat import yozuvlari bor hisoblar ro'yxati. Har biri uchun tasdiq bilan: yozuvi yo'q — o'chirish; yozuvi bor va tozalangan nomdagi haqiqiy hisob bor — yozuvlarni (o'tkazma qabul tomoni va qarz hisobi ham) shu hisobga ko'chirish va soxta hisobni o'chirish. Hech narsa avtomatik o'chirilmaydi; boshqa yozuvi bor hisobga tasdiqsiz tegilmaydi. Bu ko'chirish yuklashni bekor qilishning o'rniga toza qayta import qilishga muqobil; yo'l: avval "Oxirgi yuklashni bekor qilish" (takroran), keyin yangi versiya bilan qayta yuklash.

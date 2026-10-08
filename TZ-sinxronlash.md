@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -237,7 +237,7 @@ Har bosqich alohida pull request, oldingisi tekshirilgandan keyin keyingisiga o'
 
 **Haqiqiy serverda faqat foydalanuvchi sina oladigan narsalar:** (a) `001`, `002`, `003`, `004`, `005`, `006` ni Supabase SQL Editor'da ishga tushirish va natijalarni ko'rish; (b) pg_cron yoqilishi va `cron.job` da kunlik topshiriq; (c) Google bilan haqiqiy kirish (telefon PWA'sida ham: iPhone/Android), Google Cloud Branding dagi maxfiylik manzili; (d) ikki haqiqiy qurilma orasida sinxron tezligi (5 000 yozuv, oddiy sinxron); (e) `delete from auth.users` ning funksiya ichidan haqiqiy Supabase'da ishlashi (ikkinchi sinov akkaunti bilan); (f) uzoq muddatli (soatlab/kunlab) oflayn va haqiqiy token muddati tugashi.
 
-## 18. Kirish ekrani va fayldan yuklash (0.23.0, 0.24.0, 0.25.0 va 0.26.0)
+## 18. Kirish ekrani va fayldan yuklash (0.23.0 – 0.27.0)
 
 Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron mantig'iga (navbat, qulf, tortish) TEGILMAYDI. Ikkita alohida PR.
 
@@ -314,3 +314,18 @@ Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron man
 **Tozalash.**
  - "Oxirgi yuklashni bekor qilish" import yaratgan YANGI hisob va kategoriyalarni ham (boshqa yozuv bog'lanmagan bo'lsa) olib tashlaydi; o'zgartirilgan boshlang'ich qoldiqlar avvalgi holatga qaytadi. Yuklashlar steki saqlanadi: har yuklash o'zining bekor qilish yozuvi bilan, oxirgisidan boshlab ketma-ket qaytariladi (avval faqat oxirgi yuklashning hisoblari qaytardi, oldingi yuklashlardagilar qolib ketardi).
  - Hisoblar → "Soxta/bo'sh hisoblarni tozalash": nomi "… <summa> <valyuta>" bilan tugaydigan va yozuvi yo'q yoki faqat import yozuvlari bor hisoblar ro'yxati. Har biri uchun tasdiq bilan: yozuvi yo'q — o'chirish; yozuvi bor va tozalangan nomdagi haqiqiy hisob bor — yozuvlarni (o'tkazma qabul tomoni va qarz hisobi ham) shu hisobga ko'chirish va soxta hisobni o'chirish. Hech narsa avtomatik o'chirilmaydi; boshqa yozuvi bor hisobga tasdiqsiz tegilmaydi. Bu ko'chirish yuklashni bekor qilishning o'rniga toza qayta import qilishga muqobil; yo'l: avval "Oxirgi yuklashni bekor qilish" (takroran), keyin yangi versiya bilan qayta yuklash.
+
+### 18.5. Daromad/xarajat aniqlash va sinxron bog'liqlik (PG_23503) xatolari (0.27.0)
+
+**Xato A — barcha qator xarajat bo'lib qoldi (shrift rangi o'qilmadi).** Sabab (to'qima faylda takrorlandi): faylda shrift rangi `Amount` katagida, ilova esa faqat tanlangan summa ustunining (`EnteredAmount`) rangini o'qirdi; u rangsiz bo'lgani uchun hamma qator "kategoriya bo'yicha tanlov" (standart: xarajat) ga tushdi. Talablar:
+ 1. Rang avval tanlangan summa katagidan, rangsiz bo'lsa shu qatordagi boshqa summa ustunlaridan (`EnteredAmount`, `Amount`, `AccountChargedAmount`, "Summa") o'qiladi. Qizil (FFFF0000) — xarajat, yashil (FF008000) — daromad.
+ 2. Excel XML qismlari (workbook, rels, sharedStrings, styles, sheet) nom fazosi old qo'shimchasiga ("x:", "ss:", "main:" yoki yo'q) va BOM ga befarq o'qiladi (localName bo'yicha; rels ham, varaq yo'li ham, `r:id` ham).
+ 3. Himoya: 100 va undan ko'p oddiy qator bo'lib, na rang, na manfiy summa bilan hech biri aniqlanmasa (va foydalanuvchi kategoriya bo'yicha o'zi belgilamagan bo'lsa), ko'rinishda KATTA OGOHLANTIRISH: "Rang o'qilmadi, hamma qator xarajat deb olinmoqda. Kategoriya bo'yicha tekshiring." va "Yuklash" qo'shimcha tasdiq so'raydi.
+ 4. Ko'rinishda har doim: "xarajat: N ta, daromad: M ta, o'tkazma: K ta, qarz: L ta" va aniqlash usuli (rang / manfiy summa / "Tur" ustuni / kategoriya tanlovi).
+
+**Xato B — sinxron "Server bog'liqlikni tasdiqlamadi" (PG_23503).** Yozuvning `hisob_id` yoki `kategoriya_id` (yoki `qabul_hisob_id`, qarz va uning to'lovi uchun `qarz_id`/`hisob_id`) serverda yo'q. Talablar:
+ 1. Yuborish tartibi har doim ota jadvallar oldin: hisoblar → kategoriyalar → yozuvlar → byudjetlar → qarzlar → qarz to'lovlari → sozlamalar; har jadval o'z bo'laklarida (≤ 150), rad etilgan bo'lak ikkiga bo'linganda ham tartib saqlanadi (bo'laklar bir jadval ichida).
+ 2. Bo'lak bog'liqlik xatosi bilan rad etilsa, u bo'linmaydi: qatorlarning ota qatorlari tekshiriladi; serverda YO'Q ota qator mahalliyda bor bo'lsa, avval o'sha yuboriladi (serverda bor qator ustiga yozilmaydi: boshqa qurilma o'zgartirgan nusxa yo'qolmasin), keyin farzandlar qayta yuboriladi.
+ 3. Ota qator mahalliyda ham yo'q bo'lsa, qator "rad etilgan" ro'yxatiga kod (PG_23503), jadval, ID, tavsif va qaysi ota qator yo'qligi bilan yoziladi va navbatdan chiqariladi, LEKIN doimiy xato bo'lmaydi: keyingi tsikllarda (5 marta) avtomatik qayta navbatga qo'yiladi; "Qayta urinish" cheklovsiz qayta yuboradi.
+ 4. Xato oynasi: har rad etilgan qator uchun yo'q ota qator ("Kategoriya: Ovqatlanish (id aaaaaaaa…) serverda topilmadi"), jami soni va 10 tadan ko'p bo'lsa "va yana N ta".
+ 5. Tozalash va bekor qilish ota qatorni faqat unga bog'langan tirik yozuv bo'lmaganda mantiqiy o'chiradi (yetim yozuv hosil bo'lmaydi); o'chirilgan ota qator serverda ham qator sifatida qoladi (`deleted = true`), shuning uchun bog'liqlik buzilmaydi.

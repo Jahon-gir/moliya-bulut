@@ -356,6 +356,31 @@
     });
   }
 
+  // Qatorlarni qayta navbatga qo'yadi (masalan, serverga bog'liqlik xatosi bilan o'tmagan qator ota qator yuborilgach qayta yuborilsin).
+  // royxat: [{ jadval, kalit }] (qarz to'lovi uchun jadval 'qarzlar', kalit — qarz id). Qiymat — qatorning hozirgi updated_at i. Natija: nechtasi qo'shildi.
+  function navbatgaQoshish(royxat) {
+    return new Promise(function (resolve, reject) {
+      var nomlar = {}; royxat.forEach(function (r) { if (TOPLAMLAR[r.jadval]) nomlar[r.jadval] = 1; });
+      var tx = db.transaction(Object.keys(nomlar).concat(['sozlamalar']), 'readwrite'), s = tx.objectStore('sozlamalar'), qoshildi = 0;
+      tx.oncomplete = function () { resolve(qoshildi); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error); };
+      s.get(NAVBAT_KALITI).onsuccess = function (e) {
+        var n = e.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} }; n.qatorlar = n.qatorlar || {};
+        var kut = royxat.length;
+        if (!kut) return;
+        royxat.forEach(function (r) {
+          if (!TOPLAMLAR[r.jadval]) { if (--kut === 0) s.put(n); return; }
+          tx.objectStore(r.jadval).get(r.kalit).onsuccess = function (e2) {
+            var x = e2.target.result;
+            if (x) { (n.qatorlar[r.jadval] = n.qatorlar[r.jadval] || {})[r.kalit] = x.updated_at || new Date().toISOString(); qoshildi++; }
+            if (--kut === 0) s.put(n);
+          };
+        });
+      };
+    });
+  }
+
   // Yuborib bo'lmaydigan (buzuq) qatorni navbatdan oladi (qiymat bo'yicha); qolganlar yuboriladi
   function navbatdanTashlash(jadval, kalit, qiymat) { var y = {}; y[jadval] = {}; y[jadval][kalit] = qiymat; return navbatdanOlish(y); }
 
@@ -629,7 +654,7 @@
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
-    ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
+    ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, navbatgaQoshish: navbatgaQoshish, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
     tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
     hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI,
     importYozish: importYozish, importBekor: importBekor, hisobTozalash: hisobTozalash, IMPORT_KALITI: IMPORT_KALITI

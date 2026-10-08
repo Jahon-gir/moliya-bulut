@@ -22,6 +22,7 @@ var ImportSof = (function () {
     muddat: ['qaytarishmuddati', 'muddat', 'duedate', 'repaymentdate']
   };
 
+  var RANG_USTUNLARI = ['enteredamount', 'amount', 'accountchargedamount', 'summa', 'miqdor', 'sumasi'];
   function sarlavhaKaliti(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9Ѐ-ӿ]/g, ''); }
   // Fayldan o'qilgan matndan boshqaruv belgilari (NUL va boshqalar; "\n" va "\t" qoladi) va yarim surrogatlar olib tashlanadi: server matn maydoni ularni rad etadi
   function toza(m) {
@@ -62,6 +63,10 @@ var ImportSof = (function () {
         }
       }
     });
+    // Summa shrifti rangi boshqa "summa"-ustunda bo'lishi mumkin (masalan, EnteredAmount rangsiz, Amount rangli): hamma summa ustunlari eslab qolinadi
+    var rangUstunlari = [];
+    for (j = 0; j < n; j++) if (RANG_USTUNLARI.indexOf(sarlavhaKaliti(nomlar[j])) !== -1) rangUstunlari.push(j);
+    xarita.rangUstunlari = rangUstunlari;
     var t = 0; MAYDONLAR.forEach(function (m) { if (xarita[m] >= 0) t++; });
     return { sarlavhaQator: eng, nomlar: nomlar, xarita: xarita, taniladi: t };
   }
@@ -219,7 +224,9 @@ var ImportSof = (function () {
       if (su.xato) { x.xato = su.xato; x.kod = su.kod; r.push(x); continue; }
       x.sana = sa.sana; x.vaqt = sa.vaqt;
       x.summa = su.son; x.belgi = su.belgi; x.yaxlit = su.yaxlit;
+      // shrift rangi: avval tanlangan summa katagi, rangsiz bo'lsa — shu qatordagi boshqa summa ustunlari (Amount, AccountChargedAmount...)
       x.rang = xarita.summa >= 0 && q[xarita.summa] ? q[xarita.summa].rang || null : null;
+      if (!x.rang) (xarita.rangUstunlari || []).some(function (u) { if (q[u] && q[u].rang) { x.rang = q[u].rang; return true; } return false; });
       var val = vk || su.valyuta;
       if (vk && su.valyuta && vk !== su.valyuta) val = vk === 'UZS' ? su.valyuta : vk;
       if (val && val !== 'UZS') { x.xato = 'Valyuta ' + val + ': faqat so\'m (UZS) yuklanadi'; x.kod = 'R_VALYUTA'; x.otkaz = true; r.push(x); continue; }
@@ -495,9 +502,14 @@ var ImportSof = (function () {
       else g.qoldiqOgoh = 'Mavjud hisobning boshlang\'ich qoldig\'i o\'zgarmaydi (tasdiqlanmagan): "keyin" qiymati kiritilganga teng bo\'lmasligi mumkin';
       if ((g.boshlangich !== null && Math.abs(g.boshlangich) > 999999999999999) || (g.boshlangichYangi !== null && Math.abs(g.boshlangichYangi) > 999999999999999)) { g.boshlangich = null; g.boshlangichYangi = null; g.keyin = g.joriy + g.delta; g.qoldiqOgoh = 'Qoldiq juda katta: e\'tiborga olinmadi'; }
     });
+    var turSoni = { xarajat: 0, daromad: 0, otkazma: 0, qarz: qarzNatija.qarzlar.length, qarzAmal: jami.qarzAmal };
+    natija.forEach(function (q) { if (q.holat === 'yuklanadi' && q.yozuv) turSoni[q.yozuv.tur]++; });
+    // Himoya: 100+ oddiy qator bo'lib, na rang, na manfiy belgi bilan hech biri aniqlanmasa — rang o'qilmagan bo'lishi mumkin (hamma qator xarajat bo'lib ketadi)
+    var rangOgoh = { qatorlar: usullar.tanlov + usullar.rang + usullar.belgi, rang: usullar.rang, belgi: usullar.belgi };
+    rangOgoh.katta = usullar.tanlov >= 100 && usullar.rang === 0 && usullar.belgi === 0 && !Object.keys(turTanlovi).length;   // foydalanuvchi kategoriya bo'yicha o'zi belgilagan bo'lsa — ogohlantirish kerak emas
     var noyobSoni = Object.keys(noyobNomlar).length;
     var hisobOgoh = { yangi: yangiHisob, noyob: noyobSoni, katta: yangiHisob > 15 || yangiHisob > noyobSoni };
-    return { qatorlar: natija, jami: jami, usullar: usullar, kategoriyalar: katTartib, hisoblar: hisobTartib, turGuruhlari: turTartib, qarzlar: qarzNatija.qarzlar, qarzNomlar: qarzNatija.nomlar, qarzTasiri: qarzNatija.tasir, hisobOgoh: hisobOgoh };
+    return { qatorlar: natija, jami: jami, usullar: usullar, kategoriyalar: katTartib, hisoblar: hisobTartib, turGuruhlari: turTartib, turSoni: turSoni, rangOgoh: rangOgoh, qarzlar: qarzNatija.qarzlar, qarzNomlar: qarzNatija.nomlar, qarzTasiri: qarzNatija.tasir, hisobOgoh: hisobOgoh };
   }
 
   // Tasdiqlangan rejadan yozilishi kerak bo'lgan qatorlar. ops: { yangiId(), vaqt (Date.now() qiymati), hisobTuri(nom), hisobRang(tur), hisobBelgi(tur), katRang(nom, tur, tartib), katBelgi(nom, tur) }.

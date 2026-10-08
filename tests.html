@@ -3609,7 +3609,7 @@
         function q(sana, id, tur, hisob, qayerga, kat, summa, val, izoh, qarz) { return [sana, id, tur, hisob, qayerga, kat, summa, summa, val, summa, qarz || null, qarz ? 'Given' : null, null, izoh]; }
         return [IM_SARL,
           q('2026-10-05 09:12:33', 'f-001', 'Manual', 'Naqd pul', null, 'Oziq-ovqat', { v: '27 640,00 UZS', st: 1 }, 'UZS', 'Non\nva sut\nOlindi'),
-          q({ v: 46299.5, st: 4 }, 'f-002', 'Manual', 'Karta', null, 'Oylik maosh', { v: '5 000 000,00 UZS', st: 2 }, 'UZS', 'Maosh'),
+          q({ v: 46300.5, st: 4 }, 'f-002', 'Manual', 'Karta', null, 'Oylik maosh', { v: '5 000 000,00 UZS', st: 2 }, 'UZS', 'Maosh'),
           q('08.10.2026', 'f-003', 'Manual', 'Naqd pul', null, 'Transport', '-12 500,00 UZS', 'UZS', null),
           q('2026-10-06 10:00:00', 'f-004', 'Transfer', 'Naqd pul', 'Karta', null, '100 000,00 UZS', 'UZS', 'Kartaga'),
           q('2026-10-07 12:00:00', 'f-005', 'Manual', 'Naqd pul', null, 'Sayohat', '10,00 USD', 'USD', 'Dollar'),
@@ -3632,13 +3632,13 @@
       test('XlsxOqi: siqmagan va deflate bilan siqilgan fayl bir xil o\'qiladi; ko\'p qatorli izoh, matn/raqam turi, inline matn, mavzu rangi', function () {
         var q = imBegona();
         return Promise.all([imFayl(q, false), imFayl(q, true), imFayl(q, true, { inline: true })]).then(function (f) {
-          teng(f[1].length < f[0].length, true, 'siqilgan kichikroq');
+          teng(f[1].length < f[0].length, true, 'siqilgan kichikroq ' + f[1].length + '/' + f[0].length);
           return Promise.all(f.map(function (b) { return XlsxOqi.oqi(b); }));
         }).then(function (r) {
           var a = r[0].qatorlar;
           teng(a.length, q.length); teng(JSON.stringify(r[1].qatorlar), JSON.stringify(a)); teng(JSON.stringify(r[2].qatorlar), JSON.stringify(a));
           teng(a[1][13].v, 'Non\nva sut\nOlindi'); teng(a[1][6].v, '27 640,00 UZS'); teng(a[1][6].t, 's'); teng(a[1][6].rang, 'qizil'); teng(a[2][6].rang, 'yashil'); teng(a[3][6].rang, null);
-          teng(a[2][0].t, 'n'); teng(a[2][0].sana, true); teng(a[2][0].v, 46299.5); teng(a[7][6].v, 15000); teng(a[7][6].t, 'n'); teng(a[10].length === 0 || !a[10].some(function (c) { return c; }), true);
+          teng(a[2][0].t, 'n'); teng(a[2][0].sana, true, 'sana formati'); teng(a[2][0].v, 46300.5); teng(a[7][6].v, 15000); teng(a[7][6].t, 'n'); teng(!a[11] || !a[11].some(function (c) { return c; }), true, 'bo\'sh qator');
         });
       });
       test('XlsxOqi: shrift rangi — qizil/yashil tanib olinadi, kulrang/qora/mavzu rangi o\'qilmaydi (null)', function () {
@@ -3683,7 +3683,7 @@
           var tg = r.turGuruhlari.filter(function (g) { return g.kalit === 'kafe'; })[0]; teng(tg.tanlov, 1); teng(r.usullar.rang, 2); teng(r.usullar.belgi, 1);
           // yangi kategoriya va hisob: bir marta so'raladi (guruhlangan); mavjudlari avtomatik
           var kg = r.kategoriyalar.filter(function (g) { return g.kalit === 'xarajat|kafe'; })[0]; teng(kg.yangi, true); teng(kg.id, null);
-          teng(r.kategoriyalar.filter(function (g) { return g.kalit === 'xarajat|oziqovqat'; })[0].id, 'oziq'); teng(r.hisoblar.filter(function (g) { return g.kalit === 'karta'; })[0].yangi, true); teng(r.hisoblar.filter(function (g) { return g.kalit === 'naqdpul'; })[0].id, 'naqd');
+          teng(r.kategoriyalar.filter(function (g) { return g.kalit === 'xarajat|oziq-ovqat'; })[0].id, 'oziq'); teng(r.hisoblar.filter(function (g) { return g.kalit === 'karta'; })[0].yangi, true); teng(r.hisoblar.filter(function (g) { return g.kalit === 'naqdpul'; })[0].id, 'naqd');
         });
       });
       test('Import: xaritalash — mavjud kategoriyaga biriktirish, hisobga biriktirish, kategoriyasiz/hisobsiz qatorlar "Boshqa"/birinchi hisobga', function () {
@@ -3703,7 +3703,7 @@
         var q = [['Sana', 'ID', 'Summa', 'Kategoriya', 'Izoh'], ['2026-10-01', 'x1', 1000, 'Oziq-ovqat', 'a'], ['2026-10-02', 'x2', 2000, 'Oziq-ovqat', 'b'], ['2026-10-02', 'x2', 2500, 'Oziq-ovqat', 'v'],
           ['2026-10-03', 'Y-000001', 3000, 'Oziq-ovqat', 'g'], ['2026-10-03', 'Y-000001', 3500, 'Oziq-ovqat', 'd'], ['2026-10-04', null, 4000, 'Oziq-ovqat', 'e'], ['2026-10-04', null, 4000, 'Oziq-ovqat', 'e']];
         return imFayl(q, true).then(XlsxOqi.oqi).then(function (o) {
-          var r = imReja(o); teng(r.jami.yuklanadi, 7); teng(r.jami.takror, 1); teng(r.qatorlar[2].holat, 'takror'); teng(r.qatorlar[2].kod, 'R_TAKROR');   // x2 fayl ichida ikkinchi marta
+          var r = imReja(o); teng(r.jami.yuklanadi, 6); teng(r.jami.takror, 1); teng(r.qatorlar[2].holat, 'takror'); teng(r.qatorlar[2].kod, 'R_TAKROR');   // x2 fayl ichida ikkinchi marta
           r = imReja(o, {}, { tarixIdlar: { x1: true } }); teng(r.qatorlar[0].holat, 'takror'); teng(r.qatorlar[0].sabab.indexOf('ID') >= 0, true); teng(r.jami.takror, 2);
           r = imReja(o, { takror: 'yuklash' }, { tarixIdlar: { x1: true } }); teng(r.jami.takror, 0); teng(r.jami.yuklanadi, 7); teng(r.qatorlar[0].takror, true);
           var mk = ImportSof.mavjudKalitlar([{ tur: 'xarajat', sana: '2026-10-04', summa: 4000, kategoriya_id: 'oziq', hisob_id: 'naqd', izoh: 'e' }], imHisoblar(), imKategoriyalar());

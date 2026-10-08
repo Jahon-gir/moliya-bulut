@@ -282,7 +282,18 @@ var Sinxron = (function () {
             });
           }, Promise.resolve()).then(function () {
             // ota qatorlar yuborildi: farzandlar qayta yuboriladi (bo'lak-bo'lak; rad etilsa teng ikkiga bo'linadi, yagona qator — ro'yxatga)
-            var guruh = {}; fkRad.forEach(function (it) { (guruh[it.j] = guruh[it.j] || []).push(it.x); });
+            // ota qatori serverda hamon YO'Q (mahalliyda ham yo'q yoki rad etilgan) qatorlar bevosita ro'yxatga yoziladi: ular uchun so'rov yuborib bo'lmaydi
+            var guruh = {}, yoqOta = [];
+            fkRad.forEach(function (it) {
+              var yoq = FK_OTA[it.j].some(function (f) { var id = it.x.qator[f[0]]; return id && !otaServerda[f[1] + '|' + id]; });
+              if (yoq) yoqOta.push(it); else (guruh[it.j] = guruh[it.j] || []).push(it.x);
+            });
+            yoqOta.forEach(function (it) {
+              var key = it.j + '|' + it.x.qator.id;
+              natija.rad.push({ jadval: it.j, id: it.x.qator.id, sabab: 'Server bog\'liqlikni tasdiqlamadi (bog\'langan qator topilmadi).', kod: 'PG_23503', tavsif: tavsif(it.j, it.x.qator), ota: otaMalumoti(it.j, it.x), fk: true, kalit: it.x.kalit, urinish: (fkOldin[key] || 0) + 1 });
+              radNavbat.push({ store: it.j === 'qarz_tolovlari' ? 'qarzlar' : it.j, kalit: it.x.kalit, qiymat: it.x.qiymat });
+              bajarildi += 1; if (progress) progress(bajarildi, jamiSoni, it.j);
+            });
             var budjet = 80;
             function otaMalumoti(j, x) {
               var ota = [];

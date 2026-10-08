@@ -4230,7 +4230,7 @@ function xfix(opts) {
         test('Rang va nom fazosi: "' + (v[0] || 'old qo\'shimchasiz') + ':" fayl' + (v[1] ? ', BOM bilan' : ', BOM siz') + ' — rang "Amount" ustunida (EnteredAmount rangsiz); daromad 8 ta (yashil), xarajat 310 ta (qizil), 15 Loan; jami qoldiq qo\'lda hisoblangan qiymatga teng', function () {
           var f = xfixBayt({ prefix: v[0], bom: v[1] }), oldin;
           return XlsxOqi.oqi(f.bayt).then(function (o) {
-            teng(o.qatorlar.length, 334); teng(o.qatorlar[1][7].rang, 'qizil', 'H2 rangi'); teng(o.qatorlar[1][6].rang, null, 'G2 (EnteredAmount) rangsiz'); teng(o.qatorlar[1][7].t, 's', 'summa — matn');
+            teng(o.qatorlar.length, 334); teng(o.qatorlar[1][7].rang, 'yashil', 'H2 rangi (1-qator daromad)'); teng(o.qatorlar[9][7].rang, 'qizil', 'H10 rangi (xarajat)'); teng(o.qatorlar[1][6].rang, null, 'G2 (EnteredAmount) rangsiz'); teng(o.qatorlar[1][7].t, 's', 'summa — matn');
             var r = xfixReja(o); teng(r.turSoni.daromad, 8); teng(r.turSoni.xarajat, 310); teng(r.turSoni.otkazma, 0); teng(r.jami.qarzAmal, 15); teng(r.usullar.rang, 318); teng(r.usullar.tanlov, 0); teng(r.rangOgoh.katta, false);
             teng(r.qatorlar.filter(function (x) { return x.yozuv && x.yozuv.tur === 'daromad'; }).every(function (x) { return x.usul === 'rang'; }), true);
             return imBaza().then(function () { return jonli(); }).then(function (m) { oldin = Calc.umumiyBalans(m.hisoblar, m.yozuvlar, m.qarzlar); return imYukla(f.bayt, {}); });
@@ -4261,9 +4261,10 @@ function xfix(opts) {
       // ---- FK (PG_23503): ota qator tartibi, o'z-o'zini tuzatish, avtomatik qayta yuborish ----
       sxSinov('18.5: ota qatorlar (hisob, kategoriya, qarz) farzandlardan OLDIN yuboriladi; import ~730 qator: tartib hisoblar → kategoriyalar → yozuvlar → qarzlar → to\'lovlar, bo\'laklarda ham', function (S) {
         var f = im333();
-        return Sinxron.birinchi('yuklash').then(function () { return i4Fayl(f); }).then(function (b) { return imYukla(b, {}); }).then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) {
+        var bosh0 = 0;
+        return Sinxron.birinchi('yuklash').then(function () { bosh0 = S.sorovlar.length; return i4Fayl(f); }).then(function (b) { return imYukla(b, {}); }).then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) {
           teng(n.ok, true, n.xato); teng(n.rad.length, 0);
-          var post = S.sorovlar.filter(function (x) { return x.m === 'POST' && x.soni > 0; }).map(function (x) { return x.j; }), say = {};
+          var post = S.sorovlar.slice(bosh0).filter(function (x) { return x.m === 'POST' && x.soni > 0; }).map(function (x) { return x.j; }), say = {};
           var tartib = ['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'qarz_tolovlari'], oxirgi = -1;
           post.forEach(function (j) { var i = tartib.indexOf(j); if (i < 0) return; teng(i >= oxirgi, true, 'tartib buzildi: ' + j + ' dan oldin ' + tartib[oxirgi]); oxirgi = Math.max(oxirgi, i); });
           teng(S.soni('hisoblar') >= 7, true); teng(S.soni('yozuvlar'), 318); teng(Sinxron.holat().soni, 0);

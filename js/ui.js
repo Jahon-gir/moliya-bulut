@@ -1812,7 +1812,7 @@
     hisobot.id = 'import-hisobot';
     kk.appendChild(hisobot);
     kk.appendChild(el('p', 'Hozircha hech narsa yozilmadi. "Yuklash" tugmasini bosmaguningizcha ma\'lumotingiz o\'zgarmaydi.', 'xira'));
-    var birinchilar = r.qatorlar.filter(function (q) { return q.holat === 'yuklanadi'; }).slice(0, 10);
+    var birinchilar = r.qatorlar.filter(function (q) { return q.holat === 'yuklanadi' && q.yozuv; }).slice(0, 10);
     if (birinchilar.length) kk.appendChild(el('p', 'Birinchi ' + birinchilar.length + ' ta yozuv:', 'yozuv-nom'));
     birinchilar.forEach(function (q) { kk.appendChild(el('div', importQatorMatni(q), 'yozuv-izoh import-qator')); });
     var muammo = r.qatorlar.filter(function (q) { return q.holat !== 'yuklanadi' || q.ogoh; });

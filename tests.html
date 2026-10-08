@@ -1558,7 +1558,7 @@
         var o = R['Y-000005']; teng([o.sana, o.vaqt, o.tur, o.hisob, o.qayerga, o.kategoriya, o.summa, o.qarzNomi, o.qarzTuri, o.izoh].join('|'), '2026-10-03|10:00|O\'tkazma|Naqd pul|Karta||1000000|||Kartaga');
         var x = R['Y-000002']; teng([x.tur, x.hisob, x.qayerga, x.kategoriya, x.summa, x.qarzNomi, x.qarzTuri].join('|'), 'Xarajat|Naqd pul||Oziq-ovqat|300000||');
         teng(R['Y-000001'].tur, 'Daromad');
-        var q = R['Q-000001']; teng([q.sana, q.vaqt, q.tur, q.hisob, q.qayerga, q.kategoriya, q.summa, q.qarzNomi, q.qarzTuri, q.izoh].join('|'), '2026-10-04|12:00|Qarz|Naqd pul|||200000|Ali|Berilgan|bozor|01.12.2026');
+        var q = R['Q-000001']; teng([q.sana, q.vaqt, q.tur, q.hisob, q.qayerga, q.kategoriya, q.summa, q.qarzNomi, q.qarzTuri, q.izoh].join('|'), '2026-10-04|12:00|Qarz|Naqd pul|||200000|Ali|Berilgan|bozor');
         var q2 = R['Q-000002']; teng([q2.tur, q2.qarzNomi, q2.qarzTuri, q2.summa].join('|'), 'Qarz|G\'ayrat O\'ktam|Olingan|1000');
         var t = R['T-000001']; teng([t.sana, t.vaqt, t.tur, t.hisob, t.kategoriya, t.summa, t.qarzNomi, t.qarzTuri, t.izoh].join('|'), '2026-10-05|10:00|Qarz to\'lovi|Karta||50000|Ali|Berilgan|');
         teng(R['T-000002'].qarzTuri, 'Olingan');
@@ -1588,7 +1588,7 @@
         teng(q[1].join('|'), '05.10.2026 11:00|T-000002|Qarz to\'lovi|Karta|||1000|UZS|G\'ayrat O\'ktam|Olingan||');
         teng(q.every(function (x, i) { return i === 0 || (/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/.test(x[0]) && /^\d+$/.test(x[6]) && x[7] === 'UZS'); }), true);
         teng(q.filter(function (x) { return x[2] === 'O\'tkazma'; })[0].join('|'), '03.10.2026 10:00|Y-000005|O\'tkazma|Naqd pul|Karta||1000000|UZS|||Kartaga|');
-        teng(q.filter(function (x) { return x[1] === 'Q-000001'; })[0].join('|'), '04.10.2026 12:00|Q-000001|Qarz|Naqd pul|||200000|UZS|Ali|Berilgan|bozor');
+        teng(q.filter(function (x) { return x[1] === 'Q-000001'; })[0].join('|'), '04.10.2026 12:00|Q-000001|Qarz|Naqd pul|||200000|UZS|Ali|Berilgan|bozor|01.12.2026');
         teng(t.slice(-2), '\r\n'); teng(/5000000/.test(t) && !/5 000 000/.test(t), true);
       });
       test('CSV: formula himoyasi (oldiga bitta \'), tirnoq/vergul/nuqtali vergul/qator oxiri o\'raladi, o\'zbekcha harflar buzilmaydi', function () {

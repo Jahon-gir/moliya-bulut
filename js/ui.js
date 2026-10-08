@@ -1899,6 +1899,11 @@
 
     if (r.jami.qarz || r.qarzNomlar.length) bloklar.push(importQarzKartasi(joriy, r));
 
+    if (r.rangOgoh.katta) {
+      var ro = el('div', 'DIQQAT: Rang o\'qilmadi, hamma qator xarajat deb olinmoqda (' + r.rangOgoh.qatorlar + ' ta qator). Kategoriya bo\'yicha tekshiring: "Daromad yoki xarajat" bo\'limida daromad kategoriyalarini "Daromad" deb belgilang. Yuklash qo\'shimcha tasdiq so\'raydi.', 'xato-karta'); ro.id = 'import-rang-ogoh'; ro.setAttribute('role', 'alert');
+      bloklar.push(ro);
+    }
+
     // Takrorlar
     var tkk = karta(); tkk.id = 'import-takror-karta';
     tkk.appendChild(el('h2', 'Takroriy qatorlar'));
@@ -1913,6 +1918,9 @@
     var hisobot = el('p', 'Faylda ' + j.jami + ' ta qator: ' + j.yuklanadi + ' ta yozuv' + (j.qarzAmal ? ' va ' + j.qarzAmal + ' ta qarz amali (' + j.qarz + ' ta qarz)' : '') + ' yuklanadi, ' + j.takror + ' ta takror, ' + j.otkazildi + ' ta o\'tkazib yuboriladi, ' + j.xato + ' ta xato.' + (j.yaxlit ? ' (' + j.yaxlit + ' ta summa kasrli edi, yaxlitlandi.)' : '') + (j.tozalangan ? ' ' + j.tozalangan + ' ta qatorda nom ichidagi "summa valyuta" qismi ajratib tashlandi.' : '') + (j.ogoh ? ' ' + j.ogoh + ' ta qatorda ogohlantirish bor.' : ''), 'yozuv-nom');
     hisobot.id = 'import-hisobot';
     kk.appendChild(hisobot);
+    var ts = r.turSoni, us = r.usullar;
+    var tj = el('p', 'xarajat: ' + ts.xarajat + ' ta, daromad: ' + ts.daromad + ' ta, o\'tkazma: ' + ts.otkazma + ' ta, qarz: ' + ts.qarz + ' ta (' + ts.qarzAmal + ' amal)', 'yozuv-nom'); tj.id = 'import-tur-jami'; kk.appendChild(tj);
+    var tu = el('p', 'Aniqlash usuli: summa shrifti rangi ' + us.rang + ' ta, manfiy summa ' + us.belgi + ' ta, "Tur" ustuni/o\'tkazma ' + (us.tur + us.otkazma) + ' ta, kategoriya bo\'yicha tanlov (standart: xarajat) ' + us.tanlov + ' ta qator.', 'xira'); tu.id = 'import-usul-jami'; kk.appendChild(tu);
     kk.appendChild(el('p', 'Hozircha hech narsa yozilmadi. "Yuklash" tugmasini bosmaguningizcha ma\'lumotingiz o\'zgarmaydi.', 'xira'));
     var birinchilar = r.qatorlar.filter(function (q) { return q.holat === 'yuklanadi' && q.yozuv; }).slice(0, 10);
     if (birinchilar.length) kk.appendChild(el('p', 'Birinchi ' + birinchilar.length + ' ta yozuv:', 'yozuv-nom'));
@@ -1935,6 +1943,8 @@
   function importYuklash() {
     var joriy = imp;
     if (!joriy || joriy.faza !== 'moslash' || !joriy.reja || !(joriy.reja.jami.yuklanadi || joriy.reja.jami.qarzAmal)) return;
+    var ro = joriy.reja.rangOgoh;
+    if (ro && ro.katta && !window.confirm('DIQQAT: Rang o\'qilmadi, hamma qator xarajat deb olinmoqda (' + ro.qatorlar + ' ta qator).\n\nKategoriya bo\'yicha tekshirdingizmi (daromad kategoriyalari "Daromad" deb belgilanganmi)? Baribir yuklansinmi?')) return;
     var ho = joriy.reja.hisobOgoh;
     if (ho && ho.katta && !window.confirm('DIQQAT: ' + ho.yangi + ' ta YANGI hisob yaratiladi (fayldagi noyob hisob nomlari: ' + ho.noyob + ' ta).\n\nBu odatda nomlarni noto\'g\'ri o\'qishdan bo\'ladi. Hisoblar ro\'yxatini tekshirdingizmi? Baribir yuklansinmi?')) return;
     var paket = ImportSof.tayyorla(joriy.reja, {
@@ -2117,12 +2127,19 @@
   }
 
   // Sinxron xatosi oynasi (telefonda F12 siz): xato KODI, qisqa sabab, kutayotgan o'zgarishlar soni, rad etilgan qatorlar, "Qayta urinish" va "Kodni nusxalash"
+  var OTA_NOMI = { hisoblar: 'Hisob', kategoriyalar: 'Kategoriya', qarzlar: 'Qarz' };
+  function radMatni(r) {
+    var m = (Yuklash.NOMLAR[r.jadval] || r.jadval) + ' · ' + (r.kod || '') + ' · ' + String(r.id).slice(0, 8) + (r.tavsif ? ' · ' + r.tavsif : '') + ' — ' + r.sabab;
+    (r.ota || []).forEach(function (o) { m += '\n   ↳ ' + (OTA_NOMI[o.jadval] || o.jadval) + ': ' + (o.nom ? o.nom + ' ' : '') + '(id ' + String(o.id).slice(0, 8) + '…) serverda topilmadi' + (o.mahalliy ? ' (qurilmada bor: keyingi urinishda yuboriladi)' : ' (qurilmada ham yo\'q)'); });
+    return m;
+  }
   function sinxronXatoMatnlari(h) {
     var sabab = String(h.xato || '').replace(/\n?\(kod: [^)]*\)\s*$/, '').trim();
-    var royxat = (h.rad || []).slice(-10).map(function (r) { return (Yuklash.NOMLAR[r.jadval] || r.jadval) + ' · ' + (r.kod || '') + ' · ' + String(r.id).slice(0, 8) + (r.tavsif ? ' · ' + r.tavsif : '') + ' — ' + r.sabab; });
-    var kod = h.kod || (h.rad && h.rad.length ? (h.rad[h.rad.length - 1].kod || 'SYNC_REJECTED') : '');
-    var nusxa = ['Chuntak AI ' + VERSIYA + ' — sinxron holati', 'Kod: ' + (kod || '—'), 'Sabab: ' + (sabab || '—'), 'Kutayotgan o\'zgarishlar: ' + (h.soni || 0)].concat(royxat.length ? ['Rad etilgan qatorlar:'].concat(royxat) : []).join('\n');
-    return { sabab: sabab, royxat: royxat, kod: kod, nusxa: nusxa };
+    var radlar = h.rad || [], royxat = radlar.slice(0, 10).map(radMatni);
+    var kod = h.kod || (radlar.length ? (radlar[radlar.length - 1].kod || 'SYNC_REJECTED') : '');
+    var qoldi = radlar.length - royxat.length;
+    var nusxa = ['Chuntak AI ' + VERSIYA + ' — sinxron holati', 'Kod: ' + (kod || '—'), 'Sabab: ' + (sabab || '—'), 'Kutayotgan o\'zgarishlar: ' + (h.soni || 0), 'Rad etilgan qatorlar: ' + radlar.length].concat(royxat).concat(qoldi > 0 ? ['va yana ' + qoldi + ' ta'] : []).join('\n');
+    return { sabab: sabab, royxat: royxat, qoldi: qoldi, kod: kod, nusxa: nusxa };
   }
   function matnniNusxala(m) {
     function zaxira() {
@@ -2143,8 +2160,10 @@
         tana.appendChild(el('p', m.sabab || (h.rad && h.rad.length ? 'Ba\'zi qatorlar serverga qabul qilinmadi (ro\'yxat pastda).' : 'Xato yo\'q.'), 'sinxron-xato-sabab'));
         tana.appendChild(el('p', 'Kutayotgan o\'zgarishlar: ' + (h.soni || 0) + ' ta. Ular shu qurilmada saqlangan, yo\'qolmaydi.', 'xira sinxron-xato-soni'));
         if (m.royxat.length) {
-          tana.appendChild(el('p', 'Serverga o\'tmagan qatorlar (' + h.rad.length + ' ta; oxirgi ' + m.royxat.length + ' tasi):', 'yozuv-nom'));
-          m.royxat.forEach(function (t) { tana.appendChild(el('div', t, 'yozuv-izoh import-qator')); });
+          tana.appendChild(el('p', 'Serverga o\'tmagan qatorlar: jami ' + h.rad.length + ' ta' + (m.qoldi > 0 ? ' (birinchi ' + m.royxat.length + ' tasi)' : '') + ':', 'yozuv-nom'));
+          m.royxat.forEach(function (t) { var d = el('div', t, 'yozuv-izoh import-qator'); d.style.whiteSpace = 'pre-line'; tana.appendChild(d); });
+          if (m.qoldi > 0) tana.appendChild(el('div', 'va yana ' + m.qoldi + ' ta', 'yozuv-izoh'));
+          tana.appendChild(el('p', 'Bog\'liqlik xatosi bo\'lgan qatorlar ota qator yuborilgach avtomatik qayta yuboriladi; "Qayta urinish" ularni hoziroq qayta yuboradi.', 'xira'));
         }
         var qayta = tugma('Qayta urinish', 'asosiy-tugma', function () {
           qayta.disabled = true; qayta.textContent = 'Yuborilmoqda…';

@@ -160,9 +160,27 @@ var Sinxron = (function () {
     return r;
   }
 
-  function yubor(c, progress) {
-    var natija = { yuborildi: 0, rad: [] }, navbat, ruyxat, qarzUchun = {}, radNavbat = [];
-    return Data.navbatniOl().then(function (n) {
+  // Bog'liqlik (FK) xatosi: qator qaysi ota qatorga tayanadi
+  var FK_OTA = { yozuvlar: [['hisob_id', 'hisoblar'], ['qabul_hisob_id', 'hisoblar'], ['kategoriya_id', 'kategoriyalar']], byudjetlar: [['kategoriya_id', 'kategoriyalar']], qarzlar: [['hisob_id', 'hisoblar']], qarz_tolovlari: [['qarz_id', 'qarzlar'], ['hisob_id', 'hisoblar']] };
+  var FK_URINISH_CHEGARA = 5;   // avtomatik qayta yuborish urinishlari (qo'lda "Qayta urinish" cheklanmagan)
+
+  // Oldingi tsiklda bog'liqlik xatosi bilan o'tmagan qatorlar qayta navbatga qo'yiladi (ota qator keyin yuborilgan bo'lishi mumkin)
+  function fkQatorlarniQaytaNavbatga(qolda) {
+    return yozuvOl().then(function (rec) {
+      var rad = rec && rec.rad ? rec.rad : [], qayta = rad.filter(function (r) { return r.fk && (qolda || (r.urinish || 0) < FK_URINISH_CHEGARA); });
+      fkOldin = {};
+      if (!qayta.length) return;
+      qayta.forEach(function (r) { fkOldin[r.jadval + '|' + r.id] = r.urinish || 0; });
+      return Data.navbatgaQoshish(qayta.map(function (r) { return { jadval: r.jadval === 'qarz_tolovlari' ? 'qarzlar' : r.jadval, kalit: r.kalit || r.id }; })).then(function () {
+        return yozuvYoz(Object.assign({}, rec, { rad: rad.filter(function (r) { return qayta.indexOf(r) < 0; }) }));
+      });
+    });
+  }
+  var fkOldin = {};
+
+  function yubor(c, progress, qolda) {
+    var natija = { yuborildi: 0, rad: [] }, navbat, ruyxat, qarzUchun = {}, radNavbat = [], fkRad = [];
+    return fkQatorlarniQaytaNavbatga(qolda).then(function () { return Data.navbatniOl(); }).then(function (n) {
       navbat = n;
       var kalitlar = {};
       Object.keys(n.qatorlar || {}).forEach(function (t) { var k = Object.keys(n.qatorlar[t]); if (k.length) kalitlar[t] = k; });
@@ -216,6 +234,7 @@ var Sinxron = (function () {
         return c.from(j).upsert(bolak.map(function (x) { return x.qator; }), { onConflict: 'id' }).then(function (res) {
           if (!res.error) return muvaffaq(j, bolak);
           if (!malumotXatosimi(res) || natija.rad.length >= 30) Yuklash.tashla(res.error, j, res.status);
+          if (Yuklash.xatoKodi(res.error, res.status) === 'PG_23503' && FK_OTA[j]) { bolak.forEach(function (x) { fkRad.push({ j: j, x: x }); }); return; }   // bog'liqlik: bo'lmaymiz, avval ota qatorlar tekshiriladi (tsikl oxirida)
           if (bolak.length > 1) {
             if (qoshimchaSoroq-- <= 0) Yuklash.tashla(res.error, j, res.status);
             var h = Math.ceil(bolak.length / 2);
@@ -227,11 +246,73 @@ var Sinxron = (function () {
           bajarildi += 1; if (progress) progress(bajarildi, jamiSoni, j);
         }, function (e) { Yuklash.tashla(e, j); });
       }
+      // Bog'liqlik xatosi (PG_23503) bilan rad etilgan qatorlar: ota qator mahalliyda bo'lsa avval o'sha yuboriladi, so'ng qator qayta yuboriladi.
+      // Ota qator mahalliyda ham yo'q bo'lsa — qator "rad etilgan" ro'yxatiga qaysi ota qator yo'qligi bilan yoziladi va keyingi tsikllarda avtomatik qayta urinadi.
+      function otaNomi(t, x) { return x ? (t === 'qarzlar' ? x.shaxs : x.nom) || '' : ''; }
+      function fkniTuzat() {
+        if (!fkRad.length) return Promise.resolve();
+        var kerak = {}, otaServerda = {};
+        fkRad.forEach(function (it) { FK_OTA[it.j].forEach(function (f) { var id = it.x.qator[f[0]]; if (id) (kerak[f[1]] = kerak[f[1]] || {})[id] = true; }); });
+        var so = {}; Object.keys(kerak).forEach(function (t) { so[t] = Object.keys(kerak[t]); });
+        return Data.qatorlarniOqish(so).then(function (mah) {
+          var bor = {}, otaTartib = ['hisoblar', 'kategoriyalar', 'qarzlar'];
+          otaTartib.forEach(function (t) { (mah[t] || []).forEach(function (x) { bor[t + '|' + x.id] = x; }); });
+          return otaTartib.reduce(function (p, t) {
+            return p.then(function () {
+              var mahRoyxat = mah[t] || [];
+              if (!mahRoyxat.length) return;
+              // Faqat serverda YO'Q ota qatorlar yuboriladi: serverdagi (boshqa qurilma o'zgartirgan) qator eski mahalliy nusxa bilan ustiga yozilib ketmasin
+              var idlar = mahRoyxat.map(function (x) { return x.id; });
+              return bolaklash(idlar, 100).reduce(function (q, ids) {
+                return q.then(function (bor0) {
+                  return c.from(t).select('id').in('id', ids).then(function (res) {
+                    if (res.error) Yuklash.tashla(res.error, t, res.status);
+                    (res.data || []).forEach(function (r) { bor0[r.id] = true; otaServerda[t + '|' + r.id] = true; });
+                    return bor0;
+                  }, function (e) { Yuklash.tashla(e, t); });
+                });
+              }, Promise.resolve({})).then(function (serverda) {
+                var royxat = mahRoyxat.filter(function (x) { return !serverda[x.id]; }).map(function (x) { return SinxronSof.serverQatori(t, x); });
+                if (!royxat.length) return;
+                return c.from(t).upsert(royxat, { onConflict: 'id' }).then(function (res) {
+                  if (res.error) { if (!malumotXatosimi(res)) Yuklash.tashla(res.error, t, res.status); return; }   // ota qatorning o'zi rad etilsa, farzand qayta urinishda yana rad etiladi (sababi ro'yxatda)
+                  royxat.forEach(function (q) { yaqinda[q.id] = true; otaServerda[t + '|' + q.id] = true; });
+                }, function (e) { Yuklash.tashla(e, t); });
+              });
+            });
+          }, Promise.resolve()).then(function () {
+            // ota qatorlar yuborildi: farzandlar qayta yuboriladi (bo'lak-bo'lak; rad etilsa teng ikkiga bo'linadi, yagona qator — ro'yxatga)
+            var guruh = {}; fkRad.forEach(function (it) { (guruh[it.j] = guruh[it.j] || []).push(it.x); });
+            var budjet = 80;
+            function otaMalumoti(j, x) {
+              var ota = [];
+              FK_OTA[j].forEach(function (f) { var id = x.qator[f[0]]; if (id && !otaServerda[f[1] + '|' + id]) ota.push({ jadval: f[1], id: id, nom: otaNomi(f[1], bor[f[1] + '|' + id]), mahalliy: !!bor[f[1] + '|' + id] }); });   // faqat serverda topilmaganlari
+              return ota;
+            }
+            function qaytaYubor(j, bolak) {
+              return c.from(j).upsert(bolak.map(function (x) { return x.qator; }), { onConflict: 'id' }).then(function (res) {
+                if (!res.error) return muvaffaq(j, bolak);
+                if (!malumotXatosimi(res)) Yuklash.tashla(res.error, j, res.status);
+                if (bolak.length > 1 && budjet-- > 0) { var h = Math.ceil(bolak.length / 2); return qaytaYubor(j, bolak.slice(0, h)).then(function () { return qaytaYubor(j, bolak.slice(h)); }); }
+                bolak.forEach(function (x) {
+                  var kod = Yuklash.xatoKodi(res.error, res.status), key = j + '|' + x.qator.id;
+                  natija.rad.push({ jadval: j, id: x.qator.id, sabab: Yuklash.xatoMatni(res.error, j), kod: kod, tavsif: tavsif(j, x.qator), ota: otaMalumoti(j, x), fk: kod === 'PG_23503', kalit: x.kalit, urinish: (fkOldin[key] || 0) + 1 });
+                  radNavbat.push({ store: j === 'qarz_tolovlari' ? 'qarzlar' : j, kalit: x.kalit, qiymat: x.qiymat });
+                  bajarildi += 1; if (progress) progress(bajarildi, jamiSoni, j);
+                });
+              }, function (e) { Yuklash.tashla(e, j); });
+            }
+            return J.reduce(function (p2, j) {
+              return p2.then(function () { return guruh[j] ? bolaklash(guruh[j], YUBOR_BOLAK).reduce(function (q, bolak) { return q.then(function () { return qaytaYubor(j, bolak); }); }, Promise.resolve()) : null; });
+            }, Promise.resolve());
+          });
+        });
+      }
       return J.reduce(function (p, j) {
         return p.then(function () {
           return bolaklash(ruyxat[j], YUBOR_BOLAK).reduce(function (q, bolak) { return q.then(function () { return bolakniYubor(j, bolak); }); }, Promise.resolve());
         });
-      }, Promise.resolve());
+      }, Promise.resolve()).then(function () { return fkniTuzat(); });
     }).then(function () {
       // qarzlar va to'lovlari ikkalasi ham yuborilgach, qarz navbatdan olinadi
       var kalitlar = Object.keys(qarzUchun);
@@ -283,13 +364,13 @@ var Sinxron = (function () {
       var c, tortilgan = 0;
       return Promise.resolve().then(function () { c = Yuklash.mijoz(); tikSoni++; return tort(c, rec, ['ochildi', 'qolda', 'internet', 'kirish', 'qayta'].indexOf(sabab) >= 0 || tikSoni % 10 === 0); }).then(function (t) {
         tortilgan = t.yozildi;
-        return yubor(c, opts.progress);
+        return yubor(c, opts.progress, sabab === 'qolda');
       }).then(function (y) {
         oldingiYaqinda = yaqinda; yaqinda = {};
         xatoMatni = ''; xatoTuri = ''; xatoKod = '';
         return yozuvOl().then(function (yangi) {
           yangi = Object.assign({}, yangi || rec, { oxirgi_vaqt: new Date().toISOString() });
-          if (y.rad.length) yangi.rad = (yangi.rad || []).concat(y.rad).slice(-20);
+          if (y.rad.length) yangi.rad = (yangi.rad || []).concat(y.rad).slice(-200);
           return yozuvYoz(yangi);
         }).then(function () { holat.ishlayapti = false; return holatniYangila(); }).then(function () {
           if (tortilgan) tortildiKuzatuvchilar.forEach(function (f) { try { f(tortilgan); } catch (e) { /* ahamiyatsiz */ } });

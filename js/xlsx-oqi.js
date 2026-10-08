@@ -59,6 +59,8 @@ var XlsxOqi = (function () {
   }
   function bolalar(el, nom) { var r = []; for (var c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 1 && c.localName === nom) r.push(c); return r; }
   function birinchi(el, nom) { return bolalar(el, nom)[0] || null; }
+  // Atributni old qo'shimchasiga qaramay (r:id, x:id, id) localName bo'yicha topadi
+  function atribut(el, nom) { for (var i = 0; i < el.attributes.length; i++) if (el.attributes[i].localName === nom) return el.attributes[i].value; return null; }
 
   // Excel matnidagi "_x000D_" kabi belgilar
   function xmlBelgi(s) { return s.replace(/_x([0-9A-Fa-f]{4})_/g, function (m, h) { return String.fromCharCode(parseInt(h, 16)); }); }
@@ -170,8 +172,9 @@ var XlsxOqi = (function () {
       try {
         var kitob = xmlOqi(matnga(x[0]), 'workbook.xml'), sh = birinchi(kitob.documentElement, 'sheets'), v1 = sh && bolalar(sh, 'sheet')[0];
         if (v1 && x[1]) {
-          var rid = v1.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') || v1.getAttribute('r:id');
-          var rels = xmlOqi(matnga(x[1]), 'rels'), rl = rels.documentElement.getElementsByTagName('Relationship');
+          // Nom fazosi old qo'shimchasiga ("x:", "ss:", ...) befarq: atribut va elementlar localName bo'yicha qidiriladi
+          var rid = v1.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') || atribut(v1, 'id');
+          var rels = xmlOqi(matnga(x[1]), 'rels'), rl = bolalar(rels.documentElement, 'Relationship');
           for (var i = 0; i < rl.length; i++) if (rl[i].getAttribute('Id') === rid) {
             var t = rl[i].getAttribute('Target') || '';
             yol = t.charAt(0) === '/' ? t.slice(1) : 'xl/' + t.replace(/^\.\//, '');

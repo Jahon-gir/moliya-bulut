@@ -1589,8 +1589,240 @@
     k.appendChild(xato);
     bloklar.push(k);
     if (h.kirgan) { hisobOchirildiMatni = ''; bloklar.push(sinxronKartasi(h)); }
+    bloklar.push(importKartasi());
     bloklar.push(maxfiylikKartasi());
     return bloklar;
+  }
+
+  // ---- Fayldan yuklash (Excel .xlsx, TZ-sinxronlash.md 18.2): fayl hech qayerga yuborilmaydi; tasdiqlanmaguncha hech narsa yozilmaydi ----
+  var imp = null;   // joriy yuklash holati: { faza: 'oqilmoqda' | 'moslash' | 'yozilmoqda' | 'tayyor' | 'xato', ... }
+  var IMP_USTUNLAR = ['sana', 'summa', 'tur', 'kategoriya', 'hisob', 'qayerga', 'izoh', 'id', 'valyuta'];
+
+  function ustunHarfi(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function importMavjud() {
+    return { hisoblar: faolHisoblar(), kategoriyalar: malumot.kategoriyalar.filter(function (k) { return !k.arxivlangan; }), yozuvKalitlari: imp.kalitlar, tarixIdlar: imp.tarixIdlar };
+  }
+  function importReja() {
+    imp.reja = imp.xom ? ImportSof.reja(imp.xom, imp.tanlov, importMavjud(), Calc.hozir()) : null;
+  }
+  function importQatorlarniQayta() {
+    var x = imp.xarita;
+    imp.xom = x.sana >= 0 && x.summa >= 0 ? ImportSof.qatorlarniOqi(imp.qatorlar, imp.sarlavhaQator, x) : null;
+    importReja();
+  }
+  function importXato(joriy, e) {
+    joriy.faza = 'xato';
+    joriy.xato = xatoKodBilan(e && e.message ? e.message : 'Faylni o\'qib bo\'lmadi', e && e.kod ? e.kod : 'IMPORT_PARSE');
+    if (imp === joriy) chizish(importEkrani(), true);
+  }
+
+  function importBoshlash(f) {
+    var joriy = imp = { faza: 'oqilmoqda', fayl: f.name, xato: '', tanlov: { turTanlovi: {}, kategoriya: {}, hisob: {}, takror: 'otkaz' } };
+    ochish(importEkrani, false);
+    if (!/\.xlsx$/i.test(f.name) && f.name) { importXato(joriy, Object.assign(new Error('Faqat Excel .xlsx fayli qabul qilinadi (CSV, .xls va boshqalar emas)'), { kod: 'IMPORT_FORMAT' })); return; }
+    var oqish = f.arrayBuffer ? f.arrayBuffer() : new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; r.readAsArrayBuffer(f); });
+    Promise.all([oqish, Data.olish('sozlamalar', Data.IMPORT_KALITI)]).then(function (r) {
+      joriy.tarixIdlar = (r[1] && r[1].idlar) || {};
+      return XlsxOqi.oqi(r[0]);
+    }).then(function (x) {
+      joriy.qatorlar = x.qatorlar;
+      var t = ImportSof.ustunlarniTaxmin(x.qatorlar);
+      joriy.sarlavhaQator = t.sarlavhaQator; joriy.nomlar = t.nomlar; joriy.xarita = t.xarita;
+      joriy.kalitlar = ImportSof.mavjudKalitlar(malumot.yozuvlar, malumot.hisoblar, malumot.kategoriyalar);
+      if (imp !== joriy) return;
+      importQatorlarniQayta();
+      joriy.faza = 'moslash';
+      chizish(importEkrani(), true);
+    }).catch(function (e) { importXato(joriy, e); });
+  }
+
+  function importNomi(g, kat) {
+    if (g.id) { var m = (kat ? malumot.kategoriyalar : malumot.hisoblar).filter(function (x) { return x.id === g.id; })[0]; return m ? m.nom : ''; }
+    return g.yangiNom !== undefined ? g.yangiNom : g.nom;
+  }
+  function importQatorMatni(q) {
+    var y = q.yozuv, r = imp.reja, hg = r.hisoblar.filter(function (g) { return g.kalit === y.hisobG; })[0], t = [];
+    var belgi = y.tur === 'daromad' ? '+' : y.tur === 'xarajat' ? '−' : '';
+    t.push(Calc.sanaKorsat(y.sana) + ' ' + y.vaqt);
+    t.push(TUR_NOMI[y.tur] + ' ' + belgi + Calc.sumFormat(y.summa));
+    if (y.tur === 'otkazma') t.push(importNomi(hg, false) + ' → ' + importNomi(r.hisoblar.filter(function (g) { return g.kalit === y.qabulG; })[0], false));
+    else t.push(importNomi(r.kategoriyalar.filter(function (g) { return g.kalit === y.katG; })[0], true) + ' · ' + importNomi(hg, false));
+    if (y.izoh) t.push(y.izoh.replace(/\n/g, ' ⏎ ').slice(0, 60));
+    return t.join(' · ');
+  }
+
+  function importEkrani() {
+    var bloklar = [orqagaTugmasi(), el('h1', 'Fayldan yuklash')];
+    if (!imp) { bloklar.push(el('p', 'Fayl tanlanmagan.', 'xira')); return bloklar; }
+    var joriy = imp;
+    bloklar.push(el('p', 'Fayl: ' + joriy.fayl, 'xira import-fayl'));
+    if (joriy.faza === 'oqilmoqda') { var p = el('p', 'Fayl o\'qilmoqda…', 'xira'); p.id = 'import-holat'; bloklar.push(p); return bloklar; }
+    if (joriy.faza === 'yozilmoqda') { var p2 = el('p', 'Yozilmoqda… Oynani yopmang.', 'xira'); p2.id = 'import-holat'; bloklar.push(p2); return bloklar; }
+    if (joriy.faza === 'xato') {
+      var ek = el('div', joriy.xato, 'xato-karta'); ek.id = 'import-xato'; ek.setAttribute('role', 'alert'); bloklar.push(ek);
+      bloklar.push(el('p', 'Hech narsa o\'zgarmadi.', 'xira'));
+      return bloklar;
+    }
+    if (joriy.faza === 'tayyor') {
+      var tk = karta(); tk.id = 'import-tayyor-karta';
+      tk.appendChild(el('h2', '✓ Yuklandi'));
+      var n = joriy.natija;
+      tk.appendChild(el('p', n.yozuvlar + ' ta yozuv yuklandi' + (n.kategoriyalar ? ', ' + n.kategoriyalar + ' ta yangi kategoriya' : '') + (n.hisoblar ? ', ' + n.hisoblar + ' ta yangi hisob' : '') + '.', 'yozuv-nom'));
+      if (n.hisoblar) tk.appendChild(el('p', 'Yangi hisoblarning boshlang\'ich qoldig\'i 0 qo\'yildi. Hisob qoldig\'i haqiqiyga to\'g\'ri kelmasa, "Hisoblar" bo\'limida boshlang\'ich qoldiqni tuzating.', 'xira'));
+      tk.appendChild(el('p', 'Avval joriy holatning zaxira fayli yuklab berildi. Xato bo\'lsa: Menyu → Profil → "Oxirgi yuklashni bekor qilish".', 'xira'));
+      var bosh = tugma('Bosh sahifaga', 'asosiy-tugma', function () { imp = null; korsat('bosh'); });
+      bosh.id = 'import-tayyor';
+      tk.appendChild(bosh);
+      bloklar.push(tk);
+      return bloklar;
+    }
+
+    // ---- moslash va oldindan ko'rish ----
+    var ustunKarta = karta(); ustunKarta.id = 'import-ustunlar';
+    ustunKarta.appendChild(el('h2', 'Ustunlar'));
+    ustunKarta.appendChild(el('p', 'Ilova ustunlarni nomidan taxmin qildi. Noto\'g\'ri bo\'lsa, to\'g\'rilang.', 'xira'));
+    var variantlar = [['-1', '— yo\'q —']].concat(joriy.nomlar.map(function (nom, i) { return [String(i), ustunHarfi(i) + ': ' + (nom || '(nomsiz)')]; }));
+    IMP_USTUNLAR.forEach(function (m) {
+      var t = tanlov('imp-u-' + m, ImportSof.MAYDON_NOMLARI[m] + (m === 'sana' || m === 'summa' ? ' (majburiy)' : ''), variantlar, String(joriy.xarita[m]), function (v) {
+        joriy.xarita[m] = parseInt(v, 10); importQatorlarniQayta(); chizish(importEkrani(), true);
+      });
+      ustunKarta.appendChild(t.quti);
+    });
+    bloklar.push(ustunKarta);
+    if (!joriy.reja) {
+      bloklar.push(el('p', 'Davom etish uchun "Sana va vaqt" va "Summa" ustunlarini tanlang.', 'xato-karta'));
+      return bloklar;
+    }
+    var r = joriy.reja, j = r.jami;
+    if (!j.jami) { bloklar.push(el('p', 'Sarlavhadan keyin qator yo\'q.', 'xato-karta')); return bloklar; }
+
+    // Tur aniqlash
+    if (r.turGuruhlari.length) {
+      var tk2 = karta(); tk2.id = 'import-turlar';
+      tk2.appendChild(el('h2', 'Daromad yoki xarajat'));
+      tk2.appendChild(el('p', 'Tartib: "Tur" ustuni → sizning tanlovingiz → summa manfiy (xarajat) → summa rangi (qizil — xarajat, yashil — daromad) → bo\'lmasa kategoriya bo\'yicha tanlov (standart: xarajat). Usul: manfiy belgi ' + r.usullar.belgi + ' ta, rang ' + r.usullar.rang + ' ta, kategoriya tanlovi ' + r.usullar.tanlov + ' ta qator.', 'xira import-usul'));
+      r.turGuruhlari.forEach(function (g, i) {
+        var q = tanlov('imp-t-' + i, g.korsatma + ' — ' + g.soni + ' qator (belgi ' + g.belgi + ', rang ' + g.rang + ', tanlov ' + g.tanlov + ')',
+          [['', 'Avtomatik'], ['xarajat', 'Xarajat'], ['daromad', 'Daromad']], joriy.tanlov.turTanlovi[g.kalit] || '', function (v) {
+            if (v) joriy.tanlov.turTanlovi[g.kalit] = v; else delete joriy.tanlov.turTanlovi[g.kalit];
+            importReja(); chizish(importEkrani(), true);
+          });
+        tk2.appendChild(q.quti);
+      });
+      bloklar.push(tk2);
+    }
+    // Kategoriyalar va hisoblar: har nom bir marta
+    function guruhKartasi(sarlavha, id, royxat, mavjudlar, kat) {
+      if (!royxat.length) return;
+      var k = karta(); k.id = id;
+      k.appendChild(el('h2', sarlavha));
+      royxat.forEach(function (g, i) {
+        if (!g.soni) return;
+        var nomi = kat ? g.korsatma + ' (' + TUR_NOMI[g.tur].toLowerCase() + ')' : (g.nom || '(hisobsiz)');
+        var v = [];
+        if (kat || g.nom) v.push(['__yangi', 'Yangi yaratish: ' + (kat ? g.yangiNom : g.nom)]);
+        mavjudlar.filter(function (x) { return !kat || x.tur === g.tur; }).forEach(function (x) { v.push([x.id, x.nom]); });
+        var q = tanlov('imp-' + id + '-' + i, nomi + ' — ' + g.soni + ' qator', v, g.id || '__yangi', function (val) {
+          var t = kat ? joriy.tanlov.kategoriya : joriy.tanlov.hisob, kalit = g.kalit;
+          t[kalit] = val === '__yangi' ? { yangi: true } : { id: val };
+          importReja(); chizish(importEkrani(), true);
+        });
+        k.appendChild(q.quti);
+      });
+      bloklar.push(k);
+    }
+    guruhKartasi('Kategoriyalar', 'import-kategoriyalar', r.kategoriyalar, malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }), true);
+    guruhKartasi('Hisoblar', 'import-hisoblar', r.hisoblar, faolHisoblar(), false);
+
+    // Takrorlar
+    var tkk = karta(); tkk.id = 'import-takror-karta';
+    tkk.appendChild(el('h2', 'Takroriy qatorlar'));
+    tkk.appendChild(el('p', 'Takror: ID bo\'yicha (oldin yuklangan) yoki sana, summa, kategoriya va izoh bir xil bo\'lgan mavjud yozuv. Bir fayl ikki marta yuklansa ham ikkilanmaydi.', 'xira'));
+    var tt = tanlov('imp-takror', 'Takrorlar (' + j.takror + ' ta)', [['otkaz', 'O\'tkazib yuborish (tavsiya)'], ['yuklash', 'Baribir yuklash']], joriy.tanlov.takror, function (v) { joriy.tanlov.takror = v; importReja(); chizish(importEkrani(), true); });
+    tkk.appendChild(tt.quti);
+    bloklar.push(tkk);
+
+    // Oldindan ko'rish
+    var kk = karta(); kk.id = 'import-korinish';
+    kk.appendChild(el('h2', 'Oldindan ko\'rish'));
+    var hisobot = el('p', 'Faylda ' + j.jami + ' ta qator: ' + j.yuklanadi + ' ta yuklanadi, ' + j.takror + ' ta takror, ' + j.otkazildi + ' ta o\'tkazib yuboriladi, ' + j.xato + ' ta xato.' + (j.yaxlit ? ' (' + j.yaxlit + ' ta summa kasrli edi, yaxlitlandi.)' : ''), 'yozuv-nom');
+    hisobot.id = 'import-hisobot';
+    kk.appendChild(hisobot);
+    kk.appendChild(el('p', 'Hozircha hech narsa yozilmadi. "Yuklash" tugmasini bosmaguningizcha ma\'lumotingiz o\'zgarmaydi.', 'xira'));
+    var birinchilar = r.qatorlar.filter(function (q) { return q.holat === 'yuklanadi'; }).slice(0, 10);
+    if (birinchilar.length) kk.appendChild(el('p', 'Birinchi ' + birinchilar.length + ' ta yozuv:', 'yozuv-nom'));
+    birinchilar.forEach(function (q) { kk.appendChild(el('div', importQatorMatni(q), 'yozuv-izoh import-qator')); });
+    var muammo = r.qatorlar.filter(function (q) { return q.holat !== 'yuklanadi' || q.ogoh; });
+    if (muammo.length) {
+      kk.appendChild(el('p', 'Yuklanmaydigan yoki ogohlantirishli qatorlar (' + muammo.length + ' ta):', 'yozuv-nom'));
+      muammo.slice(0, 20).forEach(function (q) { kk.appendChild(el('div', 'Qator ' + q.n + ': ' + (q.sabab || q.ogoh) + (q.kod ? ' [' + q.kod + ']' : ''), 'yozuv-izoh import-muammo')); });
+      if (muammo.length > 20) kk.appendChild(el('div', 'va yana ' + (muammo.length - 20) + ' ta…', 'yozuv-izoh'));
+    }
+    if (joriy.xato) { var xk = el('div', joriy.xato, 'xato-karta'); xk.id = 'import-xato'; xk.setAttribute('role', 'alert'); kk.appendChild(xk); }
+    var yuk = tugma('Yuklash (' + j.yuklanadi + ' ta)', 'asosiy-tugma', importYuklash);
+    yuk.id = 'import-yuklash';
+    yuk.disabled = !j.yuklanadi;
+    kk.appendChild(yuk);
+    bloklar.push(kk);
+    return bloklar;
+  }
+
+  function importYuklash() {
+    var joriy = imp;
+    if (!joriy || joriy.faza !== 'moslash' || !joriy.reja || !joriy.reja.jami.yuklanadi) return;
+    var paket = ImportSof.tayyorla(joriy.reja, {
+      yangiId: Data.yangiId, vaqt: Date.now() - joriy.reja.jami.yuklanadi - 200,
+      hisobTuri: Calc.hisobTuriTaxmin, hisobRang: function (t) { return Calc.HISOB_RANGLARI[t]; }, hisobBelgi: function (t) { return Calc.HISOB_BELGISI[t]; },
+      katRang: function (nom, tur, i) { return RANGLAR[(malumot.kategoriyalar.length + i) % RANGLAR.length]; }, katBelgi: Calc.belgiTaxmin
+    });
+    joriy.faza = 'yozilmoqda'; joriy.xato = '';
+    chizish(importEkrani(), true);
+    // avval joriy holatning zaxirasi (fayl), keyin bitta tranzaksiyada yozish: xato bo'lsa hech narsa o'zgarmaydi
+    zaxiraniOlish(true, 'zaxira-yuklashdan-oldin').then(function () { return Data.importYozish(paket, joriy.fayl); }).then(yuklash).then(function () {
+      joriy.faza = 'tayyor';
+      joriy.natija = { yozuvlar: paket.yozuvlar.length, kategoriyalar: paket.kategoriyalar.length, hisoblar: paket.hisoblar.length };
+      if (imp === joriy) chizish(importEkrani(), true);
+    }).catch(function (e) {
+      joriy.faza = 'moslash';
+      joriy.xato = xatoKodBilan('Yozib bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Hech narsa o\'zgarmadi.', 'IMPORT_YOZISH');
+      if (imp === joriy) chizish(importEkrani(), true);
+    });
+  }
+
+  // Profil: "Fayldan yuklash" kartasi va "Oxirgi yuklashni bekor qilish"
+  function importKartasi() {
+    var k = karta();
+    k.id = 'import-karta';
+    k.appendChild(el('h2', 'Fayldan yuklash'));
+    k.appendChild(el('p', 'Excel (.xlsx) faylidagi daromad, xarajat va o\'tkazmalarni yuklang. Fayl qurilmadan chiqmaydi. Yuklashdan oldin nimalar yuklanishini ko\'rasiz va tasdiqlaysiz.', 'xira'));
+    var kiritish = document.createElement('input');
+    kiritish.type = 'file'; kiritish.id = 'import-fayl'; kiritish.hidden = true;
+    kiritish.accept = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    kiritish.addEventListener('change', function () {
+      var f = kiritish.files && kiritish.files[0];
+      kiritish.value = '';
+      if (f) importBoshlash(f);
+    });
+    var tanla = tugma('Excel faylini tanlash (.xlsx)', 'ikkinchi-tugma', function () { kiritish.click(); });
+    tanla.id = 'import-tanlash';
+    k.appendChild(tanla);
+    k.appendChild(kiritish);
+    var quti = el('div', undefined, 'import-bekor-quti');
+    k.appendChild(quti);
+    Data.olish('sozlamalar', Data.IMPORT_KALITI).then(function (t) {
+      if (!t || !t.oxirgi || !t.oxirgi.yozuvlar.length) return;
+      var o = t.oxirgi, v = Calc.hozir(new Date(o.vaqt));
+      quti.appendChild(el('p', 'Oxirgi yuklash: ' + Calc.sanaKorsat(v.sana) + ' ' + v.vaqt + ', ' + o.yozuvlar.length + ' ta yozuv' + (o.fayl ? ' (' + o.fayl + ')' : '') + '.', 'xira'));
+      var b = tugma('Oxirgi yuklashni bekor qilish', 'xavfli-tugma', function () {
+        if (!window.confirm('Oxirgi yuklash bekor qilinsinmi?\n\n' + o.yozuvlar.length + ' ta yuklangan yozuv o\'chiriladi (yuklangandan keyin tahrirlangan bo\'lsa ham). Ular yaratgan kategoriya va hisoblar — faqat boshqa joyda ishlatilmasa. Boshqa ma\'lumotingizga tegilmaydi.')) return;
+        b.disabled = true;
+        Data.importBekor().then(yuklash).then(function () { qisqaXabar('Yuklash bekor qilindi'); chizish(profilEkrani(), true); })
+          .catch(function (e) { b.disabled = false; qisqaXabar(xatoKodBilan('Bekor qilib bo\'lmadi: ' + (e && e.message ? e.message : e), 'IMPORT_BEKOR')); });
+      });
+      b.id = 'import-bekor';
+      quti.appendChild(b);
+    });
+    return k;
   }
 
   // Rozilik matni (Profil va salomlashuv ekrani uchun bir xil): "Google bilan kirish" tugmasini bosish = shunga rozilik

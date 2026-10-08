@@ -30,6 +30,7 @@
   var joriyNom = DB_NOMI;   // hozir ochiq bazaning nomi (sinovlarda boshqa nom bo'lishi mumkin)
   var PIN_KALITI = 'pin';   // sozlamalar ichidagi PIN yozuvining kaliti: zaxiraga KIRMAYDI va tiklashda saqlanib qoladi
   var SINXRON_KALITI = 'sinxron', NAVBAT_KALITI = 'sinxron-navbat';   // sozlamalar ichidagi mahalliy yozuvlar (S5): sinxron holati va serverga yuborilmagan o'zgarishlar navbati (zaxiraga KIRMAYDI)
+  var IMPORT_KALITI = 'import-tarixi';   // sozlamalar ichida (faqat shu qurilmada): Excel dan yuklangan yozuvlar tarixi (takrorni aniqlash va oxirgi yuklashni bekor qilish uchun); zaxiraga kirmaydi
   var kuzatuvchilar = [];
   function ozgarishKuzat(f) { kuzatuvchilar.push(f); }
   function ozgarishXabari() { kuzatuvchilar.slice().forEach(function (f) { try { f(); } catch (e) { /* ahamiyatsiz */ } }); }
@@ -67,7 +68,7 @@
   // Qarzning o'chirilgan to'lovlari ham ko'rinmaydi. To'liq (o'chirilganlar bilan) ro'yxat — hammasiniOqish() (zaxira uchun).
   function hammasi(toplam) {
     return amal(toplam, 'readonly', function (s) { return s.getAll(); }).then(function (r) {
-      return Calc.jonlilar(toplam, toplam === 'sozlamalar' ? r.filter(function (x) { return x.kalit !== ICHKI_NUSXA_KALITI && x.kalit !== 'yuklash' && x.kalit !== SINXRON_KALITI && x.kalit !== NAVBAT_KALITI && x.kalit !== 'rozilik'; }) : r);
+      return Calc.jonlilar(toplam, toplam === 'sozlamalar' ? r.filter(function (x) { return x.kalit !== ICHKI_NUSXA_KALITI && x.kalit !== 'yuklash' && x.kalit !== IMPORT_KALITI && x.kalit !== SINXRON_KALITI && x.kalit !== NAVBAT_KALITI && x.kalit !== 'rozilik'; }) : r);
     });
   }
   function olish(toplam, kalit) {
@@ -433,12 +434,106 @@
     });
   }
 
+  // ---- Excel dan yuklash (18.2): hammasi BITTA tranzaksiyada (xato bo'lsa hech narsa o'zgarmaydi) ----
+  // paket: ImportSof.tayyorla natijasi { hisoblar, kategoriyalar, yozuvlar, manbaIdlar }; fayl — fayl nomi.
+  // Yozuvlar oddiy saqlash bilan bir xil maydonlar oladi (updated_at, deleted = false) va serverga yuborish navbatiga tushadi (navbat formati navbatgaYoz bilan bir xil).
+  function importYozish(paket, fayl) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString();
+      tx.oncomplete = function () { resolve(); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Yozish bekor qilindi')); };
+      var so = tx.objectStore('sozlamalar');
+      so.get(SINXRON_KALITI).onsuccess = function (e1) {
+        var navbatBor = !!(e1.target.result && e1.target.result.navbat === true);
+        so.get(NAVBAT_KALITI).onsuccess = function (e2) {
+          so.get(IMPORT_KALITI).onsuccess = function (e3) {
+            var navbat = e2.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} };
+            navbat.qatorlar = navbat.qatorlar || {};
+            ['hisoblar', 'kategoriyalar', 'yozuvlar'].forEach(function (t) {
+              (paket[t] || []).forEach(function (q) {
+                var x = Object.assign({}, q, { deleted: false, updated_at: hozir });
+                tx.objectStore(t).put(x);
+                if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x.id] = hozir;
+              });
+            });
+            if (navbatBor) so.put(navbat);
+            var t = e3.target.result || { kalit: IMPORT_KALITI, idlar: {}, oxirgi: null };
+            t.idlar = t.idlar || {};
+            (paket.manbaIdlar || []).forEach(function (id) { t.idlar[id] = true; });
+            t.oxirgi = { vaqt: hozir, fayl: fayl || '', yozuvlar: paket.yozuvlar.map(function (y) { return y.id; }), kategoriyalar: paket.kategoriyalar.map(function (k) { return k.id; }),
+              hisoblar: paket.hisoblar.map(function (h) { return h.id; }), manbaIdlar: (paket.manbaIdlar || []).slice() };
+            so.put(t);
+          };
+        };
+      };
+    });
+  }
+
+  // Oxirgi yuklashni bekor qilish: yozuvlar mantiqiy o'chiriladi (deleted = true); shu yuklash yaratgan hisob va kategoriyalar — faqat hech narsa ishlatmasa
+  function importBekor() {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'byudjetlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString(), natija = { yozuvlar: 0, kategoriyalar: 0, hisoblar: 0 };
+      tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilish to\'xtatildi')); };
+      var so = tx.objectStore('sozlamalar');
+      so.get(IMPORT_KALITI).onsuccess = function (e0) {
+        var tarix = e0.target.result;
+        if (!tarix || !tarix.oxirgi) { tx.abort(); return; }
+        var ox = tarix.oxirgi;
+        so.get(SINXRON_KALITI).onsuccess = function (e1) {
+          var navbatBor = !!(e1.target.result && e1.target.result.navbat === true);
+          so.get(NAVBAT_KALITI).onsuccess = function (e2) {
+            var navbat = e2.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} };
+            navbat.qatorlar = navbat.qatorlar || {};
+            var holat = {};
+            ['yozuvlar', 'qarzlar'].forEach(function (t) { tx.objectStore(t).getAll().onsuccess = function (e) { holat[t] = e.target.result; }; });
+            // so'rovlar yuborilgan tartibda bajariladi: byudjetlar tugagach yozuvlar va qarzlar ham tayyor
+            tx.objectStore('byudjetlar').getAll().onsuccess = function (e) {
+              holat.byudjetlar = e.target.result;
+              var ochir = {}; ox.yozuvlar.forEach(function (id) { ochir[id] = true; });
+              function belgila(t, x) { tx.objectStore(t).put(Object.assign({}, x, { deleted: true, updated_at: hozir })); if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x[TOPLAMLAR[t]]] = hozir; }
+              var ishlatil = {};
+              holat.yozuvlar.forEach(function (y) {
+                if (ochir[y.id]) { if (y.deleted !== true) { belgila('yozuvlar', y); natija.yozuvlar++; } return; }
+                if (y.deleted === true) return;
+                ishlatil[y.hisob_id] = 1; if (y.qabul_hisob_id) ishlatil[y.qabul_hisob_id] = 1; if (y.kategoriya_id) ishlatil[y.kategoriya_id] = 1;
+              });
+              holat.qarzlar.forEach(function (z) { if (z.deleted === true) return; ishlatil[z.hisob_id] = 1; (z.tolovlar || []).forEach(function (t) { if (t.deleted !== true) ishlatil[t.hisob_id] = 1; }); });
+              holat.byudjetlar.forEach(function (b) { if (b.deleted !== true) ishlatil[b.kategoriya_id] = 1; });
+              var kutilgan = 0;
+              function bitta(t, id) {
+                kutilgan++;
+                tx.objectStore(t).get(id).onsuccess = function (e) {
+                  var x = e.target.result;
+                  if (x && x.deleted !== true && !ishlatil[id]) { belgila(t, x); natija[t]++; }
+                  if (--kutilgan === 0) yakun();
+                };
+              }
+              function yakun() {
+                if (navbatBor) so.put(navbat);
+                var yangi = Object.assign({}, tarix, { idlar: Object.assign({}, tarix.idlar), oxirgi: null });
+                (ox.manbaIdlar || []).forEach(function (id) { delete yangi.idlar[id]; });
+                so.put(yangi);
+              }
+              (ox.kategoriyalar || []).forEach(function (id) { bitta('kategoriyalar', id); });
+              (ox.hisoblar || []).forEach(function (id) { bitta('hisoblar', id); });
+              if (kutilgan === 0) yakun();
+            };
+          };
+        };
+      };
+    });
+  }
+
   global.Data = {
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
     ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
     tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
-    hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI
+    hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI,
+    importYozish: importYozish, importBekor: importBekor, IMPORT_KALITI: IMPORT_KALITI
   };
 })(typeof window !== 'undefined' ? window : this);

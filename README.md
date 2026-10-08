@@ -14,7 +14,7 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 3. **Keyin:** o'zgarishlar avtomatik yuboriladi, boshqa qurilmadagilari avtomatik olinadi. Asosiy ekran va Profilda holat: "Sinxronlangan",
    "Kutilmoqda (N ta o'zgarish)", "Internet yo'q", "Xato" (sabab "(kod: ...)" bilan va "Qayta urinish").
 4. **Chiqish** faqat shu qurilmadan chiqadi (ma'lumot qoladi). **Hisobni o'chirish** serverdagi akkaunt va hamma ma'lumotni o'chiradi (shu qurilmadagi ma'lumot qoladi; avval zaxira fayli yuklanadi).
-5. **Zaxira** (Menyu → Zaxira va eksport) sinxronlash o'rnini bosmaydi: vaqti-vaqti bilan JSON zaxira oling.
+5. **Excelga yuklab olish** (Menyu) — daromad, xarajat va o'tkazmalar chiroyli .xlsx faylga. **Fayldan yuklash** (Menyu → Profil) — Excel (.xlsx) fayldan yozuvlarni oldindan ko'rib, tasdiqlab yuklash; "Oxirgi yuklashni bekor qilish" bor (TZ-sinxronlash.md, 18-band). JSON zaxira oddiy ko'rinishda yashirin (Menyu pastidagi versiya qatorini 7 marta bosing); u sinxronlash o'rnini bosmaydi.
 6. **Telefon yo'qolsa / almashsa:** yangi qurilmada ilovani oching, shu Google bilan kiring: serverdagi ma'lumot o'zi qaytadi.
 
 ## Tuzilma
@@ -69,9 +69,9 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.23.0 → 0.23.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.24.0 → 0.24.1), `index.html` va `tests.html` da hammasini birdaniga:
 
-    sed -i 's/0\.23\.0/0.23.1/g' index.html tests.html
+    sed -i 's/0\.23\.0/0.24.1/g' index.html tests.html
 
 `sw.js` ning o'zida versiya yo'q: u o'z manzilidagi `?v=` dan oladi (alohida o'zgartirish kerak emas). Agar `js/` ga yangi fayl qo'shsangiz, uni `index.html` ga
 va `sw.js` dagi `royxat()` ga ham qo'shing (`tests.html` mosligini tekshiradi).

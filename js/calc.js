@@ -624,7 +624,7 @@
     return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
   }
   // sozlamalar to'plamidagi faqat shu qurilmaga tegishli yozuvlar: zaxiraga kirmaydi, tiklash ularni o'chirmaydi
-  var YEREL_KALITLAR = ['pin', 'migratsiya-zaxira', 'yuklash', 'sinxron', 'sinxron-navbat', 'rozilik'];   // 'yuklash' (S4): serverga yuklash holati (faqat shu qurilmada)
+  var YEREL_KALITLAR = ['pin', 'migratsiya-zaxira', 'yuklash', 'sinxron', 'sinxron-navbat', 'rozilik', 'import-tarixi'];   // 'yuklash' (S4): serverga yuklash holati (faqat shu qurilmada)
   function yerelKalitmi(x) { return !!x && YEREL_KALITLAR.indexOf(x.kalit) !== -1; }
 
   // Mantiqiy o'chirilgan (deleted) qatorlar ko'rinmaydi. Qarzning o'chirilgan to'lovlari ham.

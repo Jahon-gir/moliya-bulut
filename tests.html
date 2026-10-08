@@ -4313,11 +4313,11 @@ function xfix(opts) {
         });
       });
       // ---- 19-band: qarz amallari hisobotda (ixtiyoriy) ----
-      function qh(yon, summa, sana, hisob, tolovlar) { return { id: Data.yangiId(), yaratilgan: sana + 'T10:00:00.000Z', yonalish: yon, shaxs: 'Shaxs ' + summa, summa: summa, hisob_id: hisob, sana: sana, vaqt: '10:00', muddat: '', izoh: '', tolovlar: tolovlar || [] }; }
+      function qhisobot(yon, summa, sana, hisob, tolovlar) { return { id: Data.yangiId(), yaratilgan: sana + 'T10:00:00.000Z', yonalish: yon, shaxs: 'Shaxs ' + summa, summa: summa, hisob_id: hisob, sana: sana, vaqt: '10:00', muddat: '', izoh: '', tolovlar: tolovlar || [] }; }
       var SENT_OLINGAN = [1000000, 800000, 1500000, 600000, 400000, 173200];   // 6 ta olingan qarz: jami 4 473 200
       function sentQarzlar(hisob) {
-        var q = SENT_OLINGAN.map(function (s, i) { return qh('oldim', s, '2026-09-' + ('0' + (3 + i * 4)).slice(-2), hisob); });
-        q.push(qh('berdim', 735000, '2026-09-20', hisob));   // 1 ta berilgan qarz
+        var q = SENT_OLINGAN.map(function (s, i) { return qhisobot('oldim', s, '2026-09-' + ('0' + (3 + i * 4)).slice(-2), hisob); });
+        q.push(qhisobot('berdim', 735000, '2026-09-20', hisob));   // 1 ta berilgan qarz
         return q;
       }
       test('Qarz hisobotda (hisobot): Sentabr 2026 — 6 ta olingan qarz 4 473 200 "Olingan qarz" daromadi, 1 ta berilgan qarz 735 000 "Berilgan qarz" xarajati; hisobga virtual yozuvlar sifatida', function () {
@@ -4335,8 +4335,8 @@ function xfix(opts) {
         teng(Calc.oyJami(Y.concat(v), '2026-10').soni, 0, 'boshqa oyga tushmaydi');
       });
       test('Qarz hisobotda: pul kirdi = daromad ("Olingan qarz"), pul chiqdi = xarajat ("Berilgan qarz"): olingan qarz va uning qaytarilishi, berilgan qarz va uning qaytarib olinishi; o\'chirilgan to\'lov va hisob filtri', function () {
-        var olgan = qh('oldim', 1000, '2026-09-01', 'naqd', [{ id: 't1', sana: '2026-10-02', vaqt: '10:00', summa: 300, hisob_id: 'naqd' }, { id: 't2', sana: '2026-09-15', vaqt: '10:00', summa: 50, hisob_id: 'karta', deleted: true }]);
-        var bergan = qh('berdim', 2000, '2026-09-05', 'karta', [{ id: 't3', sana: '2026-09-25', vaqt: '10:00', summa: 700, hisob_id: 'karta' }]);
+        var olgan = qhisobot('oldim', 1000, '2026-09-01', 'naqd', [{ id: 't1', sana: '2026-10-02', vaqt: '10:00', summa: 300, hisob_id: 'naqd' }, { id: 't2', sana: '2026-09-15', vaqt: '10:00', summa: 50, hisob_id: 'karta', deleted: true }]);
+        var bergan = qhisobot('berdim', 2000, '2026-09-05', 'karta', [{ id: 't3', sana: '2026-09-25', vaqt: '10:00', summa: 700, hisob_id: 'karta' }]);
         var v = Calc.qarzYozuvlari([olgan, bergan]); teng(v.length, 5 - 1, 'o\'chirilgan to\'lov hisobga olinmaydi');
         var sent = Calc.hisobot(v, '2026-09-01', '2026-09-30', ''), okt = Calc.hisobot(v, '2026-10-01', '2026-10-31', '');
         teng(sent.daromad, 1000 + 700, 'olingan qarz (kirdi) + berilgan qarz qaytdi (kirdi)'); teng(sent.xarajat, 2000, 'berilgan qarz (chiqdi)');

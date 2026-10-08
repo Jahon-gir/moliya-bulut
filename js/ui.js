@@ -1617,7 +1617,7 @@
   }
 
   function importBoshlash(f) {
-    var joriy = imp = { faza: 'oqilmoqda', fayl: f.name, xato: '', tanlov: { turTanlovi: {}, kategoriya: {}, hisob: {}, takror: 'otkaz', qarzTeskari: false, qarzGuruh: {} } };
+    var joriy = imp = { faza: 'oqilmoqda', fayl: f.name, xato: '', tanlov: { turTanlovi: {}, kategoriya: {}, hisob: {}, takror: 'otkaz', qarzTeskari: false } };
     ochish(importEkrani, false);
     if (!/\.xlsx$/i.test(f.name) && f.name) { importXato(joriy, Object.assign(new Error('Faqat Excel .xlsx fayli qabul qilinadi (CSV, .xls va boshqalar emas)'), { kod: 'IMPORT_FORMAT' })); return; }
     var oqish = f.arrayBuffer ? f.arrayBuffer() : new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; r.readAsArrayBuffer(f); });
@@ -1673,23 +1673,28 @@
     var k = karta(); k.id = 'import-qarzlar';
     k.appendChild(el('h2', 'Qarzlar'));
     var p = el('p', r.jami.qarz + ' ta qarz, ' + r.jami.qarzAmal + ' ta qarz amali yuklanadi.', 'yozuv-nom'); p.id = 'import-qarz-jami'; k.appendChild(p);
-    k.appendChild(el('p', 'Qarz amallari ilovaning o\'z qarz mantig\'i bilan, qo\'lda qo\'shilgandek yaratiladi va hisob qoldig\'iga ta\'sir qiladi (hisobotga kirmaydi). Bir nomdagi amallarda kattaroq yig\'indi — qarz summasi, qarama-qarshi yo\'nalish — qaytarish.', 'xira'));
+    k.appendChild(el('p', 'Qarz amallari ilovaning o\'z qarz mantig\'i bilan, qo\'lda qo\'shilgandek yaratiladi va hisob qoldig\'iga ta\'sir qiladi (hisobotga kirmaydi). Qarzlar faqat nomning AYNAN o\'zi bo\'yicha bog\'lanadi (o\'xshash nomlar birlashtirilmaydi): har qator o\'z sanasi, summasi, hisobi va izohi bilan ko\'chadi; shu nomning ochiq qarziga teskari yo\'nalishdagi amal — qarzning qaytarishi, boshqasi — alohida qarz.', 'xira'));
     var q = tanlov('imp-qarz-yonalish', 'Qarz turi qiymatlari ("Loan" qatorlari uchun)', [
       ['standart', 'Borrowing = qarz OLINDI (pul hisobga kirdi); Lending = qarz BERILDI yoki QAYTARILDI (pul chiqdi)'],
       ['teskari', 'Teskarisi: Borrowing = pul hisobdan chiqdi; Lending = pul hisobga kirdi']], joriy.tanlov.qarzTeskari ? 'teskari' : 'standart', function (v) {
       joriy.tanlov.qarzTeskari = v === 'teskari'; importReja(); chizish(importEkrani(), true);
     });
     k.appendChild(q.quti);
-    // nomlar: o'xshashlari taklif sifatida birlashtirilgan, har nom uchun tuzatish
+    // nom bo'yicha ro'yxat: nomlar aynan fayldagidek (o'xshash nomlar birlashtirilmaydi)
     if (r.qarzNomlar.length) {
-      k.appendChild(el('p', 'Qarz nomlari (o\'xshashlari taklif sifatida birlashtirilgan; tuzating):', 'yozuv-nom'));
-      r.qarzNomlar.forEach(function (g, i) {
-        var v = [[g.kalit, 'Alohida qarz: ' + g.nom]];
-        r.qarzNomlar.forEach(function (o) { if (o.kalit !== g.kalit) v.push([o.kalit, 'Birlashtirish: ' + o.nom]); });
-        var nomi = g.nom + ' — ' + g.soni + ' amal' + (g.guruh !== g.kalit ? ' (→ ' + g.guruhNomi + ' bilan birlashtirilgan)' : '');
-        var t = tanlov('imp-qn-' + i, nomi, v, g.guruh, function (val) { joriy.tanlov.qarzGuruh[g.kalit] = val; importReja(); chizish(importEkrani(), true); });
-        k.appendChild(t.quti);
+      k.appendChild(el('p', 'Nom bo\'yicha (nomlar fayldagidek, o\'zgarishsiz):', 'yozuv-nom'));
+      r.qarzNomlar.forEach(function (g) {
+        k.appendChild(el('div', g.nom + ' — ' + g.soni + ' qator · kirdi +' + Calc.sumFormat(g.kirdi) + ' · chiqdi −' + Calc.sumFormat(g.chiqdi) + ' · ' + g.qarz + ' qarz yozuvi', 'yozuv-izoh import-qator import-nom-qator'));
       });
+    }
+    var qq = r.qatorlar.filter(function (x) { return x.qarz && x.qarzInfo && x.holat === 'yuklanadi'; });
+    if (qq.length) {
+      k.appendChild(el('p', 'Qarz qatorlari (' + qq.length + ' ta): sana · nom · tur · summa · hisob', 'yozuv-nom'));
+      qq.slice(0, 60).forEach(function (x) {
+        var i = x.qarzInfo, hg = r.hisoblar.filter(function (g) { return g.kalit === i.hisobG; })[0];
+        k.appendChild(el('div', Calc.sanaKorsat(i.sana) + ' ' + i.vaqt + ' · ' + i.nom + ' · ' + (i.turi === 'berilgan' ? 'Lending' : 'Borrowing') + ' → ' + (i.eff === 'in' ? 'kirdi +' : 'chiqdi −') + Calc.sumFormat(i.summa) + ' · ' + importNomi(hg, false), 'yozuv-izoh import-qator import-qarz-amal'));
+      });
+      if (qq.length > 60) k.appendChild(el('div', 'va yana ' + (qq.length - 60) + ' ta…', 'yozuv-izoh'));
     }
     if (r.qarzlar.length) {
       k.appendChild(el('p', 'Yaratiladigan qarzlar:', 'yozuv-nom'));

@@ -3859,40 +3859,44 @@
       var KAP = 'kapitalbankuzcard';
       function qarzReja(tanlov, mavjud) { return imFayl(qarzFayli(), true).then(XlsxOqi.oqi).then(function (o) { return imReja(o, tanlov, mavjud); }); }
       function qNom(r, nom) { return r.qarzlar.filter(function (e) { return e.nom === nom; }); }
-      test('Qarz nomlari: o\'xshashlari taklif sifatida birlashadi ("Tez/Tez karta/Tez kartada/Tez kartasidan", "Uzum bankdan/Uzumbankdan"); alohida nomlar alohida; apostrof va harf kattaligi e\'tiborsiz', function () {
-        ['Tez', 'Tez karta', 'Tez kartada', 'Tez kartasidan', 'TEZ  KARTA'].forEach(function (n) { teng(ImportSof.qarzNomKaliti(n), 'tez', n); });
-        ['Uzum bankdan', 'Uzumbankdan', 'uzum bank', 'Uzum'].forEach(function (n) { teng(ImportSof.qarzNomKaliti(n), 'uzum', n); });
-        teng(ImportSof.qarzNomKaliti('Ali') === ImportSof.qarzNomKaliti('Tez'), false); teng(ImportSof.qarzNomKaliti('Bank'), 'bank'); teng(ImportSof.qarzNomKaliti('G\'ayrat'), ImportSof.qarzNomKaliti('Gʻayrat'));
+      test('Qarz turi qiymatlari: Borrowing/Olingan, Lending/Berilgan (harf kattaligi va bo\'shliqqa e\'tiborsiz)', function () {
         teng(ImportSof.qarzTuriOqi('Borrowing'), 'olingan'); teng(ImportSof.qarzTuriOqi(' lending '), 'berilgan'); teng(ImportSof.qarzTuriOqi('Olingan'), 'olingan'); teng(ImportSof.qarzTuriOqi('Berilgan'), 'berilgan'); teng(ImportSof.qarzTuriOqi('xyz'), null);
       });
-      test('Qarz reja (Borrowing/Lending standart): 3 ta qarz, nomlar birlashtirilgan, "-" bo\'sh katak, uzilmas bo\'sh joyli summa, qarz yo\'nalishi va qoldig\'i, hisobga ta\'siri; oddiy qator qarzga aralashmaydi', function () {
+      test('Qarz reja (Borrowing/Lending standart): har qator o\'z nomi bilan AYNAN ko\'chadi (o\'xshash nomlar birlashtirilmaydi), yo\'nalish, summa, "-" bo\'sh katak, uzilmas bo\'sh joyli summa, hisobga ta\'siri; oddiy qator qarzga aralashmaydi', function () {
         return qarzReja().then(function (r) {
-          teng(r.jami.jami, 8); teng(r.jami.qarz, 3); teng(r.jami.qarzAmal, 7); teng(r.jami.yuklanadi, 1, 'oddiy xarajat'); teng(r.jami.xato + r.jami.otkazildi + r.jami.takror, 0);
-          var tez = qNom(r, 'Tez karta')[0], uzum = qNom(r, 'Uzum bankdan')[0], ali = qNom(r, 'Ali')[0];
-          teng(!!tez, true, 'qarz nomi — guruhdagi eng qisqa nom: Tez karta'); teng(tez.yon, 'oldim'); teng(tez.summa, 3087000); teng(tez.tolangan, 1500000); teng(tez.qolgan, 1587000); teng(tez.amal, 3); teng(tez.rec.tolovlar.length, 2); teng(tez.rec.izoh, 'Kvartira to\'lovi uchun'); teng(tez.rec.sana, '2026-10-08'); teng(tez.rec.vaqt, '11:35');
-          teng(uzum.yon, 'oldim'); teng(uzum.summa, 2000000); teng(uzum.qolgan, 0); teng(uzum.amal, 2);
-          teng(ali.yon, 'berdim'); teng(ali.summa, 500000); teng(ali.tolangan, 200000); teng(ali.qolgan, 300000); teng(ali.hisobG, 'naqdpul');
-          teng(r.qarzTasiri[KAP], 3087000 - 1500000 + 2000000 - 2000000); teng(r.qarzTasiri.naqdpul, -500000 + 200000);
-          teng(r.qarzNomlar.length, 5, 'Uzum bankdan va Uzumbankdan bir xil nom'); var tezNomlar = r.qarzNomlar.filter(function (g) { return g.guruhNomi === 'Tez karta'; }); teng(tezNomlar.length, 3); teng(tezNomlar.every(function (g) { return g.taklif === 'tezkarta'; }), true);
+          teng(r.jami.jami, 8); teng(r.jami.qarz, 6); teng(r.jami.qarzAmal, 7); teng(r.jami.yuklanadi, 1, 'oddiy xarajat'); teng(r.jami.xato + r.jami.otkazildi + r.jami.takror, 0);
+          teng(r.qarzNomlar.map(function (g) { return g.nom; }).sort().join('|'), ['Ali', 'Tez karta', 'Tez kartada', 'Tez kartasidan', 'Uzum bankdan', 'Uzumbankdan'].sort().join('|'), 'nomlar o\'zgarishsiz, birlashtirilmagan');
+          var a = qNom(r, 'Tez kartasidan')[0];
+          teng(a.yon, 'oldim'); teng(a.summa, 3087000); teng(a.tolangan, 0); teng(a.qolgan, 3087000); teng(a.amal, 1); teng(a.rec.izoh, 'Kvartira to\'lovi uchun'); teng(a.rec.sana, '2026-10-08'); teng(a.rec.vaqt, '11:35'); teng(a.hisobG, KAP);
+          teng(qNom(r, 'Tez karta')[0].yon, 'berdim', 'Lending o\'zi bog\'lanmaydi: alohida qarz'); teng(qNom(r, 'Tez karta')[0].summa, 1000000); teng(qNom(r, 'Tez karta')[0].rec.vaqt, '10:00'); teng(qNom(r, 'Tez kartada')[0].summa, 500000); teng(qNom(r, 'Tez kartada')[0].rec.izoh, '');
+          teng(qNom(r, 'Uzum bankdan')[0].yon, 'oldim'); teng(qNom(r, 'Uzumbankdan')[0].yon, 'berdim'); teng(qNom(r, 'Uzumbankdan')[0].summa, 2000000);
+          var ali = qNom(r, 'Ali')[0]; teng(ali.yon, 'berdim'); teng(ali.summa, 500000); teng(ali.tolangan, 200000); teng(ali.qolgan, 300000); teng(ali.amal, 2); teng(ali.hisobG, 'naqdpul'); teng(ali.rec.tolovlar.length, 1); teng(ali.rec.tolovlar[0].sana, '2026-10-06');
+          teng(r.qarzTasiri[KAP], 3087000 - 1000000 - 500000 + 2000000 - 2000000); teng(r.qarzTasiri.naqdpul, -500000 + 200000);
+          var q = r.qatorlar.filter(function (x) { return x.qarzInfo; }); teng(q.length, 7); teng(q[0].qarzInfo.nom, 'Tez kartasidan'); teng(q[0].qarzInfo.eff, 'in'); teng(q[1].qarzInfo.eff, 'out'); teng(q[0].qarzInfo.summa, 3087000);
           teng(r.hisoblar.filter(function (g) { return g.kalit === KAP; })[0].yangi, true); teng(r.hisoblar.filter(function (g) { return g.kalit === 'naqdpul'; })[0].id, 'naqd');
         });
       });
       test('Qarz yo\'nalishini almashtirish (bitta almashtirgich): hamma Loan qatorlarida pul teskari yo\'nalishda, qoldiqqa ta\'siri teskari; yo\'nalishlar to\'g\'ri', function () {
         return Promise.all([qarzReja(), qarzReja({ qarzTeskari: true })]).then(function (x) {
           var a = x[0], b = x[1];
-          teng(qNom(b, 'Tez karta')[0].yon, 'berdim'); teng(qNom(b, 'Tez karta')[0].summa, 3087000); teng(qNom(b, 'Tez karta')[0].tolangan, 1500000); teng(qNom(b, 'Ali')[0].yon, 'oldim'); teng(qNom(b, 'Ali')[0].summa, 500000);
-          teng(b.qarzTasiri[KAP], -a.qarzTasiri[KAP]); teng(b.qarzTasiri.naqdpul, -a.qarzTasiri.naqdpul); teng(b.jami.qarz, 3); teng(b.jami.qarzAmal, 7);
+          teng(qNom(b, 'Tez kartasidan')[0].yon, 'berdim'); teng(qNom(b, 'Tez kartasidan')[0].summa, 3087000); teng(qNom(b, 'Tez karta')[0].yon, 'oldim'); teng(qNom(b, 'Ali')[0].yon, 'oldim'); teng(qNom(b, 'Ali')[0].summa, 500000); teng(qNom(b, 'Ali')[0].tolangan, 200000);
+          teng(b.qarzTasiri[KAP], -a.qarzTasiri[KAP]); teng(b.qarzTasiri.naqdpul, -a.qarzTasiri.naqdpul); teng(b.jami.qarz, 6); teng(b.jami.qarzAmal, 7);
         });
       });
-      test('Qarz nomlarini birlashtirish va ajratish (foydalanuvchi tuzatadi): "Tez karta" ni alohida qarz qilish; "Ali" ni "Tez" ga birlashtirish — hisob qoldig\'iga ta\'siri o\'zgarmaydi', function () {
-        return Promise.all([qarzReja({ qarzGuruh: { tezkartada: 'tezkartada' } }), qarzReja({ qarzGuruh: { ali: 'tezkarta' } }), qarzReja()]).then(function (x) {
-          var aj = x[0], bir = x[1], asl = x[2];
-          teng(aj.jami.qarz, 4); teng(qNom(aj, 'Tez kartada').length, 1); teng(qNom(aj, 'Tez kartada')[0].summa, 500000); teng(qNom(aj, 'Tez kartada')[0].yon, 'berdim', 'yolg\'iz qaytarish asosiy amal bo\'ladi'); teng(qNom(aj, 'Tez karta')[0].summa, 3087000); teng(qNom(aj, 'Tez karta')[0].tolangan, 1000000);
-          teng(aj.qarzTasiri[KAP], asl.qarzTasiri[KAP]);
-          teng(bir.jami.qarz, 3, 'Tez karta ikki hisobdan olingan: ikki qarz yozuvi + Uzum'); var tt = qNom(bir, 'Tez karta'); teng(tt.length, 2); teng(tt[0].summa + tt[1].summa, 3287000); teng(tt[0].tolangan + tt[1].tolangan, 2000000); teng(tt[0].amal + tt[1].amal >= 5, true);
-          teng(bir.qarzTasiri[KAP], asl.qarzTasiri[KAP]); teng(bir.qarzTasiri.naqdpul, asl.qarzTasiri.naqdpul, 'birlashtirishda hisob qoldig\'i bir xil');
-          return qarzReja({ qarzGuruh: { tezkarta: 'ali', ali: 'tezkarta' } });   // aylana: yiqilmaydi
-        }).then(function (r) { teng(r.jami.qarz >= 1, true); teng(r.jami.qarzAmal, 7); });
+      test('Qarz bog\'lash faqat LoanName ning aynan o\'zi bo\'yicha va sana tartibida: bir nom ostida Borrowing, Borrowing, Lending — eng eski qarzdan qaytariladi; qaytarish qarzdan oshsa — teskari yo\'nalishdagi yangi qarz; bo\'sh joy farqi nomni o\'zgartirmaydi, harf kattaligi farq qiladi', function () {
+        function L(d, id, s, nom, t) { return [d, id, 'Loan', 'Naqd pul', '-', '-', s, s, 'UZS', s, nom, t, s, null]; }
+        var q = [IM_SARL, L('2026-10-01 10:00', 'N1', '1 000,00 UZS', 'Vali', 'Borrowing'), L('2026-10-02 10:00', 'N2', '2 000,00 UZS', 'Vali', 'Borrowing'), L('2026-10-03 10:00', 'N3', '1 500,00 UZS', 'Vali', 'Lending'),
+          L('2026-10-04 10:00', 'N4', '5 000,00 UZS', 'Vali', 'Lending'), L('2026-10-05 10:00', 'N5', '100,00 UZS', 'vali', 'Borrowing'), L('2026-10-05 11:00', 'N6', '100,00 UZS', ' Vali ', 'Borrowing')];
+        return imFayl(q, true).then(XlsxOqi.oqi).then(function (o) {
+          var r = imReja(o), v = qNom(r, 'Vali'), kichik = qNom(r, 'vali');
+          teng(kichik.length, 1, '"vali" alohida nom'); teng(r.qarzNomlar.length, 2);
+          // Vali: Borrowing 1000 (10-01) va 2000 (10-02) — ikki qarz; Lending 1500: ikkinchisiga sig\'adi (to\'liq sig\'adigan birinchi qarz: 2000); Lending 5000: 1000 + 500 qoladi — bo\'laklanadi; ortiqcha 3500 teskari yo\'nalishdagi yangi qarz
+          teng(v.length, 3, 'Vali: 1000, 2000 va teskari 3500 (bo\'sh joy bilan yozilgan nom bir xil nom)');
+          var oldim = v.filter(function (e) { return e.yon === 'oldim'; }).sort(function (a, b) { return a.summa - b.summa; }), berdim = v.filter(function (e) { return e.yon === 'berdim'; });
+          teng(oldim.map(function (e) { return e.summa + ':' + e.tolangan; }).join(), '1000:1000,2000:2000', 'avval 1500 ikkinchisiga sig\'di, keyin 5000 ning 1500 qismi qolganlarga bo\'lindi'); teng(berdim.length, 1); teng(berdim[0].summa, 3500, 'ortiqcha qism teskari yo\'nalishdagi yangi qarz'); teng(berdim[0].tolangan, 100, 'keyingi Borrowing shu qarzning qaytarishi');
+          teng(kichik[0].summa, 100); teng(kichik[0].tolangan, 0); teng(r.jami.qarzAmal, 6);
+          teng(r.qarzTasiri.naqdpul, 1000 + 2000 - 1500 - 5000 + 100 + 100, 'umumiy ta\'sir amallar yig\'indisiga teng');
+        });
       });
       test('Qarz xatolari: noma\'lum LoanType (R_QARZ_TURI), kelajak sanasi (R_KELAJAK), begona valyuta (R_VALYUTA); "Tez" nomi bo\'sh bo\'lsa "Nomsiz qarz"', function () {
         var q = [IM_SARL,
@@ -3911,21 +3915,21 @@
           naqd0 = Calc.hisobQoldigi(m.hisoblar.filter(function (h) { return h.nom === 'Naqd pul'; })[0], m.yozuvlar, m.qarzlar); teng(naqd0, 0);
           return imYukla(bayt, {});
         }).then(function (x) {
-          teng(x.p.qarzlar.length, 3); teng(x.p.yozuvlar.length, 1); teng(x.p.hisoblar.length, 1); teng(x.p.hisoblar[0].nom, 'Kapitalbank uzcard'); return jonli();
+          teng(x.p.qarzlar.length, 6); teng(x.p.yozuvlar.length, 1); teng(x.p.hisoblar.length, 1); teng(x.p.hisoblar[0].nom, 'Kapitalbank uzcard'); return jonli();
         }).then(function (m) {
-          teng(m.qarzlar.length, 3); teng(m.qarzlar.every(function (z) { return Calc.uuidTogrimi(z.id) && z.deleted === false && typeof z.updated_at === 'string' && z.tolovlar.every(function (t) { return Calc.uuidTogrimi(t.id) && t.deleted === false && typeof t.updated_at === 'string' && Calc.uuidTogrimi(t.hisob_id); }); }), true);
+          teng(m.qarzlar.length, 6); teng(m.qarzlar.every(function (z) { return Calc.uuidTogrimi(z.id) && z.deleted === false && typeof z.updated_at === 'string' && z.tolovlar.every(function (t) { return Calc.uuidTogrimi(t.id) && t.deleted === false && typeof t.updated_at === 'string' && Calc.uuidTogrimi(t.hisob_id); }); }), true);
           teng(m.qarzlar.every(function (z) { return Calc.qarzniTekshir({ yonalish: z.yonalish, shaxs: z.shaxs, summa: String(z.summa), hisob: z.hisob_id, sana: z.sana, vaqt: z.vaqt, muddat: z.muddat, izoh: z.izoh }, { sana: '2026-10-10', vaqt: '21:00' }, z).qarz !== undefined; }), true, 'qo\'lda kiritish tekshiruvidan o\'tadi');
-          var tez = m.qarzlar.filter(function (z) { return z.shaxs === 'Tez karta'; })[0], uzum = m.qarzlar.filter(function (z) { return z.shaxs === 'Uzum bankdan'; })[0];
-          teng(Calc.qarzQolgan(tez), 1587000); teng(Calc.qarzYopilganmi(tez), false); teng(tez.yopilgan, false); teng(Calc.qarzYopilganmi(uzum), true); teng(uzum.yopilgan, true);
+          var tez = m.qarzlar.filter(function (z) { return z.shaxs === 'Tez kartasidan'; })[0], ali = m.qarzlar.filter(function (z) { return z.shaxs === 'Ali'; })[0];
+          teng(Calc.qarzQolgan(tez), 3087000); teng(Calc.qarzYopilganmi(tez), false); teng(tez.yopilgan, false); teng(Calc.qarzQolgan(ali), 300000); teng(ali.tolovlar.length, 1); teng(ali.yonalish, 'berdim'); teng(m.qarzlar.map(function (z) { return z.shaxs; }).sort().join('|'), ['Ali', 'Tez karta', 'Tez kartada', 'Tez kartasidan', 'Uzum bankdan', 'Uzumbankdan'].sort().join('|'));
           var kap = m.hisoblar.filter(function (h) { return h.nom === 'Kapitalbank uzcard'; })[0], naqd = m.hisoblar.filter(function (h) { return h.nom === 'Naqd pul'; })[0];
           teng(Calc.hisobQoldigi(kap, m.yozuvlar, m.qarzlar), 3087000 - 1500000, 'Kapitalbank: +3 087 000 − 1 000 000 − 500 000 (+2 000 000 − 2 000 000)');
           teng(Calc.hisobQoldigi(naqd, m.yozuvlar, m.qarzlar), -10000 - 500000 + 200000, 'Naqd pul: oddiy xarajat, berilgan qarz, qaytgan qism');
-          var j = Calc.qarzlarJami(m.qarzlar); teng(j.olishKerak, 300000); teng(j.qaytarishKerak, 1587000);
+          var j = Calc.qarzlarJami(m.qarzlar); teng(j.olishKerak, 1000000 + 500000 + 2000000 + 300000); teng(j.qaytarishKerak, 3087000 + 2000000);
           var hisobotJami = Calc.hisobot ? 1 : 1; teng(hisobotJami, 1);
           return imYukla(bayt, {});
         }).then(function (x) {
           teng(x.p.qarzlar.length, 0, 'qarz ikkilanmaydi'); teng(x.r.jami.qarzAmal, 0); teng(x.r.jami.takror, 8); return jonli();
-        }).then(function (m) { teng(m.qarzlar.length, 3); return Data.olish('sozlamalar', Data.IMPORT_KALITI); }).then(function (t) {
+        }).then(function (m) { teng(m.qarzlar.length, 6); return Data.olish('sozlamalar', Data.IMPORT_KALITI); }).then(function (t) {
           teng(Object.keys(t.idlar).length, 8); teng(t.oxirgi.qarzlar.length, 0); return Data.boshlash(SINOV_BAZA);
         });
       });
@@ -3937,18 +3941,18 @@
         }).then(function () { return jonli(); }).then(function (m) {
           oldin = Calc.hisobQoldigi(m.hisoblar[0], m.yozuvlar, m.qarzlar); teng(oldin, 1000); return imYukla(bayt, {});
         }).then(function () { return Data.importBekor(); }).then(function (n) {
-          teng(n.qarzlar, 3); teng(n.yozuvlar, 1); teng(n.hisoblar, 1); return Promise.all([jonli(), Data.hammasiniOqish()]);
+          teng(n.qarzlar, 6); teng(n.yozuvlar, 1); teng(n.hisoblar, 1); return Promise.all([jonli(), Data.hammasiniOqish()]);
         }).then(function (r) {
           var m = r[0]; teng(m.qarzlar.length, 1); teng(m.qarzlar[0].shaxs, 'Qo\'lda'); teng(Calc.hisobQoldigi(m.hisoblar[0], m.yozuvlar, m.qarzlar), oldin, 'qoldiq qaytdi'); teng(m.hisoblar.length, 1);
-          teng(r[1].qarzlar.filter(function (z) { return z.deleted === true; }).length, 3, 'mantiqiy o\'chirilgan'); teng(Calc.qarzlarJami(m.qarzlar).qaytarishKerak, 1000);
+          teng(r[1].qarzlar.filter(function (z) { return z.deleted === true; }).length, 6, 'mantiqiy o\'chirilgan'); teng(Calc.qarzlarJami(m.qarzlar).qaytarishKerak, 1000);
           return imYukla(bayt, {});
-        }).then(function (x) { teng(x.p.qarzlar.length, 3, 'bekordan keyin qayta yuklanadi'); return jonli(); }).then(function (m) { teng(m.qarzlar.length, 4); return Data.boshlash(SINOV_BAZA); });
+        }).then(function (x) { teng(x.p.qarzlar.length, 6, 'bekordan keyin qayta yuklanadi'); return jonli(); }).then(function (m) { teng(m.qarzlar.length, 7); return Data.boshlash(SINOV_BAZA); });
       });
       test('Qarz yozish sinxron navbatiga tushadi (oddiy saqlash kabi) va xato bo\'lsa (yaroqsiz qarz) hech narsa yozilmaydi', function () {
         return imBaza().then(function () { return Data.saqlash('sozlamalar', { kalit: Data.SINXRON_KALITI, navbat: true, tayyor: true }); }).then(function () { return imFayl(qarzFayli(), true); }).then(function (b) { return imYukla(b, {}); }).then(function () {
           return Data.olish('sozlamalar', Data.NAVBAT_KALITI);
         }).then(function (nv) {
-          teng(Object.keys(nv.qatorlar.qarzlar).length, 3); teng(Object.keys(nv.qatorlar.yozuvlar).length, 1); return jonli();
+          teng(Object.keys(nv.qatorlar.qarzlar).length, 6); teng(Object.keys(nv.qatorlar.yozuvlar).length, 1); return jonli();
         }).then(function (m0) {
           var p = { hisoblar: [], kategoriyalar: [], yozuvlar: [], qarzlar: [{ shaxs: 'ID yo\'q', tolovlar: [] }], manbaIdlar: ['yangi-qarz-id'] };
           return Data.importYozish(p, 'x').then(function () { throw new Error('xato kutilgan'); }, function () { return jonli(); }).then(function (m1) { teng(m1.qarzlar.length, m0.qarzlar.length); return Data.olish('sozlamalar', Data.IMPORT_KALITI); }).then(function (t) { teng(!!t.idlar['yangi-qarz-id'], false); return Data.boshlash(SINOV_BAZA); });

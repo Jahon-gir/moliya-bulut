@@ -119,7 +119,13 @@
     return ul;
   }
 
+  // Hisobot hisoblari uchun yozuvlar: yozuvlar + (sozlama yoqiq bo'lsa) qarz amallari "Olingan qarz" / "Berilgan qarz" virtual yozuvlari sifatida.
+  // Faqat hisobot, diagramma va "Naqd pul oqimi" uchun; byudjet, Tarix va hisob qoldig'i hisobi bunga tegmaydi.
+  function hisobotYozuvlari() {
+    return Salom.qarzHisobotda() && malumot.qarzlar.length ? malumot.yozuvlar.concat(Calc.qarzYozuvlari(malumot.qarzlar)) : malumot.yozuvlar;
+  }
   function kategoriyaOl(id) {
+    if (Calc.qarzKategoriyami(id)) return Calc.QARZ_KATEGORIYALAR.filter(function (k) { return k.id === id; })[0];
     return malumot.kategoriyalar.filter(function (k) { return k.id === id; })[0];
   }
   function hisobOl(id) {
@@ -1551,6 +1557,16 @@
     });
     m.appendChild(tanlov);
     s.appendChild(m);
+    // Qarzlarni hisobotga qo'shish (sukut: yoqiq): qarz olish "Olingan qarz" daromad, qarz berish/qaytarish "Berilgan qarz" xarajat sifatida hisobot va diagrammalarda
+    var qh = el('label', undefined, 'sozlama-belgi qarz-hisobot-qator');
+    var qhb = document.createElement('input'); qhb.type = 'checkbox'; qhb.id = 'qarz-hisobotda'; qhb.checked = Salom.qarzHisobotda();
+    qhb.setAttribute('aria-label', 'Qarzlarni hisobotga qo\'shish');
+    qhb.addEventListener('change', function () { Salom.qarzHisobotdaYoz(qhb.checked); qisqaXabar(qhb.checked ? 'Qarzlar hisobotga qo\'shildi' : 'Qarzlar hisobotdan chiqarildi'); });
+    var qhm = el('span', undefined, 'sozlama-matn');
+    qhm.appendChild(el('strong', 'Qarzlarni hisobotga qo\'shish'));
+    qhm.appendChild(el('span', 'Yoqiq: hisobga pul kirishi (qarz olindi, berilgan qarz qaytdi) — "Olingan qarz" daromadi, pul chiqishi (qarz berildi, olingan qarz qaytarildi) — "Berilgan qarz" xarajati sifatida hisobot va diagrammalarda ko\'rinadi. Byudjet va hisob qoldig\'iga ta\'sir qilmaydi.', 'xira'));
+    qh.appendChild(qhb); qh.appendChild(qhm);
+    s.appendChild(qh);
     bloklar.push(s);
     // 2) Boshqa: Zaxira va eksport, Bosh ekranga o'rnatish
     var o = karta();
@@ -2500,6 +2516,13 @@
 
   // Diagramma bo'lagi bosilganda: shu kategoriya yoki kunning yozuvlari filtrlangan ro'yxat sifatida ochiladi ("Orqaga" hisobotga qaytaradi)
   function yozuvlarniOchish(f) {
+    // "Olingan qarz" / "Berilgan qarz" haqiqiy kategoriya emas: ularni bosish Qarzlar bo'limini ochadi
+    if (f.kategoriya && Calc.qarzKategoriyami(f.kategoriya)) { korsat('qarzlar'); return; }
+    if (f.kategoriyalar) {
+      var haqiqiy = f.kategoriyalar.filter(function (id) { return !Calc.qarzKategoriyami(id); });
+      if (!haqiqiy.length) { korsat('qarzlar'); return; }
+      f = Object.assign({}, f, { kategoriyalar: haqiqiy });
+    }
     filtr = Object.assign(bosFiltr(), f);
     ochish(yozuvlarEkrani, false);
   }
@@ -2527,8 +2550,8 @@
 
   // Vaqt bo'yicha ustunlar: hafta va oyda kunlar, yilda oylar, erkin davrda kunlar/haftalar/oylar (kun davrida yo'q)
   function vaqtDiagrammasi(h, davr) {
-    var v = h.tur === 'davr' ? Calc.diagrammaOraliq(malumot.yozuvlar, davr.dan, davr.gacha, h.hisob)
-      : Calc.diagrammaVaqt(malumot.yozuvlar, h.tur, h.sana, h.hisob);
+    var v = h.tur === 'davr' ? Calc.diagrammaOraliq(hisobotYozuvlari(), davr.dan, davr.gacha, h.hisob)
+      : Calc.diagrammaVaqt(hisobotYozuvlari(), h.tur, h.sana, h.hisob);
     if (!v) return null;
     var k = karta();
     k.classList.add('diagramma-karta');
@@ -2544,7 +2567,7 @@
   function filtrOynasi(qayta) {
     var h = hisobotHolat, bugun = Calc.bugun(), bp = bugun.split('-'), buYil = parseInt(bp[0], 10), buOy = parseInt(bp[1], 10);
     var oldingiFokus = document.activeElement, oldingiOverflow = document.body.style.overflow;
-    var birinchi = malumot.yozuvlar.reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
+    var birinchi = hisobotYozuvlari().reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
     var yillar = Calc.filtrYillari(birinchi, bugun);
 
     // Qoralama: "Amalga oshirish" bosilguncha hisobotga tegmaydi
@@ -2784,7 +2807,7 @@
     bloklar.push(nom);
     if (h.hisob) bloklar.push(el('p', 'Hisob: ' + (hisobNomi(h.hisob) || '—'), 'xira hisob-izohi'));
 
-    var joriyH = Calc.hisobot(malumot.yozuvlar, davr.dan, davr.gacha, h.hisob);
+    var joriyH = Calc.hisobot(hisobotYozuvlari(), davr.dan, davr.gacha, h.hisob);
     if (joriyH.soni === 0) {
       var bos = karta();
       bos.appendChild(el('p', 'Bu davrda yozuvlar yo\'q', 'xira'));
@@ -2804,7 +2827,7 @@
     bloklar.push(jami);
 
     // Oldingi davr bilan taqqoslash (xarajat); erkin davrda — xuddi shuncha kunlik oldingi oraliq
-    var oldingiH = Calc.hisobot(malumot.yozuvlar, davr.oldingi.dan, davr.oldingi.gacha, h.hisob);
+    var oldingiH = Calc.hisobot(hisobotYozuvlari(), davr.oldingi.dan, davr.oldingi.gacha, h.hisob);
     var t = Calc.taqqoslash(joriyH.xarajat, oldingiH.xarajat);
     var tk = karta();
     tk.appendChild(el('h2', 'Oldingi davr bilan (' + davr.oldingi.nom + ')'));
@@ -3739,7 +3762,7 @@
     k.classList.add('oqim-karta');
     var bosh = el('div', undefined, 'bolim-bosh');
     bosh.appendChild(el('h2', 'Naqd pul oqimi'));
-    var birinchi = malumot.yozuvlar.reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
+    var birinchi = hisobotYozuvlari().reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
     var oylar = Calc.oqimOylari(birinchi, Calc.bugun());
     if (oylar.indexOf(asosiyOy) === -1) asosiyOy = oylar[0];
     var sel = document.createElement('select');
@@ -3755,7 +3778,7 @@
     sel.addEventListener('change', function () { asosiyOy = sel.value; asosiyniQayta(); });
     bosh.appendChild(sel);
     k.appendChild(bosh);
-    var oj = Calc.oyJami(malumot.yozuvlar, asosiyOy);
+    var oj = Calc.oyJami(hisobotYozuvlari(), asosiyOy);
     var b = tugma(undefined, 'oqim-qator', function () { hisobotniOchish(asosiyOy); });
     b.id = 'oqim-qator';
     b.setAttribute('aria-label', 'Hisobotni ochish: ' + OY_NOMLARI_UI[parseInt(asosiyOy.slice(5, 7), 10) - 1] + ' ' + asosiyOy.slice(0, 4));
@@ -3833,10 +3856,10 @@
   function kategoriyalarKartasi() {
     var k = karta();
     k.classList.add('kategoriyalar-karta', 'diagramma-karta');
-    var birinchi = malumot.yozuvlar.reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
+    var birinchi = hisobotYozuvlari().reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
     var oylar = Calc.oqimOylari(birinchi, Calc.bugun());
     if (oylar.indexOf(asosiyOy) === -1) asosiyOy = oylar[0];
-    var davr = Calc.hisobotDavri('oy', asosiyOy + '-01'), h = Calc.hisobot(malumot.yozuvlar, davr.dan, davr.gacha, '');
+    var davr = Calc.hisobotDavri('oy', asosiyOy + '-01'), h = Calc.hisobot(hisobotYozuvlari(), davr.dan, davr.gacha, '');
     var xarajat = asosiyTur === 'xarajat', taqsimot = xarajat ? h.xarajatTaqsimoti : h.daromadTaqsimoti;
 
     // sarlavha: nom, kichik son belgisi (tanlangan oy va turdagi, yozuvi bor kategoriyalar soni), "Hammasi"

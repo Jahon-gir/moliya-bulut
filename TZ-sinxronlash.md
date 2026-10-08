@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -329,3 +329,20 @@ Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron man
  3. Ota qator mahalliyda ham yo'q bo'lsa, qator "rad etilgan" ro'yxatiga kod (PG_23503), jadval, ID, tavsif va qaysi ota qator yo'qligi bilan yoziladi va navbatdan chiqariladi, LEKIN doimiy xato bo'lmaydi: keyingi tsikllarda (5 marta) avtomatik qayta navbatga qo'yiladi; "Qayta urinish" cheklovsiz qayta yuboradi.
  4. Xato oynasi: har rad etilgan qator uchun yo'q ota qator ("Kategoriya: Ovqatlanish (id aaaaaaaa…) serverda topilmadi"), jami soni va 10 tadan ko'p bo'lsa "va yana N ta".
  5. Tozalash va bekor qilish ota qatorni faqat unga bog'langan tirik yozuv bo'lmaganda mantiqiy o'chiradi (yetim yozuv hosil bo'lmaydi); o'chirilgan ota qator serverda ham qator sifatida qoladi (`deleted = true`), shuning uchun bog'liqlik buzilmaydi.
+
+## 19. Qarz amallari hisobotda — ixtiyoriy (0.28.0)
+
+**Maqsad.** Ba'zi ilovalarda qarz amallari hisobot (Kategoriyalar diagrammasi, "Naqd pul oqimi") ga qo'shiladi: qarz olish — "Olingan qarz" nomli DAROMAD kategoriyasi, qarz berish/qaytarish — "Berilgan qarz" nomli XARAJAT kategoriyasi. Bizda esa qarz amallari hisobot, byudjet va diagrammalarga kirmaydi (TZ.md 6-qoida). Endi bu ixtiyoriy.
+
+**Sozlama.** Menyu → Asosiy sozlamalar → "Qarzlarni hisobotga qo'shish". SUKUT: YOQIQ. Qiymat shu qurilmada saqlanadi (`localStorage`, kalit `moliya-qarz-hisobotda`). Akkauntga sinxronlanmaydi: serverdagi `sozlamalar` jadvalida bunday ustun yo'q, yangi ustun/jadval qo'shish esa taqiqlangan (server sxemasiga tegilmaydi); mavjud sozlama yozuvi serverdan tortilganda faqat serverdagi maydonlar bilan qayta quriladi, shuning uchun u yerga yozilgan qo'shimcha maydon yo'qolib ketardi. Yangi qurilmada sukut (yoqiq) amal qiladi.
+
+**Qaysi amal qaysi tomonga tushadi** (oy — amal sanasiga qarab):
+ - Hisobga PUL KIRDI = daromad tomoni, "Olingan qarz": olingan qarzning asosiy summasi; berilgan qarz qaytarib olinganda har bir qaytarish.
+ - Hisobdan PUL CHIQDI = xarajat tomoni, "Berilgan qarz": berilgan qarzning asosiy summasi; olingan qarz qaytarilganda har bir qaytarish.
+ - Mantiqiy o'chirilgan qarz va qaytarishlar hisobga olinmaydi.
+
+**Qayerda ko'rinadi (yoqiq bo'lsa):** Asosiydagi "Kategoriyalar" (diagramma va ro'yxatda alohida qatorlar: daromad tomonida "Olingan qarz", xarajat tomonida "Berilgan qarz"), "Naqd pul oqimi" (Xarajat, Daromad, Sof balans), Hisobot ekrani (jami, oldingi davr bilan taqqoslash, doira va ustunli diagramma). "Olingan qarz" / "Berilgan qarz" qatori bosilsa Qarzlar bo'limi ochiladi (ular haqiqiy kategoriya emas, Tarix filtriga qo'yib bo'lmaydi).
+
+**O'chiq bo'lsa:** hozirgi xatti-harakat saqlanadi (qarz hisobotga kirmaydi).
+
+**Nimaga ta'sir QILMAYDI (qaror):** byudjet (qarz byudjet sarfiga kirmaydi: byudjet kategoriyalar bo'yicha oylik chegara, qarz esa kategoriyasiz), Tarix (qarz amallari avvalgidek alohida qatorlar, kun va oy jami o'zgarmaydi), hisob qoldig'i va umumiy balans (ular hamisha yozuvlar va qarzlardan hisoblanadi, sozlamaga bog'liq emas), Excel eksport, zaxira. Hisobotdagi "Olingan qarz"/"Berilgan qarz" faqat ko'rsatish uchun hisoblanadi (bazaga yozilmaydi, sinxronlanmaydi).

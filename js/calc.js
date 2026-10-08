@@ -1358,6 +1358,31 @@
     return royxat;
   }
 
+  // ---- Qarz amallari hisobotda (TZ-sinxronlash.md 19-band; sozlamada yoqilsa) ----
+  // Hisobga PUL KIRGANI (qarz olindi yoki berilgan qarz qaytarib olindi) — daromad tomoni, "Olingan qarz" kategoriyasi;
+  // hisobdan PUL CHIQQANI (qarz berildi yoki olingan qarz qaytarildi) — xarajat tomoni, "Berilgan qarz" kategoriyasi. Oy sanasiga qarab hisoblanadi.
+  // Bular haqiqiy kategoriya emas (bazaga yozilmaydi, byudjetga va hisob qoldig'iga ta'sir qilmaydi): faqat hisobot hisoblari uchun "virtual yozuv".
+  var QARZ_KATEGORIYALAR = [
+    { id: '__qarz_olingan', nom: 'Olingan qarz', tur: 'daromad', rang: '#26a69a', belgi: 'kredit', arxivlangan: false, virtual: true },
+    { id: '__qarz_berilgan', nom: 'Berilgan qarz', tur: 'xarajat', rang: '#7e57c2', belgi: 'kredit', arxivlangan: false, virtual: true }
+  ];
+  function qarzKategoriyami(id) { return id === '__qarz_olingan' || id === '__qarz_berilgan'; }
+  function qarzYozuvi(id, sana, vaqt, summa, hisobId, kirdi, izoh) {
+    return { id: id, tur: kirdi ? 'daromad' : 'xarajat', summa: summa, sana: sana, vaqt: vaqt || '00:00', hisob_id: hisobId, kategoriya_id: kirdi ? '__qarz_olingan' : '__qarz_berilgan', izoh: izoh || '', virtual: true };
+  }
+  function qarzYozuvlari(qarzlar) {
+    var r = [];
+    (qarzlar || []).forEach(function (z) {
+      var berdim = z.yonalish === 'berdim';
+      r.push(qarzYozuvi('q:' + z.id, z.sana, z.vaqt, z.summa, z.hisob_id, !berdim, z.shaxs));          // asosiy summa: olgan — kirdi, bergan — chiqdi
+      (z.tolovlar || []).forEach(function (t) {
+        if (t.deleted === true) return;
+        r.push(qarzYozuvi('t:' + (t.id || '') + ':' + z.id, t.sana, t.vaqt, t.summa, t.hisob_id, berdim, z.shaxs));   // qaytarish teskari: bergan qarz qaytsa — kirdi, olgan qarzni qaytarsa — chiqdi
+      });
+    });
+    return r;
+  }
+
   // Davr hisoboti: faqat daromad va xarajat yozuvlari (o'tkazma va qarz kirmaydi), sana chegaralari bilan.
   // hisobId berilsa, faqat shu hisob bo'yicha. Yozuv o'z sanasi tushgan davrga kiradi.
   function hisobot(yozuvlar, dan, gacha, hisobId) {
@@ -1435,7 +1460,7 @@
     yozuvlarniSuz: yozuvlarniSuz, filtrFaolmi: filtrFaolmi, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     tolanganSumma: tolanganSumma, qarzQolgan: qarzQolgan, qarzYopilganmi: qarzYopilganmi, qarzMuddatiOtdimi: qarzMuddatiOtdimi,
-    qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
+    QARZ_KATEGORIYALAR: QARZ_KATEGORIYALAR, qarzKategoriyami: qarzKategoriyami, qarzYozuvlari: qarzYozuvlari, qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
     tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,
     davrChegarasi: davrChegarasi, davrniSur: davrniSur, davrNomi: davrNomi, kunQosh: kunQosh,
     foizlar: foizlar, hisobot: hisobot, taqqoslash: taqqoslash, belgiliSum: belgiliSum, belgiliFoiz: belgiliFoiz,

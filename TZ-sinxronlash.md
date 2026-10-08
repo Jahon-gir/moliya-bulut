@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 9 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -236,3 +236,19 @@ Har bosqich alohida pull request, oldingisi tekshirilgandan keyin keyingisiga o'
 | 12 | Serverdagi ma'lumotni o'chirish ishlaydi | O'tdi (mahalliy PostgreSQL + taqlid); Supabase'da foydalanuvchi | `004` 18/18 (A o'chirsa B saqlanadi); brauzer testi: tasdiq oynasi, zaxira, mahalliy ma'lumot saqlanadi, qayta kirishda bo'sh server |
 
 **Haqiqiy serverda faqat foydalanuvchi sina oladigan narsalar:** (a) `001`, `002`, `003`, `004`, `005`, `006` ni Supabase SQL Editor'da ishga tushirish va natijalarni ko'rish; (b) pg_cron yoqilishi va `cron.job` da kunlik topshiriq; (c) Google bilan haqiqiy kirish (telefon PWA'sida ham: iPhone/Android), Google Cloud Branding dagi maxfiylik manzili; (d) ikki haqiqiy qurilma orasida sinxron tezligi (5 000 yozuv, oddiy sinxron); (e) `delete from auth.users` ning funksiya ichidan haqiqiy Supabase'da ishlashi (ikkinchi sinov akkaunti bilan); (f) uzoq muddatli (soatlab/kunlab) oflayn va haqiqiy token muddati tugashi.
+
+## 18. Kirish ekrani va fayldan yuklash (0.23.0 va 0.24.0)
+
+Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron mantig'iga (navbat, qulf, tortish) TEGILMAYDI. Ikkita alohida PR.
+
+### 18.1. Kirish ekrani va zaxira tugmasini yashirish (0.23.0)
+
+1. **Salomlashuv ekrani.** Ilova BIRINCHI ochilganda (bu qurilmada kirish bo'yicha tanlov hali qilinmagan bo'lsa) to'liq ekranli salomlashuv chiqadi: katta "Google bilan kirish" tugmasi, ustida qisqa izoh (ma'lumotlar serverda saqlanadi va hamma qurilmalarda ko'rinadi) va profildagi rozilik matni (bir xil matn); pastda kichik havola "Hozircha kirmasdan davom etish" (kamida 44 px). Tanlov (`kirdi` yoki `davom`) shu qurilmada `localStorage` (`moliya-kirish-tanlovi`) da saqlanadi va ekran qayta chiqmaydi. "PINni unutdim" to'liq tozalashi uni ham o'chiradi (qurilma yangidek boshlanadi). Kirish MAJBURIY emas, ilova internetsiz ham ishlaydi (Google tugmasi internet yo'q bo'lsa tushunarli xabar beradi, "kirmasdan davom etish" doim ishlaydi).
+   - Allaqachon kirgan foydalanuvchi, yoki bu qurilmada o'z ma'lumoti bor (standart "Naqd pul" va kategoriyalardan boshqa) eski foydalanuvchi uchun salomlashuv chiqmaydi (tanlov o'zi belgilanadi): ular uchun faqat yumshoq eslatma.
+   - Google'dan qaytish xato bilan tugasa, Profil xato matni bilan ochiladi; tanlov belgilanmaydi (keyingi ochilishda salomlashuv yana chiqadi).
+2. **Yumshoq eslatma** (kirmaganlarga): bosh sahifada kartochka "Ma'lumotlaringiz faqat shu qurilmada. Saqlab qo'yish uchun Google bilan kiring." Kuniga ko'pi bilan bir marta (kun — qurilmaning mahalliy sanasi); "Yopish" bosilsa 7 kungacha qaytmaydi; "Kirish" Profilni ochadi. Salomlashuvda "kirmasdan davom etish" tanlangan kuni eslatma chiqmaydi.
+3. **JSON zaxira tugmalari oddiy ko'rinishdan olib tashlandi** ("Zaxira nusxa olish", "Zaxiradan tiklash" va bosh sahifadagi zaxira kartochkasi). Menyudagi qator va ekran "Excelga yuklab olish" deb nomlandi; Excel tugmasi "Excelga yuklab olish (N ta qator)". Birinchi sinxrondagi, hisobni o'chirishdagi va tiklashdagi avtomatik zaxira ICHKI holda to'liq qoladi (o'zgarmagan). Yangilanishdan oldingi avtomatik nusxa kartochkasi (agar nusxa bor bo'lsa) qoladi. **Ilg'or rejim:** Menyu pastidagi versiya qatorini 7 marta bossangiz zaxira tugmalari qaytadi (o'chirmoqchi bo'lsangiz yana 7 marta); bu eski JSON zaxira fayllarini tiklash uchun.
+
+### 18.2. Fayldan yuklash (Excel import) va chiroyli Excel eksport (0.24.0)
+
+(PR 2 da to'ldiriladi.)

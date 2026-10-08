@@ -1511,10 +1511,17 @@
     var o = karta();
     o.classList.add('menyu-boshqa');
     o.appendChild(el('h2', 'Boshqa'));
-    o.appendChild(menyuQatori('mn-zaxira', 'Zaxira va eksport', malumot.zaxiraSanasi ? 'oxirgi: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) : 'zaxira yo\'q', function () { ochish(zaxiraEkrani, false); }));
+    o.appendChild(menyuQatori('mn-zaxira', 'Excelga yuklab olish', Salom.ilgormi() ? 'ilg\'or: zaxira (JSON)' : '', function () { ochish(zaxiraEkrani, false); }));
     o.appendChild(menyuQatori('mn-ornatish', 'Bosh ekranga o\'rnatish', '', function () { ochish(ornatishEkrani, false); }));
     bloklar.push(o);
-    bloklar.push(el('p', ILOVA.nom + ' · versiya ' + VERSIYA, 'versiya'));
+    var ver = el('p', ILOVA.nom + ' · versiya ' + VERSIYA, 'versiya');
+    ver.id = 'versiya-qatori';
+    var bosish = 0, bosishVaqti = 0;
+    ver.addEventListener('click', function () {   // 7 marta tez-tez bosilsa: ilg'or rejim (JSON zaxira tugmalari) yoqiladi/o'chadi
+      var hozir = Date.now(); bosish = hozir - bosishVaqti < 1500 ? bosish + 1 : 1; bosishVaqti = hozir;
+      if (bosish >= 7) { bosish = 0; qisqaXabar(Salom.ilgorAlmashtir() ? 'Ilg\'or rejim yoqildi (zaxira tugmalari)' : 'Ilg\'or rejim o\'chirildi'); chizish(menyuEkrani(), true); }
+    });
+    bloklar.push(ver);
     return bloklar;
   }
 
@@ -1561,23 +1568,7 @@
     } else {
       if (hisobOchirildiMatni) k.appendChild(el('p', hisobOchirildiMatni, 'profil-asosiy hisob-ochirildi'));
       k.appendChild(el('p', 'Kirish ixtiyoriy. Kirmasangiz ham ilova hozirgidek ishlaydi.', 'profil-asosiy'));
-      // Rozilik matni: "Google bilan kirish" tugmasini bosish = shunga rozilik
-      var rozilik = el('div', undefined, 'rozilik-matn');
-      rozilik.id = 'rozilik-matn';
-      rozilik.appendChild(el('p', 'Google bilan kirsangiz:', 'yozuv-nom'));
-      [
-        'ma\'lumotlaringiz (hisoblar, yozuvlar, qarzlar va boshqalar) serverga saqlanadi va boshqa qurilmalaringizda ham ko\'rinadi;',
-        'ularni faqat siz, o\'z akkauntingiz bilan ko\'rasiz;',
-        'serverda ma\'lumot shifrlanmagan: ilova dasturchisi texnik jihatdan ko\'ra oladi;',
-        'istalgan vaqtda "Hisobni o\'chirish" bilan serverdagi hammasini o\'chira olasiz.'
-      ].forEach(function (m) { rozilik.appendChild(el('p', '• ' + m, 'xira')); });
-      var mh = el('p', undefined, 'xira');
-      mh.appendChild(document.createTextNode('Kirish tugmasini bosish — shunga rozilik. '));
-      var ma = el('a', 'Maxfiylik va foydalanish shartlari', 'rozilik-havola');
-      ma.id = 'rozilik-havola'; ma.href = 'maxfiylik.html'; ma.target = '_blank'; ma.rel = 'noopener';
-      mh.appendChild(ma);
-      rozilik.appendChild(mh);
-      k.appendChild(rozilik);
+      k.appendChild(roziliMatniYasash());
       var kir = tugma(h.kirmoqda ? 'Google ga o\'tilmoqda…' : 'Google bilan kirish', 'asosiy-tugma', function () {
         if (navigator.onLine === false) { xato.textContent = xatoKodBilan('Internet yo\'q. Kirish uchun internetga ulaning (ilovaning o\'zi internetsiz ishlayveradi).', 'NETWORK_OFFLINE'); qisqaXabar('Internet yo\'q: kirish uchun internetga ulaning'); return; }
         kir.disabled = true;
@@ -1600,6 +1591,98 @@
     if (h.kirgan) { hisobOchirildiMatni = ''; bloklar.push(sinxronKartasi(h)); }
     bloklar.push(maxfiylikKartasi());
     return bloklar;
+  }
+
+  // Rozilik matni (Profil va salomlashuv ekrani uchun bir xil): "Google bilan kirish" tugmasini bosish = shunga rozilik
+  function roziliMatniYasash() {
+    var rozilik = el('div', undefined, 'rozilik-matn');
+    rozilik.id = 'rozilik-matn';
+    rozilik.appendChild(el('p', 'Google bilan kirsangiz:', 'yozuv-nom'));
+    [
+      'ma\'lumotlaringiz (hisoblar, yozuvlar, qarzlar va boshqalar) serverga saqlanadi va boshqa qurilmalaringizda ham ko\'rinadi;',
+      'ularni faqat siz, o\'z akkauntingiz bilan ko\'rasiz;',
+      'serverda ma\'lumot shifrlanmagan: ilova dasturchisi texnik jihatdan ko\'ra oladi;',
+      'istalgan vaqtda "Hisobni o\'chirish" bilan serverdagi hammasini o\'chira olasiz.'
+    ].forEach(function (m) { rozilik.appendChild(el('p', '• ' + m, 'xira')); });
+    var mh = el('p', undefined, 'xira');
+    mh.appendChild(document.createTextNode('Kirish tugmasini bosish — shunga rozilik. '));
+    var ma = el('a', 'Maxfiylik va foydalanish shartlari', 'rozilik-havola');
+    ma.id = 'rozilik-havola'; ma.href = 'maxfiylik.html'; ma.target = '_blank'; ma.rel = 'noopener';
+    mh.appendChild(ma);
+    rozilik.appendChild(mh);
+    return rozilik;
+  }
+
+  // ---- Salomlashuv ekrani (18.1): ilova birinchi ochilganda; tanlov qurilmada esda qoladi ----
+  function salomEkrani() {
+    if (document.getElementById('salom-ekran')) return;
+    var parda = el('div', undefined, 'salom-ekran');
+    parda.id = 'salom-ekran';
+    parda.setAttribute('role', 'dialog');
+    parda.setAttribute('aria-modal', 'true');
+    parda.setAttribute('aria-label', 'Xush kelibsiz');
+    var ichki = el('div', undefined, 'salom-ichki');
+    var belgi = document.createElement('img');
+    belgi.src = 'icons/icon.svg'; belgi.alt = ''; belgi.className = 'salom-belgi'; belgi.width = 72; belgi.height = 72;
+    ichki.appendChild(belgi);
+    ichki.appendChild(el('h1', 'Xush kelibsiz'));
+    ichki.appendChild(el('p', 'Ma\'lumotlaringiz serverda saqlanadi va barcha qurilmalaringizda ko\'rinadi. Telefon yo\'qolsa ham hammasi qaytadi.', 'salom-izoh'));
+    ichki.appendChild(roziliMatniYasash());
+    var xato = el('div', undefined, 'xato-matn'); xato.id = 'salom-xato'; xato.setAttribute('role', 'alert');
+    var kir = tugma('Google bilan kirish', 'asosiy-tugma salom-google', function () {
+      if (navigator.onLine === false) { xato.textContent = xatoKodBilan('Internet yo\'q. Kirish uchun internetga ulaning yoki kirmasdan davom eting (ilova internetsiz ishlayveradi).', 'NETWORK_OFFLINE'); return; }
+      kir.disabled = true; kir.textContent = 'Tekshirilmoqda…'; xato.textContent = '';
+      Sinxron.rozilikBelgisiniQoy();   // tugmani bosish = rozilik
+      Kirish.googleBilanKirish().then(function (n) {
+        if (n.ok) return;   // sahifa Google ga o'tmoqda
+        kir.disabled = false; kir.textContent = 'Google bilan kirish';
+        xato.textContent = n.internetYoq ? xatoKodBilan('Serverga ulanib bo\'lmadi. Internetni tekshirib, qayta urinib ko\'ring yoki kirmasdan davom eting.', 'NETWORK') : xatoKodBilan(n.xato || 'Kirib bo\'lmadi.', Kirish.holat().xatoKodi || 'AUTH_UNKNOWN');
+      });
+    });
+    kir.id = 'salom-google';
+    ichki.appendChild(kir);
+    ichki.appendChild(xato);
+    var davom = tugma('Hozircha kirmasdan davom etish', 'salom-davom', function () {
+      Salom.tanlovYoz('davom');
+      Salom.bugunEslatmasizBelgila();
+      if (parda.parentNode) parda.parentNode.removeChild(parda);
+      document.body.style.overflow = '';
+    });
+    davom.id = 'salom-davom';
+    ichki.appendChild(davom);
+    parda.appendChild(ichki);
+    document.body.appendChild(parda);
+    document.body.style.overflow = 'hidden';
+    kir.focus();
+  }
+
+  // Salomlashuv kerakmi: tanlov yo'q; kirgan bo'lsa yoki bu qurilmada o'z ma'lumoti bo'lsa (eski foydalanuvchi) — chiqmaydi, tanlov o'zi belgilanadi
+  function salomniKorsat(h) {
+    if (Salom.tanlovOl()) return Promise.resolve();
+    if (h.kirgan) { Salom.tanlovYoz('kirdi'); return Promise.resolve(); }
+    return Data.hammasiniOqish().then(function (m) {
+      if (!SinxronSof.mahalliyBoshmi(m)) { Salom.tanlovYoz('davom'); return; }
+      salomEkrani();
+    });
+  }
+
+  // ---- Yumshoq eslatma (18.1): kirmaganlarga, bosh sahifada, kuniga bir marta, yopilsa 7 kun qaytmaydi ----
+  function eslatmaKartasi() {
+    if (Kirish.holat().kirgan || !Salom.tanlovOl() || !Salom.eslatmaKerakmi()) return null;
+    Salom.eslatmaKorsatildi();
+    var k = karta();
+    k.classList.add('eslatma-karta');
+    k.id = 'eslatma-karta';
+    k.appendChild(el('p', 'Ma\'lumotlaringiz faqat shu qurilmada. Saqlab qo\'yish uchun Google bilan kiring.', 'yozuv-nom'));
+    var qator = el('div', undefined, 'tasdiq-qator');
+    var kir = tugma('Kirish', 'asosiy-tugma', function () { ochish(menyuEkrani, false); ochish(profilEkrani, false); });
+    kir.id = 'eslatma-kirish';
+    var yop = tugma('Yopish', 'ikkinchi-tugma', function () { Salom.eslatmaYop(); if (k.parentNode) k.parentNode.removeChild(k); });
+    yop.id = 'eslatma-yopish';
+    yop.setAttribute('aria-label', 'Eslatmani yopish (7 kun qaytmaydi)');
+    qator.appendChild(kir); qator.appendChild(yop);
+    k.appendChild(qator);
+    return k;
   }
 
   // ---- Sinxronlash (S5): holat, birinchi sinxron (yuklash / olish / tanlov), "Hozir sinxronlash" ----
@@ -2953,7 +3036,7 @@
   }
 
   function zaxiraEkrani() {
-    var bloklar = [orqagaTugmasi(), el('h1', 'Zaxira va eksport')];
+    var bloklar = [orqagaTugmasi(), el('h1', 'Excelga yuklab olish')];
     var xatoQutisi = el('div', undefined, 'xato-karta');
     xatoQutisi.setAttribute('role', 'alert');
     xatoQutisi.hidden = true;
@@ -2987,7 +3070,7 @@
     k.appendChild(tikla);
     k.appendChild(kiritish);
     k.appendChild(el('p', 'Tiklashdan oldin joriy holatning zaxirasi avtomatik yuklab beriladi. Buzuq yoki yarim fayl rad etiladi, mavjud ma\'lumotga tegilmaydi.', 'xira'));
-    bloklar.push(k);
+    if (Salom.ilgormi()) bloklar.push(k);   // JSON zaxira: oddiy ko'rinishda yashirin (TZ-sinxronlash §18.1)
     bloklar.push(xatoQutisi);
 
     // Sxema yangilanishidan oldingi avtomatik nusxa: yuklab olish, tiklash, o'chirish
@@ -3025,7 +3108,7 @@
 
     // Excel uchun eksport (CSV)
     var e = karta();
-    e.appendChild(el('h2', 'Excel uchun eksport'));
+    e.appendChild(el('h2', 'Excelga yuklab olish'));
     var buYil = parseInt(Calc.bugun().slice(0, 4), 10), buOy = parseInt(Calc.bugun().slice(5, 7), 10);
     var birinchi = malumot.yozuvlar.concat(malumot.qarzlar).reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
     var yillar = Calc.filtrYillari(birinchi, Calc.bugun());
@@ -3057,7 +3140,7 @@
     var ek = Calc.eksport({ yozuvlar: malumot.yozuvlar, hisoblar: malumot.hisoblar, kategoriyalar: malumot.kategoriyalar, qarzlar: malumot.qarzlar }, davr);
     var faylNomi = ILOVA.faylBelgisi + '-eksport-' + Calc.bugun();
     e.appendChild(el('p', 'Bitta jadval: yozuvlar va qarz amallari birga, eng yangisi tepada. CSV: UTF-8, ustunlar ";" bilan ajratilgan.', 'xira'));
-    var xTugma = tugma('Excel (.xlsx) yuklab olish (' + ek.soni + ' ta qator)', 'ikkinchi-tugma', function () {
+    var xTugma = tugma('Excelga yuklab olish (' + ek.soni + ' ta qator)', 'ikkinchi-tugma', function () {
       if (!ek.soni) { qisqaXabar('Tanlangan davrda yozuv yo\'q'); return; }
       faylYuklash(faylNomi + '.xlsx', Xlsx.fayl(ek), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       qisqaXabar('Excel fayli yuklab olindi');
@@ -3384,7 +3467,7 @@
   }
 
   function asosiyBolimi() {
-    return [asosiyBosh(), sinxronBelgisi(), balansKartasi(), oqimKartasi(), tezQoshishKartasi(), hisoblarKartasi(), kategoriyalarKartasi(), byudjetlarKartasi(), qarzlarKartasi(), zaxiraKartasi()].filter(Boolean);
+    return [asosiyBosh(), sinxronBelgisi(), eslatmaKartasi(), balansKartasi(), oqimKartasi(), tezQoshishKartasi(), hisoblarKartasi(), kategoriyalarKartasi(), byudjetlarKartasi(), qarzlarKartasi(), Salom.ilgormi() ? zaxiraKartasi() : null].filter(Boolean);
   }
 
   // ---- Bo'limlar ----
@@ -3511,7 +3594,8 @@
     korsat(oxirgi);
     // Google'dan qaytgan bo'lsa: natija (kirildi yoki xato) ko'rinadigan ekranni ochamiz
     Kirish.tayyor().then(function () {
-      if (!Kirish.qaytishniOl()) return;
+      if (!Kirish.qaytishniOl()) { return salomniKorsat(Kirish.holat()).catch(function () { /* ekran chiqmasa ham ilova ishlayveradi */ }); }
+      if (Kirish.holat().kirgan) Salom.tanlovYoz('kirdi');
       var h = Kirish.holat();
       ochish(menyuEkrani, false);
       ochish(profilEkrani, false);

@@ -3714,8 +3714,9 @@
         });
       });
 
-      var IM_BAZA = 'moliya-import-sinov';
-      function imBaza() { Data.yopish(); return new Promise(function (res) { var q = indexedDB.deleteDatabase(IM_BAZA); q.onsuccess = q.onerror = q.onblocked = res; }).then(function () { return Data.boshlash(IM_BAZA); }); }
+      var IM_SANOQ = 0;
+      // har sinov o'z bazasida (oldingisi ochiq qolgan bo'lishi mumkin: o'chirish to'silib qolmasin)
+      function imBaza() { var nom = 'moliya-import-sinov-' + (++IM_SANOQ) + '-' + Date.now(); Data.yopish(); return Data.boshlash(nom); }
       function imOps() { return { yangiId: Data.yangiId, vaqt: Date.now() - 10000, hisobTuri: Calc.hisobTuriTaxmin, hisobRang: function (t) { return Calc.HISOB_RANGLARI[t]; }, hisobBelgi: function (t) { return Calc.HISOB_BELGISI[t]; }, katRang: function () { return '#e57373'; }, katBelgi: Calc.belgiTaxmin }; }
       function imMavjud() { return jonli().then(function (m) { return Data.olish('sozlamalar', Data.IMPORT_KALITI).then(function (t) { return { hisoblar: m.hisoblar.filter(function (h) { return !h.arxivlangan; }), kategoriyalar: m.kategoriyalar.filter(function (k) { return !k.arxivlangan; }), yozuvKalitlari: ImportSof.mavjudKalitlar(m.yozuvlar, m.hisoblar, m.kategoriyalar), tarixIdlar: (t && t.idlar) || {}, m: m }; }); }); }
       function imYukla(bayt, tanlov, nom) {

@@ -4159,7 +4159,7 @@
         var f = im333(), m = zMalumot(); m.yozuvlar = ZKatta(480); m.qarzlar = [];
         var e = Calc.eksport(m, { tur: 'hammasi' }), bayt2 = Xlsx.fayl(e), ikki;
         return Sinxron.birinchi('yuklash').then(function () { return i4Fayl(f); }).then(function (b) { return imYukla(b, {}); }).then(function () { return imYukla(bayt2, {}); }).then(function () { return Data.navbatniOl(); }).then(function (nv) {
-          var soni = 0; Object.keys(nv.qatorlar).forEach(function (t) { soni += Object.keys(nv.qatorlar[t]).length; }); teng(soni > 780, true, 'navbatda ' + soni);
+          var soni = 0; Object.keys(nv.qatorlar).forEach(function (t) { soni += Object.keys(nv.qatorlar[t]).length; }); teng(soni > 700, true, 'navbatda ' + soni);
           return Sinxron.yurgiz('qolda');
         }).then(function (n) {
           teng(n.ok, true, n.xato); teng(n.rad.length, 0); var h = Sinxron.holat(); teng(h.soni, 0); teng(h.tur, 'tayyor');

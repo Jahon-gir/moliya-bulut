@@ -5,12 +5,12 @@ var Xlsx = (function () {
 
   var VARAQ_NOMI = 'Eksport';
   // Ustun kengliklari (belgilarda): eng kichigi va eng kattasi; haqiqiy kenglik ustundagi eng uzun matnga qarab tanlanadi (kengliklar()).
-  // Sana va vaqt, ID, Tur, Hisob, Qayerga, Kategoriya, Summa, Valyuta, Qarz nomi, Qarz turi, Izoh
-  var KENG_CHEGARA = [[18, 18], [10, 12], [10, 14], [10, 28], [10, 28], [12, 28], [12, 22], [8, 9], [10, 28], [10, 12], [20, 50]];
-  var USTUN_HARFLARI = 'ABCDEFGHIJK';
+  // Sana va vaqt, ID, Tur, Hisob, Qayerga, Kategoriya, Summa, Valyuta, Qarz nomi, Qarz turi, Izoh, Qaytarish muddati
+  var KENG_CHEGARA = [[18, 18], [10, 12], [10, 14], [10, 28], [10, 28], [12, 28], [12, 22], [8, 9], [10, 28], [10, 12], [20, 50], [20, 20]];
+  var USTUN_HARFLARI = 'ABCDEFGHIJKL';
 
   // Stil indekslari (styles.xml dagi cellXfs tartibi)
-  var S_SARLAVHA = 1, S_SANA = 2, S_SUMMA = 3, S_MATN_HIMOYALI = 4, S_SUMMA_XARAJAT = 5, S_SUMMA_DAROMAD = 6, S_IZOH = 7;   // 5: qizil (xarajat), 6: yashil (daromad), 7: izoh (o'ralgan matn)
+  var S_SARLAVHA = 1, S_SANA = 2, S_SUMMA = 3, S_MATN_HIMOYALI = 4, S_SUMMA_XARAJAT = 5, S_SUMMA_DAROMAD = 6, S_IZOH = 7, S_KUN = 8;   // 5: qizil (xarajat), 6: yashil (daromad), 7: izoh (o'ralgan matn)
 
   function xmlMatn(s) {
     return String(s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f￾￿]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -47,7 +47,7 @@ var Xlsx = (function () {
   function varaqXml(eksport, ulashgan) {
     var n = eksport.qatorlar.length, oxirgi = n + 1, x = [];
     x.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">');
-    x.push('<dimension ref="A1:K' + oxirgi + '"/>');
+    x.push('<dimension ref="A1:L' + oxirgi + '"/>');
     x.push('<sheetViews><sheetView workbookViewId="0" tabSelected="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>');
     x.push('<sheetFormatPr defaultRowHeight="15"/>');
     var kenglik = kengliklar(eksport);
@@ -63,11 +63,12 @@ var Xlsx = (function () {
       var qolgan = [q.valyuta, q.qarzNomi, q.qarzTuri];
       for (j = 0; j < qolgan.length; j++) c.push(matnHujayra(j + 7, r, qolgan[j], ulashgan));
       c.push(matnHujayra(10, r, q.izoh, ulashgan, S_IZOH));
+      if (q.muddat) c.push('<c r="L' + r + '" s="' + S_KUN + '"><v>' + seriya(q.muddat, '00:00') + '</v></c>');
       var bal = qatorBalandligi(q.izoh, kenglik[10]);
       x.push('<row r="' + r + '"' + (bal ? ' ht="' + bal + '" customHeight="1"' : '') + '>' + c.join('') + '</row>');
     }
     x.push('</sheetData>');
-    x.push('<autoFilter ref="A1:K' + oxirgi + '"/>');
+    x.push('<autoFilter ref="A1:L' + oxirgi + '"/>');
     x.push('<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>');
     x.push('</worksheet>');
     return x.join('');
@@ -81,13 +82,13 @@ var Xlsx = (function () {
   }
 
   var STILLAR = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<numFmts count="1"><numFmt numFmtId="164" formatCode="dd\\.mm\\.yyyy\\ hh:mm"/></numFmts>' +
+    '<numFmts count="2"><numFmt numFmtId="164" formatCode="dd\\.mm\\.yyyy\\ hh:mm"/><numFmt numFmtId="165" formatCode="dd\\.mm\\.yyyy"/></numFmts>' +
     '<fonts count="4"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>' +
     '<font><sz val="11"/><color rgb="FFC62828"/><name val="Calibri"/><family val="2"/></font><font><sz val="11"/><color rgb="FF2E7D32"/><name val="Calibri"/><family val="2"/></font></fonts>' +
     '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF263238"/><bgColor indexed="64"/></patternFill></fill></fills>' +
     '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
     '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="8">' +
+    '<cellXfs count="9">' +
     '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top"/></xf>' +
     '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>' +
     '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="left" vertical="top"/></xf>' +
@@ -96,6 +97,7 @@ var Xlsx = (function () {
     '<xf numFmtId="3" fontId="2" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>' +
     '<xf numFmtId="3" fontId="3" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>' +
     '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+    '<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="left" vertical="top"/></xf>' +
     '</cellXfs>' +
     '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
 
@@ -113,7 +115,7 @@ var Xlsx = (function () {
     var kitob = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
       '<bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000"/></bookViews>' +
       '<sheets><sheet name="' + VARAQ_NOMI + '" sheetId="1" r:id="rId1"/></sheets>' +
-      '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">' + VARAQ_NOMI + '!$A$1:$K$' + oxirgi + '</definedName></definedNames></workbook>';
+      '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">' + VARAQ_NOMI + '!$A$1:$L$' + oxirgi + '</definedName></definedNames></workbook>';
     return [
       ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>'],
       ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],

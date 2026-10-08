@@ -3,8 +3,8 @@
 var ImportSof = (function () {
   'use strict';
 
-  var MAYDONLAR = ['sana', 'id', 'tur', 'hisob', 'qayerga', 'kategoriya', 'summa', 'valyuta', 'izoh', 'qarzNomi', 'qarzTuri'];
-  var MAYDON_NOMLARI = { sana: 'Sana va vaqt', id: 'ID', tur: 'Tur', hisob: 'Hisob', qayerga: 'Qayerga (o\'tkazma)', kategoriya: 'Kategoriya', summa: 'Summa', valyuta: 'Valyuta', izoh: 'Izoh', qarzNomi: 'Qarz nomi', qarzTuri: 'Qarz turi' };
+  var MAYDONLAR = ['sana', 'id', 'tur', 'hisob', 'qayerga', 'kategoriya', 'summa', 'valyuta', 'izoh', 'qarzNomi', 'qarzTuri', 'qarzSumma', 'muddat'];
+  var MAYDON_NOMLARI = { sana: 'Sana va vaqt', id: 'ID', tur: 'Tur', hisob: 'Hisob', qayerga: 'Qayerga (o\'tkazma)', kategoriya: 'Kategoriya', summa: 'Summa', valyuta: 'Valyuta', izoh: 'Izoh', qarzNomi: 'Qarz nomi', qarzTuri: 'Qarz turi', qarzSumma: 'Qarz summasi (zaxira)', muddat: 'Qaytarish muddati' };
   // Sarlavha nomlari (kichik harf, faqat harf va raqam; ustuvorlik tartibida). Birinchisi eng ishonchli.
   var SARLAVHALAR = {
     sana: ['sanavavaqt', 'datetime', 'date', 'sana', 'sanasi', 'data', 'vaqt', 'time'],
@@ -17,7 +17,9 @@ var ImportSof = (function () {
     valyuta: ['transactioncurrency', 'valyuta', 'currency', 'pulbirligi'],
     izoh: ['comment', 'izoh', 'comments', 'note', 'notes', 'tavsif', 'description'],
     qarzNomi: ['loanname', 'qarznomi'],
-    qarzTuri: ['loantype', 'qarzturi']
+    qarzTuri: ['loantype', 'qarzturi'],
+    qarzSumma: ['loanchargedamount', 'qarzsummasi'],
+    muddat: ['qaytarishmuddati', 'muddat', 'duedate', 'repaymentdate']
   };
 
   function sarlavhaKaliti(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9Ѐ-ӿ]/g, ''); }
@@ -154,11 +156,33 @@ var ImportSof = (function () {
 
   var ESKI_ID = /^[YQT]-\d{6}$/;   // bizning eksportdagi tartib raqami: boshqa bazada boshqa yozuvga to'g'ri kelishi mumkin, shuning uchun takrorni aniqlashda ishlatilmaydi
 
+  // Qarz qatori yordamchilari. "-" (va "—") bo'sh katak hisoblanadi.
+  function tozaMatn(m) { var t = String(m == null ? '' : m).trim(); return /^[-–—]+$/.test(t) ? '' : t; }
+  function qarzTuriOqi(s) {   // LoanType / Qarz turi -> 'olingan' | 'berilgan' | null
+    var k = String(s == null ? '' : s).toLowerCase().replace(/[^a-zЀ-ӿ]/g, '');
+    if (k === 'borrowing' || k === 'borrow' || k === 'borrowed' || k === 'olingan' || k === 'oldim' || k === 'received') return 'olingan';
+    if (k === 'lending' || k === 'lend' || k === 'lent' || k === 'berilgan' || k === 'berdim' || k === 'given') return 'berilgan';
+    return null;
+  }
+  function qarzRoli(s) {   // "Qarz" — asosiy amal, "Qarz to'lovi" — qaytarish (o'zimizning eksport); "Loan" — rol noma'lum (begona jadval)
+    var k = String(s == null ? '' : s).toLowerCase().replace(/[^a-zЀ-ӿ]/g, '');
+    return k === 'qarz' ? 'asosiy' : (k === 'qarztolovi' || k === 'loanpayment') ? 'tolov' : null;
+  }
+  // Nomlarni taklif sifatida birlashtirish kaliti: katta-kichik harf, bo'shliq, apostrof va "karta/kartada/kartasidan/bank/bankdan" qo'shimchalari hisobga olinmaydi
+  var QARZ_QOSHIMCHALAR = ['karta', 'kartada', 'kartasidan', 'kartadan', 'kartaga', 'kartasi', 'kartani', 'bank', 'bankdan', 'bankda', 'bankka', 'bankga', 'banki'];
+  function qarzNomKaliti(nom) {
+    var s = String(nom == null ? '' : nom).toLowerCase().replace(/[ʻʼ‘’`´']/g, '').replace(/[^a-z0-9Ѐ-ӿ\s]/g, ' ').trim();
+    var sozlar = s.split(/\s+/).filter(Boolean), asos = sozlar.filter(function (w) { return QARZ_QOSHIMCHALAR.indexOf(w) === -1; });
+    if (!asos.length) asos = sozlar;
+    var k = asos.join(''), m = /^(.{2,}?)(kartasidan|kartadan|kartaga|kartada|karta|bankdan|bankda|bankka|bankga|bank)$/.exec(k);
+    return m ? m[1] : k;
+  }
+
   // ---- 1-bosqich: qatorlarni xom o'qish (xarita o'zgarsagina qayta ishlanadi) ----
-  // Natija: [{ n (Excel qator raqami), xato/kod yoki: sana, vaqt, summa, belgi, valyuta, rang, tur (matndan), kategoriya, hisob, qayerga, izoh, id, qarz }]
+  // Natija: [{ n (Excel qator raqami), xato/kod yoki: sana, vaqt, summa, belgi, valyuta, rang, tur (matndan), kategoriya, hisob, qayerga, izoh, id, qarz: null | { rol, turi, nom, muddat } }]
   function qatorlarniOqi(qatorlar, sarlavhaQator, xarita) {
     var r = [];
-    function mt(q, m) { var u = xarita[m]; return u >= 0 && q[u] ? hujayraMatni(q[u]) : ''; }
+    function mt(q, m) { var u = xarita[m]; return u >= 0 && q[u] ? tozaMatn(hujayraMatni(q[u])) : ''; }
     for (var i = sarlavhaQator + 1; i < qatorlar.length; i++) {
       var q = qatorlar[i];
       if (bosh(q)) continue;
@@ -166,15 +190,22 @@ var ImportSof = (function () {
       var sa = sanaOqi(xarita.sana >= 0 ? q[xarita.sana] : null, true);
       var su = summaOqi(xarita.summa >= 0 ? q[xarita.summa] : null);
       x.turMatn = turMatni(mt(q, 'tur'));
-      x.turNomi = mt(q, 'tur').trim();
-      x.kategoriya = mt(q, 'kategoriya').trim();
-      x.hisob = mt(q, 'hisob').trim();
-      x.qayerga = mt(q, 'qayerga').trim();
-      x.izoh = mt(q, 'izoh').replace(/\r\n?/g, '\n').trim();
-      x.id = mt(q, 'id').trim();
-      x.qarz = x.turMatn === 'qarz' || mt(q, 'qarzNomi').trim() !== '' || mt(q, 'qarzTuri').trim() !== '';
+      x.turNomi = mt(q, 'tur');
+      x.kategoriya = mt(q, 'kategoriya');
+      x.hisob = mt(q, 'hisob');
+      x.qayerga = mt(q, 'qayerga');
+      x.izoh = hujayraMatni(q[xarita.izoh]).replace(/\r\n?/g, '\n').trim();
+      if (/^[-–—]+$/.test(x.izoh)) x.izoh = '';
+      x.id = mt(q, 'id');
+      var qNom = mt(q, 'qarzNomi'), qTuri = mt(q, 'qarzTuri');
+      // Qarz qatori: TransactionType = Loan / Qarz / Qarz to'lovi, yoki qarz nomi va turi ikkalasi to'ldirilgan
+      if (x.turMatn === 'qarz' || (qNom && qTuri)) {
+        x.qarz = { rol: qarzRoli(x.turNomi), turi: qarzTuriOqi(qTuri), nom: qNom, muddat: null };
+        if (!x.qarz.turi) { x.xato = 'Qarz turi noma\'lum' + (qTuri ? ' ("' + qTuri + '")' : '') + ': Borrowing / Lending (yoki Olingan / Berilgan) bo\'lishi kerak'; x.kod = 'R_QARZ_TURI'; r.push(x); continue; }
+        if (xarita.muddat >= 0 && q[xarita.muddat] && tozaMatn(hujayraMatni(q[xarita.muddat]))) { var md = sanaOqi(q[xarita.muddat], true); if (!md.xato) x.qarz.muddat = md.sana; }
+        if (su.xato && xarita.qarzSumma >= 0) su = summaOqi(q[xarita.qarzSumma]);   // asosiy summa katagi bo'sh bo'lsa, qarz summasi ustuni
+      }
       var vk = valyutaKodi(mt(q, 'valyuta'));
-      if (x.qarz) { x.xato = 'Qarz amali: qarzlar bu usulda yuklanmaydi'; x.kod = 'R_QARZ'; x.otkaz = true; r.push(x); continue; }
       if (sa.xato) { x.xato = sa.xato; x.kod = sa.kod; r.push(x); continue; }
       if (su.xato) { x.xato = su.xato; x.kod = su.kod; r.push(x); continue; }
       x.sana = sa.sana; x.vaqt = sa.vaqt;
@@ -208,16 +239,32 @@ var ImportSof = (function () {
     return r;
   }
 
-  // xom: qatorlarniOqi natijasi. tanlov: { turTanlovi: { kategoriyaKaliti: 'xarajat' | 'daromad' }, kategoriya: { 'tur|kalit': { id } | { yangi: true } }, hisob: { kalit: { id } | { yangi: true } }, takror: 'otkaz' | 'yuklash' }
-  // mavjud: { hisoblar (faol), kategoriyalar (faol), yozuvKalitlari, tarixIdlar: { id: true } }, h: Calc.hozir()
+  // Mavjud qarzlardan takror aniqlash kalitlari: har amal "pul hisobga kirdi (in) / chiqdi (out)" ko'rinishida.
+  // Asosiy summa: olingan — in, berilgan — out; qaytarish teskari: olingan qarz qaytarilsa — out, berilgan qarz qaytarilsa — in.
+  function qarzKaliti(eff, nom, sana, summa, hisobNomi) { return [eff, qarzNomKaliti(nom), sana, summa, kalit(hisobNomi)].join('|'); }
+  function qarzKalitlari(qarzlar, hisoblar) {
+    var hn = {}, r = {};
+    (hisoblar || []).forEach(function (h) { hn[h.id] = h.nom; });
+    function qosh(k) { r[k] = (r[k] || 0) + 1; }
+    (qarzlar || []).forEach(function (z) {
+      var berdim = z.yonalish === 'berdim';
+      qosh(qarzKaliti(berdim ? 'out' : 'in', z.shaxs, z.sana, z.summa, hn[z.hisob_id] || ''));
+      (z.tolovlar || []).forEach(function (t) { if (t.deleted !== true) qosh(qarzKaliti(berdim ? 'in' : 'out', z.shaxs, t.sana, t.summa, hn[t.hisob_id] || '')); });
+    });
+    return r;
+  }
+
+  // xom: qatorlarniOqi natijasi. tanlov: { turTanlovi: { kategoriyaKaliti: 'xarajat' | 'daromad' }, kategoriya: { 'tur|kalit': { id } | { yangi: true } }, hisob: { kalit: { id } | { yangi: true } }, takror: 'otkaz' | 'yuklash', qarzTeskari: bool (Borrowing = qarz BERILDI), qarzGuruh: { nomKaliti: maqsadNomKaliti } }
+  // mavjud: { hisoblar (faol), kategoriyalar (faol), yozuvKalitlari, qarzKalitlari, tarixIdlar: { id: true } }, h: Calc.hozir()
   // Natija: { qatorlar: [{ n, holat: 'yuklanadi' | 'xato' | 'otkazildi' | 'takror', sabab, kod, tur, usul, yozuv }], jami, usullar, kategoriyalar, hisoblar, turGuruhlari }
   function reja(xom, tanlov, mavjud, h) {
     tanlov = tanlov || {};
     var turTanlovi = tanlov.turTanlovi || {}, katTanlov = tanlov.kategoriya || {}, hisobTanlov = tanlov.hisob || {};
-    var kalitlar = {}, kopIdlar = {}, tarixId = mavjud.tarixIdlar || {};
+    var kalitlar = {}, kopIdlar = {}, tarixId = mavjud.tarixIdlar || {}, qKalitlar = {}, qarzOps = [];
     Object.keys(mavjud.yozuvKalitlari || {}).forEach(function (k) { kalitlar[k] = mavjud.yozuvKalitlari[k]; });
+    Object.keys(mavjud.qarzKalitlari || {}).forEach(function (k) { qKalitlar[k] = mavjud.qarzKalitlari[k]; });
     var katGuruh = {}, hisobGuruh = {}, turGuruh = {}, katTartib = [], hisobTartib = [], turTartib = [];
-    var jami = { yuklanadi: 0, xato: 0, otkazildi: 0, takror: 0, yaxlit: 0, jami: xom.length }, usullar = { tur: 0, belgi: 0, rang: 0, tanlov: 0, otkazma: 0 };
+    var jami = { yuklanadi: 0, xato: 0, otkazildi: 0, takror: 0, yaxlit: 0, qarz: 0, qarzAmal: 0, jami: xom.length }, usullar = { tur: 0, belgi: 0, rang: 0, tanlov: 0, otkazma: 0 };
     var natija = [];
     var faolHisob = mavjud.hisoblar || [], faolKat = mavjud.kategoriyalar || [];
 
@@ -252,9 +299,125 @@ var ImportSof = (function () {
     }
     function nomi(g) { return g.id ? ((g.tur ? faolKat : faolHisob).filter(function (x) { return x.id === g.id; })[0] || {}).nom || '' : (g.yangiNom !== undefined ? g.yangiNom : g.nom); }
 
+
+    // ---- Qarz qatori: amal sifatida yig'iladi, tsikldan keyin nom bo'yicha qarzlarga birlashtiriladi ----
+    function qarzQatori(x, s) {
+      var q = x.qarz, rol = q.rol, eff, yon = null;
+      if (rol === 'asosiy') { eff = q.turi === 'berilgan' ? 'out' : 'in'; yon = q.turi === 'berilgan' ? 'berdim' : 'oldim'; }
+      else if (rol === 'tolov') { eff = q.turi === 'berilgan' ? 'in' : 'out'; yon = q.turi === 'berilgan' ? 'berdim' : 'oldim'; }
+      else { eff = q.turi === 'olingan' ? 'in' : 'out'; if (tanlov.qarzTeskari) eff = eff === 'in' ? 'out' : 'in'; }   // Borrowing — pul kirdi, Lending — pul chiqdi (almashtirgich teskari qiladi)
+      var hg = hisobGuruhi(x.hisob), op = { n: x.n, s: s, id: x.id, nom: q.nom || 'Nomsiz qarz', sana: x.sana, vaqt: x.vaqt, summa: x.summa, izoh: x.izoh, muddat: q.muddat, rol: rol, yon: yon, eff: eff, hisobG: hg.kalit };
+      s.qarz = true; s.eff = eff; s.id = x.id;
+      function rad(sabab, kod) { s.holat = 'xato'; s.sabab = sabab; s.kod = kod; jami.xato++; natija.push(s); }
+      if (hg.id === null && !hg.yangi) { rad('Hisob yo\'q (avval hisob qo\'shing)', 'R_HISOB'); return; }
+      if (Calc.kelajakmi(x.sana, x.vaqt, h)) { rad('Vaqti hozirdan keyin (' + x.sana.split('-').reverse().join('.') + ' ' + x.vaqt + '): kelajakka qarz amali bo\'lmaydi', 'R_KELAJAK'); return; }
+      var sabab = null;
+      if (x.id && !ESKI_ID.test(x.id)) {
+        if (tarixId[x.id] || kopIdlar[x.id]) sabab = 'ID bo\'yicha takror (' + x.id + ')';
+        kopIdlar[x.id] = true;
+      }
+      var fk = qarzKaliti(eff, op.nom, x.sana, x.summa, nomi(hg));
+      if (!sabab && qKalitlar[fk] > 0) { sabab = 'Yo\'nalish, sana, summa, hisob va nom bo\'yicha takror (mavjud qarz amali)'; qKalitlar[fk]--; }
+      if (x.yaxlit) { s.ogoh = 'Summa kasrli edi, so\'mga yaxlitlandi'; jami.yaxlit++; }
+      if (sabab) { s.takror = true; s.sabab = sabab; }
+      if (sabab && tanlov.takror !== 'yuklash') { s.holat = 'takror'; s.kod = 'R_TAKROR'; jami.takror++; natija.push(s); return; }
+      s.holat = 'yuklanadi';
+      natija.push(s);
+      qarzOps.push(op);
+    }
+    var qarzNatija = { qarzlar: [], nomlar: [], tasir: {} };
+    function qarzlarniRejala() {
+      var qarzGuruh = tanlov.qarzGuruh || {}, nomlar = {}, nomTartib = [], rep = {};
+      qarzOps.forEach(function (op) {
+        var k = kalit(op.nom), g = nomlar[k];
+        if (!g) { g = nomlar[k] = { kalit: k, nom: op.nom, soni: 0, sk: qarzNomKaliti(op.nom) }; nomTartib.push(g); }
+        g.soni++; op.nomK = k;
+      });
+      nomTartib.forEach(function (g) { var b = rep[g.sk]; if (!b || g.kalit.length < b.kalit.length) rep[g.sk] = g; });
+      nomTartib.forEach(function (g) { g.taklif = rep[g.sk].kalit; });
+      function yech(k0) {   // zanjir bo'ylab: A -> B -> C; aylana bo'lsa — aylanadagi eng kichik kalit
+        var yol = [], k = k0;
+        for (;;) {
+          var g = nomlar[k]; if (!g) return k;
+          var t = qarzGuruh[k] !== undefined ? qarzGuruh[k] : g.taklif;
+          if (!nomlar[t] || t === k) return k;
+          if (yol.indexOf(t) !== -1) { var ay = yol.slice(yol.indexOf(t)); ay.push(k); return ay.sort()[0]; }
+          yol.push(k); k = t;
+        }
+      }
+      var guruhlar = {}, gTartib = [];
+      nomTartib.forEach(function (g) { g.guruh = yech(g.kalit); });
+      qarzOps.forEach(function (op) {
+        var gk = nomlar[op.nomK].guruh, G = guruhlar[gk];
+        if (!G) { G = guruhlar[gk] = { kalit: gk, nom: (nomlar[gk] || nomlar[op.nomK]).nom, ops: [] }; gTartib.push(G); }
+        G.ops.push(op);
+      });
+      function sort(a, b) { var x = a.sana + ' ' + a.vaqt, y = b.sana + ' ' + b.vaqt; return x < y ? -1 : x > y ? 1 : a.n - b.n; }
+      function opXato(op, sabab, kod) { if (op.xato) return; op.xato = true; op.s.holat = 'xato'; op.s.sabab = sabab; op.s.kod = kod; }
+      gTartib.forEach(function (G) {
+        var ops = G.ops.slice().sort(sort), qarzlar = [];
+        function yangiQarz(yon, o) { return { yon: yon, hisobG: o.hisobG, summa: 0, sana: o.sana, vaqt: o.vaqt, izoh: [], muddat: o.muddat || '', ops: [], bo: [], tolangan: 0 }; }
+        function asosiyQosh(q, o) {
+          q.summa += o.summa; q.ops.push(o);
+          if (o.sana + ' ' + o.vaqt < q.sana + ' ' + q.vaqt) { q.sana = o.sana; q.vaqt = o.vaqt; }
+          if (o.izoh && q.izoh.indexOf(o.izoh) === -1) q.izoh.push(o.izoh);
+          if (o.muddat && !q.muddat) q.muddat = o.muddat;
+        }
+        // (a) o'zimizning eksport: har "Qarz" qatori — alohida qarz, "Qarz to'lovi" qatorlari shu nomdagi shu yo'nalishli qarzlarga taqsimlanadi
+        var aniq = ops.filter(function (o) { return o.rol === 'asosiy'; }), aniqTolov = ops.filter(function (o) { return o.rol === 'tolov'; }), noma = ops.filter(function (o) { return !o.rol; });
+        aniq.forEach(function (o) { var q = yangiQarz(o.yon, o); asosiyQosh(q, o); qarzlar.push(q); });
+        // (b) begona jadval: yo'nalish noma'lum — kattaroq yig'indi asosiy summa, qarama-qarshisi qaytarish
+        var tolovlar = aniqTolov.map(function (o) { return { op: o, yon: o.yon, pool: 'a' }; });
+        if (noma.length) {
+          var kir = 0, chiq = 0; noma.forEach(function (o) { if (o.eff === 'in') kir += o.summa; else chiq += o.summa; });
+          var main = kir > chiq ? 'in' : chiq > kir ? 'out' : noma[0].eff, byHisob = {}, pYon = main === 'in' ? 'oldim' : 'berdim';
+          noma.forEach(function (o) {
+            if (o.eff === main) { var q = byHisob[o.hisobG]; if (!q) { q = byHisob[o.hisobG] = yangiQarz(pYon, o); q.nomalum = true; qarzlar.push(q); } asosiyQosh(q, o); }
+            else tolovlar.push({ op: o, yon: pYon, pool: 'n' });
+          });
+        }
+        qarzlar.sort(function (a, b) { var x = a.sana + ' ' + a.vaqt, y = b.sana + ' ' + b.vaqt; return x < y ? -1 : x > y ? 1 : 0; });
+        // qaytarishlarni taqsimlash (eng eski qarzdan boshlab; summa oshsa bo'laklanadi)
+        tolovlar.sort(function (a, b) { return sort(a.op, b.op); }).forEach(function (t) {
+          var rem = t.op.summa, pool = qarzlar.filter(function (q) { return q.yon === t.yon && (t.pool === 'n' ? q.nomalum : !q.nomalum); });
+          pool.forEach(function (q) {
+            var bosh = q.summa - q.tolangan; if (rem <= 0 || bosh <= 0) return;
+            var b = Math.min(bosh, rem); q.bo.push({ op: t.op, summa: b }); q.tolangan += b; rem -= b;
+          });
+          if (!pool.length) opXato(t.op, 'Qaytarish: shu nomdagi (' + G.nom + ') asosiy qarz amali topilmadi', 'R_QARZ_ASOSIY');
+          else if (rem > 0) { t.op.s.ogoh = 'Qaytarish qarz summasidan ' + rem + ' so\'m ortiq: ortiqcha qismi yuklanmaydi'; t.op.s.ogohKod = 'R_QARZ_ORTIQCHA'; }
+        });
+        qarzlar.forEach(function (q) {
+          var ogoh = [], hammasi = q.ops.concat(q.bo.map(function (b) { return b.op; }));
+          q.bo.forEach(function (b) { if (b.op.sana + ' ' + b.op.vaqt < q.sana + ' ' + q.vaqt) { q.sana = b.op.sana; q.vaqt = b.op.vaqt; if (ogoh.indexOf('Qarz sanasi birinchi amal sanasiga moslandi') === -1) ogoh.push('Qarz sanasi birinchi amal sanasiga moslandi'); } });
+          var shakl = { yonalish: q.yon, shaxs: G.nom, summa: String(q.summa), hisob: q.hisobG, sana: q.sana, vaqt: q.vaqt, muddat: q.muddat, izoh: q.izoh.join('; ') };
+          var t = Calc.qarzniTekshir(shakl, h, null);
+          if (t.xato && t.maydon === 'muddat') { shakl.muddat = ''; ogoh.push('Qaytarish muddati noto\'g\'ri edi: tashlab yuborildi'); t = Calc.qarzniTekshir(shakl, h, null); }
+          if (t.xato) { hammasi.forEach(function (o) { opXato(o, 'Qarz tekshiruvdan o\'tmadi: ' + t.xato, 'R_QARZ_TEKSHIRUV'); }); return; }
+          var rec = Object.assign({}, t.qarz, { tolovlar: [] }), nTolov = 0;
+          q.bo.forEach(function (b, i) {
+            var tt = Calc.tolovniTekshir(rec, { summa: String(b.summa), hisob: b.op.hisobG, sana: b.op.sana, vaqt: b.op.vaqt }, h, undefined);
+            if (tt.xato) { opXato(b.op, 'Qaytarish tekshiruvdan o\'tmadi: ' + tt.xato, 'R_QARZ_TEKSHIRUV'); return; }
+            rec.tolovlar.push(Object.assign({ id: 'p' + i }, tt.tolov)); nTolov += b.summa;
+          });
+          var oplar = []; hammasi.forEach(function (o) { if (!o.xato && oplar.indexOf(o) === -1) oplar.push(o); });
+          var qolgan = rec.summa - nTolov;
+          qarzNatija.qarzlar.push({ nom: G.nom, yon: rec.yonalish, hisobG: rec.hisob_id, summa: rec.summa, tolangan: nTolov, qolgan: qolgan, amal: oplar.length, muddat: rec.muddat, ogoh: ogoh, rec: rec, ops: oplar });
+          var ta = qarzNatija.tasir, berdim = rec.yonalish === 'berdim';
+          ta[rec.hisob_id] = (ta[rec.hisob_id] || 0) + (berdim ? -rec.summa : rec.summa);
+          rec.tolovlar.forEach(function (x) { ta[x.hisob_id] = (ta[x.hisob_id] || 0) + (berdim ? x.summa : -x.summa); });
+        });
+      });
+      qarzOps.forEach(function (op) { if (op.xato) jami.xato++; else jami.qarzAmal++; });
+      nomTartib.sort(function (a, b) { return a.guruh < b.guruh ? -1 : a.guruh > b.guruh ? 1 : (a.nom < b.nom ? -1 : a.nom > b.nom ? 1 : 0); });
+      qarzNatija.nomlar = nomTartib.map(function (g) { return { kalit: g.kalit, nom: g.nom, soni: g.soni, guruh: g.guruh, taklif: g.taklif, guruhNomi: nomlar[g.guruh] ? nomlar[g.guruh].nom : g.nom }; });
+      jami.qarz = qarzNatija.qarzlar.length;
+    }
+
     xom.forEach(function (x) {
       var s = { n: x.n };
       if (x.xato) { s.holat = x.otkaz ? 'otkazildi' : 'xato'; s.sabab = x.xato; s.kod = x.kod; jami[s.holat]++; natija.push(s); return; }
+      if (x.qarz) { qarzQatori(x, s); return; }
       var tur = null, usul = null, kk = kalit(x.kategoriya);
       // 1) aniq "Tur" ustuni (Daromad / Xarajat / O'tkazma); 2) foydalanuvchi tanlovi; 3) summa manfiy; 4) summa katagi shrifti rangi; 5) kategoriya bo'yicha tanlov (standart: xarajat)
       if (x.turMatn === 'daromad' || x.turMatn === 'xarajat' || x.turMatn === 'otkazma') { tur = x.turMatn; usul = tur === 'otkazma' ? 'otkazma' : 'tur'; }
@@ -296,7 +459,8 @@ var ImportSof = (function () {
       else { s.holat = 'yuklanadi'; jami.yuklanadi++; }
       natija.push(s);
     });
-    return { qatorlar: natija, jami: jami, usullar: usullar, kategoriyalar: katTartib, hisoblar: hisobTartib, turGuruhlari: turTartib };
+    qarzlarniRejala();
+    return { qatorlar: natija, jami: jami, usullar: usullar, kategoriyalar: katTartib, hisoblar: hisobTartib, turGuruhlari: turTartib, qarzlar: qarzNatija.qarzlar, qarzNomlar: qarzNatija.nomlar, qarzTasiri: qarzNatija.tasir };
   }
 
   // Tasdiqlangan rejadan yozilishi kerak bo'lgan qatorlar. ops: { yangiId(), vaqt (Date.now() qiymati), hisobTuri(nom), hisobRang(tur), hisobBelgi(tur), katRang(nom, tur, tartib), katBelgi(nom, tur) }.
@@ -305,7 +469,8 @@ var ImportSof = (function () {
     var yangiId = ops.yangiId, vaqt = ops.vaqt;
     var hisoblar = [], kategoriyalar = [], yozuvlar = [], manba = [], hid = {}, kid = {}, t = vaqt, i, ishlatilgan = {};
     function iso(k) { return new Date(t + k).toISOString(); }
-    r.qatorlar.forEach(function (q) { if (q.holat === 'yuklanadi') { ishlatilgan[q.yozuv.hisobG] = 1; if (q.yozuv.qabulG) ishlatilgan[q.yozuv.qabulG] = 1; if (q.yozuv.katG) ishlatilgan[q.yozuv.katG] = 1; } });
+    r.qatorlar.forEach(function (q) { if (q.holat === 'yuklanadi' && q.yozuv) { ishlatilgan[q.yozuv.hisobG] = 1; if (q.yozuv.qabulG) ishlatilgan[q.yozuv.qabulG] = 1; if (q.yozuv.katG) ishlatilgan[q.yozuv.katG] = 1; } });
+    (r.qarzlar || []).forEach(function (e) { ishlatilgan[e.rec.hisob_id] = 1; e.rec.tolovlar.forEach(function (t) { ishlatilgan[t.hisob_id] = 1; }); });
     r.hisoblar.forEach(function (g) {
       if (!ishlatilgan[g.kalit]) return;
       if (g.id) hid[g.kalit] = g.id;
@@ -324,21 +489,27 @@ var ImportSof = (function () {
         kid[g.kalit] = id;
       }
     });
-    var yuklanadigan = r.qatorlar.filter(function (q) { return q.holat === 'yuklanadi'; }), N = yuklanadigan.length;
+    var yuklanadigan = r.qatorlar.filter(function (q) { return q.holat === 'yuklanadi' && q.yozuv; }), N = yuklanadigan.length, qarzlar = [];
     // fayldagi birinchi qator eng kech yaratiladi: eksportda (teng vaqtda) u yana tepada chiqadi
     for (i = N - 1; i >= 0; i--) {
       var q = yuklanadigan[i], y = q.yozuv;
       var z = { id: yangiId(), yaratilgan: iso(100 + (N - 1 - i)), tur: y.tur, summa: y.summa, sana: y.sana, vaqt: y.vaqt, hisob_id: hid[y.hisobG], kategoriya_id: y.tur === 'otkazma' ? null : kid[y.katG], izoh: y.izoh };
       if (y.tur === 'otkazma') z.qabul_hisob_id = hid[y.qabulG];
       yozuvlar.push(z);
-      if (q.id && !ESKI_ID.test(q.id)) manba.push(q.id);
     }
-    return { hisoblar: hisoblar, kategoriyalar: kategoriyalar, yozuvlar: yozuvlar, manbaIdlar: manba };
+    // Qarzlar: ilovaning o'z qarz shaklida (Calc.qarzniYangilash "yopilgan" belgisini qo'yadi), to'lovlar o'z ID si bilan
+    (r.qarzlar || []).forEach(function (e, qi) {
+      var rec = e.rec, z = Object.assign({}, rec, { id: yangiId(), yaratilgan: iso(10 + qi), hisob_id: hid[rec.hisob_id],
+        tolovlar: rec.tolovlar.map(function (x, i) { return { id: yangiId(), yaratilgan: iso(10 + qi + (i + 1) / 1000), summa: x.summa, hisob_id: hid[x.hisob_id], sana: x.sana, vaqt: x.vaqt }; }) });
+      qarzlar.push(Calc.qarzniYangilash(z));
+    });
+    r.qatorlar.forEach(function (q) { if (q.holat === 'yuklanadi' && q.id && !ESKI_ID.test(q.id)) manba.push(q.id); });
+    return { hisoblar: hisoblar, kategoriyalar: kategoriyalar, yozuvlar: yozuvlar, qarzlar: qarzlar, manbaIdlar: manba };
   }
 
   return {
     MAYDONLAR: MAYDONLAR, MAYDON_NOMLARI: MAYDON_NOMLARI, ustunlarniTaxmin: ustunlarniTaxmin, summaOqi: summaOqi, sanaOqi: sanaOqi, turMatni: turMatni, valyutaKodi: valyutaKodi,
-    qatorlarniOqi: qatorlarniOqi, reja: reja, tayyorla: tayyorla, mavjudKalitlar: mavjudKalitlar, hujayraMatni: hujayraMatni, ESKI_ID: ESKI_ID, seriyadanSana: seriyadanSana
+    qatorlarniOqi: qatorlarniOqi, reja: reja, tayyorla: tayyorla, mavjudKalitlar: mavjudKalitlar, qarzKalitlari: qarzKalitlari, qarzNomKaliti: qarzNomKaliti, qarzTuriOqi: qarzTuriOqi, hujayraMatni: hujayraMatni, ESKI_ID: ESKI_ID, seriyadanSana: seriyadanSana
   };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = ImportSof;

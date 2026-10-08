@@ -439,7 +439,7 @@
   // Yozuvlar oddiy saqlash bilan bir xil maydonlar oladi (updated_at, deleted = false) va serverga yuborish navbatiga tushadi (navbat formati navbatgaYoz bilan bir xil).
   function importYozish(paket, fayl) {
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString();
+      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString();
       tx.oncomplete = function () { resolve(); ozgarishXabari(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error || new Error('Yozish bekor qilindi')); };
@@ -450,9 +450,10 @@
           so.get(IMPORT_KALITI).onsuccess = function (e3) {
             var navbat = e2.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} };
             navbat.qatorlar = navbat.qatorlar || {};
-            ['hisoblar', 'kategoriyalar', 'yozuvlar'].forEach(function (t) {
+            ['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar'].forEach(function (t) {
               (paket[t] || []).forEach(function (q) {
                 var x = Object.assign({}, q, { deleted: false, updated_at: hozir });
+                if (t === 'qarzlar') x.tolovlar = Calc.tolovlarniBirlashtir(null, q.tolovlar, hozir, yangiId);   // saqlash() dagi kabi: har to'lovda updated_at va deleted
                 tx.objectStore(t).put(x);
                 if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x.id] = hozir;
               });
@@ -462,7 +463,7 @@
             t.idlar = t.idlar || {};
             (paket.manbaIdlar || []).forEach(function (id) { t.idlar[id] = true; });
             t.oxirgi = { vaqt: hozir, fayl: fayl || '', yozuvlar: paket.yozuvlar.map(function (y) { return y.id; }), kategoriyalar: paket.kategoriyalar.map(function (k) { return k.id; }),
-              hisoblar: paket.hisoblar.map(function (h) { return h.id; }), manbaIdlar: (paket.manbaIdlar || []).slice() };
+              hisoblar: paket.hisoblar.map(function (h) { return h.id; }), qarzlar: (paket.qarzlar || []).map(function (z) { return z.id; }), manbaIdlar: (paket.manbaIdlar || []).slice() };
             so.put(t);
           };
         };
@@ -473,7 +474,7 @@
   // Oxirgi yuklashni bekor qilish: yozuvlar mantiqiy o'chiriladi (deleted = true); shu yuklash yaratgan hisob va kategoriyalar — faqat hech narsa ishlatmasa
   function importBekor() {
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'byudjetlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString(), natija = { yozuvlar: 0, kategoriyalar: 0, hisoblar: 0 };
+      var tx = db.transaction(['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'byudjetlar', 'sozlamalar'], 'readwrite'), hozir = new Date().toISOString(), natija = { yozuvlar: 0, qarzlar: 0, kategoriyalar: 0, hisoblar: 0 };
       tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error || new Error('Bekor qilish to\'xtatildi')); };
@@ -492,7 +493,7 @@
             // so'rovlar yuborilgan tartibda bajariladi: byudjetlar tugagach yozuvlar va qarzlar ham tayyor
             tx.objectStore('byudjetlar').getAll().onsuccess = function (e) {
               holat.byudjetlar = e.target.result;
-              var ochir = {}; ox.yozuvlar.forEach(function (id) { ochir[id] = true; });
+              var ochir = {}, ochirQarz = {}; ox.yozuvlar.forEach(function (id) { ochir[id] = true; }); (ox.qarzlar || []).forEach(function (id) { ochirQarz[id] = true; });
               function belgila(t, x) { tx.objectStore(t).put(Object.assign({}, x, { deleted: true, updated_at: hozir })); if (navbatBor) (navbat.qatorlar[t] = navbat.qatorlar[t] || {})[x[TOPLAMLAR[t]]] = hozir; }
               var ishlatil = {};
               holat.yozuvlar.forEach(function (y) {
@@ -500,7 +501,10 @@
                 if (y.deleted === true) return;
                 ishlatil[y.hisob_id] = 1; if (y.qabul_hisob_id) ishlatil[y.qabul_hisob_id] = 1; if (y.kategoriya_id) ishlatil[y.kategoriya_id] = 1;
               });
-              holat.qarzlar.forEach(function (z) { if (z.deleted === true) return; ishlatil[z.hisob_id] = 1; (z.tolovlar || []).forEach(function (t) { if (t.deleted !== true) ishlatil[t.hisob_id] = 1; }); });
+              holat.qarzlar.forEach(function (z) {
+                if (ochirQarz[z.id]) { if (z.deleted !== true) { belgila('qarzlar', z); natija.qarzlar++; } return; }
+                if (z.deleted === true) return; ishlatil[z.hisob_id] = 1; (z.tolovlar || []).forEach(function (t) { if (t.deleted !== true) ishlatil[t.hisob_id] = 1; });
+              });
               holat.byudjetlar.forEach(function (b) { if (b.deleted !== true) ishlatil[b.kategoriya_id] = 1; });
               var kutilgan = 0;
               function bitta(t, id) {

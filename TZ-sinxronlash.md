@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -237,7 +237,7 @@ Har bosqich alohida pull request, oldingisi tekshirilgandan keyin keyingisiga o'
 
 **Haqiqiy serverda faqat foydalanuvchi sina oladigan narsalar:** (a) `001`, `002`, `003`, `004`, `005`, `006` ni Supabase SQL Editor'da ishga tushirish va natijalarni ko'rish; (b) pg_cron yoqilishi va `cron.job` da kunlik topshiriq; (c) Google bilan haqiqiy kirish (telefon PWA'sida ham: iPhone/Android), Google Cloud Branding dagi maxfiylik manzili; (d) ikki haqiqiy qurilma orasida sinxron tezligi (5 000 yozuv, oddiy sinxron); (e) `delete from auth.users` ning funksiya ichidan haqiqiy Supabase'da ishlashi (ikkinchi sinov akkaunti bilan); (f) uzoq muddatli (soatlab/kunlab) oflayn va haqiqiy token muddati tugashi.
 
-## 18. Kirish ekrani va fayldan yuklash (0.23.0 va 0.24.0)
+## 18. Kirish ekrani va fayldan yuklash (0.23.0, 0.24.0 va 0.25.0)
 
 Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron mantig'iga (navbat, qulf, tortish) TEGILMAYDI. Ikkita alohida PR.
 
@@ -272,3 +272,22 @@ Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron man
 **Xato kodlari:** `IMPORT_PARSE` (buzilgan fayl), `IMPORT_EMPTY` (bo'sh), `IMPORT_FORMAT` (xlsx emas / .xls / CSV), `IMPORT_KATTA` (30 MB yoki 50 000 qatordan katta), `IMPORT_BRAUZER`, `IMPORT_YOZISH`, `IMPORT_BEKOR`; qator kodlari: `R_SANA`, `R_SUMMA`, `R_VALYUTA`, `R_KELAJAK`, `R_OTKAZMA`, `R_QARZ`, `R_HISOB`, `R_TAKROR`.
 
 **Excel eksporti (yaxshilandi).** Xarajat summasi qizil, daromad yashil, o'tkazma va qarz oddiy; sarlavha qatori to'q fonda oq qalin matn; ustun kengligi mazmunga moslanadi; ko'p qatorli izoh o'raladi (qator balandligi bilan); sana va summa haqiqiy Excel turida; sarlavhalar o'zbekcha. Aylanish: eksport → toza baza → yuklash → eksport bir xil (testlangan).
+
+### 18.3. Qarz qatorlarini yuklash (0.25.0)
+
+**Muammo.** 0.24.0 da qarz qatorlari `R_QARZ` bilan o'tkazib yuborilardi. Qarz amallari hisob qoldig'iga ta'sir qiladi, shuning uchun ularsiz hisoblar boshqa ilovadagi qoldiqlardan farq qiladi. Endi qarzlar ham yuklanadi.
+
+**Ilovada qarz qanday ishlaydi (mavjud mantiq, o'zgarmaydi).** Qarz = bitta yozuv: `{ yonalish: 'berdim' | 'oldim', shaxs, summa, hisob_id, sana, vaqt, muddat, izoh, tolovlar: [{ summa, hisob_id, sana, vaqt }] }`. "Berdim" (men berdim): qarz summasi hisobdan CHIQADI, qaytarilgan to'lovlar hisobga KIRADI. "Oldim" (men oldim): qarz summasi hisobga KIRADI, qaytarishlar hisobdan CHIQADI. To'lovlar yig'indisi qarz summasidan oshmaydi; to'lov vaqti qarz vaqtidan oldin bo'lmaydi; vaqt hozirdan keyin bo'lmaydi. Qolgan = summa − to'langan; hisob qoldig'i `Calc.hisobQoldigi` da yozuvlar va qarzlardan hisoblanadi (alohida saqlanmaydi). Qarz amallari hisobotga, byudjetga va diagrammalarga kirmaydi. Bir shaxsga bir nechta qarz yozuvi bo'lishi mumkin (ro'yxatda shaxs bo'yicha guruhlanadi).
+
+**Talablar.**
+1. `TransactionType = Loan` qatorlari o'tkazib yuborilmaydi; oldindan ko'rishda alohida "Qarzlar" bo'limida chiqadi. Qarz qatorlarida Category va TransferedTo "-" bo'lishi mumkin ("-" bo'sh deb o'qiladi).
+2. Ilovaning o'z qarz mantiqi qayta ishlatiladi: qarz va to'lovlar `Calc.qarzniTekshir`, `Calc.tolovniTekshir`, `Calc.qarzniYangilash` va saqlashdagi `Calc.tolovlarniBirlashtir` orqali, qo'lda qo'shilgandek yaratiladi. Hisob qoldig'iga ta'sir ham aynan `Calc.hisobQoldigi` yo'li bilan.
+3. Yo'nalish: standart — `Borrowing` = qarz OLINDI (pul hisobga kirdi), `Lending` = qarz BERILDI/QAYTARILDI (pul hisobdan chiqdi). Oldindan ko'rishda shu taxmin yoziladi va BITTA almashtirgich bilan teskarisiga o'zgartiriladi; qoldiqlarga ta'siri darhol yangilanadi. Qarz yozuvining yo'nalishi (olingan/berilgan) guruhdagi amallarning kattaroq yig'indisidan aniqlanadi (olingan summa ko'proq bo'lsa — "oldim", aks holda "berdim"), qarama-qarshi yo'nalishdagi amallar to'lov (qaytarish) bo'ladi. Kirish va chiqish yig'indisi teng bo'lsa, birinchi amal yo'nalishi hal qiladi.
+4. Qarzlar NOM (`LoanName`) bo'yicha guruhlanadi. O'xshash nomlar (katta-kichik harf, bo'shliq, apostrof, "karta/kartada/kartasidan/bank/bankdan" qo'shimchalari) taklif sifatida bitta qarzga birlashtiriladi; foydalanuvchi har nom uchun tuzatadi (boshqa nom bilan birlashtirish yoki alohida qilish). Har guruh uchun bitta qarz yozuvi (bir hisobdan olingan qarz — bitta yozuv; asosiy summa turli hisoblardan bo'lsa, hisob soniga qarab bir nechta yozuv: har yozuvning hisobi bitta, qoldiq to'g'ri chiqishi uchun), amallar shu qarzning tarixi: birinchi yo'nalishdagi amallar yig'indisi — qarz summasi, qarama-qarshilari — to'lovlar. Qarz sanasi — guruhning eng birinchi amali sanasi.
+5. Takror: `TransactionId` bo'yicha (qarz qatorlari uchun ham); ID bo'lmasa (yoki o'zimizning `Q-000001` tartib raqami bo'lsa) — yo'nalish, sana, summa, hisob va nom bo'yicha mavjud qarz amallari bilan solishtiriladi. Shu fayl ikki marta yuklansa qarz ikkilanmaydi. Oldin yuklangan oddiy qatorlarga tegilmaydi.
+6. `AccountFrom` bizdagi hisobga moslanadi (oddiy qatorlardagi kabi: noma'lum bo'lsa bir marta so'raladi).
+7. "Oxirgi yuklashni bekor qilish" qarz yozuvlarini ham to'liq qaytaradi (qarzlar mantiqiy o'chadi, hisob qoldiqlari avvalgi holatga qaytadi).
+8. Oldindan ko'rishda: nechta qarz, nechta amal, har qarzning yakuniy qoldig'i (olingan − qaytarilgan) va hisob qoldiqlariga ta'siri.
+9. Excel eksporti qarz amallarini shu ustunlar bilan chiqaradi: "Tur" = Qarz / Qarz to'lovi (`TransactionType = Loan` ning o'zimizdagi ko'rinishi), "Qarz nomi" (`LoanName`), "Qarz turi" = Berilgan / Olingan (`LoanType`), "Hisob" (`AccountFrom`). Qaytarish muddati ham chiqadi ("Qaytarish muddati" ustuni, eksportning oxirgi ustuni; Excelda haqiqiy sana). Eksport → toza baza → yuklash → eksport qarzlar uchun ham bir xil chiqadi.
+
+**Cheklovlar (ochiq aytiladi).** To'lov (qaytarish) izohi saqlanmaydi: ilovadagi to'lovda izoh maydoni yo'q (server sxemasi o'zgartirilmaydi). Bir nom ostidagi bir nechta qo'shimcha olish amali bitta qarz summasiga qo'shiladi (alohida sanalari yo'qoladi, qarz sanasi — eng birinchisi). Fayl qisman yangilangan bo'lsa (oldin yuklangan qarzga yangi amallar qo'shilgan), yangi amallar alohida qarz yozuvi bo'ladi (ro'yxatda shaxs bo'yicha guruhlanib ko'rinadi).

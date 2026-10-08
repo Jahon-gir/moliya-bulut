@@ -944,14 +944,15 @@
   function davrdami(sana, c) { return !c || (sana >= c.dan && sana <= c.gacha); }
 
   // ---- Eksport (F9): bitta jadval — yozuvlar va qarz amallari birga, eng yangisi tepada ----
-  var EKSPORT_SARLAVHA = ['Sana va vaqt', 'ID', 'Tur', 'Hisob', 'Qayerga', 'Kategoriya', 'Summa', 'Valyuta', 'Qarz nomi', 'Qarz turi', 'Izoh'];
+  var EKSPORT_SARLAVHA = ['Sana va vaqt', 'ID', 'Tur', 'Hisob', 'Qayerga', 'Kategoriya', 'Summa', 'Valyuta', 'Qarz nomi', 'Qarz turi', 'Izoh', 'Qaytarish muddati'];
   var EKSPORT_TURI = { daromad: 'Daromad', xarajat: 'Xarajat', otkazma: 'O\'tkazma' };
   function eksportRaqam(prefiks, n) { return prefiks + '-' + ('000000' + n).slice(-6); }
   function eksportTartib(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
   // Tartib kaliti: UUID ga o'tgan qatorlar uchun eski ID (`eski_id`): Y-000123 raqamlari migratsiyadan keyin ham o'zgarmaydi
   function eksportKaliti(x) { return (x.yaratilgan || '') + ' ' + (x.eski_id !== undefined ? x.eski_id : x.id); }
 
-  // Natija: { sarlavha, qatorlar: [{ sana, vaqt, id, tur, hisob, qayerga, kategoriya, summa, valyuta, qarzNomi, qarzTuri, izoh }], soni }
+  // Natija: { sarlavha, qatorlar: [{ sana, vaqt, id, tur, hisob, qayerga, kategoriya, summa, valyuta, qarzNomi, qarzTuri, izoh, muddat }], soni }
+  // Qarz amallari: Tur = "Qarz" (asosiy summa) yoki "Qarz to'lovi" (qaytarish), "Qarz nomi" (shaxs), "Qarz turi" = Berilgan / Olingan; muddat faqat "Qarz" qatorida.
   // ID: ilovadagi yaratilish tartibi bo'yicha raqam (Y-000001 yozuv, Q-000001 qarz, T-000001 qarz to'lovi); davr tanlashga bog'liq emas.
   // Summa har doim musbat: yo'nalishni "Tur" (va "Qarz turi") aytadi.
   function eksport(malumot, davr) {
@@ -971,7 +972,7 @@
       var turi = z.yonalish === 'berdim' ? 'Berilgan' : 'Olingan';
       if (davrdami(z.sana, c)) {
         qatorlar.push({ sana: z.sana, vaqt: z.vaqt || '00:00', ord: eksportKaliti(z), id: eksportRaqam('Q', i + 1), tur: 'Qarz', hisob: hn[z.hisob_id] || '', qayerga: '', kategoriya: '',
-          summa: z.summa, valyuta: 'UZS', qarzNomi: z.shaxs || '', qarzTuri: turi, izoh: z.izoh || '' });
+          summa: z.summa, valyuta: 'UZS', qarzNomi: z.shaxs || '', qarzTuri: turi, izoh: z.izoh || '', muddat: z.muddat || '' });
       }
       (z.tolovlar || []).slice().sort(function (a, b) { return eksportTartib(a.sana + ' ' + (a.vaqt || '') + ' ' + (a.eski_id !== undefined ? a.eski_id : a.id), b.sana + ' ' + (b.vaqt || '') + ' ' + (b.eski_id !== undefined ? b.eski_id : b.id)); }).forEach(function (t) {
         tn++;
@@ -988,7 +989,7 @@
   // CSV: xuddi shu ustunlar. Sana va vaqt "KK.OO.YYYY SS:DD" matni, summa mingliksiz butun son; matnlarda formula himoyasi (csvMatn).
   function eksportCSV(e) {
     var q = e.qatorlar.map(function (r) {
-      return [sanaDMY(r.sana) + ' ' + r.vaqt, r.id, csvMatn(r.tur), csvMatn(r.hisob), csvMatn(r.qayerga), csvMatn(r.kategoriya), String(r.summa), r.valyuta, csvMatn(r.qarzNomi), r.qarzTuri, csvMatn(r.izoh)];
+      return [sanaDMY(r.sana) + ' ' + r.vaqt, r.id, csvMatn(r.tur), csvMatn(r.hisob), csvMatn(r.qayerga), csvMatn(r.kategoriya), String(r.summa), r.valyuta, csvMatn(r.qarzNomi), r.qarzTuri, csvMatn(r.izoh), r.muddat ? sanaDMY(r.muddat) : ''];
     });
     return csvFayl(e.sarlavha, q);
   }

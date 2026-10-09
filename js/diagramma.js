@@ -83,18 +83,18 @@
   //         bosilganda: function (id), guruhBosilganda: function (idlar), turNomi, markazNom, yashirin, yonTugmalari }
   // Eng katta 5 ta kategoriya alohida tilim; qolganlari va jami summaning 3% idan kichiklari bitta "Boshqalar" tilimida (Calc.donaGuruhlash).
   // Ro'yxatda "Boshqalar" qatori "N ta, bosib oching" yozuvi bilan turadi: bosilsa ichidagi kategoriyalar shu qator ostida ochiladi, yana bossa yopiladi.
-  // Tilim ranglari — yarqin, to'yingan palitra (CSS: --dona-1 … --dona-8), har bo'lak boshqa rang; "Boshqalar" — kulrang.
+  // Tilim ranglari — har bo'lak kategoriyaning O'Z rangida (0.31.0); "Boshqalar" bo'lagi kulrang (#7B8498).
   // Tilimlar: stroke-dasharray bilan chizilgan aylana yoylari (uchlari tekis: stroke-linecap butt), orasida ≈7 px ochiq joy.
   // ======================================================================
-  var DONA_VB = 180, DONA_R = 64, DONA_QALINLIK = 22, DONA_BOSHLIQ = 7, DONA_RANGLAR = 8;
-  function donaRangi(indeks) { return 'var(--dona-' + (indeks % DONA_RANGLAR + 1) + ')'; }
+  var DONA_VB = 180, DONA_R = 64, DONA_QALINLIK = 22, DONA_BOSHLIQ = 7;
+  function toliqRang(r) { return /^#[0-9a-f]{6}$/i.test(r || '') ? r : global.Ikonlar.KULRANG; }
 
-  // Ikon katagi (40 px yumaloq-kvadrat, fon — rangning ≈15% tusi): ui.js dagi belgiKatak bilan bir xil ko'rinish
+  // Ikon katagi (40 px yumaloq-kvadrat, to'liq kategoriya rangida): ui.js dagi belgiKatak bilan bir xil ko'rinish
   function belgiKatagi(kalit, rang, olcham) {
     var d = el('span', undefined, 'belgi-katak');
     d.style.width = d.style.height = olcham + 'px';
-    d.style.setProperty('--r', rang);
-    d.style.setProperty('--r-tus', 'color-mix(in srgb, ' + rang + ' 15%, transparent)');
+    d.style.background = rang;
+    d.style.color = global.Ikonlar.ikonRangi(rang);
     d.appendChild(global.Belgilar.chiz(kalit, Math.round(olcham * 0.58)));
     return d;
   }
@@ -106,13 +106,10 @@
     var guruh = Calc.donaGuruhlash(opts.taqsimot);
     var tilimlar = Calc.tilimBurchaklari(guruh.tilimlar);
     var BOSHQALAR = 'boshqalar';
-    var ranglar = {};   // kalit -> rang (tilim va ro'yxat belgisi bir xil rangda)
-    var tartib = 0;
-    guruh.tilimlar.forEach(function (t) { ranglar[t.kategoriya_id] = t.kategoriya_id === BOSHQALAR ? 'var(--g-boshqa)' : donaRangi(tartib++); });
     function malumot(id) {
-      if (id === BOSHQALAR) return { nom: 'Boshqalar', rang: ranglar[BOSHQALAR], belgi: 'boshqa' };
+      if (id === BOSHQALAR) return { nom: 'Boshqalar', rang: global.Ikonlar.KULRANG, belgi: 'dots' };
       var k = opts.kategoriya(id);
-      return { nom: k ? k.nom : 'Kategoriyasiz', rang: ranglar[id] || 'var(--g-boshqa)', belgi: k ? k.belgi || Calc.belgiTaxmin(k.nom, k.tur) : 'umumiy' };
+      return { nom: k ? k.nom : 'Kategoriyasiz', rang: toliqRang(k && k.rang), belgi: k ? k.belgi || Calc.belgiTaxmin(k.nom, k.tur) : 'help-circle' };
     }
     function nomi(t) {
       return t.kategoriya_id === BOSHQALAR ? 'Boshqalar (' + guruh.boshqalar.soni + ' ta kategoriya)' : malumot(t.kategoriya_id).nom;
@@ -205,7 +202,7 @@
       b.setAttribute('data-kategoriya', kalit);
       b.setAttribute('data-summa', summa);
       b.setAttribute('data-foiz', foiz);
-      b.appendChild(belgiKatagi(belgiKaliti || 'umumiy', rang, 40));
+      b.appendChild(belgiKatagi(belgiKaliti || 'tag', rang, 40));
       var matnQism = el('span', undefined, 'dona-matn');
       matnQism.appendChild(el('span', nom, 'dona-nom'));
       matnQism.appendChild(el('span', izoh || sum(summa), 'dona-qiymat'));
@@ -224,20 +221,20 @@
     }
     function kategoriyaQatori(x, ichki) {
       var m = malumot(x.kategoriya_id);
-      return qator(x.kategoriya_id, m.nom, ichki ? 'var(--g-boshqa)' : m.rang, x.summa, x.foiz, matn({ kategoriya_id: x.kategoriya_id, summa: x.summa, foiz: x.foiz }) + '. Yozuvlarni ochish',
+      return qator(x.kategoriya_id, m.nom, m.rang, x.summa, x.foiz, matn({ kategoriya_id: x.kategoriya_id, summa: x.summa, foiz: x.foiz }) + '. Yozuvlarni ochish',
         function () { opts.bosilganda(x.kategoriya_id); }, ichki ? 'dona-ichki' : '', m.belgi);
     }
     var alohida = guruh.tilimlar.filter(function (t) { return t.kategoriya_id !== BOSHQALAR || !guruh.boshqalar; });
     alohida.forEach(function (x) { kategoriyaQatori(x, false); });
     if (guruh.boshqalar) {
       var g = guruh.boshqalar, ichkilar = [];
-      var gQator = qator(BOSHQALAR, 'Boshqalar', 'var(--g-boshqa)', g.summa, g.foiz, 'Boshqalar: ' + g.soni + ' ta kategoriya, ' + sum(g.summa) + ', ' + g.foiz + ' foiz. Ochish yoki yopish', function (b) {
+      var gQator = qator(BOSHQALAR, 'Boshqalar', global.Ikonlar.KULRANG, g.summa, g.foiz, 'Boshqalar: ' + g.soni + ' ta kategoriya, ' + sum(g.summa) + ', ' + g.foiz + ' foiz. Ochish yoki yopish', function (b) {
         var ochiq = b.getAttribute('aria-expanded') !== 'true';
         b.setAttribute('aria-expanded', String(ochiq));
         ichkilar.forEach(function (li) { li.hidden = !ochiq; });
         gQator.classList.toggle('ochiq', ochiq);
         b.querySelector('.dona-qiymat').textContent = ochiq ? g.soni + ' ta kategoriya, yopish uchun bosing' : g.soni + ' ta, bosib oching';
-      }, 'dona-guruh', 'boshqa', g.soni + ' ta, bosib oching');
+      }, 'dona-guruh', 'dots', g.soni + ' ta, bosib oching');
       gQator.querySelector('.dona-qator').setAttribute('aria-expanded', 'false');
       guruh.dum.forEach(function (x) { var li = kategoriyaQatori(x, true); li.hidden = true; ichkilar.push(li); });
     }

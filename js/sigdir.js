@@ -32,9 +32,46 @@ var Sigdir = (function () {
     return 'kichik';
   }
 
+  // Kun sarlavhasi (TZ 22.4): chapda sana (.kun-sana, hech qachon siqilmaydi) va kichik qator (.kun-hafta), o'ngda xarajat/daromad belgilari (.pill, data-qiymat).
+  // Joy yetsa belgilar TO'LIQ raqamda; yetmasa ikkalasi birga qisqa ko'rinishga ("−2,75 mln") o'tadi; shunda ham sig'masa chapdagi kichik qator qisqaradi (…).
+  // Tuzilma: .kun-sarlavha > .kun-chap (> .kun-sana, .kun-hafta) + .pill-quti (> .pill-ich > .pill*). Natija: 'asl' | 'qisqa' | 'yashirin'
+  function kunQatori(qator) {
+    var chap = qator.querySelector('.kun-chap'), sana = qator.querySelector('.kun-sana'), quti = qator.querySelector('.pill-quti'), ich = qator.querySelector('.pill-ich');
+    if (!chap || !sana || !quti || !ich) return 'asl';
+    var pillar = ich.querySelectorAll('.pill'), i;
+    for (i = 0; i < pillar.length; i++) {
+      var toli = pillar[i].getAttribute('data-toli');
+      if (toli === null) { toli = pillar[i].textContent; pillar[i].setAttribute('data-toli', toli); }
+      pillar[i].textContent = toli; pillar[i].removeAttribute('data-qisqa');
+    }
+    chap.style.minWidth = ''; quti.style.flex = '';
+    if (qator.clientWidth === 0) return 'yashirin';
+    chap.style.minWidth = sana.offsetWidth + 'px';   // sana hech qachon siqilmasin
+    function sigadimi() { return ich.offsetWidth <= quti.clientWidth + 0.5; }
+    if (!pillar.length || sigadimi()) return 'asl';
+    for (i = 0; i < pillar.length; i++) {
+      var q = pillar[i].getAttribute('data-qiymat');
+      if (q !== null && isFinite(Number(q))) { pillar[i].textContent = Calc.qisqaBelgi(Number(q), pillar[i].getAttribute('data-plyus') === '1'); pillar[i].setAttribute('data-qisqa', '1'); }
+    }
+    if (!sigadimi()) quti.style.flex = '0 0 auto';   // belgilar o'z kengligini oladi, chapdagi kichik qator qisqaradi
+    return 'qisqa';
+  }
+
+  // Izoh (TZ 22.4): bir qator, oxiri "…". Qisqartirilgan bo'lsa bosish to'liq ochadi, yana bossa yig'adi. Qisqa (qisqartirilmagan) izohda hech narsa o'zgarmaydi.
+  // Natija: 'ochildi' | 'yopildi' | 'qisqa' (qisqa izoh: o'zgarmadi, bosish qatorning o'ziga o'tadi)
+  function izohAlmashtir(e) {
+    var ochiq = e.classList.contains('ochiq');
+    if (!ochiq && e.scrollWidth <= e.clientWidth + 1) return 'qisqa';
+    e.classList.toggle('ochiq', !ochiq);
+    e.setAttribute('aria-expanded', String(!ochiq));
+    return ochiq ? 'yopildi' : 'ochildi';
+  }
+
   function hammasi(ildiz) {
-    var royxat = (ildiz || document).querySelectorAll('.sig');
-    for (var i = 0; i < royxat.length; i++) sigdir(royxat[i]);
+    var r = ildiz || document, royxat = r.querySelectorAll('.sig'), i;
+    for (i = 0; i < royxat.length; i++) sigdir(royxat[i]);
+    var qatorlar = r.querySelectorAll('.kun-sarlavha');
+    for (i = 0; i < qatorlar.length; i++) kunQatori(qatorlar[i]);
   }
 
   var kutilmoqda = false;
@@ -52,5 +89,5 @@ var Sigdir = (function () {
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { keyinroq(ildiz); });
   }
 
-  return { sigdir: sigdir, hammasi: hammasi, keyinroq: keyinroq, kuzat: kuzat, MIN_SHRIFT: MIN_SHRIFT };
+  return { sigdir: sigdir, kunQatori: kunQatori, izohAlmashtir: izohAlmashtir, hammasi: hammasi, keyinroq: keyinroq, kuzat: kuzat, MIN_SHRIFT: MIN_SHRIFT };
 })();

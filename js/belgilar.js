@@ -62,7 +62,7 @@
     for (var i = 0; i < RO_YXAT.length; i++) if (RO_YXAT[i].kalit === kalit) return RO_YXAT[i];
     return null;
   }
-  function bormi(kalit) { return !!topish(kalit); }
+  function bormi(kalit) { return !!topish(kalit) || (!!global.Ikonlar && global.Ikonlar.bormi(kalit)); }   // eski belgilar yoki Tabler ikonlari (js/ikonlar.js)
 
   // Nom bo'yicha mos belgi kaliti: nom so'zlarga bo'linadi (harf bo'lmagan belgilar bo'yicha, apostroflar olib tashlanadi);
   // ro'yxat tartibida birinchi mos kelgan (so'z kalit so'zdan boshlansa). Topilmasa "umumiy". Hisob belgilari (guruh "hisob") nomdan ham topiladi.
@@ -84,18 +84,19 @@
   // Turga mos standart kategoriyalar ro'yxati ("Standart kategoriya" oynasi): { nom, tur, belgi, rang }
   var STANDART = [];
   [
-    ['xarajat', [['Oziq-ovqat', 'oziq', '#e57373'], ['Transport', 'transport', '#64b5f6'], ['Kommunal to\'lovlar', 'kommunal', '#ffb74d'], ['Uy-ro\'zg\'or', 'uy', '#a1887f'],
-      ['Sog\'liq', 'sogliq', '#81c784'], ['Dori-darmon', 'dori', '#4db6ac'], ['Bolalar', 'bolalar', '#f48fb1'], ['Ta\'lim', 'talim', '#9575cd'], ['Kiyim', 'kiyim', '#f06292'],
-      ['Aloqa va internet', 'aloqa', '#4dd0e1'], ['Ko\'ngilochar', 'kongilochar', '#ba68c8'], ['Sovg\'a', 'sovga', '#ff8a65'], ['Sport', 'sport', '#7986cb'], ['Soliq', 'soliq', '#90a4ae'],
-      ['Ta\'mirlash', 'tamirlash', '#bcaaa4'], ['Texnika', 'texnika', '#64b5f6'], ['Yoqilg\'i', 'yoqilgi', '#ffd54f'], ['Avtomobil', 'avto', '#ef9a9a'], ['Sayohat', 'sayohat', '#4fc3f7'],
-      ['Uy hayvonlari', 'hayvon', '#a5d6a7'], ['Xayriya', 'xayriya', '#aed581'], ['Kredit', 'kredit', '#b0bec5'], ['Komissiya', 'komissiya', '#e0e0e0'], ['Obuna', 'obuna', '#ce93d8'],
-      ['Go\'zallik', 'goz', '#f8bbd0'], ['Kafe va restoran', 'kafe', '#ffcc80'], ['Do\'kon', 'market', '#80cbc4'], ['Boshqa', 'boshqa', '#90a4ae']]],
-    ['daromad', [['Oylik maosh', 'ishhaqi', '#43a047'], ['Qo\'shimcha daromad', 'qoshimcha', '#26a69a'], ['Sovg\'a', 'sovga', '#ffd54f'], ['Keshbek', 'keshbek', '#66bb6a'],
-      ['Investitsiya', 'investitsiya', '#29b6f6'], ['Pensiya', 'pensiya', '#9ccc65'], ['Ijara daromadi', 'ijara', '#ffa726'], ['Boshqa', 'boshqa', '#90a4ae']]]
+    ['xarajat', [['Oziq-ovqat', 'tools-kitchen-2', '#14B870'], ['Transport', 'bus', '#00B4D8'], ['Kommunal to\'lovlar', 'bulb', '#E6B800'], ['Uy-ro\'zg\'or', 'shopping-cart', '#1E8FFF'],
+      ['Sog\'liq', 'heartbeat', '#E5483D'], ['Dori-darmon', 'pill', '#E0356B'], ['Bolalar', 'mood-kid', '#F0407A'], ['Ta\'lim', 'school', '#E08A00'], ['Kiyim', 'shirt', '#F0407A'],
+      ['Aloqa va internet', 'wifi', '#3F6FE0'], ['Ko\'ngilochar', 'device-gamepad-2', '#9B4DDB'], ['Sovg\'a', 'gift', '#FF7A2F'], ['Sport', 'barbell', '#7C5CFF'], ['Soliq', 'receipt', '#7B8498'],
+      ['Ta\'mirlash', 'tool', '#F5A300'], ['Texnika', 'device-laptop', '#2F5DDB'], ['Yoqilg\'i', 'gas-station', '#E5483D'], ['Avtomobil', 'car', '#26A69A'], ['Sayohat', 'plane', '#00B4D8'],
+      ['Uy hayvonlari', 'paw', '#6FBF2E'], ['Xayriya', 'heart-handshake', '#14B870'], ['Kredit', 'credit-card', '#2F5DDB'], ['Komissiya', 'percentage', '#5C6BC0'], ['Obuna', 'repeat', '#C2409B'],
+      ['Go\'zallik', 'brush', '#F0407A'], ['Kafe va restoran', 'coffee', '#F5A300'], ['Do\'kon', 'building-store', '#2EA84F'], ['Boshqa', 'dots', '#7B8498']]],
+    ['daromad', [['Oylik maosh', 'wallet', '#12B76A'], ['Qo\'shimcha daromad', 'briefcase', '#26A69A'], ['Sovg\'a', 'gift', '#FF7A2F'], ['Keshbek', 'arrow-back-up', '#1C9AE0'],
+      ['Investitsiya', 'trending-up', '#2EA84F'], ['Pensiya', 'award', '#6FBF2E'], ['Ijara daromadi', 'key', '#6A4CE0'], ['Boshqa', 'dots', '#7B8498']]]
   ].forEach(function (g) { g[1].forEach(function (x) { STANDART.push({ nom: x[0], tur: g[0], belgi: x[1], rang: x[2] }); }); });
 
   // SVG chizish (faqat brauzerda). Rang — currentColor. olcham — piksel.
   function chiz(kalit, olcham) {
+    if (global.Ikonlar && global.Ikonlar.bormi(kalit)) return global.Ikonlar.chiz(kalit, olcham);   // yangi (Tabler) ikonlar
     var NS = 'http://www.w3.org/2000/svg', b = topish(kalit) || topish('umumiy');
     var s = document.createElementNS(NS, 'svg');
     s.setAttribute('viewBox', '0 0 24 24');

@@ -162,7 +162,7 @@
           // yaratilgan har biriga 1 ms farq bilan yoziladi: ro'yxat tayyor tartibda chiqishi uchun
           tx.objectStore('kategoriyalar').put({
             id: yangiId(), yaratilgan: new Date(vaqt++).toISOString(),
-            nom: k.nom, tur: k.tur, rang: k.rang, belgi: Calc.belgiTaxmin(k.nom, k.tur), arxivlangan: false, updated_at: hozir, deleted: false
+            nom: k.nom, tur: k.tur, rang: k.rang, belgi: k.belgi, arxivlangan: false, updated_at: hozir, deleted: false
           });
         });
         tx.objectStore('sozlamalar').put({
@@ -175,8 +175,15 @@
   // Tayyor kategoriyalar ro'yxati: [{ nom, tur, rang }]
   function tayyorKategoriyalar() {
     var r = [];
-    XARAJAT_KATEGORIYALARI.forEach(function (k) { r.push({ nom: k[0], tur: 'xarajat', rang: k[1] }); });
-    DAROMAD_KATEGORIYALARI.forEach(function (k) { r.push({ nom: k[0], tur: 'daromad', rang: k[1] }); });
+    // ikon va rang: Belgilar.standart dan (yangi Tabler ikonlari, 0.31.0); u yerda bo'lmasa — nomga qarab boshlang'ich tanlov
+    function ol(nom, tur, eskiRang) {
+      var x = global.Belgilar ? global.Belgilar.standart.filter(function (q) { return q.nom === nom && q.tur === tur; })[0] : null;
+      if (x) return { nom: nom, tur: tur, rang: x.rang, belgi: x.belgi };
+      var b = global.Ikonlar ? global.Ikonlar.boshlangich(nom) : null;
+      return { nom: nom, tur: tur, rang: b ? b.rang : eskiRang, belgi: b ? b.belgi : Calc.belgiTaxmin(nom, tur) };
+    }
+    XARAJAT_KATEGORIYALARI.forEach(function (k) { r.push(ol(k[0], 'xarajat', k[1])); });
+    DAROMAD_KATEGORIYALARI.forEach(function (k) { r.push(ol(k[0], 'daromad', k[1])); });
     return r;
   }
 

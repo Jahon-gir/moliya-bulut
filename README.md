@@ -26,6 +26,7 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 | `js/ui.js`, `js/glidirak.js`, `js/diagramma.js`, `js/tema.js`, `js/pin*.js`, `js/pwa.js` | Ekranlar va ular bilan bog'liq narsalar |
 | `js/kirish.js`, `js/sinxron-sof.js`, `js/sinxron.js`, `js/yuklash.js` | Google bilan kirish, sinxron qoidalari (sof), sinxron tsikli va birinchi sinxron, serverga yuborish yordamchilari |
 | `js/vendor/` | Ichki kutubxonalar (`@supabase/auth-js`, `@supabase/postgrest-js`, MIT); CDN yo'q |
+| `js/ikonlar.js` | Kategoriya ikonlari: [Tabler Icons](https://tabler.io/icons) (MIT litsenziya, © Paweł Kuna) dan faqat kerakli outline SVG yo'llari; internet kerak emas |
 | `supabase/` | Serverdagi baza: SQL fayllar (001–006), testlar, `README.md` (qadamma-qadam) |
 | `maxfiylik.html` | Maxfiylik va foydalanish shartlari (alohida ochiq sahifa) |
 | `tests.html` | Avtomatik birlik testlari (brauzerda) |
@@ -68,7 +69,7 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.30.0 → 0.28.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.31.0 → 0.28.1), `index.html` va `tests.html` da hammasini birdaniga:
 
     sed -i 's/0\.23\.0/0.28.1/g' index.html tests.html
 
@@ -100,3 +101,7 @@ Kutubxona `js/vendor/supabase-auth.min.js` (ichki nusxa, MIT; kerak bo'lsa qayta
 ## Maxfiylik sahifasi
 
 `maxfiylik.html` — alohida ochiq sahifa (GitHub Pages: `https://jahon-gir.github.io/moliya-bulut/maxfiylik.html`). Google Cloud → Branding dagi "privacy policy" manzili shu bo'lishi kerak.
+
+## Litsenziyalar
+- **Tabler Icons** (outline uslub), MIT litsenziya, Copyright (c) 2020-2024 Paweł Kuna: https://github.com/tabler/tabler-icons. Kategoriya ikonlari va yuqori/pastki menyu ikonlari uchun faqat kerakli SVG yo'llari `js/ikonlar.js` va `index.html` ga ko'chirilgan. MIT litsenziyasi shartiga ko'ra mualliflik va litsenziya eslatmasi shu yerda saqlanadi.
+- `@supabase/auth-js`, `@supabase/postgrest-js` — MIT (`js/vendor/`).

@@ -220,6 +220,38 @@
   var HAFTA_KUNI_QISQA = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];   // dushanbadan yakshanbagacha
 
   // Katta summalarni qisqartiradi (o'qlar uchun): 1200000 -> "1,2 mln", 5000 -> "5 ming", 2500000000 -> "2,5 mlrd"
+  // Kun sarlavhasidagi belgi uchun qisqa ko'rinish (TZ 22.4): 2 750 000 -> "2,75 mln", 6 114 594 -> "6,11 mln", 12 300 000 -> "12,3 mln", 100 mln va ko'pi butun
+  // ("100 mln"), 1 mln dan kichik bo'lsa "ming" ("850 ming"), 1000 dan kichik bo'lsa o'z holida. Belgi: manfiy "−", belgili=true bo'lsa musbat "+".
+  function qisqaBelgi(n, belgili) {
+    var a = Math.abs(Math.round(n)), birliklar = [[1e12, 'trln'], [1e9, 'mlrd'], [1e6, 'mln'], [1e3, 'ming']];
+    var belgi = n < 0 ? '−' : (belgili && n > 0 ? '+' : '');
+    function format(v) {
+      var r = v >= 100 ? Math.round(v) : v >= 10 ? Math.round(v * 10) / 10 : Math.round(v * 100) / 100;
+      return { r: r, t: String(r).replace('.', ',') };
+    }
+    for (var i = 0; i < birliklar.length; i++) {
+      if (a < birliklar[i][0]) continue;
+      var f = format(a / birliklar[i][0]);
+      if (f.r >= 1000 && i > 0) { f = format(a / birliklar[i - 1][0]); return belgi + f.t + ' ' + birliklar[i - 1][1]; }   // 999 960 -> "1000 ming" emas, "1 mln"
+      return belgi + f.t + ' ' + birliklar[i][1];
+    }
+    return belgi + String(a);
+  }
+
+  // Hafta kuni (mahalliy sana bo'yicha): "2026-10-09" -> "Juma"
+  var HAFTA_KUNLARI = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+  function haftaKuni(iso) {
+    var q = String(iso).split('-');
+    return HAFTA_KUNLARI[new Date(Date.UTC(+q[0], +q[1] - 1, +q[2])).getUTCDay()];
+  }
+  // Kun sarlavhasi uchun: bugun — "Bugun · Juma", kecha — "Kecha · Payshanba", boshqa kun — "Chorshanba"
+  function kunBelgisi(iso, bugunIso) {
+    var h = haftaKuni(iso);
+    if (iso === bugunIso) return 'Bugun · ' + h;
+    var q = String(bugunIso).split('-'), kecha = new Date(Date.UTC(+q[0], +q[1] - 1, +q[2] - 1)).toISOString().slice(0, 10);
+    return iso === kecha ? 'Kecha · ' + h : h;
+  }
+
   function qisqaSum(n) {
     var manfiy = n < 0, a = Math.abs(Math.round(n)), birliklar = [[1e12, 'trln'], [1e9, 'mlrd'], [1e6, 'mln'], [1e3, 'ming']];
     function yoz(v, nom) { return String(v).replace('.', ',') + ' ' + nom; }
@@ -1469,7 +1501,7 @@
     HISOB_TURLARI: HISOB_TURLARI, HISOB_TURI_NOMI: HISOB_TURI_NOMI, HISOB_RANGLARI: HISOB_RANGLARI, HISOB_BELGISI: HISOB_BELGISI, belgiTaxmin: belgiTaxmin, hisobTuriTaxmin: hisobTuriTaxmin,
     hisobniYangilash: hisobniYangilash, kategoriyaniYangilash: kategoriyaniYangilash, hisobBelgisiOl: hisobBelgisiOl, hisobRangiOl: hisobRangiOl, oxirgi4Tekshir: oxirgi4Tekshir,
     hisobMaskasi: hisobMaskasi, hisoblarniSuz: hisoblarniSuz, standartHolati: standartHolati, oyKochir: oyKochir,
-    donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, DONA_KICHIK_FOIZ: DONA_KICHIK_FOIZ, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
+    qisqaBelgi: qisqaBelgi, haftaKuni: haftaKuni, kunBelgisi: kunBelgisi, donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, DONA_KICHIK_FOIZ: DONA_KICHIK_FOIZ, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
     BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,
     hozir: hozir, kelajakmi: kelajakmi, vaqtTekshir: vaqtTekshir, yozuvVaqti: yozuvVaqti,

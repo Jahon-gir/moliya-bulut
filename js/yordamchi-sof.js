@@ -13,7 +13,16 @@ var YordamchiSof = (function () {
   // Server natijada rad etadigan kalitlar bilan bir xil (supabase/functions/yordamchi/index.ts, TAQIQ_KALIT): maxfiylik
   var TAQIQ_KALIT = /^(izoh|shaxs|ism|familiya|yozuvlar|qarzdor|kimga|kimdan|tolovlar|matn|savol)$/;
 
-  var TUSHUNARSIZ_MATNI = 'Savolni tushunmadim. Masalan: «Shu oy taksiga qancha ketdi?»';
+  // Tayyor javoblar (serverga ikkinchi so'rov yuborilmaydi) va ularning bosiladigan savollari
+  var TUSHUNARSIZ_MATNI = 'Savolni tushunmadim.';
+  var TUSHUNARSIZ_SAVOLLAR = ['Shu oy xarajatim', 'Hisoblarimda qancha bor?', 'Menga kim qarzdor?', 'Byudjetimdan qancha qoldi?'];
+  var TASHQARI_MATNI = 'Men faqat Chuntak AI dagi pullaringiz haqida gaplasha olaman.';
+  var TASHQARI_SAVOLLAR = ['Shu oy xarajatim', 'Hisoblarimda qancha bor?', 'Shu oy eng katta 5 ta xarajatim'];
+  var UMUMIY_JAVOB = 'Men Chuntak AI yordamchisiman: pullaringiz haqidagi savollarga yozuvlaringiz asosida javob beraman. Masalan: «Shu oy xarajatim», «Hisoblarimda qancha bor?», «Byudjetimdan qancha qoldi?» yoki «Shu oy eng katta 5 ta xarajatim».';
+  var UMUMIY_SAVOLLAR = ['Shu oy xarajatim', 'Hisoblarimda qancha bor?', 'Byudjetimdan qancha qoldi?'];
+  var XOTIRA_MAX = 3;        // suhbat xotirasi: oxirgi almashinuvlar soni
+  var SOROV_MAX = 5;         // bitta rejada so'rovlar (serverdagi chegara)
+  var NATIJALAR_MAX = 10000; // hamma natijalar JSON uzunligi (serverdagi chegara)
 
   // Xato kodi -> { matn, qayta } (qayta: "Qayta urinish" ko'rsatilsinmi). Kod matn oxirida "(kod: ...)" bilan chiqadi.
   var XATOLAR = {
@@ -282,10 +291,157 @@ var YordamchiSof = (function () {
     return { natija: natija, karta: { amal: 'oylik_hisobot', davr: s.davr, davrNomi: davrMatni(s.davr, bugunSana), xarajat: natija.xarajat, daromad: natija.daromad, sof: butun(h.qoldiq), eng: engKat, hisob: f.his ? qirqNom(f.his.nom) : '', hisob_id: f.his ? f.his.id : '' } };
   }
 
+  // ---- Yangi amallar (TZ 26): jadval, chegara, eng_katta_yozuvlar, byudjet, taxmin, jamgarma ----
+  var GURUH_NOMI = { kategoriya: 'kategoriyalar bo\'yicha', hisob: 'hisoblar bo\'yicha', kun: 'kunlar bo\'yicha', hafta: 'haftalar bo\'yicha', oy: 'oylar bo\'yicha', yil: 'yillar bo\'yicha', hafta_kuni: 'hafta kunlari bo\'yicha', yoq: '' };
+  function olchovNomi(o, tur) {
+    if (o === 'jami') return tur === 'aylanma' ? 'aylanma' : tur;
+    return { soni: (tur === 'aylanma' ? 'harakatlar' : tur + ' yozuvlari') + ' soni', ortacha: 'o\'rtacha ' + (tur === 'aylanma' ? 'harakat' : tur + ' yozuvi'), eng_katta: 'eng katta ' + (tur === 'aylanma' ? 'harakat' : tur + ' yozuvi'), eng_kichik: 'eng kichik ' + (tur === 'aylanma' ? 'harakat' : tur + ' yozuvi') }[o];
+  }
+  // Hisobga kirgan va chiqqan hamma pul: daromad/xarajat, o'tkazma (ikki hisob uchun ikki harakat), qarz amallari va qaytarishlar. [{ sana, summa, hisob_id, kirim }]
+  function harakatlar(m, dan, gacha, hisobId) {
+    var r = [];
+    function qosh(sana, summa, h, kirim) { if (sana >= dan && sana <= gacha && (!hisobId || h === hisobId)) r.push({ sana: sana, summa: summa, hisob_id: h, kirim: kirim }); }
+    m.yozuvlar.forEach(function (y) {
+      if (y.tur === 'daromad') qosh(y.sana, y.summa, y.hisob_id, true);
+      else if (y.tur === 'xarajat') qosh(y.sana, y.summa, y.hisob_id, false);
+      else if (y.tur === 'otkazma') { qosh(y.sana, y.summa, y.hisob_id, false); qosh(y.sana, y.summa, y.qabul_hisob_id, true); }
+    });
+    m.qarzlar.forEach(function (z) {
+      var berdim = z.yonalish === 'berdim';
+      qosh(z.sana, z.summa, z.hisob_id, !berdim);
+      (z.tolovlar || []).forEach(function (t) { if (t.deleted !== true) qosh(t.sana, t.summa, t.hisob_id, berdim); });
+    });
+    return r;
+  }
+  function hisobNomiOl(m, id) { var h = m.hisoblar.filter(function (x) { return x.id === id; })[0]; return h ? qirqNom(h.nom) : 'Noma\'lum'; }
+  function ozgartir(royxat, olchov) {   // royxat: summalar; natija: bitta qiymat
+    if (!royxat.length) return 0;
+    if (olchov === 'soni') return royxat.length;
+    var jami = royxat.reduce(function (a, x) { return a + x; }, 0);
+    if (olchov === 'jami') return jami;
+    if (olchov === 'ortacha') return jami / royxat.length;
+    return olchov === 'eng_katta' ? Math.max.apply(null, royxat) : Math.min.apply(null, royxat);
+  }
+  function guruhKaliti(g, x, m) {
+    if (g === 'kategoriya') return { k: x.kategoriya_id || '', nom: x.kategoriya_id ? kategoriyaNomi(m, x.kategoriya_id) : 'Kategoriyasiz' };
+    if (g === 'hisob') return { k: x.hisob_id, nom: hisobNomiOl(m, x.hisob_id) };
+    if (g === 'kun') return { k: x.sana, nom: x.sana };
+    if (g === 'hafta') { var d = Calc.davrChegarasi('hafta', x.sana).dan; return { k: d, nom: d }; }
+    if (g === 'oy') return { k: x.sana.slice(0, 7), nom: x.sana.slice(0, 7) };
+    if (g === 'yil') return { k: x.sana.slice(0, 4), nom: x.sana.slice(0, 4) };
+    if (g === 'hafta_kuni') { var n = Calc.haftaKuni(x.sana); return { k: n, nom: n }; }
+    return { k: 'hammasi', nom: 'Hammasi' };
+  }
+  // Ko'rinishdagi qator nomi (natijada ISO sana/oy qoladi: server raqam tekshiruvi sana qismlarini taniydi)
+  function guruhKorsatma(g, nom) {
+    if (g === 'kun') return Calc.sanaKorsat(nom);
+    if (g === 'hafta') return Calc.oraliqNomi(nom, Calc.kunQosh(nom, 6));
+    if (g === 'oy') return OY_NOMLARI[parseInt(nom.slice(5, 7), 10) - 1] + ' ' + nom.slice(0, 4);
+    return nom;
+  }
+  function jadvalTahlili(m, s, bugunSana) {
+    var f = filtrYasash(m, s), tur = s.tur;
+    var f2 = { tur: tur === 'aylanma' ? '' : tur, kat: f.kat, his: f.his };
+    var elementlar;
+    if (tur === 'aylanma') elementlar = harakatlar(m, s.davr.dan, s.davr.gacha, f.his ? f.his.id : '');
+    else elementlar = Calc.yozuvlarniSuz(hisobotYozuvlari(m), suzFiltri(f2, s.davr.dan, s.davr.gacha, ''));
+    var guruhlar = {}, tartib = [];
+    elementlar.forEach(function (x) {
+      var g = guruhKaliti(s.guruh, x, m), q = guruhlar[g.k];
+      if (!q) { q = guruhlar[g.k] = { nom: g.nom, summalar: [] }; tartib.push(q); }
+      q.summalar.push(x.summa);
+    });
+    var barcha = elementlar.map(function (x) { return x.summa; }), umumiy = butun(ozgartir(barcha, s.olchov));
+    var qatorlar = tartib.map(function (q) { return { nom: q.nom, qiymat: butun(ozgartir(q.summalar, s.olchov)) }; });
+    var yon = s.tartib === 'osish' ? 1 : -1;
+    qatorlar.sort(function (a, b) { return yon * (a.qiymat - b.qiymat) || (a.nom < b.nom ? -1 : a.nom > b.nom ? 1 : 0); });
+    var soniJami = qatorlar.length;
+    var ulush = s.olchov === 'jami' || s.olchov === 'soni';
+    qatorlar = qatorlar.slice(0, s.limit).map(function (q) {
+      var o = { nom: q.nom, qiymat: q.qiymat };
+      if (ulush) o.foiz = umumiy > 0 ? Math.round(q.qiymat * 100 / umumiy) : 0;
+      return o;
+    });
+    var natija = { tur: tur, guruh: s.guruh, olchov: s.olchov, umumiy: umumiy, qatorlar_soni: soniJami, qatorlar: qatorlar };
+    if (f.kat && tur !== 'aylanma') natija.kategoriya = qirqNom(f.kat.nom);
+    if (f.his) natija.hisob = qirqNom(f.his.nom);
+    var davrN = davrMatni(s.davr, bugunSana), gN = GURUH_NOMI[s.guruh];
+    return { natija: natija, karta: { amal: 'jadval', sarlavha: bosh(davrN + ' · ' + (gN ? gN + ' ' : '') + olchovNomi(s.olchov, tur)), olchov: s.olchov, tur: tur, umumiy: umumiy,
+      qatorlar: qatorlar.map(function (q) { return { nom: guruhKorsatma(s.guruh, q.nom), qiymat: q.qiymat, foiz: q.foiz === undefined ? null : q.foiz }; }), qatorlar_soni: soniJami } };
+  }
+
+  function chegaraTahlili(m, s) {
+    var kat = kategoriyaTop(m, s.kategoriya), his = hisobTop(m, s.hisob);
+    var r = Calc.yozuvlarniSuz(m.yozuvlar, { tur: s.tur || '', kategoriya: kat ? kat.id : '', hisob: his ? his.id : '' });
+    var sanalar = r.map(function (y) { return y.sana; }).sort();
+    var natija = { birinchi_sana: sanalar.length ? sanalar[0] : null, oxirgi_sana: sanalar.length ? sanalar[sanalar.length - 1] : null, yozuvlar_soni: r.length };
+    if (s.tur) natija.tur = s.tur;
+    if (kat) natija.kategoriya = qirqNom(kat.nom);
+    if (his) natija.hisob = qirqNom(his.nom);
+    return { natija: natija, karta: { amal: 'chegara', sarlavha: 'Yozuvlar chegarasi' + (s.tur ? ' · ' + s.tur : '') + (kat ? ' · ' + qirqNom(kat.nom) : '') + (his ? ' · ' + qirqNom(his.nom) : ''), birinchi: natija.birinchi_sana, oxirgi: natija.oxirgi_sana, soni: r.length } };
+  }
+
+  function engKattaTahlili(m, s, bugunSana) {
+    var kat = kategoriyaTop(m, s.kategoriya);
+    var r = Calc.yozuvlarniSuz(m.yozuvlar, { tur: s.tur, kategoriya: kat ? kat.id : '', dan: s.davr.dan, gacha: s.davr.gacha });
+    r.sort(function (a, b) { return b.summa - a.summa || yozuvKaliti(a, b); });
+    var top = r.slice(0, s.limit);
+    var natija = { tur: s.tur, topilgan_soni: r.length, royxat: top.map(function (y) { return { sana: y.sana, kategoriya: kategoriyaNomi(m, y.kategoriya_id), summa: butun(y.summa) }; }) };
+    if (kat) natija.kategoriya = qirqNom(kat.nom);
+    return { natija: natija, karta: { amal: 'eng_katta_yozuvlar', sarlavha: bosh(davrMatni(s.davr, bugunSana) + ' · eng katta ' + (s.tur === 'daromad' ? 'daromadlar' : 'xarajatlar') + (kat ? ' · ' + qirqNom(kat.nom) : '')), tur: s.tur,
+      topilgan_soni: r.length, qatorlar: top.map(function (y) { return { id: y.id, sana: y.sana, kategoriya: kategoriyaNomi(m, y.kategoriya_id), izoh: y.izoh || '', summa: butun(y.summa) }; }) } };
+  }
+
+  // Byudjet: mavjud Calc.byudjetHisobi (joriy oy; qarz byudjetga kirmaydi, o'tkazma ham)
+  function byudjetTahlili(m, s, bugunSana) {
+    var h = Calc.byudjetHisobi(m.byudjetlar || [], m.kategoriyalar, m.yozuvlar, bugunSana), kat = kategoriyaTop(m, s.kategoriya);
+    function qator(nom, x) { var t = x.holat; return { nom: nom, limit: butun(t.limit), sarflangan: butun(t.sarflangan), qolgan: butun(t.qolgan), oshgan: butun(t.oshgan), foiz: t.foiz }; }
+    var qatorlar = h.chegarali.filter(function (x) { return !kat || x.kategoriya.id === kat.id; }).slice(0, 20).map(function (x) { return qator(qirqNom(x.kategoriya.nom), x); });
+    var umumiy = !kat && h.umumiy ? qator('Umumiy oylik chegara', h.umumiy) : null;
+    var natija = { oy: bugunSana.slice(0, 7), belgilangan: !!(umumiy || qatorlar.length), umumiy: umumiy ? { limit: umumiy.limit, sarflangan: umumiy.sarflangan, qolgan: umumiy.qolgan, oshgan: umumiy.oshgan, foiz: umumiy.foiz } : null,
+      kategoriyalar: qatorlar };
+    var kartaQatorlar = (umumiy ? [umumiy] : []).concat(qatorlar).map(function (q) {
+      var kk = h.chegarali.filter(function (x) { return qirqNom(x.kategoriya.nom) === q.nom; })[0];
+      return Object.assign({}, q, { nom: q.nom === 'Umumiy oylik chegara' ? 'Umumiy' : q.nom, chiziq: q.limit > 0 ? Math.min(100, q.sarflangan * 100 / q.limit) : 0, oshib: q.oshgan > 0, kat: kk ? kk.kategoriya : null });
+    });
+    return { natija: natija, karta: { amal: 'byudjet', oyNomi: davrMatni(Calc.davrChegarasi('oy', bugunSana), bugunSana), belgilangan: natija.belgilangan, qatorlar: kartaQatorlar } };
+  }
+
+  // Taxmin (faqat joriy oy): shu kungacha xarajat + kunlik o'rtacha * oyda qolgan kunlar (butun so'mga yaxlitlanadi)
+  function taxminTahlili(m, s, bugunSana) {
+    var oy = Calc.davrChegarasi('oy', bugunSana), kunlar = Calc.kunlarSoni(oy.dan, oy.gacha), otgan = parseInt(bugunSana.slice(8, 10), 10), qolgan = kunlar - otgan;
+    var shu = Calc.hisobot(hisobotYozuvlari(m), oy.dan, bugunSana, '').xarajat, ortacha = shu / otgan;
+    var natija = { oy: bugunSana.slice(0, 7), shu_kungacha: butun(shu), otgan_kunlar: otgan, kunlik_ortacha: butun(ortacha), qolgan_kunlar: qolgan, kutilayotgan_jami: butun(shu + ortacha * qolgan) };
+    return { natija: natija, karta: null, gap: 'Taxmin: oy oxirigacha jami taxminan ' + Calc.sumFormat(natija.kutilayotgan_jami) + ' xarajat bo\'ladi (shu kungacha ' + Calc.sumFormat(natija.shu_kungacha) + ', kuniga o\'rtacha ' + Calc.sumFormat(natija.kunlik_ortacha) + ', oyda ' + qolgan + ' kun qoldi).' };
+  }
+
+  // Jamg'arma: davr daromadi - xarajati; foiz = farq / daromad (daromad 0 bo'lsa foiz yo'q)
+  function jamgarmaTahlili(m, s, bugunSana) {
+    var h = Calc.hisobot(hisobotYozuvlari(m), s.davr.dan, s.davr.gacha, ''), farq = h.daromad - h.xarajat;
+    var natija = { daromad: butun(h.daromad), xarajat: butun(h.xarajat), farq: Math.abs(butun(farq)), farq_yonalish: farq > 0 ? 'ortiqcha' : farq < 0 ? 'kamomad' : 'nol' };
+    if (h.daromad > 0) natija.foiz = Math.round(Math.abs(farq) * 100 / h.daromad);
+    var bosh_ = bosh(davrMatni(s.davr, bugunSana)) + ': daromad ' + Calc.sumFormat(natija.daromad) + ', xarajat ' + Calc.sumFormat(natija.xarajat) + ' — ';
+    var gap = farq > 0 ? bosh_ + Calc.sumFormat(natija.farq) + ' tejaldi' + (natija.foiz !== undefined ? ' (daromadning ' + natija.foiz + '%)' : '') + '.'
+      : farq < 0 ? bosh_ + 'xarajat daromaddan ' + Calc.sumFormat(natija.farq) + ' ko\'p.' : bosh_ + 'daromad va xarajat teng.';
+    return { natija: natija, karta: null, gap: gap };
+  }
+
+  // Davom savollari (serverdagi davomniTekshir nusxasi): 2..3 ta, har biri ≤ 40 belgi, raqamsiz; aks holda hammasi tashlanadi
+  function davomniTekshir(x) {
+    if (!Array.isArray(x) || x.length < 2 || x.length > 3) return [];
+    var chiq = [];
+    for (var i = 0; i < x.length; i++) {
+      var t = typeof x[i] === 'string' ? tozaNom(x[i]).replace(/\s+/g, ' ') : '';
+      if (!t || t.length > 40 || /\d/.test(t) || chiq.indexOf(t) >= 0) return [];
+      chiq.push(t);
+    }
+    return chiq;
+  }
+
   // Asosiy kirish. m = { hisoblar, kategoriyalar, yozuvlar, qarzlar } (mantiqiy o'chirilganlar allaqachon chiqarilgan), s = serverdan kelgan tuzilgan so'rov.
   // Qaytaradi: { natija, karta, gap } yoki null (amal "tushunarsiz" yoki noma'lum). natija — serverga, karta — faqat ekranga, gap — karta yo'q amalda ilovaning o'z gapi.
   function tahlil(s, m, bugunSana, savol) {
-    if (!s || !s.davr && s.amal !== 'qarzlar' && s.amal !== 'hisoblar') return null;
+    if (!s || !s.davr && ['qarzlar', 'hisoblar', 'chegara', 'byudjet', 'taxmin'].indexOf(s.amal) < 0) return null;
     switch (s.amal) {
       case 'yigindi': return yigindiTahlili(m, s, bugunSana);
       case 'kategoriyalar': return kategoriyalarTahlili(m, s, bugunSana);
@@ -294,13 +450,32 @@ var YordamchiSof = (function () {
       case 'qarzlar': return qarzlarTahlili(m, s, bugunSana, savol);
       case 'hisoblar': return hisoblarTahlili(m, s);
       case 'oylik_hisobot': return oylikTahlili(m, s, bugunSana);
+      case 'jadval': return jadvalTahlili(m, s, bugunSana);
+      case 'chegara': return chegaraTahlili(m, s);
+      case 'eng_katta_yozuvlar': return engKattaTahlili(m, s, bugunSana);
+      case 'byudjet': return byudjetTahlili(m, s, bugunSana);
+      case 'taxmin': return taxminTahlili(m, s, bugunSana);
+      case 'jamgarma': return jamgarmaTahlili(m, s, bugunSana);
       default: return null;
     }
   }
+  // Bir rejadagi 1..5 so'rov ketma-ket hisoblanadi: [{ sorov, natija, karta, gap }] (hisoblab bo'lmaganlari tashlanadi; tushunarsiz so'rovlar ham)
+  function tahlillar(sorovlar, m, bugunSana, savol) {
+    var chiq = [];
+    (sorovlar || []).slice(0, SOROV_MAX).forEach(function (s) {
+      if (!s || s.amal === 'tushunarsiz') return;
+      var t = tahlil(s, m, bugunSana, savol);
+      if (t && natijaYuborsaBoladimi(t.natija)) chiq.push({ sorov: s, natija: t.natija, karta: t.karta || null, gap: t.gap || '' });
+    });
+    return chiq;
+  }
+  function natijalarYuborsaBoladimi(natijalar) { return natijalar.length > 0 && natijalar.length <= SOROV_MAX && JSON.stringify(natijalar).length <= NATIJALAR_MAX; }
   function hisobla(s, m, bugunSana) { var t = tahlil(s, m, bugunSana); return t ? t.natija : null; }
 
   return {
-    SAVOL_MAX: SAVOL_MAX, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI, XATOLAR: XATOLAR, TAQIQ_KALIT: TAQIQ_KALIT,
+    SAVOL_MAX: SAVOL_MAX, XOTIRA_MAX: XOTIRA_MAX, SOROV_MAX: SOROV_MAX, XATOLAR: XATOLAR, TAQIQ_KALIT: TAQIQ_KALIT,
+    TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI, TUSHUNARSIZ_SAVOLLAR: TUSHUNARSIZ_SAVOLLAR, TASHQARI_MATNI: TASHQARI_MATNI, TASHQARI_SAVOLLAR: TASHQARI_SAVOLLAR, UMUMIY_JAVOB: UMUMIY_JAVOB, UMUMIY_SAVOLLAR: UMUMIY_SAVOLLAR,
+    tahlillar: tahlillar, davomniTekshir: davomniTekshir, natijalarYuborsaBoladimi: natijalarYuborsaBoladimi, harakatlar: harakatlar,
     xatoMatni: xatoMatni, xatoQaytaMi: xatoQaytaMi, tayyorSavollar: tayyorSavollar, nomlar: nomlar,
     natijaTekshir: natijaTekshir, natijaYuborsaBoladimi: natijaYuborsaBoladimi, hisobla: hisobla, tahlil: tahlil, izohTasnifi: izohTasnifi, davrMatni: davrMatni
   };

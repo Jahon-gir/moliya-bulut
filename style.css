@@ -1089,3 +1089,12 @@ html.pin-qulf .yordamchi-tugma, html.pin-qulf .yo-ekran { visibility: hidden; }
 .yk-sof-raqam { flex: 1 1 0; min-width: 0; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .yk-eng { margin-top: 12px; font-size: 14px; color: var(--yo-matn); overflow-wrap: anywhere; }
 .yk-kat-ich > .yk-nom { flex: none; }
+
+
+/* ===== 0.34.0: AI yordamchi — erkin savollar: yangi kartalar va davom savollari (TZ-sinxronlash.md 26-band) ===== */
+.yk-foiz { flex: none; min-width: 38px; text-align: right; font-size: 12px; color: var(--yo-xira); font-variant-numeric: tabular-nums; }
+.yk-qiymat { flex: none; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.yk-yozuv-matn { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.yk-nom-bir { flex: none; }
+.yk-bir-qator { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yo-davom { align-self: stretch; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: 0; }

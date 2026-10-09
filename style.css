@@ -918,3 +918,106 @@ button.izoh-bir.ochiq { white-space: normal; overflow: visible; text-overflow: c
 .kat-ranglar .rang-tugma { width: 100%; max-width: 48px; aspect-ratio: 1; min-height: 44px; justify-self: center; }
 .rang-boshqa { font-size: 11px; font-weight: 700; color: var(--matn); background: conic-gradient(#ff5c5c, #ffd24d, #5cff7a, #4dc8ff, #8a5cff, #ff5cb0, #ff5c5c); }
 .rang-kiritish { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+
+/* ===== 0.32.0: AI yordamchi — suzuvchi tugma va chat ekrani (TZ-sinxronlash.md 24-band). Ranglar CSS o'zgaruvchilarida: yorug' va tungi rejim ===== */
+:root {
+  --yo-fon: #f4f6f5; --yo-karta: #ffffff; --yo-chegara: #dde4e1; --yo-matn: #1d2a26; --yo-xira: #66756f;
+  --yo-savol-fon: #e8eef7; --yo-savol-matn: #2f4a72; --yo-yubor: #2f4a72;
+  --yo-tugma: #1f2a3a; --yo-hoshiya: #ffffff; --yo-soya: 0 4px 14px rgba(20, 30, 28, .3);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="yorug"]) {
+    --yo-fon: #12161f; --yo-karta: #1b2130; --yo-chegara: #2a3245; --yo-matn: #e8ecf3; --yo-xira: #9aa6ba;
+    --yo-savol-fon: #262e40; --yo-savol-matn: #a9c2f0; --yo-yubor: #3a64b5;
+    --yo-tugma: #3a64b5; --yo-hoshiya: var(--fon); --yo-soya: 0 4px 14px rgba(0, 0, 0, .55);
+  }
+}
+:root[data-tema="qorongi"] {
+  --yo-fon: #12161f; --yo-karta: #1b2130; --yo-chegara: #2a3245; --yo-matn: #e8ecf3; --yo-xira: #9aa6ba;
+  --yo-savol-fon: #262e40; --yo-savol-matn: #a9c2f0; --yo-yubor: #3a64b5;
+  --yo-tugma: #3a64b5; --yo-hoshiya: var(--fon); --yo-soya: 0 4px 14px rgba(0, 0, 0, .55);
+}
+
+/* Suzuvchi "Ko'zlar" tugmasi: pastki menyu ustida, o'ngda (o'ngdan 16 px, menyudan ~16 px yuqorida) */
+.yordamchi-tugma {
+  position: fixed; z-index: 20; box-sizing: border-box; width: 58px; height: 58px; padding: 0; margin: 0;
+  right: 16px; right: max(16px, calc((100vw - 560px) / 2 + 16px)); bottom: calc(88px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border-radius: 50%; border: 3px solid var(--yo-hoshiya); background: var(--yo-tugma); box-shadow: var(--yo-soya);
+}
+.yordamchi-tugma[hidden] { display: none; }
+.yordamchi-tugma svg { width: 36px; height: 30px; display: block; overflow: visible; }
+.yo-koz { transform-box: fill-box; transform-origin: center; animation: yo-pirpira 6s infinite; }
+.yo-qorachiq { transform: translate(1.6px, 2.6px); transition: transform .18s ease-out; }
+.yordamchi-tugma.bosildi .yo-qorachiq { transform: translate(0, 0); }
+@keyframes yo-pirpira { 0%, 93%, 100% { transform: scaleY(1); } 96.5% { transform: scaleY(.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .yo-koz { animation: none; }
+  .yo-qorachiq { transition: none; }
+}
+html.pin-qulf .yordamchi-tugma, html.pin-qulf .yo-ekran { visibility: hidden; }
+
+/* Chat ekrani: to'liq ekran (pastki menyu ko'rinmaydi) */
+.yo-ekran {
+  position: fixed; left: 0; right: 0; top: 0; height: 100vh; height: 100dvh; z-index: 100; box-sizing: border-box;
+  display: flex; flex-direction: column; background: var(--yo-fon); color: var(--yo-matn); overflow: hidden;
+}
+.yo-bosh {
+  flex: none; display: flex; align-items: center; gap: 12px; box-sizing: border-box;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(16px, calc((100% - 560px) / 2)) 10px;
+  background: var(--yo-fon); border-bottom: 1px solid var(--yo-chegara);
+}
+.yo-bosh h1 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 20px; color: var(--yo-matn); }
+.yo-doira {
+  flex: none; width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  color: var(--yo-matn); background: var(--yo-karta); border: 1px solid var(--yo-chegara); border-radius: 50%;
+}
+.yo-doira svg { width: 22px; height: 22px; }
+.yo-doira:disabled { opacity: .45; cursor: default; }
+.yo-royxat {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 12px; padding: 16px max(16px, calc((100% - 560px) / 2));
+}
+.yo-savol {
+  align-self: flex-end; max-width: 85%; box-sizing: border-box; padding: 10px 14px; border-radius: 16px;
+  background: var(--yo-savol-fon); color: var(--yo-savol-matn); font-size: 14px; font-weight: 700; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.yo-javob {
+  align-self: stretch; box-sizing: border-box; padding: 16px; border-radius: 18px; flex: none;
+  background: var(--yo-karta); border: 1px solid var(--yo-chegara); color: var(--yo-matn); font-size: 15px; font-weight: 400; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.yo-xato { border-color: var(--xarajat, #c62828); }
+.yo-qayta {
+  display: block; margin-top: 12px; min-height: 44px; padding: 8px 18px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  color: var(--yo-savol-matn); background: var(--yo-savol-fon); border: 0; border-radius: 22px;
+}
+.yo-kutish { display: flex; gap: 6px; align-items: center; min-height: 52px; }
+.yo-nuqta { width: 8px; height: 8px; border-radius: 50%; background: var(--yo-xira); animation: yo-nuqta 1.2s infinite ease-in-out; }
+.yo-nuqta:nth-child(2) { animation-delay: .2s; }
+.yo-nuqta:nth-child(3) { animation-delay: .4s; }
+@keyframes yo-nuqta { 0%, 80%, 100% { opacity: .3; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .yo-nuqta { animation: none; opacity: .6; } }
+.yo-bosh-holat { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+.yo-izoh { margin: 0; font-size: 15px; color: var(--yo-xira); }
+.yo-tayyorlar { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.yo-tayyor {
+  max-width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 16px; text-align: left; font: inherit; font-size: 14px; cursor: pointer;
+  color: var(--yo-matn); background: var(--yo-karta); border: 1px solid var(--yo-chegara); border-radius: 22px; overflow-wrap: anywhere;
+}
+.yo-pastki {
+  flex: none; display: flex; align-items: center; gap: 8px; box-sizing: border-box; margin: 0;
+  padding: 10px max(16px, calc((100% - 560px) / 2)) calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--yo-fon); border-top: 1px solid var(--yo-chegara);
+}
+.yo-kiritish {
+  flex: 1 1 auto; min-width: 0; width: auto; height: 48px; box-sizing: border-box; padding: 0 18px; font: inherit; font-size: 16px; margin: 0;
+  color: var(--yo-matn); background: var(--yo-karta); border: 1px solid var(--yo-chegara); border-radius: 24px;
+}
+.yo-kiritish::placeholder { color: var(--yo-xira); opacity: 1; }
+.yo-yubor {
+  flex: none; width: 48px; height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  color: #ffffff; background: var(--yo-yubor); border: 0; border-radius: 50%;
+}
+.yo-yubor svg { width: 24px; height: 24px; }
+.yo-yubor:disabled { opacity: .45; cursor: default; }

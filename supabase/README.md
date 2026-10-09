@@ -107,6 +107,8 @@ Bu fayl **ixtiyoriy, lekin tavsiya etiladi**: ilova uni bo'lmasa ham ishlaydi. N
 Bu qism ilovaga hali ulanmagan (chat ekrani keyingi bosqichlarda). Bu yerda faqat server tayyorlanadi va bitta sinov so'rovi bilan tekshiriladi.
 **Kalitlar (OpenAI/Anthropic) faqat Supabase "Secrets" da turadi: ularni hech qachon repozitoriyga, chatga yoki ilova kodiga yozmang.**
 
+> **Funksiya yana o'zgardi (0.34.0, erkin savollar):** `index.ts` yangi protokolga o'tdi (reja: sorovlar/suhbat/tashqari, javob: matn va davom savollari, tarix, kuniga 200 so'rov). **Dashboard'dagi funksiyaga qayta joylang** (Edge Functions → `yordamchi` → eski matnni o'chirib, yangi `index.ts` ni to'liq nusxalab qo'ying → Deploy). Eski funksiya yangi ilovaning so'rovini tushunmaydi, shuning uchun ilovani yangilashdan oldin yoki birga joylang. Secrets va 007 qayta kiritilmaydi.
+
 > **Funksiya o'zgardi (3-PR, 0.33.0):** `supabase/functions/yordamchi/index.ts` yangilandi (AI_RAQAM endi savoldagi raqamlarni ham ruxsat etadi). Dashboard'dagi funksiyaga **qayta joylang**: Edge Functions → `yordamchi` → muharrirdagi hamma matnni o'chirib, yangi `index.ts` ni to'liq nusxalab qo'ying → **Deploy**. Secrets va 007 qayta kiritilmaydi.
 
 ### 5.1. Limit jadvalini yaratish (007 va 008)

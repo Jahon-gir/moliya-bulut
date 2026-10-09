@@ -193,7 +193,91 @@ var YordamchiKarta = (function () {
     return c;
   }
 
-  var YASOVCHILAR = { kategoriyalar: kategoriyalar, qidiruv: qidiruv, taqqoslash: taqqoslash, qarzlar: qarzlar, hisoblar: hisoblar, oylik_hisobot: oylik };
+  // ---- 7. jadval (guruhlangan natija, "Hisoblar" kartasi shaklida) ----
+  function raqamMatni(n) { return Calc.sumFormat(n).replace(/ so'm$/, ''); }
+  function jadvalQatori(q, soni) {
+    var r = e('div', undefined, 'yk-hisob');
+    r.appendChild(e('span', q.nom, 'yk-nom'));
+    r.appendChild(sig(soni ? q.qiymat + ' ta' : Calc.sumFormat(q.qiymat), soni ? undefined : q.qiymat, 'yk-summa yk-qalin'));
+    if (q.foiz !== null && q.foiz !== undefined) r.appendChild(e('span', q.foiz + '%', 'yk-foiz'));
+    return r;
+  }
+  function jadval(k) {
+    var c = karta(), soni = k.olchov === 'soni';
+    c.appendChild(bosh(k.sarlavha));
+    if (k.olchov === 'jami') c.appendChild(sig(Calc.sumFormat(k.umumiy), k.umumiy, 'yk-katta' + (k.tur === 'daromad' ? ' yk-plyus' : k.tur === 'xarajat' ? ' yk-minus' : '')));
+    if (!k.qatorlar.length) c.appendChild(e('p', 'Bu davrda yozuv yo\'q.', 'yk-bosh'));
+    k.qatorlar.slice(0, SOZ_KOP).forEach(function (q) { c.appendChild(jadvalQatori(q, soni)); });
+    if (k.qatorlar.length > SOZ_KOP) {
+      var qolgan = e('div'); qolgan.hidden = true;
+      k.qatorlar.slice(SOZ_KOP).forEach(function (q) { qolgan.appendChild(jadvalQatori(q, soni)); });
+      var yana = tugma('Yana ' + (k.qatorlar.length - SOZ_KOP) + ' ta', 'yk-yana', function () {
+        qolgan.hidden = !qolgan.hidden; yana.textContent = qolgan.hidden ? 'Yana ' + (k.qatorlar.length - SOZ_KOP) + ' ta' : 'Yashirish'; yana.setAttribute('aria-expanded', String(!qolgan.hidden));
+        if (!qolgan.hidden) Sigdir.hammasi(c);
+      });
+      yana.setAttribute('aria-expanded', 'false');
+      c.appendChild(qolgan); c.appendChild(yana);
+    }
+    return c;
+  }
+
+  // ---- 8. chegara (birinchi va oxirgi yozuv sanasi, jami soni): uch qatorli karta ----
+  function chegara(k) {
+    var c = karta();
+    c.appendChild(bosh(k.sarlavha));
+    [['Birinchi yozuv', k.birinchi ? Calc.sanaKorsat(k.birinchi) : '—'], ['Oxirgi yozuv', k.oxirgi ? Calc.sanaKorsat(k.oxirgi) : '—'], ['Jami yozuvlar', k.soni + ' ta']].forEach(function (x) {
+      var r = e('div', undefined, 'yk-hisob');
+      r.appendChild(e('span', x[0], 'yk-nom')); r.appendChild(e('span', x[1], 'yk-qiymat'));
+      c.appendChild(r);
+    });
+    return c;
+  }
+
+  // ---- 9. eng_katta_yozuvlar (qidiruv kartasidagi yozuvlar ro'yxati shaklida; izoh faqat ekranda) ----
+  function engKatta(k, h) {
+    var c = karta();
+    c.appendChild(bosh(k.sarlavha));
+    if (!k.qatorlar.length) c.appendChild(e('p', 'Bu davrda yozuv yo\'q.', 'yk-bosh'));
+    var royxat = e('div', undefined, 'yk-yozuvlar');
+    k.qatorlar.forEach(function (q) {
+      var b = e('button', undefined, 'yk-yozuv'); b.type = 'button';
+      b.setAttribute('aria-label', 'Yozuvni ochish: ' + q.kategoriya);
+      b.appendChild(e('span', qisqaSana(q.sana), 'yk-sana'));
+      var o = e('span', undefined, 'yk-yozuv-matn');
+      o.appendChild(e('span', q.kategoriya, 'yk-nom yk-nom-bir'));
+      if (q.izoh) o.appendChild(e('span', q.izoh, 'yk-kichik yk-bir-qator'));
+      b.appendChild(o);
+      b.appendChild(sig(Calc.sumFormat(q.summa), q.summa, 'yk-summa yk-qalin'));
+      b.addEventListener('click', function () { h.ochish('yozuv', { id: q.id }); });
+      royxat.appendChild(b);
+    });
+    c.appendChild(royxat);
+    return c;
+  }
+
+  // ---- 10. byudjet: har qator nom, "sarflangan / chegara", 6 px chiziq (oshgan bo'lsa qizil) ----
+  function byudjet(k, h) {
+    var c = karta();
+    c.appendChild(bosh(bosh_(k.oyNomi) + ' · byudjet'));
+    if (!k.belgilangan) {
+      c.appendChild(e('p', 'Byudjet belgilanmagan', 'yk-katta-matn'));
+    } else {
+      k.qatorlar.forEach(function (q) {
+        var b = e('div', undefined, 'yk-davr');
+        var ust = e('div', undefined, 'yk-ust');
+        ust.appendChild(e('span', q.nom, 'yk-nom'));
+        ust.appendChild(sig(raqamMatni(q.sarflangan) + ' / ' + Calc.sumFormat(q.limit), q.sarflangan, 'yk-summa yk-qalin' + (q.oshib ? ' yk-minus' : '')));
+        b.appendChild(ust);
+        b.appendChild(chiziq(q.chiziq, q.oshib ? 'var(--oqim-xarajat, #c62828)' : (q.kat && /^#[0-9a-f]{6}$/i.test(q.kat.rang || '') ? q.kat.rang : 'var(--yo-savol-matn)'), 6));
+        b.appendChild(e('div', (q.oshib ? 'Oshgan: ' + Calc.sumFormat(q.oshgan) : 'Qolgan: ' + Calc.sumFormat(q.qolgan)) + ' · ' + q.foiz + '%', 'yk-kichik' + (q.oshib ? ' yk-minus' : '')));
+        c.appendChild(b);
+      });
+    }
+    c.appendChild(tugmaQatori('Byudjetni ochish', function () { h.ochish('byudjet'); }));
+    return c;
+  }
+
+  var YASOVCHILAR = { kategoriyalar: kategoriyalar, qidiruv: qidiruv, taqqoslash: taqqoslash, qarzlar: qarzlar, hisoblar: hisoblar, oylik_hisobot: oylik, jadval: jadval, chegara: chegara, eng_katta_yozuvlar: engKatta, byudjet: byudjet };
   // Karta elementi yoki null (bu amal uchun karta yo'q)
   function yasa(k, hamyon) { var f = k && YASOVCHILAR[k.amal]; return f ? f(k, hamyon) : null; }
 

@@ -3929,6 +3929,7 @@
       ochish(hisobotEkrani, false);
     } else if (nom === 'qarzlar') korsat('qarzlar');
     else if (nom === 'hisoblar') ochish(hisoblarEkrani, false);
+    else if (nom === 'byudjet') ochish(byudjetEkrani, false);
     else if (nom === 'yozuv') {
       var y = malumot.yozuvlar.filter(function (x) { return x.id === p.id; })[0];
       if (y) ochish(function () { return tahrirShakli(y); }, true);

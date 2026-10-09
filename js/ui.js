@@ -271,7 +271,7 @@
     return b;
   }
 
-  // Kun sarlavhasi (TZ 22.4): chapda sana va kichik "Chorshanba · 5 ta yozuv" qatori (bugun/kecha belgisi bilan), o'ngda xarajat (qizil) va daromad (yashil) belgilari
+  // Kun sarlavhasi (TZ 22.4, 27): chapda sana va kichik "Chorshanba · 5 ta yozuv" qatori (bugun/kecha belgisi bilan), o'ngda xarajat (qizil) va daromad (yashil) belgilari
   // "so'm"siz; joy yetmasa ikkalasi "mln" ko'rinishiga o'tadi (js/sigdir.js). Xarajat yoki daromad bo'lmasa, faqat borini ko'rsatadi.
   function kunSarlavhasi(g, soni) {
     var q = el('div', undefined, 'kun-sarlavha');
@@ -1486,8 +1486,8 @@
       });
       bloklar.push(stickyBosh('Tarix', [qT, fT], yorliqlar));   // menyu tugmasi, sarlavha, qidiruv, filtr va oylar qatori — bitta sticky blok
       setTimeout(function () { var t = yorliqlar.querySelector('[aria-selected=true]'); if (t) yorliqlar.scrollLeft = Math.max(0, t.offsetLeft - yorliqlar.clientWidth / 2 + t.offsetWidth / 2); }, 0);
-      // oylik jami: hisobot() bilan bir xil qoida (o'tkazma va qarz kirmaydi)
-      var oj = Calc.oyJami(malumot.yozuvlar, tarixOy), jk = karta();
+      // oylik jami: Asosiy sahifadagi "Naqd pul oqimi" bilan AYNAN bir xil (TZ 27): yozuvlar + qarz amallari ("Olingan qarz" daromad, "Berilgan qarz" xarajat); o'tkazma kirmaydi
+      var oj = Calc.oyJami(hisobotYozuvlari(), tarixOy), jk = karta();
       jk.classList.add('tarix-jami');
       // 0.30.0: tepada "Oy balansi" va oy nomi (pill), ostida katta raqam, undan keyin Xarajat va Daromad yonma-yon
       var tBosh = el('div', undefined, 'tj-bosh');

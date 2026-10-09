@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 17 (09.10.2026): 22-band (kategoriya ikonlari va Tarix ko'rinishi) qo'shildi. Oldingi: 16 (09.10.2026): 21-band (yangi dizayn) qo'shildi. Oldingi: 15 (09.10.2026): 20-band (soddalashtirish) qo'shildi. Oldingi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 18 (09.10.2026): 23-band (AI yordamchi: server qismi) qo'shildi. Oldingi: 17 (09.10.2026): 22-band (kategoriya ikonlari va Tarix ko'rinishi) qo'shildi. Oldingi: 16 (09.10.2026): 21-band (yangi dizayn) qo'shildi. Oldingi: 15 (09.10.2026): 20-band (soddalashtirish) qo'shildi. Oldingi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -422,3 +422,53 @@ Yangi ikon tanlanmagan (eski kalitli) kategoriyalarga qurilmada BIR MARTA, nomga
 
 ### 22.5 Pastki menyu
 Qarzlar — `users` (ikki odam), Asosiy — `home`, Tarix — `history`, Ko'proq — `dots`. Markazdagi "+" tugmasi o'zgarmaydi.
+
+## 23. AI yordamchi: server qismi (1-PR, jami 3 tadan)
+
+Bu band 3-bandda "alohida TZ" deb qoldirilgan sun'iy intellektning birinchi qismi. Bu PR da ilova ko'rinishiga va ilova fayllariga (`index.html`, `js/`, `style.css`, `sw.js`) TEGILMAYDI; chat ekrani va tugma keyingi PR larda. Qilinmaydi: chat ekrani, ilovadagi hisoblash, pullik obuna, ovoz, chek rasmi.
+
+### 23.1. G'oya (o'zgarmas qoida)
+**AI hech qachon raqam hisoblamaydi va to'qimaydi.** 1) Savol -> AI tuzilgan so'rov (JSON) qaytaradi (rejim `reja`). 2) Ilova shu so'rovni telefonda o'z ma'lumotidan hisoblaydi (keyingi PR). 3) Hisoblangan natija -> AI uni 1–2 gapli o'zbekcha matnga aylantiradi (rejim `javob`).
+
+### 23.2. Fayllar va joylash
+`supabase/functions/yordamchi/index.ts` (Supabase Edge Function): BITTA fayl, boshqa mahalliy fayldan import yo'q, tashqi paket yo'q; Supabase Dashboard muharririga nusxalab joylanadi (CLI ishlatilmaydi). Qadamlar: `supabase/README.md` 5-bo'lim. Sinov: `supabase/functions/yordamchi/test.mjs` (29 tekshiruv, AI taqlid qilinadi). Limit: `supabase/007_ai_limit.sql` (+ `008_ai_limit_testi.sql`, 11 tekshiruv).
+
+### 23.3. So'rov tanasi (POST, JSON) va javoblar
+- `reja`: `{ rejim, savol, bugun: "YYYY-MM-DD", kategoriyalar: [nom…], hisoblar: [nom…] }` (har ro'yxat ≤ 100 ta, nom ≤ 60 belgi). Javob: `{ ok: true, sorov }`.
+- `javob`: `{ rejim, savol, sorov, natija }`, `natija` — obyekt (faqat raqamlar, kategoriya/hisob nomlari, mantiqiy qiymat; chuqurlik ≤ 4, ≤ 4000 belgi). Javob: `{ ok: true, matn }` (≤ 400 belgi).
+- Xato: `{ xato: { kod, sabab } }`, `sabab` o'zbekcha.
+
+**Tuzilgan so'rov (sxema, qat'iy):** `{ amal, davr: {dan, gacha}, davr2: {dan, gacha} | null, tur: "xarajat" | "daromad" | null, kategoriya: nom | null, hisob: nom | null, matn: izohdan qidiriladigan so'z | null }`. Hamma 7 kalit bo'lishi shart, ortiqcha kalit rad etiladi. `amal`: `yigindi`, `kategoriyalar`, `qidiruv`, `taqqoslash`, `qarzlar`, `hisoblar`, `oylik_hisobot`, `tushunarsiz`. Qoidalar: sanalar haqiqiy (`YYYY-MM-DD`, `dan` ≤ `gacha`); `tushunarsiz` dan boshqa amalda `davr` shart; `davr2` faqat `taqqoslash` da (va unda shart); `qidiruv` da `matn` shart (≤ 40 belgi); `kategoriya` va `hisob` `reja` rejimida yuborilgan ro'yxatdagi nom bo'lishi shart (katta-kichik harf, bo'shliq, apostrof turlariga e'tiborsiz; ro'yxatdagi aniq yozuv qaytariladi). AI javobi sxemaga mos kelmasa (JSON emas, noma'lum amal, ro'yxatda yo'q nom va h.k.) `reja` rejimida xato emas, `amal = "tushunarsiz"` (qolgan maydonlar `null`) qaytadi.
+
+### 23.4. Raqam tekshiruvi (`javob`)
+AI matnidagi har raqam kirishda bo'lishi shart. Ruxsat etilgan raqamlar: `natija` dagi barcha sonlar (nomlardagi raqamlar ham) va `sorov.davr/davr2` sanalarining yil, oy, kun qismlari. Savoldagi raqamlar hisobga olinmaydi. "1 200 000", "1200000", "1,25 mln" (faqat ko'rsatilgan aniqlik doirasida yaxlitlash) mos hisoblanadi. Birorta raqam topilmasa, matn QAYTARILMAYDI: `AI_RAQAM` (502). AI ga raqamlarni so'z bilan yozmaslik buyuriladi (so'z bilan yozilgan raqamni tekshirib bo'lmaydi: cheklov).
+
+### 23.5. Ruxsat va cheklovlar
+- **Kirish:** `Authorization: Bearer <JWT>` bo'lmasa yoki yaroqsiz bo'lsa 401 `AI_RUXSAT`. JWT Supabase Auth (`/auth/v1/user`) orqali tekshiriladi.
+- **Ruxsat ro'yxati:** kirgan foydalanuvchi emaili maxfiy o'zgaruvchi `AI_RUXSAT_EMAIL` (vergul bilan) da bo'lishi shart, aks holda 403 `AI_RUXSAT`. O'zgaruvchi yo'q yoki bo'sh bo'lsa hech kimga ruxsat yo'q. Email repoga yozilmaydi (sinov fayli ham tekshiradi).
+- **Savol uzunligi:** ≤ 300 belgi, aks holda 413 `AI_UZUN`. AI javob tokenlari cheklangan (reja 300, javob 250).
+- **Kunlik limit:** bir foydalanuvchiga kuniga 100 ta so'rov (kun — Asia/Tashkent). Har to'g'ri shakldagi so'rov (reja ham, javob ham alohida) sanaladi, ya'ni bitta savol 2 ta so'rov = kuniga ~50 ta savol. Hisoblash `public.ai_limit_oshir()` funksiyasi orqali (007): yangi jadval `ai_limit(user_id, kun, soni)`, RLS yoqilgan va FORCE, hech qanday siyosat yo'q (ilovadan jadvalga tegib bo'lmaydi), funksiya `SECURITY DEFINER`, faqat `auth.uid()`, EXECUTE faqat `authenticated`; hisob o'chirilsa qatorlar cascade bilan ketadi; 7 kundan eski qatorlar o'zi tozalanadi. 101-chi so'rov 429 `AI_LIMIT`. Jadval yo'q bo'lsa (007 ishga tushirilmagan) so'rov rad etiladi (503 `AI_LIMIT`), chunki cheklovsiz ishlash xavfli. Mavjud jadvallarga tegilmadi.
+- **CORS:** faqat `https://jahon-gir.github.io` va `http://localhost:8000`; boshqa manzilga `Access-Control-Allow-Origin` berilmaydi.
+
+### 23.6. Xato kodlari
+| Kod | HTTP | Ma'nosi |
+|---|---|---|
+| `AI_RUXSAT` | 401 / 403 | Kirmagan yoki ruxsat etilmagan |
+| `AI_KIRISH` | 400 / 405 | So'rov shakli noto'g'ri |
+| `AI_UZUN` | 413 | Savol 300 belgidan uzun |
+| `AI_LIMIT` | 429 / 503 | Kunlik limit tugadi / limitni tekshirib bo'lmadi |
+| `AI_PROVAYDER` | 502 | Provayder sozlanmagan, kalit yo'q, xato yoki bo'sh javob |
+| `AI_SXEMA` | 502 | `javob` rejimida AI matni talabga mos emas (juda uzun) |
+| `AI_RAQAM` | 502 | AI matnidagi raqam natijada yo'q |
+| `NETWORK` | 503 | Tarmoq xatosi (provayder yoki Supabase Auth) |
+
+### 23.7. Provayder va maxfiy o'zgaruvchilar
+Provayder sozlama bilan almashadi: `AI_PROVAYDER` (`openai` yoki `claude`), `AI_MODEL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`. Hammasi FAQAT Supabase Secrets da; kodga, repoga, testga yozilmaydi. `AI_MODEL` ataylab sukut qiymatsiz: model nomi o'zgarib turadi, noto'g'ri nom o'rniga aniq xato (`AI_PROVAYDER`) berilgani yaxshi. So'rov vaqti chegarasi 20 soniya.
+
+### 23.8. AI ga nima YUBORILMAYDI (maxfiylik)
+AI ga yozuvlar ro'yxati, izohlar va qarzdagi shaxs ismlari yuborilmaydi. Yuboriladi: savol, bugungi sana, kategoriya/hisob nomlari, ilova hisoblagan jamlar. `javob` rejimida `natija` da `izoh`, `shaxs`, `ism`, `yozuvlar`, `qarzdor`, `tolovlar`, `matn`, `savol` kabi kalitlar bo'lsa so'rov rad etiladi (400 `AI_KIRISH`), AI chaqirilmaydi. Funksiya savol va natijani logga yozmaydi (kodda `console.*` yo'q; sinov tekshiradi) va bazaga ham saqlamaydi (faqat kunlik son).
+
+### 23.9. Ochiq qolgan va qabul qilingan taxminlar
+- Haqiqiy Supabase'da va haqiqiy AI provayderi bilan sinalmagan (kalit yo'q); foydalanuvchi `supabase/README.md` 5.4 bo'yicha tekshiradi.
+- Ilovada chat ekrani, tugma va hisoblash keyingi PR larda; `natija` ning aniq shakli (qaysi amal qanday kalitlar qaytaradi) o'sha PR da belgilanadi.
+- Versiya raqami (`index.html`) bu PR da oshirilmadi: ilova fayllariga tegilmadi.

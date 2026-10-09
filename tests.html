@@ -2171,6 +2171,7 @@
           teng(Kirish.OCHIQ_KALIT.indexOf('sb_publishable_'), 0); teng(Kirish.SUPABASE_MANZIL, 'https://cqajcalwisdnsvadekxy.supabase.co');
           var kodsiz = t[0].replace(/\/\/[^\n]*/g, '');
           teng(/service_role|client_secret|sb_secret_|eyJ[A-Za-z0-9_-]{20,}|password\s*[:=]/i.test(kodsiz), false);
+          teng(/OPENAI_API_KEY|ANTHROPIC_API_KEY|AI_RUXSAT_EMAIL|sk-ant-|sk-proj-|sk-[A-Za-z0-9]{20,}/.test(t[0] + t[1] + t[2]), false);   // AI kalitlari va ruxsat emaili ilovada bo'lmaydi (faqat Supabase secrets da)
           teng(/sb_publishable_/.test(kodsiz), true);
           teng(/<script src="js\/vendor\/supabase-auth\.min\.js\?v=/.test(t[1]) && t[1].indexOf('supabase-auth.min.js') < t[1].indexOf('js/kirish.js') && t[1].indexOf('js/kirish.js') < t[1].indexOf('js/ui.js'), true);   // tashqi CDN emas, ichki nusxa
           teng(/https?:\/\/[^"']*(cdn|unpkg|jsdelivr)/i.test(t[1]), false);
@@ -2953,6 +2954,7 @@
           var s = t.join('\n');
           teng(/service_role/i.test(s.replace(/service_role[^\n]*(HECH|hech|yozilmaydi|ishlatilmaydi)[^\n]*/g, '')) && /sb_secret_|eyJhbGciOi/.test(s), false);
           teng(/sb_secret_|eyJhbGciOi/.test(s), false);
+          teng(/OPENAI_API_KEY|ANTHROPIC_API_KEY|AI_RUXSAT_EMAIL|sk-ant-|sk-proj-|sk-[A-Za-z0-9]{20,}/.test(s), false);   // AI kalitlari ilovada yo'q
         });
       });
 

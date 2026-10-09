@@ -13,7 +13,11 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 | `004_hisobni_ochirish_testi.sql` | 003 ni tekshiradi: ikkita sinov foydalanuvchi, A o'chirsa B ning ma'lumoti saqlanadi. Supabase'da ishga tushiriladi |
 | `005_sinxron_xizmat.sql` | Fon tortishini yengillashtiruvchi `sinxron_holati()` va 90 kunlik tombstone tozalash `tombstone_tozalash()` + kunlik jadval (pg_cron) (S8). Supabase'da ishga tushiriladi |
 | `006_sinxron_xizmat_testi.sql` | 005 ni tekshiradi (16 tekshiruv). Supabase'da ishga tushiriladi |
-| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
+| `007_ai_limit.sql` | AI yordamchi kunlik limiti: yangi jadval `ai_limit` (RLS, siyosatsiz) va `ai_limit_oshir()` funksiyasi. Supabase'da ishga tushiriladi |
+| `008_ai_limit_testi.sql` | 007 ni tekshiradi (11 tekshiruv). Supabase'da ishga tushiriladi |
+| `functions/yordamchi/index.ts` | AI yordamchi Edge Function (bitta fayl). Supabase Dashboard'ga nusxalab joylanadi (5-bo'lim) |
+| `functions/yordamchi/test.mjs` | Funksiya sinovi (kompyuterda, `node --test`). AI taqlid qilinadi, haqiqiy kalit kerak emas |
+| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–008) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
 
@@ -97,3 +101,78 @@ Bu fayl **ixtiyoriy, lekin tavsiya etiladi**: ilova uni bo'lmasa ham ishlaydi. N
 - **Bog'liqlik:** hisob, kategoriya va qarzga havolalar faqat o'z qatorlariga bo'ladi (boshqa foydalanuvchi qatoriga bog'lab bo'lmaydi). Tekshiruv tranzaksiya oxirida bajariladi.
 - **Saqlanmaydigan narsalar:** balans, hisob qoldig'i (ilovada hisoblanadi), PIN-kod, to'liq karta raqami.
 - **Nom takrorlanishi** va boshqa jadvallararo qoidalar bazada tekshirilmaydi (sinxronlashda to'qnashuv chiqarmasligi uchun); ularni ilova tekshiradi.
+
+## 5. AI yordamchi: server qismi (Edge Function `yordamchi`)
+
+Bu qism ilovaga hali ulanmagan (chat ekrani keyingi bosqichlarda). Bu yerda faqat server tayyorlanadi va bitta sinov so'rovi bilan tekshiriladi.
+**Kalitlar (OpenAI/Anthropic) faqat Supabase "Secrets" da turadi: ularni hech qachon repozitoriyga, chatga yoki ilova kodiga yozmang.**
+
+### 5.1. Limit jadvalini yaratish (007 va 008)
+
+1. Supabase → **SQL Editor** → **New query**. `supabase/007_ai_limit.sql` matnini to'liq nusxalab qo'ying → **Run**. Natija: **"Success. No rows returned"** (qayta ishga tushirish xavfsiz).
+2. Yana **New query**. `supabase/008_ai_limit_testi.sql` → **Run**. Oxirgi qator: `JAMI: 11 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov hech narsa saqlamaydi.
+
+### 5.2. Funksiyani Dashboard'da yaratish
+
+1. Supabase → chap menyudan **Edge Functions** → **Deploy a new function** → **Via Editor**.
+2. Funksiya nomi aynan: `yordamchi`.
+3. Muharrirdagi namuna matnni butunlay o'chiring. `supabase/functions/yordamchi/index.ts` faylining **hamma matnini** nusxalab qo'ying.
+4. **Deploy** ni bosing. "Verify JWT" (JWT tekshiruvi) yoqilgan holda qoldiring (odatiy).
+5. Funksiya manzili: `https://<loyiha>.supabase.co/functions/v1/yordamchi` (loyiha manzili ilovada allaqachon bor).
+
+### 5.3. Maxfiy o'zgaruvchilarni (Secrets) kiritish
+
+Edge Functions → **Secrets** (yoki Project Settings → Edge Functions → Secrets) → **Add new secret**. Bittadan kiriting:
+
+| Nom | Qiymat |
+|---|---|
+| `AI_PROVAYDER` | `openai` yoki `claude` |
+| `AI_MODEL` | tanlangan provayderdagi model nomi (provayder hujjatidan oling; masalan, arzon va tez model) |
+| `OPENAI_API_KEY` | OpenAI kaliti (faqat `AI_PROVAYDER=openai` bo'lsa kerak) |
+| `ANTHROPIC_API_KEY` | Anthropic kaliti (faqat `AI_PROVAYDER=claude` bo'lsa kerak) |
+| `AI_RUXSAT_EMAIL` | ruxsat berilgan Google email(lar), vergul bilan: `bir@gmail.com, ikki@gmail.com` |
+
+`SUPABASE_URL` va `SUPABASE_ANON_KEY` ni Supabase o'zi beradi, ularni kiritmaysiz. Secret o'zgarsa funksiyani qayta Deploy qilish shart emas (yangi so'rovlar yangi qiymatni oladi). `AI_RUXSAT_EMAIL` bo'sh yoki yo'q bo'lsa funksiya HAMMAGA 403 qaytaradi.
+
+### 5.4. Bitta sinov so'rovi
+
+1. Ilovani GitHub Pages manzilida ochib (`https://jahon-gir.github.io/moliya-bulut/`), `AI_RUXSAT_EMAIL` dagi Google akkaunt bilan kiring.
+2. Brauzerda **F12** (kompyuterda) → **Console**. Quyidagini nusxalab yopishtiring va Enter bosing:
+
+       Kirish.tokenOl().then(function (t) {
+         return fetch(Kirish.SUPABASE_MANZIL + '/functions/v1/yordamchi', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json', apikey: Kirish.OCHIQ_KALIT, Authorization: 'Bearer ' + t },
+           body: JSON.stringify({ rejim: 'reja', savol: 'Bu oy oziq-ovqatga qancha sarfladim?', bugun: new Date().toISOString().slice(0, 10), kategoriyalar: ['Oziq-ovqat', 'Transport'], hisoblar: ['Naqd pul'] })
+         });
+       }).then(function (r) { return r.json(); }).then(console.log);
+
+3. Kutilgan natija: `{ ok: true, sorov: { amal: 'yigindi', davr: { dan: '2026-10-01', gacha: '2026-10-31' }, tur: 'xarajat', kategoriya: 'Oziq-ovqat', ... } }`.
+4. Xato chiqsa, `xato.kod` ga qarang:
+
+| Kod | Sababi va yechimi |
+|---|---|
+| `AI_RUXSAT` (401) | Kirmagansiz yoki token eskirgan: ilovada qayta kiring |
+| `AI_RUXSAT` (403) | Emailingiz `AI_RUXSAT_EMAIL` ro'yxatida yo'q (yozilishi aynan Google emailingiz bilan bir xil bo'lsin) |
+| `AI_LIMIT` (503, "Limitni tekshirib bo'lmadi") | 007 ishga tushirilmagan: 5.1 ni bajaring |
+| `AI_LIMIT` (429) | Bugun 100 ta so'rov ishlatilgan (kun O'zbekiston vaqti bilan) |
+| `AI_PROVAYDER` | Provayder yoki model/kalit kiritilmagan yoki noto'g'ri, yoki provayderda pul/limit tugagan. Secrets ni tekshiring |
+| `AI_UZUN` / `AI_KIRISH` | Savol 300 belgidan uzun yoki so'rov shakli noto'g'ri |
+| `AI_SXEMA` / `AI_RAQAM` | AI javobi talabga mos kelmadi; matn ko'rsatilmaydi. Qayta urinib ko'ring |
+| `NETWORK` | Internet yoki provayderga ulanish xatosi |
+
+Funksiya jurnali (Edge Functions → yordamchi → **Logs**) da savol yoki natija ko'rinmaydi: funksiya ularni yozmaydi.
+
+### 5.5. Provayderni almashtirish
+
+Edge Functions → Secrets: `AI_PROVAYDER` ni `openai` ↔ `claude` ga o'zgartiring, `AI_MODEL` ni yangi provayderning model nomiga almashtiring va tegishli kalit (`OPENAI_API_KEY` yoki `ANTHROPIC_API_KEY`) kiritilganini tekshiring. Kodni o'zgartirish kerak emas. 5.4 dagi sinovni qayta bajaring.
+
+### 5.6. AI ga nima yuboriladi
+
+Faqat: savol matni, bugungi sana, kategoriya va hisob nomlari, ilova hisoblagan jamlar (raqamlar). Yozuvlar ro'yxati, izohlar va qarzdagi shaxs ismlari YUBORILMAYDI (funksiya natijada `izoh`, `shaxs`, `yozuvlar` kabi kalitlarni rad etadi). Savol va natija bazaga ham, logga ham yozilmaydi; bazada faqat kunlik so'rovlar soni (`ai_limit`) saqlanadi.
+
+### 5.7. Funksiyani kompyuterda sinash (dasturchi uchun)
+
+    node --test supabase/functions/yordamchi/test.mjs
+
+Node 22.18 yoki yangisi kerak. Haqiqiy kalit va tarmoq ishlatilmaydi.

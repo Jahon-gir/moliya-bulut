@@ -500,12 +500,9 @@ html[data-tema="qorongi"] .tanlov-qator.birinchi { background: rgba(43, 181, 143
 .tanlov-matn .xira { font-size: 14px; line-height: 1.35; }
 .tanlov-keyingi { flex: none; color: var(--xira); }
 
-/* 9-bosqich: zaxira va eksport */
+/* 9-bosqich: eksport */
 .xato-karta { margin: 0 0 12px; padding: 12px 14px; font-weight: 600; color: var(--matn); background: var(--karta); border: 1px solid var(--xarajat); border-left-width: 5px; border-radius: 12px; }
 .xato-karta[hidden] { display: none; }
-.zaxira-karta .zaxira-sana { font-weight: 600; margin-bottom: 4px; }
-.zaxira-eslatma { margin: 8px 0 10px; line-height: 1.4; }
-.zaxira-karta .ikkinchi-tugma { margin-top: 0; }
 
 /* 10-bosqich: Asosiy, Tarix, Qarzlar, Ko'proq */
 .bolim-bosh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
@@ -709,14 +706,9 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .yuklash-karta .xato-matn { white-space: pre-line; overflow-wrap: anywhere; }
 
 /* Sinxronlash (S5) */
-.sinxron-belgi { display: block; width: 100%; min-height: 44px; margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--chiziq); border-radius: 12px; background: var(--karta); color: var(--xira); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
-.sinxron-belgi.xato { color: var(--xarajat); border-color: var(--xarajat); }
-.sinxron-belgi.internet { color: var(--xira); }
 .sinxron-karta .sinxron-holat { margin: 0 0 8px; font-weight: 600; }
 .sinxron-karta .asosiy-tugma, .sinxron-karta .ikkinchi-tugma { margin-top: 6px; }
 .sinxron-karta .xato-matn, .xato-matn#sinxron-xato { white-space: pre-line; overflow-wrap: anywhere; }
-.sinxron-taqqos { margin: 8px 0; }
-.sinxron-taqqos .yozuv-nom { margin: 4px 0; }
 
 /* Maxfiylik va hisobni o'chirish (S7) */
 .maxfiylik-havola { display: block; min-height: 44px; line-height: 44px; padding: 0 14px; border: 1px solid var(--chiziq); border-radius: 12px; color: var(--asosiy); font-weight: 600; text-align: center; text-decoration: none; }
@@ -762,8 +754,3 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .soxta-qator:first-child { border-top: 0; }
 .import-keyin { font-weight: 600; }
 
-/* Qarzlarni hisobotga qo'shish (0.28.0) */
-.sozlama-belgi { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; min-height: 44px; cursor: pointer; }
-.sozlama-belgi input { width: 24px; height: 24px; flex: none; margin-top: 2px; }
-.sozlama-matn { display: flex; flex-direction: column; gap: 4px; }
-.sozlama-matn .xira { font-size: 13px; }

@@ -4,6 +4,6 @@
 var ILOVA = {
   nom: 'Chuntak AI',
   qisqaNom: 'Chuntak',
-  faylBelgisi: 'chuntak'   // yuklab olinadigan fayl nomlarining boshi: chuntak-zaxira-…, chuntak-eksport-…
+  faylBelgisi: 'chuntak'   // yuklab olinadigan fayl nomlarining boshi: chuntak-eksport-…
 };
 if (typeof document !== 'undefined') document.title = ILOVA.nom;

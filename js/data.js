@@ -186,7 +186,7 @@
   // XAVFSIZLIK: hammasi (o'qish, ma'lumotning ESKI holatdagi nusxasi, yangi qatorlar, versiya belgisi) BITTA tranzaksiyada. Telefon o'chsa yoki
   // ilova yopilsa, tranzaksiya to'liq bekor bo'ladi: ma'lumot va versiya avvalgidek qoladi, keyingi ochilishda migratsiya qaytadan boshlanadi.
   // Versiya Sozlamalar ichida tekshiriladi: ikkinchi marta ishlasa yoki ilova ikki joyda bir vaqtda ochilsa ham ma'lumot buzilmaydi.
-  // Migratsiyadan oldingi holat `migratsiya-zaxira` yozuviga (sozlamalar ichida) saqlanadi: Zaxira va eksport ekranidan tiklash mumkin.
+  // Migratsiyadan oldingi holat `migratsiya-zaxira` yozuviga (sozlamalar ichida) saqlanadi (ichki xavfsizlik nusxasi; ekranda ko'rsatilmaydi).
   // opts.sinovToxtatish — FAQAT sinov uchun: shuncha yozishdan keyin tranzaksiyani bekor qiladi ("yarim yo'lda to'xtash" sinovi).
   function sxemaniYangilash(opts) {
     opts = opts || {};
@@ -210,7 +210,7 @@
           var hozirISO = new Date().toISOString();
           var umumiy = xom.sozlamalar.filter(function (x) { return !Calc.yerelKalitmi(x); });
           var eskiHolat = { hisoblar: xom.hisoblar, kategoriyalar: xom.kategoriyalar, yozuvlar: xom.yozuvlar, byudjetlar: xom.byudjetlar, qarzlar: xom.qarzlar, sozlamalar: umumiy };
-          var nusxa = Calc.zaxiraYasash(eskiHolat, eski, new Date());   // migratsiyadan OLDINGI holat (tiklash mumkin)
+          var nusxa = Calc.zaxiraYasash(eskiHolat, eski, new Date());   // migratsiyadan OLDINGI holat (ichki nusxa)
           var natija = Calc.malumotniYangilash(eskiHolat, eski, { yangiId: yangiId, hozir: hozirISO, sxema: SXEMA_VERSIYASI });
           var yozilgan = 0, toxtadi = false;
           function put(t, x) {

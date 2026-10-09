@@ -750,7 +750,6 @@
   }
 
   var ZAXIRA_TOPLAMLARI = ['hisoblar', 'yozuvlar', 'kategoriyalar', 'byudjetlar', 'qarzlar', 'sozlamalar'];
-  var ZAXIRA_ESLATMA_KUNI = 14;   // oxirgi zaxiradan shuncha kundan oshsa, eslatma chiqadi
 
   function sanaYaroqli(s) {
     if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
@@ -764,12 +763,6 @@
     var f = { ilova: 'moliya', sxema_versiyasi: sxema, zaxira_vaqti: (hozirgi || new Date()).toISOString(), soni: {} };
     ZAXIRA_TOPLAMLARI.forEach(function (t) { f[t] = (malumot[t] || []).filter(function (x) { return !(t === 'sozlamalar' && yerelKalitmi(x)); }); f.soni[t] = f[t].length; });   // PIN va ichki nusxa zaxiraga kirmaydi
     return f;
-  }
-
-  // Fayl nomi: chuntak-zaxira-2026-10-05-2130.json (mahalliy sana va vaqt)
-  function zaxiraNomi(d, old) {
-    var h = hozir(d);
-    return ILOVA.faylBelgisi + '-' + (old || 'zaxira') + '-' + h.sana + '-' + h.vaqt.replace(':', '') + '.json';
   }
 
   // Zaxira matnini tekshiradi va joriy sxemaga o'tkazadi. HECH NARSAGA TEGMAYDI (faqat yangi obyekt qaytaradi).
@@ -908,14 +901,6 @@
     // Ko'rsatiladigan sonlar: mantiqiy o'chirilganlar (deleted) hisobga kirmaydi
     var soni = {}; ZAXIRA_TOPLAMLARI.forEach(function (t) { soni[t] = t === 'sozlamalar' ? m[t].length : m[t].filter(function (x) { return x.deleted !== true; }).length; });
     return { malumot: m, soni: soni, kelajak: kelajak, eskiSxema: v < sxema, fayldagiSxema: v, uuid: uuidHisobot };
-  }
-
-  // Oxirgi zaxira holati bosh sahifa uchun: { holat: 'yoq' | 'yaqinda' | 'eski', kun }.
-  // Hech qachon olinmagan bo'lsa 'yoq'. 14 kundan OSHSA 'eski' (aynan 14 kun hali eslatmasiz).
-  function zaxiraHolati(oxirgiSana, bugunSana) {
-    if (!oxirgiSana || !sanaYaroqli(oxirgiSana)) return { holat: 'yoq', kun: null };
-    var kun = Math.round((sanaUTC(bugunSana) - sanaUTC(oxirgiSana)) / 86400000);
-    return { holat: kun > ZAXIRA_ESLATMA_KUNI ? 'eski' : 'yaqinda', kun: kun };
   }
 
   // CSV: ajratuvchi nuqtali vergul, qatorlar CRLF, boshida UTF-8 BOM (Excel o'zbekcha harflarni to'g'ri ochishi uchun).
@@ -1471,7 +1456,7 @@
     glidirakChegarasi: glidirakChegarasi, glidirakTuzat: glidirakTuzat, glidirakQiymatlari: glidirakQiymatlari,
     kunlarSoni: kunlarSoni, oraliqNomi: oraliqNomi, oraliqTekshir: oraliqTekshir, oraliqSur: oraliqSur, hisobotDavri: hisobotDavri,
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
-    ZAXIRA_ESLATMA_KUNI: ZAXIRA_ESLATMA_KUNI, sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraNomi: zaxiraNomi, zaxiraniTekshir: zaxiraniTekshir, zaxiraHolati: zaxiraHolati,
+    sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraniTekshir: zaxiraniTekshir,
     TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
     uuidYarat: uuidYarat, uuidTogrimi: uuidTogrimi, uuidgaOtkazish: uuidgaOtkazish, malumotniYangilash: malumotniYangilash, tolovlarniBirlashtir: tolovlarniBirlashtir,
     yerelKalitmi: yerelKalitmi, jonliQarz: jonliQarz, jonlilar: jonlilar, YEREL_KALITLAR: YEREL_KALITLAR,

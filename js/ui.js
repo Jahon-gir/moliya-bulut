@@ -6,8 +6,7 @@
   var tugmalar = document.querySelectorAll('[data-bolim]');
   var keyingiBosqich = 'Bu bo\'lim keyingi bosqichlarda quriladi.';
 
-  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [], qarzlar: [], zaxiraSanasi: null, balansYashirin: false, tema: 'qurilma' };
-  var xabar = '';          // "Saqlandi" xabari, faqat qo'shish ekranida bir marta ko'rsatiladi
+  var malumot = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [], qarzlar: [], balansYashirin: false, tema: 'qurilma' };
   var joriy = 'bosh';      // hozirgi bo'lim
   var stek = [];           // bo'lim ichidagi ochiq ekranlar: [{ yasash, forma }]; "Orqaga" oxirgisini yopadi
   // Hisobot bo'limi holati: tur ('kun' | 'hafta' | 'oy' | 'yil' | 'davr'), davrdagi sana (davr bo'lmasa), erkin davr dan/gacha,
@@ -122,7 +121,7 @@
   // Hisobot hisoblari uchun yozuvlar: yozuvlar + (sozlama yoqiq bo'lsa) qarz amallari "Olingan qarz" / "Berilgan qarz" virtual yozuvlari sifatida.
   // Faqat hisobot, diagramma va "Naqd pul oqimi" uchun; byudjet, Tarix va hisob qoldig'i hisobi bunga tegmaydi.
   function hisobotYozuvlari() {
-    return Salom.qarzHisobotda() && malumot.qarzlar.length ? malumot.yozuvlar.concat(Calc.qarzYozuvlari(malumot.qarzlar)) : malumot.yozuvlar;
+    return malumot.qarzlar.length ? malumot.yozuvlar.concat(Calc.qarzYozuvlari(malumot.qarzlar)) : malumot.yozuvlar;
   }
   function kategoriyaOl(id) {
     if (Calc.qarzKategoriyami(id)) return Calc.QARZ_KATEGORIYALAR.filter(function (k) { return k.id === id; })[0];
@@ -666,10 +665,12 @@
     wiz.saqlanmoqda = true;
     Data.saqlash('yozuvlar', yozuv).then(function () {
       malumot.yozuvlar.push(yozuv);
-      xabar = 'Saqlandi: ' + (yozuv.tur === 'daromad' ? '+' : yozuv.tur === 'xarajat' ? '−' : '') +
-        Calc.sumFormat(yozuv.summa);
       wiz = null;            // saqlangach shakl tozalanadi
-      korsat('qoshish');     // balans va ro'yxat yangilanadi, yangi shakl 1-qadamdan boshlanadi
+      qoshishRejimi = 'yozuv';
+      tarixOy = yozuv.sana.slice(0, 7);   // Tarixda yangi yozuvning oyi ochiladi
+      tarixFiltr = bosFiltr();            // eski qidiruv yoki filtr yangi yozuvni yashirib qo'ymasin
+      korsat('tarix');       // forma yopiladi, Tarixga o'tiladi (TZ-sinxronlash.md 20.5)
+      qisqaXabar('Saqlandi: ' + (yozuv.tur === 'daromad' ? '+' : yozuv.tur === 'xarajat' ? '−' : '') + Calc.sumFormat(yozuv.summa));
     }).catch(function (xato) {
       wiz.saqlanmoqda = false;
       qisqaXabar('Saqlab bo\'lmadi: ' + xato);
@@ -692,7 +693,6 @@
     bloklar.push(chiziq);
 
     bloklar.push(el('h1', QADAM_SARLAVHASI[kalit]));
-    if (xabar && wiz.qadam === 0) { bloklar.push(el('div', xabar, 'xabar')); xabar = ''; }
 
     var tana = { summa: summaQadami, kategoriya: kategoriyaQadami, vaqt: vaqtQadami, izoh: izohQadami,
       hisob: function () { return hisobQadami('hisob'); }, qayerdan: function () { return hisobQadami('qayerdan'); },
@@ -1502,7 +1502,7 @@
     return bloklar;
   }
 
-  // ---- "Ko'proq" bo'limi: Hisobot, Byudjet, Hisoblar, Kategoriyalar, Zaxira va eksport, versiya ----
+  // ---- "Ko'proq" bo'limi: Hisobot, Byudjet, Hisoblar, Kategoriyalar ----
   function koproqMenyusi() {
     var bloklar = [el('h1', 'Ko\'proq')];
     var k = karta();
@@ -1557,31 +1557,16 @@
     });
     m.appendChild(tanlov);
     s.appendChild(m);
-    // Qarzlarni hisobotga qo'shish (sukut: yoqiq): qarz olish "Olingan qarz" daromad, qarz berish/qaytarish "Berilgan qarz" xarajat sifatida hisobot va diagrammalarda
-    var qh = el('label', undefined, 'sozlama-belgi qarz-hisobot-qator');
-    var qhb = document.createElement('input'); qhb.type = 'checkbox'; qhb.id = 'qarz-hisobotda'; qhb.checked = Salom.qarzHisobotda();
-    qhb.setAttribute('aria-label', 'Qarzlarni hisobotga qo\'shish');
-    qhb.addEventListener('change', function () { Salom.qarzHisobotdaYoz(qhb.checked); qisqaXabar(qhb.checked ? 'Qarzlar hisobotga qo\'shildi' : 'Qarzlar hisobotdan chiqarildi'); });
-    var qhm = el('span', undefined, 'sozlama-matn');
-    qhm.appendChild(el('strong', 'Qarzlarni hisobotga qo\'shish'));
-    qhm.appendChild(el('span', 'Yoqiq: hisobga pul kirishi (qarz olindi, berilgan qarz qaytdi) — "Olingan qarz" daromadi, pul chiqishi (qarz berildi, olingan qarz qaytarildi) — "Berilgan qarz" xarajati sifatida hisobot va diagrammalarda ko\'rinadi. Byudjet va hisob qoldig\'iga ta\'sir qilmaydi.', 'xira'));
-    qh.appendChild(qhb); qh.appendChild(qhm);
-    s.appendChild(qh);
     bloklar.push(s);
-    // 2) Boshqa: Zaxira va eksport, Bosh ekranga o'rnatish
+    // 2) Boshqa: Excelga yuklab olish, Bosh ekranga o'rnatish
     var o = karta();
     o.classList.add('menyu-boshqa');
     o.appendChild(el('h2', 'Boshqa'));
-    o.appendChild(menyuQatori('mn-zaxira', 'Excelga yuklab olish', Salom.ilgormi() ? 'ilg\'or: zaxira (JSON)' : '', function () { ochish(zaxiraEkrani, false); }));
+    o.appendChild(menyuQatori('mn-eksport', 'Excelga yuklab olish', '', function () { ochish(eksportEkrani, false); }));
     o.appendChild(menyuQatori('mn-ornatish', 'Bosh ekranga o\'rnatish', '', function () { ochish(ornatishEkrani, false); }));
     bloklar.push(o);
     var ver = el('p', ILOVA.nom + ' · versiya ' + VERSIYA, 'versiya');
     ver.id = 'versiya-qatori';
-    var bosish = 0, bosishVaqti = 0;
-    ver.addEventListener('click', function () {   // 7 marta tez-tez bosilsa: ilg'or rejim (JSON zaxira tugmalari) yoqiladi/o'chadi
-      var hozir = Date.now(); bosish = hozir - bosishVaqti < 1500 ? bosish + 1 : 1; bosishVaqti = hozir;
-      if (bosish >= 7) { bosish = 0; qisqaXabar(Salom.ilgorAlmashtir() ? 'Ilg\'or rejim yoqildi (zaxira tugmalari)' : 'Ilg\'or rejim o\'chirildi'); chizish(menyuEkrani(), true); }
-    });
     bloklar.push(ver);
     return bloklar;
   }
@@ -1841,7 +1826,7 @@
       var n = joriy.natija;
       tk.appendChild(el('p', n.yozuvlar + ' ta yozuv' + (n.qarzlar ? ' va ' + n.qarzlar + ' ta qarz (' + n.qarzAmal + ' amal)' : '') + ' yuklandi' + (n.kategoriyalar ? ', ' + n.kategoriyalar + ' ta yangi kategoriya' : '') + (n.hisoblar ? ', ' + n.hisoblar + ' ta yangi hisob' : '') + '.', 'yozuv-nom'));
       if (n.hisoblar) tk.appendChild(el('p', 'Yangi hisoblarning boshlang\'ich qoldig\'i 0 qo\'yildi. Hisob qoldig\'i haqiqiyga to\'g\'ri kelmasa, "Hisoblar" bo\'limida boshlang\'ich qoldiqni tuzating.', 'xira'));
-      tk.appendChild(el('p', 'Avval joriy holatning zaxira fayli yuklab berildi. Xato bo\'lsa: Menyu → Profil → "Oxirgi yuklashni bekor qilish".', 'xira'));
+      tk.appendChild(el('p', 'Xato bo\'lsa: Menyu → Profil → "Oxirgi yuklashni bekor qilish".', 'xira'));
       var bosh = tugma('Bosh sahifaga', 'asosiy-tugma', function () { imp = null; korsat('bosh'); });
       bosh.id = 'import-tayyor';
       tk.appendChild(bosh);
@@ -1970,8 +1955,8 @@
     });
     joriy.faza = 'yozilmoqda'; joriy.xato = '';
     chizish(importEkrani(), true);
-    // avval joriy holatning zaxirasi (fayl), keyin bitta tranzaksiyada yozish: xato bo'lsa hech narsa o'zgarmaydi
-    zaxiraniOlish(true, 'zaxira-yuklashdan-oldin').then(function () { return Data.importYozish(paket, joriy.fayl); }).then(yuklash).then(function () {
+    // bitta tranzaksiyada yozish: xato bo'lsa hech narsa o'zgarmaydi
+    Data.importYozish(paket, joriy.fayl).then(yuklash).then(function () {
       joriy.faza = 'tayyor';
       joriy.natija = { yozuvlar: paket.yozuvlar.length, qarzlar: paket.qarzlar.length, qarzAmal: joriy.reja.jami.qarzAmal, kategoriyalar: paket.kategoriyalar.length, hisoblar: paket.hisoblar.length };
       if (imp === joriy) chizish(importEkrani(), true);
@@ -2110,38 +2095,22 @@
     return k;
   }
 
-  // ---- Sinxronlash (S5): holat, birinchi sinxron (yuklash / olish / tanlov), "Hozir sinxronlash" ----
-  var sinxronUI = { tanlovKorsatilgan: null, band: false, progress: '', xato: '', natija: '', tahlil: null, imzo: '' };
-  function sanoqMatni(n) { return n.hisoblar + ' ta hisob, ' + n.yozuvlar + ' ta yozuv, ' + n.qarzlar + ' ta qarz'; }
+  // ---- Sinxronlash (S5): holat, birinchi sinxron (tanlovsiz: server yutadi), "Hozir sinxronlash" ----
+  var sinxronUI = { band: false, progress: '', xato: '', natija: '', imzo: '' };
   function sinxronMatni() {
     var h = Sinxron.holat();
     return SinxronSof.holatMatni(h);
   }
-  // Ko'rinib turgan sinxron matnlarini (kartada va Asosiydagi belgida) qayta chizmasdan yangilaydi
+  // Ko'rinib turgan sinxron matnlarini (Profil kartasida) qayta chizmasdan yangilaydi
   function sinxronMatnlari() {
     var h = Sinxron.holat(), q = function (id) { return document.getElementById(id); };
-    var m = q('sinxron-holat'), p = q('sinxron-progress'), x = q('sinxron-xato'), n = q('sinxron-natija'), b = q('sinxron-belgi');
+    var m = q('sinxron-holat'), p = q('sinxron-progress'), x = q('sinxron-xato'), n = q('sinxron-natija');
     if (m) m.textContent = sinxronMatni();
     if (p) p.textContent = sinxronUI.progress || (h.ishlayapti || h.tur === 'boshlanmoqda' ? h.jarayon : '') || '';
     if (x) x.textContent = (h.tur === 'xato' || h.tur === 'internet-yoq') && h.xato ? xatoKodBilan(h.xato, h.kod) : sinxronUI.xato;
     if (n) n.textContent = sinxronUI.natija;
-    if (b) { b.textContent = '☁ ' + sinxronMatni(); b.className = 'sinxron-belgi' + (h.tur === 'xato' ? ' xato' : h.tur === 'internet-yoq' ? ' internet' : ''); }
-    ['sinxron-roziman', 'sinxron-tanlash', 'sinxron-hozir', 'sinxron-qayta'].forEach(function (id) { var t = q(id); if (t) t.disabled = sinxronUI.band || h.ishlayapti; });
+    ['sinxron-roziman', 'sinxron-hozir', 'sinxron-qayta'].forEach(function (id) { var t = q(id); if (t) t.disabled = sinxronUI.band || h.ishlayapti; });
   }
-  // Asosiy sahifadagi kichik holat belgisi (faqat kirgan foydalanuvchiga): bosilsa Profil ochiladi
-  function sinxronBelgisi() {
-    var h = Sinxron.holat();
-    if (!Kirish.holat().kirgan || h.tur === 'yoq') return null;
-    var t = tugma('☁ ' + sinxronMatni(), 'sinxron-belgi', function () {
-      var x = Sinxron.holat();
-      if (x.tur === 'xato' || x.tur === 'internet-yoq' || (x.rad && x.rad.length)) { sinxronXatoOynasi(); return; }   // xato bo'lsa: kod, sabab, qayta urinish (telefonda ham)
-      ochish(menyuEkrani, false); ochish(profilEkrani, false);
-    });
-    t.id = 'sinxron-belgi';
-    t.setAttribute('aria-label', 'Sinxronlash holati: ' + sinxronMatni() + '. Profilni ochish');
-    return t;
-  }
-
   // Sinxron xatosi oynasi (telefonda F12 siz): xato KODI, qisqa sabab, kutayotgan o'zgarishlar soni, rad etilgan qatorlar, "Qayta urinish" va "Kodni nusxalash"
   var OTA_NOMI = { hisoblar: 'Hisob', kategoriyalar: 'Kategoriya', qarzlar: 'Qarz' };
   function radMatni(r) {
@@ -2158,13 +2127,13 @@
     return { sabab: sabab, royxat: royxat, qoldi: qoldi, kod: kod, nusxa: nusxa };
   }
   function matnniNusxala(m) {
-    function zaxira() {
+    function eskiUsul() {
       var ta = document.createElement('textarea'); ta.value = m; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
       var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
       document.body.removeChild(ta); return ok;
     }
-    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(m).then(function () { return true; }, function () { return zaxira(); });
-    return Promise.resolve(zaxira());
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(m).then(function () { return true; }, function () { return eskiUsul(); });
+    return Promise.resolve(eskiUsul());
   }
   function sinxronXatoOynasi() {
     pastkiOyna('Sinxronlash xatosi', function (oyna, yop) {
@@ -2201,7 +2170,7 @@
   // Kartaning "shakli" (qaysi tugmalar bor): faqat shakl o'zgarsa kartani qayta chizamiz, aks holda faqat matnlar yangilanadi (tugma bosilayotganda miltillamasin)
   function sinxronImzosi() {
     var h = Sinxron.holat();
-    return [Kirish.holat().kirgan, h.tayyor, h.rozilik, h.tur === 'tanlov', h.tur === 'xato' || h.tur === 'internet-yoq', !!h.ziddiyat, (h.rad || []).length].join('|');
+    return [Kirish.holat().kirgan, h.tayyor, h.rozilik, h.tur === 'xato' || h.tur === 'internet-yoq', !!h.ziddiyat, (h.rad || []).length].join('|');
   }
   function sinxronKartasi(h) {
     sinxronUI.imzo = sinxronImzosi();
@@ -2226,7 +2195,7 @@
       });
       hozir.id = 'sinxron-hozir';
       k.appendChild(hozir);
-      if (holat.ziddiyat) k.appendChild(el('p', 'To\'qnashuv: ' + holat.ziddiyat + ' ta qatorni boshqa qurilma ham o\'zgartirgan edi. Qoida: oxirgi yuborilgan o\'zgarish saqlanadi (zaxira faylingiz bor).', 'xira'));
+      if (holat.ziddiyat) k.appendChild(el('p', 'To\'qnashuv: ' + holat.ziddiyat + ' ta qatorni boshqa qurilma ham o\'zgartirgan edi. Qoida: oxirgi yuborilgan o\'zgarish saqlanadi.', 'xira'));
       if (holat.rad && holat.rad.length) k.appendChild(el('p', 'Serverga yuborilmagan ' + holat.rad.length + ' ta qator (serverdagi qoidalarga mos emas): ' + holat.rad.slice(0, 3).map(function (r) { return Yuklash.NOMLAR[r.jadval] + ' — ' + r.sabab; }).join('; ') + '. Ularni tahrirlab, qayta saqlang.', 'xato-matn'));
     } else if (!holat.rozilik) {
       // Rozilik yo'q (eski kirish yoki boshqa akkaunt): avtomatik boshlanmaydi, avval rozilik so'raladi
@@ -2234,15 +2203,10 @@
       var roz = tugma('Roziman, sinxronlashni yoqish', 'asosiy-tugma', function () { sinxronUI.xato = ''; Sinxron.rozilikBer().then(function () { sinxronMatnlari(); }); });
       roz.id = 'sinxron-roziman';
       k.appendChild(roz);
-    } else if (holat.tur === 'tanlov') {
-      k.appendChild(el('p', 'Ham shu qurilmada, ham serverda ma\'lumot bor. Qaysi birini saqlashni o\'zingiz tanlaysiz: hech narsa o\'zingizdan so\'rashsiz o\'chirilmaydi.', 'xira'));
-      var tanla = tugma('Tanlash', 'asosiy-tugma', function () { sinxronUI.tahlil = Sinxron.tanlovTahlili(); ochish(sinxronTanlovEkrani, false); });
-      tanla.id = 'sinxron-tanlash';
-      k.appendChild(tanla);
     } else if (xatoli) {
-      k.appendChild(el('p', 'Birinchi sinxronlash tugamadi. Hech narsa o\'chmadi.', 'xira'));
+      k.appendChild(el('p', 'Birinchi sinxronlash tugamadi. Shu qurilmadagi ma\'lumotga tegilmadi.', 'xira'));
     } else {
-      k.appendChild(el('p', 'Birinchi sinxronlash o\'zi boshlanadi: ikki tomon solishtiriladi va hech narsa o\'zingizdan so\'rashsiz o\'chirilmaydi.', 'xira'));
+      k.appendChild(el('p', 'Birinchi sinxronlash o\'zi boshlanadi: serverda ma\'lumot bo\'lsa, shu qurilma serverdagidek bo\'ladi; serverda ma\'lumot bo\'lmasa, shu qurilmadagi ma\'lumot serverga yuklanadi.', 'xira'));
     }
     if (xatoli) {
       var qayta = tugma('Qayta urinish', 'ikkinchi-tugma', function () { sinxronUI.xato = ''; Sinxron.qaytaUrinish().then(function () { sinxronMatnlari(); }); });
@@ -2257,90 +2221,8 @@
     return k;
   }
 
-  var MAXFIYLIK_MATNI = 'Ma\'lumotlaringiz xavfsiz serverga (Supabase) nusxalanadi. Sizning akkauntingizdan boshqa hech kim ko\'ra olmaydi.\n\n' +
-    'Halol ogohlantirish: ma\'lumot serverda shifrlanmagan holda saqlanadi, shuning uchun ilova dasturchisi (men) texnik jihatdan ma\'lumotlar bazasini ko\'ra olaman. PIN-kod serverga yuborilmaydi.';
-
-  function sinxronNatijaMatni(n) {
-    if (n.variant === 'birlashtirish') {
-      var b = n.hisobot || {}, q = b.qoshilgan || {};
-      return 'Birlashtirildi: endi shu qurilmada ham, serverda ham ' + sanoqMatni(n.soni) + '.' + (q.hisoblar || q.kategoriyalar ? ' Bir xil nomli ' + (q.hisoblar || 0) + ' ta hisob va ' + (q.kategoriyalar || 0) + ' ta kategoriya bittadan qoldi.' : '') + (b.qayta_nomlangan ? ' ' + b.qayta_nomlangan + ' ta hisob nomiga "(shu qurilma)" qo\'shildi (nomi bir xil, lekin boshqa qoldiq).' : '') + (b.byudjet_tashlangan ? ' ' + b.byudjet_tashlangan + ' ta byudjet chegarasi ikkala tomonda bor edi: serverdagisi qoldi.' : '');
-    }
-    if (n.variant === 'server' || n.variant === 'olish') return 'Serverdagi ma\'lumot shu qurilmaga olindi: ' + sanoqMatni(n.soni) + '.';
-    if (n.variant === 'mahalliy') return 'Server shu qurilmadagi ma\'lumot bilan bir xil qilindi' + (n.ochirilgan ? ' (serverdagi ortiqcha ' + n.ochirilgan + ' ta qator o\'chirilgan deb belgilandi)' : '') + '.';
-    if (n.variant === 'yuklash') return 'Ma\'lumot serverga yuklandi' + (n.jadvallar ? ': ' + n.jadvallar.map(function (q) { return q.nom + ' ' + q.server + '/' + q.mahalliy; }).join(', ') : '') + '.';
-    return 'Sinxronlash yoqildi.';
-  }
-
-  // Tanlangan variantni bajaradi. zaxira = true bo'lsa avval joriy holatning zaxira fayli yuklab beriladi
-  function sinxronBajar(variant, zaxira) {
-    sinxronUI.band = true; sinxronUI.xato = ''; sinxronUI.natija = ''; sinxronUI.progress = 'Boshlanmoqda…'; sinxronMatnlari();
-    // Zaxira fayli Sinxron ichida, qulf olingandan va server tekshirilgandan keyin (bir marta) yuklab beriladi
-    return Sinxron.birinchi(variant, { progress: function (matn) { sinxronUI.progress = matn; sinxronMatnlari(); }, zaxira: zaxira ? function () { return zaxiraniOlish(true, 'zaxira-sinxrondan-oldin'); } : undefined }).then(function (n) {
-      sinxronUI.progress = '';
-      if (!n.ok && n.tur === 'bor') { sinxronUI.xato = ''; setTimeout(function () { Sinxron.qaytaUrinish(); }, 0); return; }   // yuklash paytida serverda ma'lumot paydo bo'ldi: ikki tomon qayta solishtiriladi (tanlov ekrani)
-      if (!n.ok) { sinxronUI.xato = xatoKodBilan(n.xato, n.kod || n.tur) + (n.buzuq ? '\n' + n.buzuq.join('\n') : ''); return; }
-      sinxronUI.natija = sinxronNatijaMatni(n) + (n.ogohlantirish ? '\nEslatma: ' + n.ogohlantirish : '');
-      qisqaXabar('Sinxronlash yoqildi', undefined, 5000);
-      return yuklash().then(function () { yangilash(); });
-    }).catch(function (e) { sinxronUI.progress = ''; sinxronUI.xato = xatoKodBilan('Bajarib bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Mahalliy ma\'lumot o\'zgarmadi.', 'UI_' + ((e && e.name) || 'ERROR')); })
-      .then(function () { sinxronUI.band = false; sinxronMatnlari(); if (stek.length && stek[stek.length - 1].yasash === sinxronTanlovEkrani && !sinxronUI.xato) { stek.pop(); } if (stek.length && stek[stek.length - 1].yasash === profilEkrani) chizish(profilEkrani(), false); });
-  }
   // Xato matniga qisqa texnik kod qo'shadi (skrinshotdan sababni aniq bilish uchun)
   function xatoKodBilan(matn, kod) { return matn + (kod ? '\n(kod: ' + kod + ')' : ''); }
-
-  // Ikkala tomonda ham ma'lumot bor: uch variant, har birining oqibati oddiy tilda
-  function sinxronTanlovEkrani() {
-    var t = sinxronUI.tahlil;
-    var bloklar = [orqagaTugmasi(), el('h1', 'Birinchi sinxronlash')];
-    if (!t) t = Sinxron.tanlovTahlili();
-    if (!t) { bloklar.push(el('p', 'Hozir tanlash kerak emas.', 'xira')); return bloklar; }
-    var k = karta();
-    if (t.tur === 'yuklash') {
-      // Bu qurilmadagi ma'lumot BOSHQA akkaunt bilan sinxronlangan edi, hozirgi akkauntning serveri esa bo'sh: o'z-o'zidan yuborilmaydi
-      k.appendChild(el('p', 'Bu qurilmadagi ma\'lumot (' + sanoqMatni(t.mahalliy) + ') boshqa akkaunt bilan sinxronlangan edi. Hozirgi akkauntingizning serverida hali hech narsa yo\'q. Shu ma\'lumot hozirgi akkauntga ham saqlansinmi?', 'yozuv-nom'));
-      k.appendChild(el('p', MAXFIYLIK_MATNI, 'xira'));
-      bloklar.push(k);
-      var hha = tugma('Ha, shu akkauntga saqlash', 'asosiy-tugma', function () { sinxronBajar('yuklash', true); });
-      hha.id = 'tanlov-yuklash';
-      var yoq = tugma('Yo\'q, chiqish', 'ikkinchi-tugma', function () { Kirish.chiqish().then(function () { stek.pop(); chizish(profilEkrani(), false); qisqaXabar('Chiqdingiz'); }); });
-      yoq.id = 'tanlov-chiqish';
-      var kk = karta(); kk.appendChild(hha); kk.appendChild(yoq); bloklar.push(kk);
-      var xx = el('div', undefined, 'xato-matn'); xx.id = 'sinxron-xato'; xx.setAttribute('role', 'alert'); bloklar.push(xx);
-      var pp = el('div', undefined, 'yuklash-progress'); pp.id = 'sinxron-progress'; pp.setAttribute('role', 'status'); pp.setAttribute('aria-live', 'polite'); bloklar.push(pp);
-      setTimeout(sinxronMatnlari, 0);
-      return bloklar;
-    }
-    k.appendChild(el('p', 'Ham shu qurilmada, ham serverda ma\'lumot bor. Qaysi birini saqlashni tanlang. Tanlashdan oldin joriy holatning zaxira fayli avtomatik yuklab beriladi, hech narsa jimgina o\'chirilmaydi.'));
-    var s = el('div', undefined, 'sinxron-taqqos');
-    s.appendChild(el('div', 'Shu qurilmada: ' + sanoqMatni(t.mahalliy), 'yozuv-nom'));
-    s.appendChild(el('div', 'Serverda: ' + sanoqMatni(t.server), 'yozuv-nom'));
-    k.appendChild(s);
-    if (t.boshqaAkkaunt) k.appendChild(el('p', '⚠ Bu qurilmadagi ma\'lumot boshqa akkaunt bilan sinxronlangan edi.', 'xato-matn'));
-    k.appendChild(el('p', MAXFIYLIK_MATNI, 'xira'));
-    bloklar.push(k);
-    function variant(id, sarlavha, matn, klass, bajar) {
-      var c = karta();
-      c.appendChild(el('h2', sarlavha));
-      c.appendChild(el('p', matn, 'xira'));
-      var b = tugma(sarlavha, klass, bajar);
-      b.id = id;
-      c.appendChild(b);
-      bloklar.push(c);
-    }
-    variant('tanlov-birlashtirish', 'Birlashtirish', 'Ikkala tomondagi hamma narsa saqlanadi: natijada shu qurilmada ham, serverda ham ikkalasining ma\'lumoti bo\'ladi. Bir xil nomli hisob va kategoriyalar (masalan "Naqd pul", "Oziq-ovqat") bittadan qoladi. Hech narsa o\'chmaydi. Tavsiya etiladi.', 'asosiy-tugma', function () {
-      sinxronBajar('birlashtirish', true);
-    });
-    variant('tanlov-server', 'Faqat serverdagini olish', 'Shu qurilmadagi ma\'lumot (' + sanoqMatni(t.mahalliy) + ') serverdagi bilan ALMASHTIRILADI va ko\'rinmay qoladi. Faqat serverdagi ma\'lumot (' + sanoqMatni(t.server) + ') qoladi. Shu qurilmadagining nusxasi zaxira faylida bo\'ladi.', 'ikkinchi-tugma', function () {
-      if (window.confirm('Shu qurilmadagi ' + sanoqMatni(t.mahalliy) + ' serverdagi ' + sanoqMatni(t.server) + ' bilan almashtiriladi. Zaxira fayli avtomatik yuklab beriladi.\n\nDavom etilsinmi?')) sinxronBajar('server', true);
-    });
-    variant('tanlov-mahalliy', 'Faqat shu qurilmadagini yuborish', 'Server shu qurilmadagi ma\'lumot (' + sanoqMatni(t.mahalliy) + ') bilan bir xil bo\'ladi. Serverdagi ma\'lumot (' + sanoqMatni(t.server) + ') o\'chirilgan deb belgilanadi: u boshqa qurilmalarda ham ko\'rinmay qoladi.', 'ikkinchi-tugma', function () {
-      if (window.confirm('Server shu qurilmadagi ' + sanoqMatni(t.mahalliy) + ' bilan bir xil bo\'ladi. Serverdagi ' + sanoqMatni(t.server) + ' o\'chirilgan deb belgilanadi va boshqa qurilmalarda ko\'rinmay qoladi. Zaxira fayli avtomatik yuklab beriladi.\n\nDavom etilsinmi?')) sinxronBajar('mahalliy', true);
-    });
-    var x = el('div', undefined, 'xato-matn'); x.id = 'sinxron-xato'; x.setAttribute('role', 'alert'); bloklar.push(x);
-    var p = el('div', undefined, 'yuklash-progress'); p.id = 'sinxron-progress'; p.setAttribute('role', 'status'); p.setAttribute('aria-live', 'polite'); bloklar.push(p);
-    setTimeout(sinxronMatnlari, 0);
-    return bloklar;
-  }
 
   // ---- Maxfiylik va hisobni o'chirish (S7) ----
   var hisobOchirildiMatni = '';
@@ -2356,17 +2238,17 @@
     k.appendChild(a);
     return k;
   }
-  // Hisobni o'chirish: tasdiq oynasi (nima o'chadi, nima saqlanadi), "Bekor qilish" va qizil "O'chirish". Zaxira fayli avtomatik yuklab beriladi.
+  // Hisobni o'chirish: tasdiq oynasi (nima o'chadi, nima saqlanadi), "Bekor qilish" va qizil "O'chirish".
   function hisobniOchirishOynasi() {
     pastkiOyna('Hisobni o\'chirish', function (oyna, yop) {
       oyna.appendChild(el('p', 'O\'chadi: serverdagi hisobingiz (akkaunt) va serverdagi hamma ma\'lumotingiz (hisoblar, kategoriyalar, yozuvlar, byudjetlar, qarzlar, to\'lovlar, sozlamalar). Qaytarib bo\'lmaydi.', 'yozuv-nom'));
       oyna.appendChild(el('p', 'Saqlanadi: shu qurilmadagi ma\'lumot. Ilova kirmasdan avvalgidek ishlayveradi. Boshqa qurilmalarda ham sinxronlash to\'xtaydi, ularda ma\'lumot qoladi.', 'xira'));
-      oyna.appendChild(el('p', 'Boshlashdan oldin zaxira fayli (JSON) avtomatik yuklab beriladi. Internet kerak.', 'xira'));
+      oyna.appendChild(el('p', 'Internet kerak.', 'xira'));
       var holat = el('div', undefined, 'yuklash-progress'); holat.id = 'ochir-holat'; holat.setAttribute('role', 'status'); holat.setAttribute('aria-live', 'polite');
       var xato = el('div', undefined, 'xato-matn'); xato.id = 'ochir-xato'; xato.setAttribute('role', 'alert');
       var kutayotgan = Sinxron.kutayotgan();
       if (kutayotgan > 0) {
-        oyna.appendChild(el('p', 'Serverga hali yuborilmagan ' + kutayotgan + ' ta o\'zgarish bor. Ular shu qurilmada saqlanadi, lekin serverda baribir hammasi o\'chadi. Xohlasangiz, avval yuborib oling (shunda ularning nusxasi zaxira faylida ham bo\'ladi).', 'xato-matn'));
+        oyna.appendChild(el('p', 'Serverga hali yuborilmagan ' + kutayotgan + ' ta o\'zgarish bor. Ular shu qurilmada saqlanadi, lekin serverda baribir hammasi o\'chadi. Xohlasangiz, avval yuborib oling.', 'xato-matn'));
         var yub = tugma('Avval yuborib olish', 'ikkinchi-tugma', function () {
           yub.disabled = true; xato.textContent = ''; holat.textContent = 'Yuborilmoqda…';
           Sinxron.yurgiz('qolda').then(function (n) { holat.textContent = ''; yub.disabled = false; if (!n.ok && n.xato) xato.textContent = xatoKodBilan(n.xato, n.kod); else { qisqaXabar('Yuborildi'); yop(); hisobniOchirishOynasi(); } });
@@ -2383,11 +2265,8 @@
         tasdiq.disabled = true; bekor.disabled = true; holat.textContent = 'Server tekshirilmoqda…';
         Kirish.serverBormi().then(function (bor) {
           if (!bor) return { ok: false, tur: 'internet', kod: 'NETWORK', xato: 'Serverga ulanib bo\'lmadi. Internetni tekshirib, qayta urinib ko\'ring (hech narsa o\'chmadi).' };
-          holat.textContent = 'Zaxira tayyorlanmoqda…';
-          return zaxiraniOlish(true, 'zaxira-hisobni-ochirishdan-oldin').then(function () {   // zaxira saqlanmasa, hech narsa o'chirilmaydi
-            holat.textContent = 'Serverdagi ma\'lumot o\'chirilmoqda…';
-            return Sinxron.hisobniOchirish();
-          }, function (e) { return { ok: false, tur: 'xato', kod: 'BACKUP_FAILED', xato: 'Zaxira faylini saqlab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Hech narsa o\'chirilmadi.' }; });
+          holat.textContent = 'Serverdagi ma\'lumot o\'chirilmoqda…';
+          return Sinxron.hisobniOchirish();
         }).then(function (n) {
           holat.textContent = '';
           if (!n.ok) { xato.textContent = xatoKodBilan(n.xato, n.kod || n.tur); tasdiq.disabled = false; bekor.disabled = false; return; }
@@ -2415,7 +2294,7 @@
     var qator = el('div', undefined, 'almashtirgich-qator');
     var matn = el('div', undefined, 'almashtirgich-matn');
     matn.appendChild(el('div', 'PIN-kod bilan ochish', 'yozuv-nom'));
-    matn.appendChild(el('div', yoqilgan ? 'Ilova ochilganda va 1 daqiqadan ko\'p fonda turgandan keyin PIN-kod so\'raladi. PIN-kod zaxira fayliga kirmaydi.' : 'Telefoningizni boshqa odam ochsa ham, ma\'lumotingizni ko\'ra olmasligi uchun 4 raqamli PIN-kod qo\'ying.', 'yozuv-izoh'));
+    matn.appendChild(el('div', yoqilgan ? 'Ilova ochilganda va 1 daqiqadan ko\'p fonda turgandan keyin PIN-kod so\'raladi. PIN-kod serverga yuborilmaydi.' : 'Telefoningizni boshqa odam ochsa ham, ma\'lumotingizni ko\'ra olmasligi uchun 4 raqamli PIN-kod qo\'ying.', 'yozuv-izoh'));
     qator.appendChild(matn);
     var sw = tugma(undefined, 'almashtirgich' + (yoqilgan ? ' yoqiq' : ''), function () {
       var rejim = yoqilgan ? 'ochirish' : 'yoqish';
@@ -3473,7 +3352,7 @@
     yangiYozuvOynasi();
   }
 
-  // ---- Zaxira va eksport (F9) ----
+  // ---- Excelga yuklab olish (eksport) ----
   var eksportHolat = { tur: 'hammasi', yil: null, oy: null };   // CSV davri
 
   // Faylni yuklab berish (Blob). Hech qayerga yuborilmaydi: hammasi qurilmada
@@ -3488,117 +3367,8 @@
     setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
   }
 
-  // Joriy holatning to'liq zaxirasi (JSON). Muvaffaqiyatli bo'lsa va oldin=false bo'lsa, oxirgi zaxira sanasi yangilanadi.
-  function zaxiraniOlish(oldinTiklash, nomBelgisi) {
-    return Data.hammasiniOqish().then(function (m) {
-      var bugun = Calc.bugun();
-      if (!oldinTiklash) {
-        // fayl ichidagi sozlamalarda ham yangi sana bo'ladi: tiklangach "oxirgi zaxira" shu faylning sanasi
-        var bor = m.sozlamalar.some(function (x) { return x.kalit === 'asosiy'; });
-        m.sozlamalar = bor ? m.sozlamalar.map(function (x) { return x.kalit === 'asosiy' ? Object.assign({}, x, { oxirgi_zaxira_sanasi: bugun }) : x; })
-          : m.sozlamalar.concat([{ kalit: 'asosiy', sxema_versiyasi: Data.SXEMA_VERSIYASI, oxirgi_zaxira_sanasi: bugun }]);
-      }
-      var fayl = Calc.zaxiraYasash(m, Data.SXEMA_VERSIYASI, new Date());
-      faylYuklash(Calc.zaxiraNomi(new Date(), oldinTiklash ? (nomBelgisi || 'zaxira-tiklashdan-oldin') : 'zaxira'), JSON.stringify(fayl), 'application/json');
-      if (oldinTiklash) return fayl;
-      var asosiy = m.sozlamalar.filter(function (x) { return x.kalit === 'asosiy'; })[0];
-      return Data.saqlash('sozlamalar', asosiy).then(function () { malumot.zaxiraSanasi = bugun; return fayl; });
-    });
-  }
-
-  // Tiklash: tekshirish (hech narsaga tegmasdan) -> tasdiq -> joriy holat zaxirasi yuklanadi -> bitta tranzaksiyada almashtirish
-  function zaxiradanTiklash(fayl, xatoChiqar) {
-    if (fayl.size > 200 * 1024 * 1024) { xatoChiqar('Fayl juda katta (200 MB dan oshmasin)'); return; }
-    var oqish = fayl.text ? fayl.text() : new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; r.readAsText(fayl); });
-    oqish.then(function (matn) {
-      var t = Calc.zaxiraniTekshir(matn, Data.SXEMA_VERSIYASI, Calc.hozir());
-      if (t.xato) { xatoChiqar(t.xato + '. Mavjud ma\'lumotga tegilmadi.'); return; }
-      var s = t.soni, kj = t.kelajak;
-      var matnTasdiq = 'Zaxiradan tiklash\n\nFaylda: ' + s.yozuvlar + ' ta yozuv, ' + s.hisoblar + ' ta hisob, ' + s.kategoriyalar + ' ta kategoriya, ' + s.qarzlar + ' ta qarz.\n\n' +
-        'Mavjud ma\'lumot (' + malumot.yozuvlar.length + ' ta yozuv, ' + malumot.qarzlar.length + ' ta qarz) shu fayldagi bilan ALMASHTIRILADI. Avval joriy holatning zaxirasi avtomatik yuklab beriladi.' +
-        (t.eskiSxema ? '\n\nBu eski versiya zaxirasi: yangi tuzilishga o\'tkaziladi, hech narsa o\'chmaydi.' : '') +
-        (kj.yozuv + kj.qarz + kj.tolov ? '\n\n⚠ Vaqti hozirdan keyin bo\'lgan: ' + kj.yozuv + ' ta yozuv, ' + kj.qarz + ' ta qarz, ' + kj.tolov + ' ta to\'lov. Ular o\'chirilmaydi, "Kelajak" belgisi bilan ko\'rinadi; tahrirlashda vaqtni o\'tmishga to\'g\'rilang.' : '') +
-        '\n\nDavom etilsinmi?';
-      if (!window.confirm(matnTasdiq)) return;
-      return zaxiraniOlish(true).then(function () { return Data.almashtirish(t.malumot); })
-        .then(yuklash).then(function () {
-          korsat('bosh');
-          qisqaXabar('Zaxiradan tiklandi: ' + s.yozuvlar + ' ta yozuv, ' + s.qarzlar + ' ta qarz', undefined, 6000);
-        });
-    }).catch(function (xato) { xatoChiqar('Tiklab bo\'lmadi: ' + (xato && xato.message ? xato.message : xato) + '. Mavjud ma\'lumot o\'zgarmadi.'); });
-  }
-
-  function zaxiraEkrani() {
+  function eksportEkrani() {
     var bloklar = [orqagaTugmasi(), el('h1', 'Excelga yuklab olish')];
-    var xatoQutisi = el('div', undefined, 'xato-karta');
-    xatoQutisi.setAttribute('role', 'alert');
-    xatoQutisi.hidden = true;
-    function xatoChiqar(m) { xatoQutisi.textContent = m; xatoQutisi.hidden = false; xatoQutisi.scrollIntoView({ block: 'center' }); }
-
-    var k = karta();
-    k.appendChild(el('h2', 'Zaxira nusxa'));
-    var z = Calc.zaxiraHolati(malumot.zaxiraSanasi, Calc.bugun());
-    k.appendChild(el('p', z.holat === 'yoq' ? 'Zaxira hali olinmagan.' : 'Oxirgi zaxira: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) + (z.kun === 0 ? ' (bugun)' : ' (' + z.kun + ' kun oldin)'), 'xira zaxira-sana'));
-    k.appendChild(el('p', 'Ma\'lumotlar faqat shu qurilmada saqlanadi, hech qayerga yuborilmaydi. Zaxira — barcha yozuv, hisob, kategoriya, byudjet va qarzlar bitta JSON faylda.', 'xira'));
-    var olish = tugma('Zaxira nusxa olish', 'asosiy-tugma', function () {
-      olish.disabled = true;
-      zaxiraniOlish(false).then(function () { qisqaXabar('Zaxira yuklab olindi'); chizish(zaxiraEkrani(), true); })
-        .catch(function (x) { olish.disabled = false; xatoChiqar('Zaxira olib bo\'lmadi: ' + x); });
-    });
-    olish.id = 'zaxira-olish';
-    k.appendChild(olish);
-    var kiritish = document.createElement('input');
-    kiritish.type = 'file';
-    kiritish.id = 'zaxira-fayl';
-    kiritish.accept = '.json,application/json';
-    kiritish.hidden = true;
-    kiritish.addEventListener('change', function () {
-      var f = kiritish.files && kiritish.files[0];
-      kiritish.value = '';
-      xatoQutisi.hidden = true;
-      if (f) zaxiradanTiklash(f, xatoChiqar);
-    });
-    var tikla = tugma('Zaxiradan tiklash', 'ikkinchi-tugma', function () { kiritish.click(); });
-    tikla.id = 'zaxira-tikla';
-    k.appendChild(tikla);
-    k.appendChild(kiritish);
-    k.appendChild(el('p', 'Tiklashdan oldin joriy holatning zaxirasi avtomatik yuklab beriladi. Buzuq yoki yarim fayl rad etiladi, mavjud ma\'lumotga tegilmaydi.', 'xira'));
-    if (Salom.ilgormi()) bloklar.push(k);   // JSON zaxira: oddiy ko'rinishda yashirin (TZ-sinxronlash §18.1)
-    bloklar.push(xatoQutisi);
-
-    // Sxema yangilanishidan oldingi avtomatik nusxa: yuklab olish, tiklash, o'chirish
-    if (malumot.migratsiyaNusxa) {
-      var mn = malumot.migratsiyaNusxa, mk = karta();
-      mk.classList.add('migratsiya-karta');
-      mk.appendChild(el('h2', 'Yangilanishdan oldingi nusxa'));
-      var mv = Calc.hozir(new Date(mn.vaqt));
-      mk.appendChild(el('p', 'Ilova ma\'lumot tuzilishini yangilaganda (' + Calc.sanaKorsat(mv.sana) + ' ' + mv.vaqt + ') o\'zi avtomatik nusxa saqladi' +
-        (mn.soni && mn.soni.yozuvlar !== undefined ? ': ' + mn.soni.yozuvlar + ' ta yozuv, ' + mn.soni.hisoblar + ' ta hisob, ' + mn.soni.qarzlar + ' ta qarz' : '') +
-        '. Yangilanishdan keyin biror narsa noto\'g\'ri ko\'rinsa, shu nusxani tiklashingiz mumkin. Hamma narsa joyida bo\'lsa, nusxani o\'chirib joyni bo\'shatishingiz mumkin.', 'xira'));
-      function nusxaniOl() { return Data.olish('sozlamalar', Data.ICHKI_NUSXA_KALITI).then(function (x) { if (!x || !x.fayl) throw new Error('Nusxa topilmadi'); return x.fayl; }); }
-      var mYuk = tugma('Faylga yuklab olish', 'ikkinchi-tugma', function () {
-        nusxaniOl().then(function (f) { faylYuklash(Calc.zaxiraNomi(new Date(), 'zaxira-yangilanishdan-oldin'), JSON.stringify(f), 'application/json'); qisqaXabar('Nusxa yuklab olindi'); })
-          .catch(function (x) { xatoChiqar('Nusxani olib bo\'lmadi: ' + (x && x.message ? x.message : x)); });
-      });
-      mYuk.id = 'mig-yuklash';
-      mk.appendChild(mYuk);
-      var mTik = tugma('Shu nusxani tiklash', 'ikkinchi-tugma', function () {
-        xatoQutisi.hidden = true;
-        nusxaniOl().then(function (f) { zaxiradanTiklash(new Blob([JSON.stringify(f)], { type: 'application/json' }), xatoChiqar); })
-          .catch(function (x) { xatoChiqar('Nusxani olib bo\'lmadi: ' + (x && x.message ? x.message : x)); });
-      });
-      mTik.id = 'mig-tiklash';
-      mk.appendChild(mTik);
-      var mOch = tugma('Nusxani o\'chirish', 'xavfli-tugma', function () {
-        if (!window.confirm('Yangilanishdan oldingi nusxa o\'chirilsinmi? Ma\'lumotingizga tegilmaydi, faqat shu qo\'shimcha nusxa o\'chadi.')) return;
-        Data.haqiqiyOchirish('sozlamalar', Data.ICHKI_NUSXA_KALITI).then(function () { malumot.migratsiyaNusxa = null; qisqaXabar('Nusxa o\'chirildi'); chizish(zaxiraEkrani(), true); })
-          .catch(function (x) { xatoChiqar('O\'chirib bo\'lmadi: ' + x); });
-      });
-      mOch.id = 'mig-ochirish';
-      mk.appendChild(mOch);
-      bloklar.push(mk);
-    }
-
     // Excel uchun eksport (CSV)
     var e = karta();
     e.appendChild(el('h2', 'Excelga yuklab olish'));
@@ -3610,7 +3380,7 @@
     davrMaydon.appendChild(el('span', 'Davr', 'belgi'));
     var turQator = el('div', undefined, 'tanlov');
     [['hammasi', 'Hammasi'], ['oy', 'Oy'], ['yil', 'Yil']].forEach(function (t) {
-      var b = tugma(t[1], undefined, function () { eksportHolat.tur = t[0]; chizish(zaxiraEkrani(), true); });
+      var b = tugma(t[1], undefined, function () { eksportHolat.tur = t[0]; chizish(eksportEkrani(), true); });
       b.setAttribute('aria-pressed', String(eksportHolat.tur === t[0]));
       b.setAttribute('data-davr', t[0]);
       turQator.appendChild(b);
@@ -3619,11 +3389,11 @@
     e.appendChild(davrMaydon);
     if (eksportHolat.tur !== 'hammasi') {
       var tanlar = el('div', undefined, 'juft');
-      var yilT = tanlov('e-yil', 'Yil', yillar.map(function (y) { return [String(y), String(y)]; }), String(eksportHolat.yil), function (v) { eksportHolat.yil = parseInt(v, 10); chizish(zaxiraEkrani(), true); });
+      var yilT = tanlov('e-yil', 'Yil', yillar.map(function (y) { return [String(y), String(y)]; }), String(eksportHolat.yil), function (v) { eksportHolat.yil = parseInt(v, 10); chizish(eksportEkrani(), true); });
       yilT.quti.style.flex = '1';
       tanlar.appendChild(yilT.quti);
       if (eksportHolat.tur === 'oy') {
-        var oyT = tanlov('e-oy', 'Oy', OY_NOMLARI_UI.map(function (n, i) { return [String(i + 1), n]; }), String(eksportHolat.oy), function (v) { eksportHolat.oy = parseInt(v, 10); chizish(zaxiraEkrani(), true); });
+        var oyT = tanlov('e-oy', 'Oy', OY_NOMLARI_UI.map(function (n, i) { return [String(i + 1), n]; }), String(eksportHolat.oy), function (v) { eksportHolat.oy = parseInt(v, 10); chizish(eksportEkrani(), true); });
         oyT.quti.style.flex = '1';
         tanlar.appendChild(oyT.quti);
       }
@@ -3652,31 +3422,6 @@
   }
   var OY_NOMLARI_UI = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
 
-  // Bosh sahifa: oxirgi zaxira sanasi; 14 kundan oshsa (yoki hali olinmagan, lekin yozuv bor) eslatma
-  function zaxiraKartasi() {
-    var z = Calc.zaxiraHolati(malumot.zaxiraSanasi, Calc.bugun());
-    var bor = malumot.yozuvlar.length + malumot.qarzlar.length > 0;
-    var eslatma = z.holat === 'eski' || (z.holat === 'yoq' && bor);
-    var k = karta();
-    k.classList.add('zaxira-karta');
-    if (eslatma) k.classList.add('ogohlantirish-karta');
-    k.appendChild(el('h2', 'Zaxira nusxa'));
-    k.appendChild(el('div', z.holat === 'yoq' ? 'Zaxira hali olinmagan' : 'Oxirgi zaxira: ' + Calc.sanaKorsat(malumot.zaxiraSanasi) + (z.kun === 0 ? ' (bugun)' : ' (' + z.kun + ' kun oldin)'), 'zaxira-sana'));
-    if (eslatma) {
-      var m = el('div', undefined, 'zaxira-eslatma');
-      m.appendChild(el('strong', '⚠ ' + (z.holat === 'yoq' ? 'Zaxira olinmagan. ' : 'Oxirgi zaxiradan ' + z.kun + ' kun o\'tdi. ')));
-      m.appendChild(document.createTextNode('Ma\'lumotlar faqat shu qurilmada saqlanadi: yo\'qolib qolmasligi uchun zaxira nusxa oling.'));
-      k.appendChild(m);
-      var t = tugma('Hozir zaxira olish', 'ikkinchi-tugma', function () {
-        t.disabled = true;
-        zaxiraniOlish(false).then(function () { qisqaXabar('Zaxira yuklab olindi'); korsat('bosh'); }).catch(function (x) { t.disabled = false; qisqaXabar('Zaxira olib bo\'lmadi: ' + x); });
-      });
-      t.id = 'bosh-zaxira';
-      k.appendChild(t);
-    }
-    return k;
-  }
-
   // Asosiydagi Xarajat / Daromadlar tanlovi qurilmada eslab qolinadi (xotira ishlamasa, xarajat)
   function asosiyTurniOl() {
     try { return localStorage.getItem('moliya-asosiy-tur') === 'daromad' ? 'daromad' : 'xarajat'; } catch (e) { return 'xarajat'; }
@@ -3694,7 +3439,7 @@
   function pulBelgili(n) { return malumot.balansYashirin ? '••••' : (n > 0 ? '+' : '') + Calc.sumFormat(n); }
   function asosiyniQayta() { chizish(bolimlar.bosh(malumot), true); }
 
-  // Mavzu: darhol qo'llanadi (qayta yuklamasdan), sozlamalarda saqlanadi (zaxiraga kiradi)
+  // Mavzu: darhol qo'llanadi (qayta yuklamasdan), sozlamalarda saqlanadi
   function temaniTanlash(tema) {
     Tema.qollash(tema);
     return Data.olish('sozlamalar', 'asosiy').then(function (z) {
@@ -3960,7 +3705,7 @@
   }
 
   function asosiyBolimi() {
-    return [asosiyBosh(), sinxronBelgisi(), eslatmaKartasi(), balansKartasi(), oqimKartasi(), tezQoshishKartasi(), hisoblarKartasi(), kategoriyalarKartasi(), byudjetlarKartasi(), qarzlarKartasi(), Salom.ilgormi() ? zaxiraKartasi() : null].filter(Boolean);
+    return [asosiyBosh(), eslatmaKartasi(), balansKartasi(), oqimKartasi(), tezQoshishKartasi(), hisoblarKartasi(), kategoriyalarKartasi(), byudjetlarKartasi(), qarzlarKartasi()].filter(Boolean);
   }
 
   // ---- Bo'limlar ----
@@ -3993,7 +3738,7 @@
   function korsat(nom) {
     if (nom === 'yana' || nom === 'hisobot' || nom === 'byudjet') nom = 'koproq';   // eski saqlangan tanlov
     if (!bolimlar[nom]) nom = 'bosh';
-    if (nom !== 'qoshish') { xabar = ''; wiz = null; qoshishRejimi = 'yozuv'; }   // boshqa bo'limga o'tilsa, yozuv shakli tozalanadi
+    if (nom !== 'qoshish') { wiz = null; qoshishRejimi = 'yozuv'; }   // boshqa bo'limga o'tilsa, yozuv shakli tozalanadi
     joriy = nom;
     stek = [];
     tugmalar.forEach(function (t) {
@@ -4039,14 +3784,11 @@
       malumot.hisoblar = r[0].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
       malumot.yozuvlar = r[2];
       malumot.kategoriyalar = r[1].sort(function (a, b) { return a.yaratilgan < b.yaratilgan ? -1 : 1; });
-      return Promise.all([Data.olish('sozlamalar', 'asosiy'), Data.olish('sozlamalar', Data.ICHKI_NUSXA_KALITI)]);
-    }).then(function (r) {
-      var sozlama = r[0], nusxa = r[1];
-      malumot.migratsiyaNusxa = nusxa ? { vaqt: nusxa.vaqt, eskiSxema: nusxa.eski_sxema, soni: nusxa.fayl && nusxa.fayl.soni ? nusxa.fayl.soni : {} } : null;   // sxema yangilanishidan oldingi avtomatik nusxa (bo'lsa)
-      malumot.zaxiraSanasi = sozlama ? sozlama.oxirgi_zaxira_sanasi || null : null;
+      return Data.olish('sozlamalar', 'asosiy');
+    }).then(function (sozlama) {
       malumot.balansYashirin = !!(sozlama && sozlama.balans_yashirin === true);
       malumot.tema = Tema.togrimi(sozlama && sozlama.tema) ? sozlama.tema : 'qurilma';
-      Tema.qollash(malumot.tema);   // zaxiradan tiklangach ham, ilova ochilganda ham saqlangan mavzu qo'llanadi
+      Tema.qollash(malumot.tema);   // ilova ochilganda saqlangan mavzu qo'llanadi
     });
   }
 
@@ -4062,15 +3804,10 @@
     if (oxirgiEkran && (oxirgiEkran.yasash === profilEkrani || oxirgiEkran.yasash === menyuEkrani)) chizish(oxirgiEkran.yasash(), true);
   });
 
-  // Sinxron holati o'zgarsa: ko'rinib turgan ekran yangilanadi (Profil/Menyu qayta chiziladi, belgi matni almashadi). Serverdan yangi ma'lumot kelsa, ro'yxatlar yangilanadi.
+  // Sinxron holati o'zgarsa: ko'rinib turgan ekran yangilanadi (Profil/Menyu qayta chiziladi, matn almashadi). Serverdan yangi ma'lumot kelsa, ro'yxatlar yangilanadi.
   Sinxron.kuzat(function (h) {
     if (h.tur === 'tayyor' || h.tur === 'kutilmoqda') sinxronUI.xato = '';
-    var tt = Sinxron.tanlovTahlili();
-    if (h.tur === 'tanlov' && tt && sinxronUI.tanlovKorsatilgan !== tt) {   // birinchi sinxron "tanlov" topdi: Profil ochiq bo'lsa, tanlov ekrani o'zi ochiladi
-      sinxronUI.tanlovKorsatilgan = tt;
-      var top = stek[stek.length - 1];
-      if (top && top.yasash === profilEkrani && !sinxronUI.band) { sinxronUI.tahlil = tt; ochish(sinxronTanlovEkrani, false); return; }
-    }   // muvaffaqiyatli sinxrondan keyin eski xato xabari qolmasin
+    // muvaffaqiyatli sinxrondan keyin eski xato xabari qolmasin
     var oxirgiEkran = stek[stek.length - 1];
     if (h.tur === 'ishlayapti') sinxronUI.natija = '';
     if (oxirgiEkran && oxirgiEkran.yasash === menyuEkrani) {   // Menyu qayta chizilmaydi (bosilayotgan qator almashib ketmasin): faqat Profil qatorining matni yangilanadi

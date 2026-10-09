@@ -41,19 +41,8 @@ var Salom = (function () {
   // "Kirmasdan davom etish" tanlangan kuni eslatma chiqmasin
   function bugunEslatmasizBelgila(hozir) { var h = eslatmaHolati(); h.korsatilgan = sana(hozir || new Date()); yoz(ESLATMA_KALITI, JSON.stringify(h)); }
 
-  // Ilg'or rejim (JSON zaxira tugmalari): Menyu pastidagi versiya qatori 7 marta bosilsa yoqiladi/o'chadi
-  var ILGOR_KALITI = 'moliya-ilgor';
-  function ilgormi() { return oqi(ILGOR_KALITI) === '1'; }
-  function ilgorAlmashtir() { var y = !ilgormi(); yoz(ILGOR_KALITI, y ? '1' : '0'); return y; }
-
-  // "Qarzlarni hisobotga qo'shish" (TZ-sinxronlash.md 19-band): sukut — YOQIQ; faqat shu qurilmada saqlanadi (serverda sozlama ustuni yo'q, sxema o'zgarmaydi)
-  var QARZ_HISOBOT_KALITI = 'moliya-qarz-hisobotda';
-  function qarzHisobotda() { return oqi(QARZ_HISOBOT_KALITI) !== '0'; }
-  function qarzHisobotdaYoz(b) { yoz(QARZ_HISOBOT_KALITI, b ? '1' : '0'); }
-
   return {
-    qarzHisobotda: qarzHisobotda, qarzHisobotdaYoz: qarzHisobotdaYoz,
     sozla: sozla, tanlovOl: tanlovOl, tanlovYoz: tanlovYoz, eslatmaKerakmi: eslatmaKerakmi, eslatmaKorsatildi: eslatmaKorsatildi,
-    eslatmaYop: eslatmaYop, bugunEslatmasizBelgila: bugunEslatmasizBelgila, ilgormi: ilgormi, ilgorAlmashtir: ilgorAlmashtir, YOPISH_MS: YOPISH_MS
+    eslatmaYop: eslatmaYop, bugunEslatmasizBelgila: bugunEslatmasizBelgila, YOPISH_MS: YOPISH_MS
   };
 })();

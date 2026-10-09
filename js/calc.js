@@ -1043,12 +1043,14 @@
     var c = davrChegarasi('oy', kalit + '-01'), h = hisobot(yozuvlar, c.dan, c.gacha, '');
     return { daromad: h.daromad, xarajat: h.xarajat, qoldiq: h.qoldiq, soni: h.soni };
   }
-  // Tarixda ko'rinadigan qarz amallari: har qarz va har to'lov alohida qator. Ular oylik xarajat/daromadga KIRMAYDI.
+  // Tarixda ko'rinadigan qarz amallari: har qarz va har to'lov alohida qator (qator soni va ro'yxat o'zgarmaydi). Oy va kun jamlariga ular
+  // Asosiy sahifadagi bilan AYNAN bir xil qoida bilan qo'shiladi (TZ 27-band): oy jami — oyJami(hisobotYozuvlari), kun jami — tarixGuruhlari.
   function qarzSatrlari(qarzlar) {
     var r = [];
     qarzlar.forEach(function (z) {
       r.push({ turi: 'qarz', id: 'q:' + z.id, qarz_id: z.id, sana: z.sana, vaqt: z.vaqt || '00:00', summa: z.summa, hisob_id: z.hisob_id, shaxs: z.shaxs, yonalish: z.yonalish, izoh: z.izoh || '', yaratilgan: z.yaratilgan || '' });
       (z.tolovlar || []).forEach(function (t) {
+        if (t.deleted === true) return;   // mantiqiy o'chirilgan qaytarish ko'rinmaydi va sanalmaydi
         r.push({ turi: 'tolov', id: 't:' + (t.id || '') + ':' + z.id, qarz_id: z.id, sana: t.sana, vaqt: t.vaqt || '00:00', summa: t.summa, hisob_id: t.hisob_id, shaxs: z.shaxs, yonalish: z.yonalish, izoh: '', yaratilgan: t.yaratilgan || '' });
       });
     });
@@ -1070,7 +1072,8 @@
     });
   }
   // Tarix: yozuvlar va qarz qatorlari kunlar bo'yicha (eng yangi kun birinchi; kun ichida soat bo'yicha kamayish).
-  // Kun jami (xarajat, daromad) faqat yozuvlardan: o'tkazma va qarz kirmaydi.
+  // Kun jami (xarajat, daromad): oddiy yozuvlar + shu kundagi (filtrdan o'tgan) qarz amallari — qarzKirdimi() qoidasi bilan (Asosiy sahifa bilan bir xil);
+  // o'tkazma kirmaydi. Filtrdan o'tmagan qarz qatori (masalan kategoriya filtri) ro'yxatda ham, jamda ham yo'q.
   // Natija: [{ sana, xarajat, daromad, elementlar: [{ turi: 'yozuv', yozuv } | { turi: 'qarz' | 'tolov', satr }] }]
   function tarixGuruhlari(yozuvlar, qarzQatorlari) {
     var el = [];
@@ -1088,6 +1091,8 @@
       if (!g || g.sana !== e.sana) { g = { sana: e.sana, xarajat: 0, daromad: 0, elementlar: [] }; guruhlar.push(g); }
       g.elementlar.push(e);
       if (e.turi === 'yozuv') { if (e.yozuv.tur === 'xarajat') g.xarajat += e.yozuv.summa; else if (e.yozuv.tur === 'daromad') g.daromad += e.yozuv.summa; }
+      else if (qarzKirdimi(e.satr.yonalish, e.turi)) g.daromad += e.satr.summa;
+      else g.xarajat += e.satr.summa;
     });
     return guruhlar;
   }
@@ -1388,17 +1393,19 @@
     { id: '__qarz_berilgan', nom: 'Berilgan qarz', tur: 'xarajat', rang: '#7e57c2', belgi: 'kredit', arxivlangan: false, virtual: true }
   ];
   function qarzKategoriyami(id) { return id === '__qarz_olingan' || id === '__qarz_berilgan'; }
+  // Qarz amali qaysi tomonga tushadi (Asosiy hisobot ham, Tarix jamlari ham shu qoida bilan): true — hisobga PUL KIRDI (daromad tomoni),
+  // false — hisobdan PUL CHIQDI (xarajat tomoni). turi: 'qarz' (asosiy summa: olgan — kirdi, bergan — chiqdi) yoki 'tolov' (qaytarish teskari).
+  function qarzKirdimi(yonalish, turi) { return turi === 'tolov' ? yonalish === 'berdim' : yonalish !== 'berdim'; }
   function qarzYozuvi(id, sana, vaqt, summa, hisobId, kirdi, izoh) {
     return { id: id, tur: kirdi ? 'daromad' : 'xarajat', summa: summa, sana: sana, vaqt: vaqt || '00:00', hisob_id: hisobId, kategoriya_id: kirdi ? '__qarz_olingan' : '__qarz_berilgan', izoh: izoh || '', virtual: true };
   }
   function qarzYozuvlari(qarzlar) {
     var r = [];
     (qarzlar || []).forEach(function (z) {
-      var berdim = z.yonalish === 'berdim';
-      r.push(qarzYozuvi('q:' + z.id, z.sana, z.vaqt, z.summa, z.hisob_id, !berdim, z.shaxs));          // asosiy summa: olgan — kirdi, bergan — chiqdi
+      r.push(qarzYozuvi('q:' + z.id, z.sana, z.vaqt, z.summa, z.hisob_id, qarzKirdimi(z.yonalish, 'qarz'), z.shaxs));          // asosiy summa: olgan — kirdi, bergan — chiqdi
       (z.tolovlar || []).forEach(function (t) {
         if (t.deleted === true) return;
-        r.push(qarzYozuvi('t:' + (t.id || '') + ':' + z.id, t.sana, t.vaqt, t.summa, t.hisob_id, berdim, z.shaxs));   // qaytarish teskari: bergan qarz qaytsa — kirdi, olgan qarzni qaytarsa — chiqdi
+        r.push(qarzYozuvi('t:' + (t.id || '') + ':' + z.id, t.sana, t.vaqt, t.summa, t.hisob_id, qarzKirdimi(z.yonalish, 'tolov'), z.shaxs));   // qaytarish teskari: bergan qarz qaytsa — kirdi, olgan qarzni qaytarsa — chiqdi
       });
     });
     return r;
@@ -1481,7 +1488,7 @@
     yozuvlarniSuz: yozuvlarniSuz, filtrFaolmi: filtrFaolmi, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     tolanganSumma: tolanganSumma, qarzQolgan: qarzQolgan, qarzYopilganmi: qarzYopilganmi, qarzMuddatiOtdimi: qarzMuddatiOtdimi,
-    QARZ_KATEGORIYALAR: QARZ_KATEGORIYALAR, qarzKategoriyami: qarzKategoriyami, qarzYozuvlari: qarzYozuvlari, qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
+    QARZ_KATEGORIYALAR: QARZ_KATEGORIYALAR, qarzKategoriyami: qarzKategoriyami, qarzKirdimi: qarzKirdimi, qarzYozuvlari: qarzYozuvlari, qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
     tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,
     davrChegarasi: davrChegarasi, davrniSur: davrniSur, davrNomi: davrNomi, kunQosh: kunQosh,
     foizlar: foizlar, hisobot: hisobot, taqqoslash: taqqoslash, belgiliSum: belgiliSum, belgiliFoiz: belgiliFoiz,

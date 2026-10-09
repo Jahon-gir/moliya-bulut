@@ -298,7 +298,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   --g-setka: #e6ece9;
   --g-baza: #b9c4bf;
   --g-yoritish: rgba(15, 139, 109, .10);
-  --g-boshqa: #8a97a1;      /* "Boshqalar" tilimi */
+  --g-boshqa: #7b8498;      /* "Boshqalar" tilimi */
   --b-sariq: #fab219;
   --b-qizil: #d03b3b;
   --b-qizil-matn: #ffffff;
@@ -310,7 +310,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
     --g-setka: #26322d;
     --g-baza: #3a4842;
     --g-yoritish: rgba(255, 255, 255, .08);
-    --g-boshqa: #7b8892;
+    --g-boshqa: #7b8498;
     --b-qizil: #e5645f;
     --b-qizil-matn: #1d2a26;
   }
@@ -321,7 +321,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
     --g-setka: #26322d;
     --g-baza: #3a4842;
     --g-yoritish: rgba(255, 255, 255, .08);
-    --g-boshqa: #7b8892;
+    --g-boshqa: #7b8498;
     --b-qizil: #e5645f;
     --b-qizil-matn: #1d2a26;
   }
@@ -667,8 +667,6 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 }
 
 /* Menyu ekrani: ☰ tugmasi, Xavfsizlik almashtirgichi */
-.asosiy-bosh { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
-.asosiy-bosh h1 { margin: 0; }
 .menyu-tugma { background: var(--karta); }
 .mavzu-karta { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--chiziq); }
 .mavzu-sarlavha { margin-bottom: 8px; }
@@ -761,7 +759,6 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
   --asosiy-yengil: rgba(15, 139, 109, .13);
   --oqim-fon: #e8eef7; --oqim-chegara: #d3deee; --oqim-katak: #ffffff;
   --oqim-xarajat: #b3412f; --oqim-daromad: #2f7a3f; --oqim-sof: #2f4a72; --oqim-sof-matn: #ffffff;
-  --dona-1: #7c5cff; --dona-2: #1e9bff; --dona-3: #19c37d; --dona-4: #ffb020; --dona-5: #ff5c8a; --dona-6: #14c8c8; --dona-7: #ff7a3d; --dona-8: #b25cff;
   --qarz-berdim-fon: #e3f3e8; --qarz-berdim-chegara: #2f7a3f; --qarz-oldim-fon: #fbe8e4; --qarz-oldim-chegara: #b3412f;
   --nav-soya: 0 6px 22px rgba(20, 30, 28, .16);
 }
@@ -785,21 +782,9 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 /* Raqamlar kartadan chiqib ketmasin (js/sigdir.js): bitta qator, tekis raqamlar */
 .sig { display: block; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }
 
-/* Kategoriya belgisi: yumaloq-kvadrat katak, fon — rangning ≈15% tusi, ikon — shu rangda */
-.belgi-katak {
-  display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 30%; vertical-align: middle;
-  background: var(--r-tus, rgba(128, 128, 128, .15)); color: var(--r, var(--xira));
-}
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  .belgi-katak { color: color-mix(in srgb, var(--r) 82%, var(--matn)); }
-}
+/* Kategoriya belgisi (0.31.0): yumaloq-kvadrat katak, TO'LIQ tanlangan rangda; ikon rangi JS da avtomatik (och rangda to'q, aks holda oq) */
+.belgi-katak { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 32%; vertical-align: middle; background: var(--r, #7b8498); }
 .belgi-katak svg { display: block; }
-
-/* Yuqori sarlavha qatori: sahifa aylanganda ham joyida turadi, orqa foni to'liq qoplangan */
-.asosiy-bosh {
-  position: sticky; top: 0; z-index: 30; margin: -16px -16px 14px;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; background: var(--fon); border-bottom: 1px solid var(--chiziq);
-}
 
 /* Pastki navigatsiya: chetdan ichkarida suzuvchi, yumaloq panel */
 .pastki {
@@ -885,3 +870,51 @@ select.oy-pill { min-height: 44px; padding: 6px 30px 6px 14px; }
 .qarz-summa.minus { color: var(--oqim-xarajat); }
 .qarz-qator .yozuv-izoh { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
 .muddat-matn { white-space: nowrap; }
+
+
+/* ===== 0.31.0: ikonlar, ranglar, Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ===== */
+/* Yuqori sarlavha qatori (Asosiy, Tarix, Qarzlar, Ko'proq): menyu tugmasi + ekran nomi (+ o'ngda tugmalar, pastida oylar qatori) — sahifa aylanganda ham tepada */
+.sticky-bosh {
+  position: sticky; top: 0; z-index: 30; margin: -16px -16px 14px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; background: var(--fon); border-bottom: 1px solid var(--chiziq);
+}
+.bosh-qator { display: flex; align-items: center; gap: 12px; }
+.bosh-qator h1 { margin: 0; flex: 1 1 auto; min-width: 0; }
+.bosh-ong { display: flex; gap: 8px; flex: none; }
+.sticky-bosh .oy-yorliqlar { margin: 10px -16px 0; padding: 0 16px 2px; scrollbar-width: none; -ms-overflow-style: none; }
+.sticky-bosh .oy-yorliqlar::-webkit-scrollbar { display: none; }
+
+/* Yozuv qatorlari: bitta yumaloq kartada, nozik chiziq bilan */
+.yozuv-kv { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 0; text-align: left; font: inherit; color: inherit; cursor: pointer; border-top: 1px solid var(--chiziq); }
+.yozuv-kv:first-child { border-top: 0; }
+.yozuv-kv .yozuv-chap { flex: 1 1 0; min-width: 0; }
+.yozuv-kv .yozuv-nom { font-size: 14px; font-weight: 600; word-break: normal; overflow-wrap: break-word; }
+.yozuv-kv .yozuv-izoh { display: block; max-width: 100%; margin-top: 1px; font-size: 13px; line-height: 1.3; color: var(--xira); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
+button.izoh-bir { width: 100%; padding: 0; text-align: left; font: inherit; font-size: 13px; line-height: 1.3; color: var(--xira); background: none; border: 0; cursor: pointer; }
+button.izoh-bir.ochiq { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.yozuv-kv .yozuv-summa { flex: none; max-width: none; white-space: nowrap; font-size: 14px; font-variant-numeric: tabular-nums; }
+.yozuv-kv:focus-visible { outline: 3px solid var(--asosiy); outline-offset: -3px; border-radius: 12px; }
+
+/* Kun sarlavhasi: chapda sana va kichik qator, o'ngda xarajat/daromad belgilari */
+.kun-sarlavha { display: flex; align-items: center; gap: 10px; margin: 18px 4px 8px; padding: 0; font-size: 14px; }
+.kun-chap { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.kun-sana { font-size: 17px; font-weight: 700; color: var(--matn); white-space: nowrap; }
+.kun-hafta { display: block; align-self: stretch; font-size: 13px; color: var(--xira); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill-quti { flex: 1 1 0; min-width: 0; overflow: hidden; display: flex; }
+.pill-ich { display: flex; gap: 6px; margin-left: auto; width: max-content; }
+.pill { flex: none; white-space: nowrap; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pill-xarajat { color: var(--oqim-xarajat); background: var(--qarz-oldim-fon); }
+.pill-daromad { color: var(--oqim-daromad); background: var(--qarz-berdim-fon); }
+.kun { margin-bottom: 4px; padding-top: 2px; padding-bottom: 2px; }
+
+/* Ikonni va rangni tanlash (kategoriya) */
+.ikon-guruh { margin: 16px 0 6px; font-size: 14px; font-weight: 600; color: var(--xira); }
+.ikon-tarmoq { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ikon-tanlov { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 76px; padding: 8px 2px 6px; font: inherit; color: var(--matn); cursor: pointer; background: none; border: 2px solid transparent; border-radius: 14px; }
+.ikon-katak { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 13px; background: var(--chiziq); }
+.ikon-tanlov.tanlangan { border-color: var(--asosiy); }
+.ikon-nom { max-width: 100%; font-size: 11.5px; line-height: 1.15; text-align: center; overflow-wrap: anywhere; }
+.kat-ranglar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.kat-ranglar .rang-tugma { width: 100%; max-width: 48px; aspect-ratio: 1; min-height: 44px; justify-self: center; }
+.rang-boshqa { font-size: 11px; font-weight: 700; color: var(--matn); background: conic-gradient(#ff5c5c, #ffd24d, #5cff7a, #4dc8ff, #8a5cff, #ff5cb0, #ff5c5c); }
+.rang-kiritish { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

@@ -15,24 +15,25 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.30.0"></script>
-  <script src="js/tema.js?v=0.30.0"></script>
-  <script src="js/belgilar.js?v=0.30.0"></script>
-  <script src="js/calc.js?v=0.30.0"></script>
-  <script src="js/xlsx.js?v=0.30.0"></script>
-  <script src="js/xlsx-oqi.js?v=0.30.0"></script>
-  <script src="js/import-sof.js?v=0.30.0"></script>
-  <script src="js/sinxron-sof.js?v=0.30.0"></script>
-  <script src="js/data.js?v=0.30.0"></script>
-  <script src="js/sigdir.js?v=0.30.0"></script>
-  <script src="js/diagramma.js?v=0.30.0"></script>
-  <script src="js/pin.js?v=0.30.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.30.0"></script>
-  <script src="js/kirish.js?v=0.30.0"></script>
-  <script src="js/yuklash.js?v=0.30.0"></script>
-  <script src="js/salom.js?v=0.30.0"></script>
-  <script src="js/sinxron.js?v=0.30.0"></script>
-  <script src="js/pwa.js?v=0.30.0"></script>
+  <script src="js/ilova.js?v=0.31.0"></script>
+  <script src="js/tema.js?v=0.31.0"></script>
+  <script src="js/ikonlar.js?v=0.31.0"></script>
+  <script src="js/belgilar.js?v=0.31.0"></script>
+  <script src="js/calc.js?v=0.31.0"></script>
+  <script src="js/xlsx.js?v=0.31.0"></script>
+  <script src="js/xlsx-oqi.js?v=0.31.0"></script>
+  <script src="js/import-sof.js?v=0.31.0"></script>
+  <script src="js/sinxron-sof.js?v=0.31.0"></script>
+  <script src="js/data.js?v=0.31.0"></script>
+  <script src="js/sigdir.js?v=0.31.0"></script>
+  <script src="js/diagramma.js?v=0.31.0"></script>
+  <script src="js/pin.js?v=0.31.0"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.31.0"></script>
+  <script src="js/kirish.js?v=0.31.0"></script>
+  <script src="js/yuklash.js?v=0.31.0"></script>
+  <script src="js/salom.js?v=0.31.0"></script>
+  <script src="js/sinxron.js?v=0.31.0"></script>
+  <script src="js/pwa.js?v=0.31.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -922,11 +923,11 @@
       // --- DOM: diagrammadagi raqamlar va matnli muqobillar (aria-label) ---
       function sinovKartasi(el) { var q = document.createElement('div'); q.style.width = '320px'; q.appendChild(el); return q; }
       function tilimlarOl(quti) { return Array.prototype.slice.call(quti.querySelectorAll('.dona-tilim')); }
-      test('DOM doira (TZ): 2 ta tilim, har biri boshqa yarqin rang (palitra), summa va foiz hisobotdagidek', function () {
+      test('DOM doira (TZ): 2 ta tilim, har biri kategoriyaning o\'z rangida, summa va foiz hisobotdagidek', function () {
         var h = oyHisoboti(TZ), quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: katOl, bosilganda: function () {} });
         var t = tilimlarOl(quti); teng(t.length, 2);
         teng(t.map(function (e) { return e.getAttribute('data-kategoriya') + ':' + e.getAttribute('data-summa') + ':' + e.getAttribute('data-foiz') + ':' + e.getAttribute('stroke'); }).join(),
-          'oziq:450000:90:var(--dona-1),trans:50000:10:var(--dona-2)');   // yarqin palitra: har bo'lak boshqa rang
+          'oziq:450000:90:#e57373,trans:50000:10:#64b5f6');   // har bo'lak kategoriyaning o'z rangida
       });
       test('DOM doira: har tilim va ro\'yxat qatorida aria-label (nom, summa, foiz) bor; ro\'yxatda hammasi ko\'rinadi', function () {
         var h = oyHisoboti(TZ), quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: katOl, bosilganda: function () {} });
@@ -949,12 +950,12 @@
         teng(quti.querySelectorAll('.dona-qator').length, 1); teng(quti.querySelector('.dona-qiymat').textContent, '777 000 so\'m'); teng(quti.querySelector('.dona-foiz').textContent, '100%');
         var c1 = quti.querySelector('circle.dona-tilim'); teng(parseFloat(c1.getAttribute('stroke-dasharray')) > 400, true);   // bitta tilim: butun halqa (aylana uzunligi ≈402), ochiq joy yo'q
       });
-      test('DOM doira: 15 ta kategoriya — 6 tilim (5 + Boshqalar), 15 ta qator, har tilim boshqa rang, foizlar yig\'indisi 100', function () {
+      test('DOM doira: 15 ta kategoriya — 6 tilim (5 + Boshqalar), 15 ta qator, har tilim kategoriyaning o\'z rangida, foizlar yig\'indisi 100', function () {
         var Y = [], K = {}; for (var i = 0; i < 15; i++) { Y.push({ tur: 'xarajat', summa: (i + 1) * 1000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'k' + i }); K['k' + i] = { nom: 'Kategoriya ' + i, rang: '#' + ('00' + (i * 17).toString(16)).slice(-2) + '8080' }; }
         var h = oyHisoboti(Y), quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: function (id) { return K[id]; }, bosilganda: function () {}, guruhBosilganda: function () {} });
         var t = tilimlarOl(quti); teng(t.length, 6); teng(quti.querySelectorAll('.dona-qator').length, 16);   // 15 kategoriya + "Boshqalar" sarlavhasi
         teng(quti.querySelectorAll('.dona-qator[data-kategoriya^="k"]').length, 15);
-        var rr = t.map(function (e) { return e.getAttribute('stroke'); }); teng(rr.filter(function (v, i) { return rr.indexOf(v) === i; }).length, 6, 'har bo\'lak boshqa rang'); teng(rr[5], 'var(--g-boshqa)');
+        var rr = t.map(function (e) { return e.getAttribute('stroke'); }); teng(rr.slice(0, 5).join(), t.slice(0, 5).map(function (e) { return K[e.getAttribute('data-kategoriya')].rang; }).join(), 'o\'z rangi'); teng(rr[5], '#7B8498', '"Boshqalar" bo\'lagi #7B8498');
         teng(t.reduce(function (a, e) { return a + Number(e.getAttribute('data-foiz')); }, 0), 100);
         teng(t.reduce(function (a, e) { return a + Number(e.getAttribute('data-summa')); }, 0), h.xarajat);
       });
@@ -2151,7 +2152,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.30.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.31.0', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -2415,7 +2416,9 @@
       test('yangi bazaning tayyor kategoriyalari va "Naqd pul" hisobi belgi, rang, tur bilan yoziladi', function () {
         return Promise.all([Data.hammasi('kategoriyalar'), Data.hammasi('hisoblar')]).then(function (r) {
           teng(r[0].length, 15); teng(r[0].every(function (k) { return Belgilar.bormi(k.belgi); }), true);
-          teng(r[0].filter(function (k) { return k.nom === 'Oziq-ovqat'; })[0].belgi, 'oziq'); teng(r[0].filter(function (k) { return k.nom === 'Oylik maosh'; })[0].belgi, 'ishhaqi');
+          var oz = r[0].filter(function (k) { return k.nom === 'Oziq-ovqat'; })[0], oy = r[0].filter(function (k) { return k.nom === 'Oylik maosh'; })[0];
+          teng(oz.belgi, 'tools-kitchen-2'); teng(oz.rang, '#14B870'); teng(oy.belgi, 'wallet'); teng(oy.rang, '#12B76A');   // yangi (Tabler) ikon va ranglar
+          teng(r[0].every(function (k) { return Ikonlar.bormi(k.belgi) && /^#[0-9A-F]{6}$/.test(k.rang); }), true);
           teng(r[1][0].tur, 'naqd'); teng(r[1][0].belgi, 'naqd'); teng(r[1][0].oxirgi4, ''); teng(typeof r[1][0].rang, 'string');
         });
       });
@@ -2436,7 +2439,7 @@
       });
       test('DOM doira: bitta kategoriya — to\'liq halqa (qalinlik 22, radius 64), butun aylana', function () {
         var quti = Diagramma.dona({ taqsimot: [{ kategoriya_id: 'a', summa: 777, foiz: 100 }], jami: 777, kategoriya: function () { return { nom: 'A', rang: '#e57373', belgi: 'oziq', tur: 'xarajat' }; }, bosilganda: function () {}, guruhBosilganda: function () {} });
-        var c = quti.querySelector('circle.dona-tilim'); teng(c.getAttribute('stroke-width'), '22'); teng(c.getAttribute('stroke'), 'var(--dona-1)'); teng(c.getAttribute('r'), '64');
+        var c = quti.querySelector('circle.dona-tilim'); teng(c.getAttribute('stroke-width'), '22'); teng(c.getAttribute('stroke'), '#e57373'); teng(c.getAttribute('r'), '64');
       });
 
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
@@ -4348,7 +4351,7 @@ function xfix(opts) {
           .then(function (n) { teng(n.ok, true, n.xato); teng(Sinxron.holat().tur, 'tayyor'); teng(Sinxron.holat().xato, ''); teng((Sinxron.holat().rad || []).length, 0); teng(Sinxron.holat().soni, 0); teng(Object.keys(S.jadval.yozuvlar).some(function (id) { return S.jadval.yozuvlar[id].summa === 777; }), true); return sxNavbat(); })
           .then(function (n) { teng(n, 0); S.rad = null; });
       });
-      // ---- 0.30.0: yangi dizayn ----
+      // ---- 0.31.0: yangi dizayn ----
       function sigElement(matn, kenglik, qiymat, plyus) {
         var quti = document.createElement('div'); quti.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + kenglik + 'px';
         var e = document.createElement('div'); e.className = 'sig'; e.style.cssText = 'display:block;white-space:nowrap;overflow:hidden;font:700 20px sans-serif'; e.textContent = matn;
@@ -4384,7 +4387,7 @@ function xfix(opts) {
       });
       test('Dizayn (CSS): sticky sarlavha, suzuvchi pastki panel (safe-area), kartalar yumaloq, ranglar o\'zgaruvchilarda — yorug\' va qora rejim uchun', function () {
         return matnOl('style.css').then(function (c) {
-          teng(/\.asosiy-bosh \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: var\(--fon\);[^}]*border-bottom: 1px solid var\(--chiziq\)/.test(c), true, 'sticky sarlavha');
+          teng(/\.sticky-bosh \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: var\(--fon\);[^}]*border-bottom: 1px solid var\(--chiziq\)/.test(c), true, 'sticky sarlavha');
           teng(/\.pastki \{[^}]*bottom: calc\(10px \+ env\(safe-area-inset-bottom\)\);[^}]*border-radius: 22px/.test(c), true, 'suzuvchi panel');
           teng(/\.karta \{[^}]*border-radius: 18px/.test(c), true, 'karta burchagi'); teng(/#ekran \{[^}]*safe-area-inset-bottom/.test(c), true, 'pastki bo\'sh joy');
           teng(/\.nav-tugma\.faol \{[^}]*background: var\(--asosiy-yengil\)/.test(c), true);
@@ -4393,8 +4396,152 @@ function xfix(opts) {
           [['--oqim-fon', '#e8eef7', '#1b2130'], ['--oqim-xarajat', '#b3412f', '#ff8a78'], ['--oqim-daromad', '#2f7a3f', '#5fd38a'], ['--oqim-katak', '#ffffff', '#262e40'], ['--oqim-sof', '#2f4a72', '#3a64b5']].forEach(function (r) {
             teng(c.indexOf(r[0] + ': ' + r[1]) >= 0, true, r[0] + ' yorug\''); teng(c.split(r[0] + ': ' + r[2]).length - 1 >= 2, true, r[0] + ' qora (media va data-tema)');
           });
-          ['#7c5cff', '#1e9bff', '#19c37d', '#ffb020', '#ff5c8a'].forEach(function (h, i) { teng(c.indexOf('--dona-' + (i + 1) + ': ' + h) >= 0, true, 'donut ' + h); });
-          teng(/\.belgi-katak \{[^}]*border-radius: 30%/.test(c), true); teng(/\.qarz-tanlov-tugma\[aria-pressed="true"\]/.test(c), true);
+          teng(c.indexOf('--g-boshqa: #7b8498') >= 0, true, 'Boshqalar bo\'lagi');
+          teng(/\.belgi-katak \{[^}]*border-radius: 32%/.test(c), true, 'ikon katagi'); teng(/\.sticky-bosh \.oy-yorliqlar::-webkit-scrollbar \{ display: none/.test(c) && /scrollbar-width: none/.test(c), true, 'oylar qatori siljitish chizig\'i yashirin'); teng(/\.qarz-tanlov-tugma\[aria-pressed="true"\]/.test(c), true);
+        });
+      });
+      // ---- 0.31.0: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
+      var ISTALGAN_IKONLAR = 'shopping-cart tools-kitchen-2 coffee bread apple pizza cup cake bus car gas-station taxi train plane bike car-crash home home-2 key bulb droplet flame wifi device-mobile device-laptop tool pill stethoscope heartbeat tooth scissors brush barbell bath school book book-2 certificate baby-carriage baby-bottle mood-kid paw shirt shoe shopping-bag movie device-gamepad-2 music beach gift confetti heart-handshake building-mosque heart package truck-delivery building-store wallet cash coin briefcase trending-up arrow-back-up award building-bank credit-card receipt report-money piggy-bank arrows-exchange repeat shield-check dots help-circle pencil tag percentage meat robot users users-group user chart-line signature file-text menu-2 history search filter'.split(' ');
+      var ALMASHTIRILGAN = { 'taxi': 'car-suv', 'tooth': 'dental', 'piggy-bank': 'moneybag' };   // Tabler da yo'q nomlar: yaqin ma'noli ikon
+      test('Ikonlar (Tabler): so\'ralgan hamma ikon lokal faylda bor (3 tasi yaqin ma\'noli bilan almashtirilgan), yo\'llar to\'g\'ri, guruhlar 10 ta, takror yo\'q', function () {
+        ISTALGAN_IKONLAR.forEach(function (n) {
+          var kalit = ALMASHTIRILGAN[n] || n; teng(Ikonlar.bormi(kalit), true, n + ' -> ' + kalit);
+          var y = Ikonlar.yollar(kalit); teng(Array.isArray(y) && y.length > 0 && y.every(function (d) { return /^[MmLlHhVvCcSsQqTtAaZz0-9 .,\-]+$/.test(d) && /^[Mm]/.test(d); }), true, kalit + ' yo\'llari');
+        });
+        teng(Ikonlar.GURUHLAR.map(function (g) { return g.nom; }).join('|'), 'Oziq-ovqat|Transport|Uy va kommunal|Sog\'liq va go\'zallik|Ta\'lim va oila|Xarid va ko\'ngilochar|Sovg\'a va ehson|Daromad|Moliya va qarz|Boshqa');
+        var hammasi = []; Ikonlar.GURUHLAR.forEach(function (g) { g.ikonlar.forEach(function (x) { hammasi.push(x[0]); teng(Ikonlar.bormi(x[0]), true, x[0]); teng(typeof x[1] === 'string' && x[1].length > 0 && x[1].length <= 14, true, 'nom: ' + x[1]); }); });
+        teng(hammasi.filter(function (v, i) { return hammasi.indexOf(v) === i; }).length, hammasi.length, 'takror ikon yo\'q');
+        // so'ralgan ro'yxatdagi (yuqori tugmalar va menyudan tashqari) hamma ikon tanlash oynasida bor
+        ISTALGAN_IKONLAR.filter(function (n) { return ['menu-2', 'history', 'search', 'filter', 'home'].indexOf(n) < 0; }).forEach(function (n) { teng(hammasi.indexOf(ALMASHTIRILGAN[n] || n) >= 0, true, 'oynada: ' + n); });
+        teng(Ikonlar.bormi('yoq-ikon'), false); teng(Ikonlar.bormi('constructor'), false); teng(Ikonlar.yollar('yoq-ikon'), null);
+      });
+      test('Ikonlar: 16 ta tayyor rang aynan berilgandek; ikon rangi avtomatik — rang och bo\'lsa (yorqinlik > 0,55) to\'q, aks holda oq', function () {
+        teng(Ikonlar.RANGLAR.join(' '), '#7C5CFF #1E8FFF #00B4D8 #14B870 #2EA84F #6FBF2E #E6B800 #F5A300 #FF7A2F #E5483D #F0407A #C2409B #9B4DDB #2F5DDB #26A69A #7B8498');
+        teng(Ikonlar.ikonRangi('#FFFFFF'), '#1f2a3a'); teng(Ikonlar.ikonRangi('#FFD54F'), '#1f2a3a'); teng(Ikonlar.ikonRangi('#F8F000'), '#1f2a3a', 'och sariq');
+        teng(Ikonlar.ikonRangi('#000000'), '#ffffff'); teng(Ikonlar.ikonRangi('#E6B800'), '#1f2a3a', 'sariq — to\'q ikon'); teng(Ikonlar.ikonRangi('#F5A300'), '#1f2a3a'); teng(Ikonlar.ikonRangi('#7C5CFF'), '#ffffff'); teng(Ikonlar.ikonRangi('#2F5DDB'), '#ffffff'); teng(Ikonlar.ikonRangi('#7B8498'), '#ffffff');
+        teng(Math.abs(Ikonlar.yorqinlik('#FFFFFF') - 1) < 1e-9, true); teng(Ikonlar.yorqinlik('#000000'), 0); teng(Ikonlar.yorqinlik('xato'), 0);
+        Ikonlar.RANGLAR.concat(['#FFD54F', '#aed581', '#e0e0e0']).forEach(function (r) { var och = Ikonlar.yorqinlik(r) > 0.55; teng(Ikonlar.ikonRangi(r), och ? '#1f2a3a' : '#ffffff', r); });
+        // kontrast: tanlangan ikon rangi katak rangiga qarshi kamida 2,2:1 (16 ta tayyor rang uchun; talab qilingan 0,55 chegarasi bilan)
+        function wcag(hex) { var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex); var l = [m[1], m[2], m[3]].map(function (h) { var v = parseInt(h, 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2]; }
+        function kontrast(a, b) { var l1 = wcag(a), l2 = wcag(b), h = Math.max(l1, l2), q = Math.min(l1, l2); return (h + 0.05) / (q + 0.05); }
+        Ikonlar.RANGLAR.forEach(function (r) { teng(kontrast(r, Ikonlar.ikonRangi(r)) >= 2.2, true, r + ' kontrast ' + kontrast(r, Ikonlar.ikonRangi(r)).toFixed(2)); });
+      });
+      test('Ikonlar.boshlangich: nomga qarab bir martalik ikon va rang — talab qilingan jadvalning hammasi', function () {
+        var J = [['Taksi', 'car-suv', '#F5A300'], ['Ovqat', 'tools-kitchen-2', '#14B870'], ['Oziq-ovqat', 'tools-kitchen-2', '#14B870'], ['Do\'kon', 'building-store', '#2EA84F'], ['Dokon', 'building-store', '#2EA84F'], ['Market', 'building-store', '#2EA84F'],
+          ['Ro\'zg\'or', 'shopping-cart', '#1E8FFF'], ['Bozor', 'shopping-cart', '#1E8FFF'], ['Jamoat transporti', 'bus', '#00B4D8'], ['Avtobus', 'bus', '#00B4D8'], ['Benzin', 'gas-station', '#E5483D'], ['Yoqilg\'i', 'gas-station', '#E5483D'],
+          ['Ijara', 'key', '#6A4CE0'], ['Kommunal', 'bulb', '#E6B800'], ['Internet', 'wifi', '#3F6FE0'], ['Telefon', 'device-mobile', '#3F6FE0'], ['Aloqa', 'device-mobile', '#3F6FE0'],
+          ['Apteka', 'pill', '#E0356B'], ['Dori', 'pill', '#E0356B'], ['Shifokor', 'stethoscope', '#E0356B'], ['Klinika', 'stethoscope', '#E0356B'], ['Kontrakt', 'school', '#E08A00'], ['O\'qish', 'school', '#E08A00'], ['Kurs', 'school', '#E08A00'],
+          ['Kredit', 'credit-card', '#2F5DDB'], ['Komissiya', 'percentage', '#5C6BC0'], ['Keshbek', 'arrow-back-up', '#1C9AE0'], ['Cashback', 'arrow-back-up', '#1C9AE0'], ['Ish haqi', 'wallet', '#12B76A'], ['Oylik maosh', 'wallet', '#12B76A'],
+          ['Avans', 'cash', '#6FBF2E'], ['Go\'sht', 'meat', '#E5483D'], ['Sunniy intellekt', 'robot', '#00A3A3'], ['AI', 'robot', '#00A3A3'], ['Trading', 'chart-line', '#0FA36B'], ['Kiyim', 'shirt', '#F0407A'], ['Sovg\'a', 'gift', '#FF7A2F'],
+          ['Ta\'til', 'beach', '#00B4D8'], ['Dam olish', 'beach', '#00B4D8'], ['Boshqa', 'dots', '#7B8498'], ['Nomalum', 'help-circle', '#8D6E63'], ['Noma\'lum', 'help-circle', '#8D6E63']];
+        J.forEach(function (q) { var b = Ikonlar.boshlangich(q[0]); teng(b.belgi + ' ' + b.rang, q[1] + ' ' + q[2], q[0]); teng(b.qoida, true, q[0]); });
+        // harf kattaligi va apostrof turlariga e'tiborsiz
+        ['TAKSI', 'taksi', 'Doʻkon', 'Do‘kon', 'Do’kon', 'Go’sht', 'ISH HAQI', 'Noma’lum', 'Yoqilgʻi'].forEach(function (n) { teng(Ikonlar.boshlangich(n).qoida, true, n); });
+        teng(Ikonlar.boshlangich('Doʻkon').belgi, 'building-store'); teng(Ikonlar.boshlangich('Yoqilgʻi').belgi, 'gas-station');
+        // qisqa so'zlar faqat butun so'z sifatida: "Maishiy" (ai), "Madam" (dam) ga tegmaydi
+        teng(Ikonlar.boshlangich('Maishiy xizmat').belgi, 'tag'); teng(Ikonlar.boshlangich('Madam').belgi, 'tag'); teng(Ikonlar.boshlangich('Mail').belgi, 'tag');
+        // qoidaga tushmagan nomlar: tag ikoni va nomdan barqaror (hash) yarqin rang (16 ta tayyor rangdan)
+        var nomlar = ['Maishiy xizmat', 'Zzz', 'Hobbi', 'Mebel', 'Kitoblar do\'koni emas', 'Ehtiyot qismlar', 'Baliq', 'Gullar', 'Sayr', 'Soat', 'Parfyum', 'Foto', 'Chiqim', 'Qimor', 'Xobbi', 'Tadbir', 'Mijoz', 'Kassa', 'Yo\'l', 'Nashr'];
+        var ranglar = {};
+        nomlar.forEach(function (n) { var b = Ikonlar.boshlangich(n), b2 = Ikonlar.boshlangich(n); if (b.qoida) return; teng(b.belgi, 'tag', n); teng(Ikonlar.RANGLAR.indexOf(b.rang) >= 0, true, n + ' rangi tayyor ranglardan'); teng(b.rang, b2.rang, 'barqaror'); ranglar[b.rang] = 1; });
+        teng(Object.keys(ranglar).length >= 5, true, 'turli nomlar — turli ranglar: ' + Object.keys(ranglar).length);
+        teng(Ikonlar.boshlangich('').belgi, 'tag'); teng(Ikonlar.boshlangich(null).belgi, 'tag'); teng(Ikonlar.hashRang('Ab C'), Ikonlar.hashRang('ab  c'), 'bo\'shliq va katta-kichik harfga e\'tiborsiz');
+      });
+      test('Ikonlar.boshlangichRejasi: faqat ikoni tanlanmagan (eski kalitli) kategoriyalarga; foydalanuvchi tanlagani ustiga yozilmaydi; qayta ishlasa bo\'sh', function () {
+        var K = [{ id: 'a', nom: 'Taksi', tur: 'xarajat', belgi: 'transport', rang: '#64b5f6' }, { id: 'b', nom: 'Taksi', tur: 'xarajat', belgi: 'tag', rang: '#7C5CFF' },   // b: foydalanuvchi tanlagan (nom qoidaga to'g'ri kelsa ham tegilmaydi)
+          { id: 'c', nom: 'Hobbi', tur: 'xarajat', belgi: 'umumiy', rang: '#90a4ae' }, { id: 'd', nom: 'Ish haqi', tur: 'daromad', belgi: '', rang: '#43a047' }, { id: 'e', nom: 'Gift', tur: 'xarajat', belgi: 'bus', rang: '#00B4D8' }];
+        var r = Ikonlar.boshlangichRejasi(K);
+        teng(r.map(function (x) { return x.id; }).join(), 'a,c,d'); teng(r[0].belgi + r[0].rang, 'car-suv#F5A300'); teng(r[1].belgi, 'tag'); teng(r[2].belgi + r[2].rang, 'wallet#12B76A');
+        var yangi = K.map(function (k) { var q = r.filter(function (x) { return x.id === k.id; })[0]; return q ? Object.assign({}, k, { belgi: q.belgi, rang: q.rang }) : k; });
+        teng(Ikonlar.boshlangichRejasi(yangi).length, 0, 'ikkinchi marta o\'zgarmaydi'); teng(yangi[1].rang, '#7C5CFF'); teng(yangi[4].belgi, 'bus');
+        teng(Ikonlar.boshlangichRejasi([]).length, 0); teng(Ikonlar.boshlangichRejasi(null).length, 0);
+      });
+      test('Belgilar.chiz: yangi (Tabler) va eski ikon kalitlari ham chiziladi; yangi ikon 24x24 chiziqli SVG', function () {
+        var a = Belgilar.chiz('car-suv', 23), b = Belgilar.chiz('oziq', 20), c = Belgilar.chiz('yoq-kalit', 20);
+        teng(a.getAttribute('width'), '23'); teng(a.getAttribute('stroke'), 'currentColor'); teng(a.querySelectorAll('path').length, Ikonlar.yollar('car-suv').length); teng(b.querySelectorAll('path, circle, rect').length > 0, true); teng(c.querySelectorAll('path, circle, rect').length > 0, true);
+        teng(Belgilar.bormi('car-suv') && Belgilar.bormi('oziq') && !Belgilar.bormi('yoq-kalit'), true);
+        Belgilar.standart.forEach(function (x) { teng(Ikonlar.bormi(x.belgi) && Ikonlar.RANGLAR.concat(['#6A4CE0', '#E0356B', '#3F6FE0', '#E08A00', '#5C6BC0', '#1C9AE0', '#12B76A']).indexOf(x.rang) >= 0, true, x.nom); });
+      });
+      sxSinov('0.31.0: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
+        var kid = Calc.uuidYarat(), kat = { id: kid, yaratilgan: new Date().toISOString(), nom: 'Taksi', tur: 'xarajat', rang: '#F5A300', belgi: 'car-suv', arxivlangan: false };
+        return sxMalumot(2).then(function () { return Sinxron.birinchi('yuklash'); }).then(function (n) { teng(n.ok, true, n.xato); return Data.saqlash('kategoriyalar', kat); })
+          .then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) { teng(n.ok, true, n.xato); var r = S.jadval.kategoriyalar[kid]; teng(r.belgi, 'car-suv'); teng(r.rang, '#F5A300'); teng(r.nom, 'Taksi');
+            return Data.saqlash('kategoriyalar', Object.assign({}, kat, { belgi: 'bus', rang: '#00B4D8' })); })
+          .then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) { teng(n.ok, true, n.xato); teng(S.jadval.kategoriyalar[kid].belgi, 'bus'); teng(S.jadval.kategoriyalar[kid].rang, '#00B4D8'); return sxQurilma(SX_B, true); })
+          .then(function () { return Sinxron.birinchi('olish'); }).then(function (n) { teng(n.ok, true, n.xato); return Data.hammasi('kategoriyalar'); })
+          .then(function (ks) { var k = ks.filter(function (x) { return x.id === kid; })[0]; teng(k.belgi, 'bus'); teng(k.rang, '#00B4D8'); teng(k.nom, 'Taksi'); teng(Ikonlar.boshlangichRejasi([k]).length, 0, 'boshqa qurilmada qayta ustiga yozilmaydi'); });
+      });
+      test('Calc.haftaKuni va kunBelgisi: hafta kuni sanadan (mahalliy), "Bugun"/"Kecha" belgisi, oy va yil chegarasi', function () {
+        teng(['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'].map(Calc.haftaKuni).join(), 'Dushanba,Seshanba,Chorshanba,Payshanba,Juma,Shanba,Yakshanba');
+        teng(Calc.haftaKuni('2026-09-30'), 'Chorshanba'); teng(Calc.haftaKuni('2024-02-29'), 'Payshanba'); teng(Calc.haftaKuni('2026-01-01'), 'Payshanba');
+        teng(Calc.kunBelgisi('2026-10-09', '2026-10-09'), 'Bugun · Juma'); teng(Calc.kunBelgisi('2026-10-08', '2026-10-09'), 'Kecha · Payshanba'); teng(Calc.kunBelgisi('2026-10-07', '2026-10-09'), 'Chorshanba');
+        teng(Calc.kunBelgisi('2026-09-30', '2026-10-01'), 'Kecha · Chorshanba', 'oy chegarasi'); teng(Calc.kunBelgisi('2026-12-31', '2027-01-01'), 'Kecha · Payshanba', 'yil chegarasi'); teng(Calc.kunBelgisi('2024-02-29', '2024-03-01'), 'Kecha · Payshanba', 'kabisa yil');
+        teng(Calc.kunBelgisi('2026-10-10', '2026-10-09'), 'Shanba', 'ertangi kun oddiy hafta kuni');
+      });
+      test('Calc.qisqaBelgi: "−2,75 mln", "+6,11 mln", "−12,3 mln", 100 mln va ko\'pi butun, 1 mln dan kichik — ming; yaxlitlash chegarasi', function () {
+        teng(Calc.qisqaBelgi(-2750000), '−2,75 mln'); teng(Calc.qisqaBelgi(6114594, true), '+6,11 mln'); teng(Calc.qisqaBelgi(-12300000), '−12,3 mln'); teng(Calc.qisqaBelgi(100000000, true), '+100 mln');
+        teng(Calc.qisqaBelgi(-123456789), '−123 mln'); teng(Calc.qisqaBelgi(987654321, true), '+988 mln'); teng(Calc.qisqaBelgi(850000), '850 ming'); teng(Calc.qisqaBelgi(-12345), '−12,3 ming'); teng(Calc.qisqaBelgi(999), '999'); teng(Calc.qisqaBelgi(0, true), '0');
+        teng(Calc.qisqaBelgi(999960), '1 mln', '"1000 ming" emas'); teng(Calc.qisqaBelgi(99999999, true), '+100 mln'); teng(Calc.qisqaBelgi(2000000), '2 mln', 'ortiqcha nol yo\'q'); teng(Calc.qisqaBelgi(1234567890), '1,23 mlrd');
+      });
+      // --- Kun sarlavhasi sig'ishi (CSS ni qayta ishlab: tests.html da style.css yo'q) ---
+      function kunSarlavhaYasash(kenglik, hafta, pillar) {
+        var q = document.createElement('div'); q.style.cssText = 'position:absolute;left:-9999px;top:0;display:flex;align-items:center;gap:10px;width:' + kenglik + 'px;font:14px sans-serif'; q.className = 'kun-sarlavha';
+        var chap = document.createElement('div'); chap.className = 'kun-chap'; chap.style.cssText = 'flex:0 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start';
+        var sana = document.createElement('strong'); sana.className = 'kun-sana'; sana.style.cssText = 'font:700 17px sans-serif;white-space:nowrap'; sana.textContent = '30-sentabr';
+        var h = document.createElement('span'); h.className = 'kun-hafta'; h.style.cssText = 'display:block;align-self:stretch;font:13px sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; h.textContent = hafta;
+        chap.appendChild(sana); chap.appendChild(h); q.appendChild(chap);
+        var quti = document.createElement('div'); quti.className = 'pill-quti'; quti.style.cssText = 'flex:1 1 0;min-width:0;overflow:hidden;display:flex';
+        var ich = document.createElement('div'); ich.className = 'pill-ich'; ich.style.cssText = 'display:flex;gap:6px;margin-left:auto;width:max-content';
+        pillar.forEach(function (x) { var e = document.createElement('span'); e.className = 'pill'; e.style.cssText = 'flex:none;white-space:nowrap;padding:4px 10px;border-radius:999px;font:700 13px sans-serif'; e.textContent = x[0]; e.setAttribute('data-qiymat', String(x[1])); if (x[2]) e.setAttribute('data-plyus', '1'); ich.appendChild(e); });
+        quti.appendChild(ich); q.appendChild(quti); document.body.appendChild(q);
+        return { q: q, chap: chap, sana: sana, hafta: h, quti: quti, ich: ich, pillar: [].slice.call(ich.children), tozala: function () { document.body.removeChild(q); } };
+      }
+      test('Kun sarlavhasi (fit): joy yetsa TO\'LIQ raqam shundayligicha; yetmasa ikkala belgi birga "mln" ga o\'tadi; sana siqilmaydi; belgilar ikkiga bo\'linmaydi; gorizontal siljish yo\'q', function () {
+        var a = kunSarlavhaYasash(600, 'Chorshanba · 5 ta yozuv', [['−2 750 000', -2750000], ['+6 114 594', 6114594, true]]);
+        try { teng(Sigdir.kunQatori(a.q), 'asl'); teng(a.pillar.map(function (e) { return e.textContent; }).join(), '−2 750 000,+6 114 594'); teng(a.pillar.some(function (e) { return e.getAttribute('data-qisqa'); }), false); } finally { a.tozala(); }
+        var b = kunSarlavhaYasash(280, 'Chorshanba · 5 ta yozuv', [['−2 750 000', -2750000], ['+6 114 594', 6114594, true]]);
+        try {
+          var sanaKengligi = b.sana.offsetWidth;
+          teng(Sigdir.kunQatori(b.q), 'qisqa'); teng(b.pillar.map(function (e) { return e.textContent; }).join(), '−2,75 mln,+6,11 mln', 'ikkalasi birga qisqardi'); teng(b.pillar.every(function (e) { return e.getAttribute('data-qisqa') === '1'; }), true);
+          teng(b.sana.offsetWidth, sanaKengligi, 'sana siqilmadi'); teng(b.sana.scrollWidth <= b.sana.clientWidth + 1, true); teng(b.q.scrollWidth <= b.q.clientWidth + 1, true, 'gorizontal siljish yo\'q');
+          teng(b.pillar.every(function (e) { return e.scrollWidth <= e.clientWidth + 1 && e.getBoundingClientRect().height < 34; }), true, 'belgi ikkiga bo\'linmadi (bir qator)');
+          b.q.style.width = '600px'; teng(Sigdir.kunQatori(b.q), 'asl'); teng(b.pillar.map(function (e) { return e.textContent; }).join(), '−2 750 000,+6 114 594', 'kenglashganda yana to\'liq');
+        } finally { b.tozala(); }
+        // juda katta summalar (360 px ekran kartasi ≈ 320 px)
+        var c = kunSarlavhaYasash(320, 'Bugun · Chorshanba · 12 ta yozuv', [['−123 456 789', -123456789], ['+987 654 321', 987654321, true]]);
+        try { var sk = c.sana.offsetWidth; teng(Sigdir.kunQatori(c.q), 'qisqa'); teng(c.pillar.map(function (e) { return e.textContent; }).join(), '−123 mln,+988 mln'); teng(c.sana.offsetWidth, sk); teng(c.q.scrollWidth <= c.q.clientWidth + 1, true, 'sig\'adi');
+          teng(c.hafta.scrollWidth > c.hafta.clientWidth, true, 'kichik qator qisqardi (…), sana emas'); teng(c.chap.style.minWidth, sk + 'px'); } finally { c.tozala(); }
+        // faqat bor belgi ko'rsatiladi: bittasi yoki hech biri
+        var d = kunSarlavhaYasash(320, 'Juma · 2 ta yozuv', [['−60 000', -60000]]); try { teng(Sigdir.kunQatori(d.q), 'asl'); teng(d.pillar.length, 1); } finally { d.tozala(); }
+        var e = kunSarlavhaYasash(320, 'Juma · 1 ta yozuv', []); try { teng(Sigdir.kunQatori(e.q), 'asl'); teng(e.pillar.length, 0); } finally { e.tozala(); }
+        var f = kunSarlavhaYasash(200, 'Juma · 1 ta yozuv', [['+10 850 000', 10850000, true]]); try { teng(Sigdir.kunQatori(f.q), 'qisqa'); teng(f.pillar[0].textContent, '+10,9 mln'); } finally { f.tozala(); }
+      });
+      test('Izoh (Sigdir.izohAlmashtir): uzun izoh qisqartiriladi, bosilganda ochiladi, yana bossa yig\'iladi; qisqa izoh o\'zgarmaydi', function () {
+        var quti = document.createElement('div'); quti.style.cssText = 'position:absolute;left:-9999px;width:120px';
+        function izoh(matn) { var b = document.createElement('button'); b.className = 'izoh-bir'; b.style.cssText = 'display:block;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:13px sans-serif;border:0;padding:0'; b.textContent = matn; b.setAttribute('aria-expanded', 'false'); quti.appendChild(b); return b; }
+        document.body.appendChild(quti);
+        try {
+          var uzun = izoh('Bu juda uzun izoh matni bir qatorga sig\'maydi albatta'), qisqa = izoh('qisqa');
+          teng(uzun.scrollWidth > uzun.clientWidth, true, 'qisqartirilgan');
+          teng(Sigdir.izohAlmashtir(uzun), 'ochildi'); teng(uzun.classList.contains('ochiq'), true); teng(uzun.getAttribute('aria-expanded'), 'true');
+          teng(Sigdir.izohAlmashtir(uzun), 'yopildi'); teng(uzun.classList.contains('ochiq'), false); teng(uzun.getAttribute('aria-expanded'), 'false');
+          teng(Sigdir.izohAlmashtir(qisqa), 'qisqa'); teng(qisqa.classList.contains('ochiq'), false); teng(qisqa.getAttribute('aria-expanded'), 'false');
+        } finally { document.body.removeChild(quti); }
+      });
+      test('Tarix va sarlavhalar (ui.js, index.html, CSS): bitta sticky tepa qism — menyu tugmasi, sarlavha, qidiruv, filtr va oylar; Oy balansi sticky emas; Asosiy, Qarzlar, Ko\'proq ham sticky; pastki menyu ikonlari', function () {
+        return Promise.all(['js/ui.js', 'index.html', 'style.css', 'sw.js', 'README.md'].map(matnOl)).then(function (x) {
+          var u = x[0], h = x[1], c = x[2], sw = x[3], rd = x[4];
+          teng((u.match(/stickyBosh\('/g) || []).length, 4, 'Asosiy, Tarix, Qarzlar, Ko\'proq');
+          ['stickyBosh(\'Asosiy\'', 'stickyBosh(\'Tarix\', [qT, fT], yorliqlar)', 'stickyBosh(\'Qarzlar\'', 'stickyBosh(\'Ko\\\'proq\''].forEach(function (k) { teng(u.indexOf(k) >= 0, true, k); });
+          teng(/function stickyBosh[\s\S]*?belgiTugmasi\('menyu'[\s\S]*?el\('h1', nom\)/.test(u), true, 'menyu tugmasi va sarlavha');
+          teng(/jk\.classList\.add\('tarix-jami'\)/.test(u) && !/tarix-jami[^}]*sticky/.test(c) && /\.sticky-bosh \{[^}]*position: sticky/.test(c), true, 'oy balansi sticky emas');
+          teng(h.indexOf('M9 7m-4 0a4 4 0 1 0 8 0') > 0 && /data-bolim="qarzlar"[\s\S]{0,60}<svg/.test(h), true, 'Qarzlar — users');
+          [['bosh', 'M5 12l-2 0l9 -9l9 9l-2 0'], ['tarix', 'M12 8l0 4l2 2'], ['koproq', 'M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0']].forEach(function (q) { teng(new RegExp('data-bolim="' + q[0] + '"[\\s\\S]{0,40}<svg[^>]*>(?:<path[^>]*>)*?[^]*?' + q[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(h), true, q[0]); });
+          teng(h.indexOf('class="nav-qoshish"') > 0 && h.indexOf('M12 5v14M5 12h14') > 0, true, '"+" tugmasi o\'zgarishsiz');
+          teng(h.indexOf('js/ikonlar.js') > 0 && sw.indexOf("'js/ikonlar.js' + v") >= 0 && sw.indexOf("'js/sigdir.js' + v") >= 0, true, 'index.html va sw.js keshi');
+          teng(/Tabler/.test(rd) && /MIT/.test(rd), true, 'README: litsenziya eslatmasi');
+          teng(/\.ikon-tarmoq \{[^}]*repeat\(4, minmax\(0, 1fr\)\)/.test(c), true, '4 ustunli katakcha'); teng(/\.kat-ranglar \{/.test(c), true);
+          teng(u.indexOf('kategoriyaIkonTanlagich(holat)') > 0 && u.indexOf('kategoriyaRangTanlagich(holat)') > 0 && u.indexOf('Ikonni tanlash') > 0 && u.indexOf('Rangni tanlash') > 0 && u.indexOf('Boshqa rang tanlash') > 0, true, 'ikon va rang tanlash oynasi');
         });
       });
       var ul = document.getElementById('natija');

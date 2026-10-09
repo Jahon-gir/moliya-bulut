@@ -3918,11 +3918,30 @@
 
   Sigdir.kuzat(ekran);
 
+  // AI yordamchi kartalaridagi tugmalar (25-band): tegishli bo'limni ochadi
+  function yordamchiOchish(nom, p) {
+    if (nom === 'hisobot') {
+      var oy = Calc.davrChegarasi('oy', p.dan);
+      hisobotHolat.turi = p.tur === 'daromad' ? 'daromad' : 'xarajat';
+      hisobotHolat.hisob = p.hisob_id && hisobOl(p.hisob_id) ? p.hisob_id : '';
+      if (oy.dan === p.dan && oy.gacha === p.gacha) { hisobotHolat.tur = 'oy'; hisobotHolat.sana = p.dan; }
+      else { hisobotHolat.tur = 'davr'; hisobotHolat.dan = p.dan; hisobotHolat.gacha = p.gacha; hisobotHolat.sana = p.dan; }
+      ochish(hisobotEkrani, false);
+    } else if (nom === 'qarzlar') korsat('qarzlar');
+    else if (nom === 'hisoblar') ochish(hisoblarEkrani, false);
+    else if (nom === 'yozuv') {
+      var y = malumot.yozuvlar.filter(function (x) { return x.id === p.id; })[0];
+      if (y) ochish(function () { return tahrirShakli(y); }, true);
+    }
+  }
+
   // AI yordamchi (24-band): suzuvchi tugma va chat ekrani js/yordamchi.js da; bu yerdan faqat ma'lumot, joy va xabar beriladi
   Yordamchi.boshlash({
     malumot: function () { return malumot; },
     korinadi: function () { return joriy === 'bosh' && !stek.length; },
-    xabar: function (m) { qisqaXabar(m); }
+    xabar: function (m) { qisqaXabar(m); },
+    belgi: function (k, o) { return kategBadge(k, o); },
+    ochish: yordamchiOchish
   });
 
   function korsat(nom) {

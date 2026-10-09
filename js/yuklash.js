@@ -191,7 +191,7 @@ var Yuklash = (function () {
     opts = opts || {};
     if (yurmoqda) return Promise.resolve({ ok: false, tur: 'band', xato: 'Yuklash allaqachon davom etmoqda.' });
     yurmoqda = true;
-    var c, r, mahalliy, mavjudHolat;
+    var c, r, mahalliy, mavjudHolat, sozlamaRuxsatsiz = false;
     function tugat(x) { yurmoqda = false; return x; }
     return Data.hammasiniOqish().then(function (m) {
       r = qatorlar(m); mahalliy = soni(r);
@@ -224,7 +224,8 @@ var Yuklash = (function () {
               return bolaklash(r[j], BOLAK).reduce(function (q, bolak) {
                 return q.then(function () {
                   return c.from(j).upsert(bolak, { onConflict: 'id' }).then(function (res) {
-                    if (res.error) tashla(res.error, j, res.status);
+                    if (res.error && j === 'sozlamalar' && xatoKodi(res.error, res.status) === 'PG_42501') sozlamaRuxsatsiz = true;   // Sozlamalar qatori: jim e'tiborsiz (TZ-sinxronlash.md 20.2)
+                    else if (res.error) tashla(res.error, j, res.status);
                     bajarildi += bolak.length;
                     if (opts.progress) opts.progress(bajarildi, jamiSoni, j);
                   }, function (e) { tashla(e, j); });
@@ -232,7 +233,7 @@ var Yuklash = (function () {
               }, Promise.resolve());
             });
           }, Promise.resolve()).then(function () { return serverSoni(c); }).then(function (server) {
-            var jadvallar = JADVALLAR.map(function (j) { return { jadval: j, nom: NOMLAR[j], mahalliy: mahalliy[j], server: server[j], mos: mahalliy[j] === server[j] }; });
+            var jadvallar = JADVALLAR.map(function (j) { return { jadval: j, nom: NOMLAR[j], mahalliy: mahalliy[j], server: server[j], mos: mahalliy[j] === server[j] || (j === 'sozlamalar' && sozlamaRuxsatsiz) }; });
             var farq = jadvallar.filter(function (x) { return !x.mos; });
             if (farq.length) return tugat({ ok: false, tur: 'mos-emas', jadvallar: jadvallar, xato: 'Yuklash tugadi, lekin qatorlar soni mos kelmadi: ' + farq.map(function (x) { return x.nom + ' ' + x.server + '/' + x.mahalliy; }).join(', ') + '. Qayta bosib ko\'ring.' });
             var vaqt = new Date().toISOString();

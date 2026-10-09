@@ -213,7 +213,7 @@ var Pin = (function () {
         var bekor = tugma('Bekor qilish', 'pin-ikkinchi', function () { asosiy(); }), davom = tugma('Davom etish', 'pin-asosiy', function () { unutdim2(); });
         ogohlantirish(qism, 'PINni unutdingizmi?', [
           'PIN-kodni tiklab bo\'lmaydi. Davom etsangiz, ilovadagi BARCHA ma\'lumot (yozuvlar, hisoblar, qarzlar, byudjet) shu qurilmadan o\'chiriladi.',
-          'Zaxira nusxangiz (JSON fayl) bo\'lsa, o\'chirgandan keyin "Zaxiradan tiklash" orqali ma\'lumotni qaytarishingiz mumkin. Zaxira bo\'lmasa, ma\'lumotni qaytarib bo\'lmaydi.'
+          'Agar Google bilan kirib sinxronlash yoqilgan bo\'lsa, qayta kirganingizda ma\'lumot serverdan qaytadi. Aks holda ma\'lumotni qaytarib bo\'lmaydi.'
         ], [bekor, davom], '1 / 2');
         davom.id = 'pin-unutdim-1';
       }

@@ -1,5 +1,5 @@
 // Ikki tomonlama sinxronlash (TZ-sinxronlash.md, S5): o'zgarishlarni serverga avtomatik yuborish (navbat), serverdagi o'zgarishlarni tortib olish,
-// birinchi sinxron (yuklash / olish / tanlov), holat ko'rsatkichi. Kirmagan foydalanuvchi uchun UMUMAN ishlamaydi.
+// birinchi sinxron (yuklash / olish: tanlovsiz, server yutadi), holat ko'rsatkichi. Kirmagan foydalanuvchi uchun UMUMAN ishlamaydi.
 // Mahalliy baza asosiy: ilova avvalgidek hamma narsani undan o'qiydi; server — nusxa va qurilmalar o'rtasidagi ko'prik.
 // Sof (bazasiz, tarmoqsiz) qoidalar js/sinxron-sof.js da; serverga yuborish va xato matnlari js/yuklash.js da (S4); bazaga yozish js/data.js da.
 // Faqat ochiq (publishable) kalit ishlatiladi; user_id, created_at, updated_at ni ilova yubormaydi (serverdagi trigger qo'yadi).
@@ -19,14 +19,14 @@ var Sinxron = (function () {
   var holat = { tur: 'boshlanmagan', tayyor: false, rozilik: false, jarayon: '', soni: 0, oxirgi: null, xato: '', ziddiyat: 0, rad: [], ishlayapti: false, yangilandi: 0 };
   var kuzatuvchilar = [], tortildiKuzatuvchilar = [];
   var yaqinda = {}, oldingiYaqinda = {};       // oxirgi tsikllarda o'zimiz yuborgan qator id lari ("aks-sado" to'qnashuv emas)
-  var oxirgiKirishId = null, band = null, birinchiBand = false, avtoBand = false, tanlovTahlili = null, oxirgiFaollik = Date.now(), tikSoni = 0, rpcHolati = undefined, qayta = false, xatoKod = '', rejaSoati = null, davrSoati = null, boshlandi = false, oxirgiBoshlanish = 0, xatoMatni = '', xatoTuri = '';
+  var oxirgiKirishId = null, band = null, birinchiBand = false, avtoBand = false, oxirgiFaollik = Date.now(), tikSoni = 0, rpcHolati = undefined, qayta = false, xatoKod = '', rejaSoati = null, davrSoati = null, boshlandi = false, oxirgiBoshlanish = 0, xatoMatni = '', xatoTuri = '';
 
   function sozla(s) { sozlama = s || {}; }
   function uid() { return sozlama.foydalanuvchi ? sozlama.foydalanuvchi() : (typeof Kirish !== 'undefined' && Kirish.holat().kirgan ? Kirish.holat().id : ''); }
   function xabarla() { kuzatuvchilar.slice().forEach(function (f) { try { f(holat); } catch (e) { /* ahamiyatsiz */ } }); }
   function kuzat(f) { kuzatuvchilar.push(f); return function () { kuzatuvchilar = kuzatuvchilar.filter(function (x) { return x !== f; }); }; }
   function tortildiKuzat(f) { tortildiKuzatuvchilar.push(f); }
-  function tashlash() { yaqinda = {}; oldingiYaqinda = {}; xatoMatni = ''; xatoTuri = ''; xatoKod = ''; tanlovTahlili = null; avtoBand = false; rpcHolati = undefined; tikSoni = 0; holat.jarayon = ''; holat.rad = []; holat.ziddiyat = 0; holat.oxirgi = null; }   // sinovlarda qurilma almashganda
+  function tashlash() { yaqinda = {}; oldingiYaqinda = {}; xatoMatni = ''; xatoTuri = ''; xatoKod = ''; avtoBand = false; rpcHolati = undefined; tikSoni = 0; holat.jarayon = ''; holat.rad = []; holat.ziddiyat = 0; holat.oxirgi = null; }   // sinovlarda qurilma almashganda
 
   // ---------------- Holat ----------------
   function yozuvOl() { return Data.olish('sozlamalar', Data.SINXRON_KALITI); }
@@ -65,10 +65,9 @@ var Sinxron = (function () {
       holat.tayyor = tayyorMi(rec, id); holat.rozilik = !!(roz && roz.user_id === id);
       if (!id) holat.tur = 'yoq';
       else if (!tayyorMi(rec, id)) {
-        // Birinchi sinxron shu akkaunt uchun hali tugamagan. Rozilik yo'q: "yoqilmagan" (yoki boshqa akkaunt). Rozilik bor: avtomatik boshlanmoqda / tanlov kerak / xato
+        // Birinchi sinxron shu akkaunt uchun hali tugamagan. Rozilik yo'q: "yoqilmagan" (yoki boshqa akkaunt). Rozilik bor: avtomatik boshlanmoqda / xato
         if (!roz || roz.user_id !== id) holat.tur = rec && rec.user_id && rec.user_id !== id ? 'boshqa-akkaunt' : 'boshlanmagan';
         else if (holat.ishlayapti || avtoBand) holat.tur = 'ishlayapti';
-        else if (tanlovTahlili) holat.tur = 'tanlov';
         else if (xatoMatni) holat.tur = xatoTuri === 'internet' ? 'internet-yoq' : 'xato';
         else holat.tur = 'boshlanmoqda';
       }
@@ -233,6 +232,11 @@ var Sinxron = (function () {
       function bolakniYubor(j, bolak) {
         return c.from(j).upsert(bolak.map(function (x) { return x.qator; }), { onConflict: 'id' }).then(function (res) {
           if (!res.error) return muvaffaq(j, bolak);
+          if (j === 'sozlamalar' && Yuklash.xatoKodi(res.error, res.status) === 'PG_42501') {   // Sozlamalar qatori uchun ruxsat xatosi: jim e'tiborsiz; navbatdan olinadi (kutilayotganlar soniga kirmaydi), xato ko'rsatilmaydi
+            bajarildi += bolak.length; if (progress) progress(bajarildi, jamiSoni, j);
+            var yy = { sozlamalar: {} }; bolak.forEach(function (x) { yy.sozlamalar[x.kalit] = x.qiymat; });
+            return Data.navbatdanOlish(yy);
+          }
           if (!malumotXatosimi(res) || natija.rad.length >= 30) Yuklash.tashla(res.error, j, res.status);
           if (Yuklash.xatoKodi(res.error, res.status) === 'PG_23503' && FK_OTA[j]) { bolak.forEach(function (x) { fkRad.push({ j: j, x: x }); }); return; }   // bog'liqlik: bo'lmaymiz, avval ota qatorlar tekshiriladi (tsikl oxirida)
           if (bolak.length > 1) {
@@ -421,7 +425,7 @@ var Sinxron = (function () {
     if (!uid()) return holatniYangila();
     return rozilikniQayd().then(function () { return holatniYangila(); }).then(function (rec) {
       if (tayyorMi(rec, uid())) return yurgiz('kirish');
-      if (tanlovTahlili || xatoMatni || avtoBand) return null;   // tanlov kutilmoqda yoki xato: foydalanuvchi "Qayta urinish" bosadi (har hodisada qaytadan urinilmaydi)
+      if (xatoMatni || avtoBand) return null;   // xato: foydalanuvchi "Qayta urinish" bosadi (har hodisada qaytadan urinilmaydi)
       return avtomatik();
     });
   }
@@ -461,7 +465,7 @@ var Sinxron = (function () {
     return n;
   }
 
-  // Ikki tomonni solishtiradi (hech narsaga tegmaydi). Natija: { tur: 'bosh-bosh' | 'yuklash' | 'olish' | 'tanlov', mahalliy: {...}, server: {...}, boshqaAkkaunt }
+  // Ikki tomonni solishtiradi (hech narsaga tegmaydi). Natija: { tur: 'bosh-bosh' | 'yuklash' | 'olish' | 'server', mahalliy: {...}, server: {...}, boshqaAkkaunt }
   function tahlil() {
     var c;
     return Promise.all([Data.hammasiniOqish(), yozuvOl()]).then(function (r) {
@@ -470,10 +474,10 @@ var Sinxron = (function () {
       return Yuklash.serverSoni(c).then(function (server) {
         var mahalliy = sanash(m), bosh = SinxronSof.mahalliyBoshmi(m), serverJami = Yuklash.jami(server), tur, davom = false;
         if (serverJami === 0) tur = bosh ? 'bosh-bosh' : 'yuklash';
-        else tur = bosh ? 'olish' : 'tanlov';
+        else tur = bosh ? 'olish' : 'server';   // serverda ma'lumot bor: server yutadi (qurilma bo'sh bo'lsa ham, to'la bo'lsa ham)
         var natija = function (davomi) { return { tur: davomi ? 'yuklash' : tur, davom: !!davomi, mahalliy: mahalliy, server: { hisoblar: server.hisoblar, kategoriyalar: server.kategoriyalar, yozuvlar: server.yozuvlar, byudjetlar: server.byudjetlar, qarzlar: server.qarzlar, tolovlar: server.qarz_tolovlari, jami: serverJami }, boshqaAkkaunt: boshqa }; };
-        if (tur !== 'tanlov') return natija(false);
-        // Ikkalasida ham bor. Agar serverdagi hamma qator shu qurilmaniki bo'lsa (S4 dagi qo'lda yuklash yoki yarim qolgan yuklash), bu "tanlov" emas:
+        if (tur !== 'server') return natija(false);
+        // Ikkalasida ham bor. Agar serverdagi hamma qator shu qurilmaniki bo'lsa (S4 dagi qo'lda yuklash yoki yarim qolgan yuklash), qurilmadagi hech narsa tashlanmaydi:
         // yuklash shunchaki tugallanadi. Faqat shu qurilmada oldingi yuklash belgisi bo'lsa (Yuklash holati) va hamma server ID si bizda ham bor bo'lsa.
         return Yuklash.holatOl().then(function (yh) {
           if (!yh || !uid() || yh.user_id !== uid()) return natija(false);
@@ -519,19 +523,11 @@ var Sinxron = (function () {
     return o.then(function (n) { holat.ishlayapti = false; return holatniYangila().then(function () { return n; }); });
   }
 
-  // Birinchi sinxronni bajaradi. variant: 'bosh-bosh' | 'yuklash' | 'olish' | 'birlashtirish' | 'server' | 'mahalliy'. opts.progress(matn)
+  // Birinchi sinxronni bajaradi. variant: 'bosh-bosh' | 'yuklash' | 'olish' | 'server' (olish va server bir xil: server yutadi). opts.progress(matn)
   // Natija: { ok: true, ... } yoki { ok: false, tur, xato }. Xatoda mahalliy ma'lumot o'zgarmaydi (almashtirish bitta tranzaksiyada).
   function birinchi(variant, opts) {
     opts = opts || {};
     var progress = opts.progress || function () {};
-    var zaxiraQilindi = false;
-    // Zaxira fayli bir urinishda BIR marta va faqat ishonchli davom etadigan bo'lsa (qulf olingan, server javob bergan va tekshiruvdan o'tgan) yuklab beriladi.
-    // Zaxira olinmasa, hech narsa o'zgarmaydi.
-    function zaxiraQil() {
-      if (zaxiraQilindi || !opts.zaxira) return Promise.resolve();
-      zaxiraQilindi = true;
-      return Promise.resolve().then(opts.zaxira).catch(function (e) { var x = new Error('Zaxira faylini saqlab bo\'lmadi: ' + (e && e.message ? e.message : e) + '. Hech narsa o\'zgarmadi.'); x.server = true; x.kod = 'BACKUP_FAILED'; throw x; });
-    }
     return bandIsh(function () {
       var c = Yuklash.mijoz();
       if (variant === 'bosh-bosh') {
@@ -539,7 +535,7 @@ var Sinxron = (function () {
       }
       if (variant === 'yuklash') {
         // Yozuvlar navbatga tushsin (navbat = true), tayyor = false: yuklash tugamaguncha avtomatik tsikl ishlamaydi
-        return zaxiraQil().then(function () { return Data.saqlash('sozlamalar', yangiYozuv({}, { tayyor: false })); }).then(function () {
+        return Data.saqlash('sozlamalar', yangiYozuv({}, { tayyor: false })).then(function () {
           return Yuklash.yubor({ foydalanuvchi: uid(), progress: function (a, b, j) { progress('Yuklanmoqda: ' + a + ' / ' + b + (j ? ' (' + Yuklash.NOMLAR[j] + ')' : '')); } });
         }).then(function (n) {
           if (!n.ok) return n;
@@ -555,47 +551,12 @@ var Sinxron = (function () {
             if (xato) return { ok: false, tur: 'xato', kod: 'DATA_INVALID', xato: 'Serverdagi ma\'lumot tekshiruvdan o\'tmadi: ' + xato + '. Mahalliy ma\'lumotga tegilmadi.' };
             var navbat = null;
             if (!(r.S.sozlamalar || []).length && asosiy) { navbat = { sozlamalar: { asosiy: asosiy.updated_at } }; }   // serverda sozlama qatori yo'q: bizniki yuboriladi
-            return zaxiraQil().then(function () { return Data.almashtirish(m, { navbatsiz: !navbat, navbat: navbat || undefined, yerel: [yangiYozuv(r.kursor)] }); }).then(function () { return { ok: true, variant: variant, soni: sanash(m) }; });
+            return Data.almashtirish(m, { navbatsiz: !navbat, navbat: navbat || undefined, yerel: [yangiYozuv(r.kursor)] }).then(function () { return { ok: true, variant: variant, soni: sanash(m) }; });
           });
-        });
-      }
-      if (variant === 'birlashtirish') {
-        progress('Serverdan olinmoqda…');
-        return hammasiniTort(c, function (j, n) { progress('Olinmoqda: ' + Yuklash.NOMLAR[j] + ' ' + n); }).then(function (r) {
-          return Data.hammasiniOqish().then(function (L) {
-            var asosiy = (L.sozlamalar || []).filter(function (x) { return x.kalit === 'asosiy'; })[0];
-            var S = SinxronSof.serverdanMalumot(r.S, asosiy), b = SinxronSof.birlashtirish(L, S), xato = tekshirMalumot(b.malumot);
-            if (xato) return { ok: false, tur: 'xato', kod: 'DATA_INVALID', xato: 'Birlashtirilgan ma\'lumot tekshiruvdan o\'tmadi: ' + xato + '. Mahalliy ma\'lumotga tegilmadi.' };
-            return zaxiraQil().then(function () { return Data.almashtirish(b.malumot, { navbat: b.navbat, yerel: [yangiYozuv(r.kursor)] }); }).then(function () { return { ok: true, variant: variant, hisobot: b.hisobot, soni: sanash(b.malumot) }; });
-          });
-        });
-      }
-      if (variant === 'mahalliy') {
-        progress('Server tekshirilmoqda…');
-        return Promise.all([Data.hammasiniOqish(), hammasiniTort(c)]).then(function (x) {
-          var L = x[0], r = x[1], local = {}, tomb = {}, soni = 0;
-          J.forEach(function (j) { local[j] = {}; });
-          ['hisoblar', 'kategoriyalar', 'yozuvlar', 'byudjetlar', 'qarzlar'].forEach(function (t) { (L[t] || []).forEach(function (q) { local[t][q.id] = true; if (t === 'qarzlar') (q.tolovlar || []).forEach(function (p) { local.qarz_tolovlari[p.id] = true; }); }); });
-          J.forEach(function (j) {
-            if (j === 'sozlamalar') return;
-            var ids = (r.S[j] || []).filter(function (s) { return s.deleted !== true && !local[j][s.id]; }).map(function (s) { return s.id; });
-            if (ids.length) tomb[j] = ids;
-          });
-          var asosiyId = (r.S.sozlamalar || [])[0] ? r.S.sozlamalar[0].id : null;
-          // Serverda bor, lekin shu qurilmada yo'q qatorlar o'chirilgan deb belgilanadi (qator saqlanadi: tomb). Qarz to'lovlari ham.
-          var tartib = ['yozuvlar', 'byudjetlar', 'qarz_tolovlari', 'qarzlar', 'kategoriyalar', 'hisoblar'].filter(function (j) { return tomb[j]; });
-          return zaxiraQil().then(function () { return tartib.reduce(function (p, j) {
-            return p.then(function () {
-              return bolaklash(tomb[j], OCHIRISH_BOLAK).reduce(function (q, ids) {
-                return q.then(function () { return c.from(j).update({ deleted: true }).in('id', ids).then(function (res) { if (res.error) Yuklash.tashla(res.error, j, res.status); soni += ids.length; progress('Serverdagi ortiqcha qatorlar o\'chirilmoqda: ' + soni); }, function (e) { Yuklash.tashla(e, j); }); });
-              }, Promise.resolve());
-            });
-          }, Promise.resolve()).then(function () { return Data.hammasiniNavbatga(yangiYozuv({}, { navbat: true }), asosiyId); }).then(function () { return { ok: true, variant: variant, ochirilgan: soni }; }); });
         });
       }
       return { ok: false, tur: 'xato', kod: 'UNKNOWN_VARIANT', xato: 'Noma\'lum variant' };
     }).then(function (n) {
-      if (n.ok) tanlovTahlili = null;
       if (n.ok && variant !== 'olish' && variant !== 'server') return yurgiz('qolda', { progress: function (a, b) { progress('Yuborilmoqda: ' + a + ' / ' + b); } }).then(function (t) {
         if (t && t.ok === false && t.tur !== 'tayyor-emas') { n.ogohlantirish = t.xato; }
         return n;
@@ -635,8 +596,8 @@ var Sinxron = (function () {
   // ---------------- Avtomatik birinchi sinxron (S8) ----------------
   // Kirish roziligi (Google tugmasi) bo'lgan akkaunt kirgan zahoti ishlaydi. Ikki tomon solishtiriladi:
   //   ikkalasi bo'sh (tayyor "Naqd pul" va kategoriyalar bo'sh hisoblanadi) -> yoqiladi; qurilmada bor, server bo'sh -> yuklanadi;
-  //   qurilma bo'sh, serverda bor -> tortiladi; ikkalasida ham bor -> TANLOV (foydalanuvchi tanlaydi: zaxira va tushuntirish bilan). Jimgina hech narsa o'chirilmaydi.
-  // Natija: { ok: true, tur: 'tayyor' | variant } | { ok: false, tur: 'tanlov', tahlil } | { ok: false, tur: 'rozilik-yoq' | 'kirmagan' | 'xato' | 'internet' | 'band', xato, kod }
+  //   qurilma bo'sh, serverda bor -> tortiladi; ikkalasida ham bor -> SERVER YUTADI (qurilmadagi, serverga hali yuborilmagan ma'lumot tashlanadi; hech narsa so'ralmaydi, TZ-sinxronlash.md 20.1).
+  // Natija: { ok: true, tur: 'tayyor' | variant } | { ok: false, tur: 'rozilik-yoq' | 'kirmagan' | 'xato' | 'internet' | 'band', xato, kod }
   function avtomatik() {
     var id = uid();
     if (!id) return Promise.resolve({ ok: false, tur: 'kirmagan' });
@@ -651,12 +612,10 @@ var Sinxron = (function () {
         xatoTuri = 'internet'; xatoKod = 'NETWORK_OFFLINE'; xatoMatni = 'Internet yo\'q. Internet qaytganda sinxronlash o\'zi boshlanadi.';
         return tugat({ ok: false, tur: 'internet', kod: xatoKod, xato: xatoMatni });
       }
-      xatoMatni = ''; xatoTuri = ''; xatoKod = ''; tanlovTahlili = null;
+      xatoMatni = ''; xatoTuri = ''; xatoKod = '';
       holat.jarayon = 'Server bilan solishtirilmoqda…'; holatniYangila();
       return tahlil().then(function (t) {
         if (t.tur === 'xato') { xatoMatni = t.xato; xatoKod = t.kod || 'UNKNOWN'; xatoTuri = internetXatomi(t.xato) ? 'internet' : 'xato'; return tugat({ ok: false, tur: xatoTuri, xato: t.xato, kod: xatoKod }); }
-        // Ikkalasida ham ma'lumot bor, YOKI bu qurilmadagi ma'lumot boshqa akkaunt bilan sinxronlangan edi (u hozirgi akkauntga o'z-o'zidan yuborilmaydi): foydalanuvchi tanlaydi
-        if (t.tur === 'tanlov' || (t.boshqaAkkaunt && t.tur === 'yuklash')) { tanlovTahlili = t; return tugat({ ok: false, tur: 'tanlov', tahlil: t }); }
         avtoBand = false;   // birinchi() o'z qulfini oladi
         return birinchi(t.tur, { progress: function (m) { holat.jarayon = m; xabarla(); } }).then(function (n) {
           if (!n.ok) {
@@ -678,7 +637,7 @@ var Sinxron = (function () {
 
   return {
     sozla: sozla, kuzat: kuzat, tortildiKuzat: tortildiKuzat, boshlash: boshlash, holat: function () { return holat; }, holatniYangila: holatniYangila,
-    rozilikBelgisiniQoy: rozilikBelgisiniQoy, rozilikniQayd: rozilikniQayd, rozilikBer: rozilikBer, avtomatik: avtomatik, tanlovTahlili: function () { return tanlovTahlili; }, tanlovniTozala: function () { tanlovTahlili = null; return holatniYangila(); }, davrniBoshla: davrniBoshla, davrniToxtat: davrniToxtat,
+    rozilikBelgisiniQoy: rozilikBelgisiniQoy, rozilikniQayd: rozilikniQayd, rozilikBer: rozilikBer, avtomatik: avtomatik, davrniBoshla: davrniBoshla, davrniToxtat: davrniToxtat,
     hisobniOchirish: hisobniOchirish, yurgiz: yurgiz, qaytaUrinish: qayta_urinish, tahlil: tahlil, birinchi: birinchi, tashlash: tashlash, band: function () { return !!band || birinchiBand || avtoBand; },
     kutayotgan: function () { return holat.soni; }, sanash: sanash, OVERLAP_MS: OVERLAP_MS
   };

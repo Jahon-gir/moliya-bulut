@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 15 (09.10.2026): 20-band (soddalashtirish) qo'shildi. Oldingi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -346,3 +346,28 @@ Bu band asosiy TZ'da yo'q edi; foydalanuvchi talabi bilan qo'shildi. Sinxron man
 **O'chiq bo'lsa:** hozirgi xatti-harakat saqlanadi (qarz hisobotga kirmaydi).
 
 **Nimaga ta'sir QILMAYDI (qaror):** byudjet (qarz byudjet sarfiga kirmaydi: byudjet kategoriyalar bo'yicha oylik chegara, qarz esa kategoriyasiz), Tarix (qarz amallari avvalgidek alohida qatorlar, kun va oy jami o'zgarmaydi), hisob qoldig'i va umumiy balans (ular hamisha yozuvlar va qarzlardan hisoblanadi, sozlamaga bog'liq emas), Excel eksport, zaxira. Hisobotdagi "Olingan qarz"/"Berilgan qarz" faqat ko'rsatish uchun hisoblanadi (bazaga yozilmaydi, sinxronlanmaydi).
+
+## 20. Soddalashtirish va yangi dizayn (0.29.0)
+
+Maqsad: ortiqcha narsalarni olib tashlash. Yangi funksiya qo'shilmaydi. Sinxronlash yadrosi qoidalari (outbox, qulf, tombstone, ota-bola tartibi, partiyalash, oxirgi yozgan yutadi) va server sxemasi o'zgarmaydi.
+
+### 20.1 Birinchi sinxronlash: tanlov yo'q
+"Birlashtirish", "Faqat serverdagini olish", "Faqat shu qurilmadagini yuborish" tugmalari va tanlov ekrani olib tashlanadi. Google bilan kirgandan keyin, hech narsa so'ramasdan:
+- Serverda shu foydalanuvchining ma'lumoti BOR bo'lsa: server yutadi. Qurilma serverdagidek bo'lib qoladi; shu qurilmadagi, serverga hali yuborilmagan ma'lumot tashlanadi (navbat ham tozalanadi).
+- Serverda ma'lumot YO'Q bo'lsa: qurilmadagi ma'lumot serverga yuklanadi (hech narsa o'chirilmaydi).
+- Ikkalasi ham bo'sh bo'lsa: oldingidek (shunchaki yoqiladi).
+- Bu qoida faqat shu hisob uchun BIRINCHI sinxronda ishlaydi. Keyingi sinxronlashlar eski qoida bo'yicha (outbox, oxirgi yozgan yutadi).
+- Eslatma: qurilma boshqa hisob bilan sinxronlangan bo'lsa ham qoida bir xil (serverda bor bo'lsa server yutadi, yo'q bo'lsa yuklanadi).
+- Xatolik bo'lsa mahalliy ma'lumot o'zgarmaydi (almashtirish bitta tranzaksiyada) va oddiy "Qayta urinish" ishlaydi.
+
+### 20.2 Bosh ekranda sinxron banneri yo'q
+"Xato (N ta o'zgarish kutilmoqda)" va shunga o'xshash kulrang/qizil banner bosh ekrandan butunlay olib tashlanadi. Sinxronlash holati oynasi (kod, sabab, "Qayta urinish", "Kodni nusxalash") Menyu → Profil va sinxronlash ichida qoladi. PG_42501 xatosi Sozlamalar qatori uchun jimgina e'tiborsiz qoldiriladi: foydalanuvchiga ko'rinmaydi, kutilayotganlar sonida hisoblanmaydi.
+
+### 20.3 Zahiralash (JSON zaxira) olib tashlanadi
+JSON zaxira olish va tiklash, bosh ekrandagi zaxira kartasi va eslatmasi, "ilg'or rejim", import/sinxron/hisobni o'chirishdan oldingi avtomatik zaxira fayli, Sozlamalardagi zaxira matnlari olib tashlanadi. Excelga yuklab olish va Excel dan yuklash QOLADI. Serverdagi `oxirgi_zaxira_sanasi` ustuni sxemada qoladi (sxema o'zgarmaydi), lekin ilova uni ishlatmaydi.
+
+### 20.4 Qarzlar har doim hisobotda
+v0.28.0 dagi "Qarzlarni hisobotga qo'shish" tugmasi olib tashlanadi. Qarz amallari doim hisobotda: "Olingan qarz" — daromad tomonida, "Berilgan qarz" — xarajat tomonida (Kategoriyalar va Naqd pul oqimi). Byudjet, Tarix va hisob qoldig'iga ta'siri o'zgarmaydi. Eski sozlama kaliti (`moliya-qarz-hisobotda`) e'tiborsiz qoldiriladi.
+
+### 20.5 Saqlagandan keyin Tarixga o'tish
+Xarajat, daromad yoki o'tkazma yozuvi TO'LIQ saqlangach forma yopiladi, ilova avtomatik "Tarix" bo'limiga o'tadi va yangi yozuvning oyi ko'rinadi (yangi yozuv ro'yxatda ko'rinadi). Forma qayta ochilmaydi.

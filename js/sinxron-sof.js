@@ -1,5 +1,5 @@
 // Sinxronlashning SOF (DOM'siz, bazasiz) qismi (TZ-sinxronlash.md, S5): mahalliy qator <-> serverdagi qator o'zgartirishlari,
-// tortilgan qatorni mahalliy bazaga qo'llash qoidasi va birinchi sinxrondagi "Birlashtirish". Hamma funksiya kiritilgan obyektlarga TEGMAYDI
+// tortilgan qatorni mahalliy bazaga qo'llash qoidasi. Hamma funksiya kiritilgan obyektlarga TEGMAYDI
 // (yangi obyekt qaytaradi), shuning uchun tests.html da to'liq sinaladi. Bu yerda tarmoq va IndexedDB yo'q.
 var SinxronSof = (function () {
   'use strict';
@@ -124,97 +124,6 @@ var SinxronSof = (function () {
     return jonli(m.kategoriyalar).every(function (k) { return tayyor[k.tur + '|' + Calc.nomKaliti(k.nom)] === true && k.arxivlangan !== true; });
   }
 
-  // ---- BIRLASHTIRISH (birinchi sinxron: ikkala tomonda ham ma'lumot bor) ----
-  // L — mahalliy to'liq ma'lumot (o'chirilganlar bilan), S — serverdan (serverdanMalumot). Natija: { malumot, navbat, hisobot }.
-  // - Hamma qator saqlanadi (hech narsa o'chmaydi). Bir xil ID: serverdagisi.
-  // - Hisob/kategoriya: ikkala tomonda bir xil NOM (harf kattaligi, bo'shliq va apostrofga e'tiborsiz) bo'lsa va mazmun bir xil bo'lsa (tur, boshlang'ich
-  //   qoldiq) — bitta bo'ladi (serverdagisi), mahalliy yozuvlar unga ulanadi. Mahalliy hisobning boshlang'ich qoldig'i 0 bo'lsa (tayyor "Naqd pul" kabi)
-  //   u har doim serverdagi bir xil nomli hisobga qo'shiladi (jami balans o'zgarmaydi). Nomi bir xil, lekin ikkala tomonda boshqa noldan farqli qoldiq bo'lsa —
-  //   ikkalasi qoladi, mahalliysi nomiga " (shu qurilma)" qo'shiladi (balans o'zgarmasligi uchun).
-  // - Byudjet: bir kategoriyaga ikkala tomonda chegara bo'lsa — serverdagisi qoladi (soni hisobotda).
-  // - Sozlamalar: qurilmaning o'z qiymatlari saqlanadi, serverdagi qatorning id si olinadi.
-  // navbat: serverga yuborilishi kerak qatorlar { jadval: { kalit: updated_at } }.
-  function birlashtirish(L, S, hozirISO) {
-    hozirISO = hozirISO || new Date().toISOString();
-    var hisobot = { qoshilgan: { hisoblar: 0, kategoriyalar: 0 }, qayta_nomlangan: 0, byudjet_tashlangan: 0, faqat_mahalliy: {}, faqat_server: {} };
-    var navbat = { hisoblar: {}, kategoriyalar: {}, yozuvlar: {}, byudjetlar: {}, qarzlar: {}, sozlamalar: {} };
-    var M = { hisoblar: [], kategoriyalar: [], yozuvlar: [], byudjetlar: [], qarzlar: [], sozlamalar: [] };
-    var xarita = { hisoblar: {}, kategoriyalar: {} };
-
-    function sIdlar(j) { var o = {}; (S[j] || []).forEach(function (x) { o[x.id] = x; }); return o; }
-    function dedup(j, nomKalitFn, tenglikFn) {
-      var sid = sIdlar(j), sNom = {}, ishlatilgan = {};
-      (S[j] || []).forEach(function (x) { M[j].push(x); if (x.deleted !== true) { ishlatilgan[nomKalitFn(x)] = true; sNom[nomKalitFn(x)] = x; } });
-      (L[j] || []).forEach(function (l) {
-        if (sid[l.id]) return;                         // bir xil ID: serverdagisi qoldi
-        var kalit = nomKalitFn(l), s = l.deleted === true ? null : sNom[kalit];
-        if (s && tenglikFn(l, s)) { xarita[j][l.id] = s.id; hisobot.qoshilgan[j]++; return; }   // bir xil hisob/kategoriya: bitta bo'ladi
-        var y = l;
-        if (s && l.deleted !== true) {                 // nomi bir xil, mazmuni boshqa: ikkalasi qoladi
-          var nom = l.nom + ' (shu qurilma)', n = 2;
-          while (ishlatilgan[nomKalitFn({ nom: nom, tur: l.tur })]) nom = l.nom + ' (shu qurilma ' + (n++) + ')';
-          y = Object.assign({}, l, { nom: nom, updated_at: hozirISO }); hisobot.qayta_nomlangan++;
-        }
-        ishlatilgan[nomKalitFn(y)] = true;
-        M[j].push(y); navbat[j][y.id] = y.updated_at;
-        hisobot.faqat_mahalliy[j] = (hisobot.faqat_mahalliy[j] || 0) + 1;
-      });
-    }
-    dedup('hisoblar', function (x) { return Calc.nomKaliti(x.nom); }, function (l, s) { return l.tur === s.tur && (l.boshlangich_qoldiq === s.boshlangich_qoldiq || l.boshlangich_qoldiq === 0) && (l.arxivlangan === true) === (s.arxivlangan === true); });
-    dedup('kategoriyalar', function (x) { return x.tur + '|' + Calc.nomKaliti(x.nom); }, function (l, s) { return (l.arxivlangan === true) === (s.arxivlangan === true); });
-
-    function havola(j, v) { return v && xarita[j][v] ? xarita[j][v] : v; }
-    // Yozuvlar: serverdagilar o'zgarishsiz; mahalliylar (havolalari yangilangan holda) qo'shiladi
-    var yid = sIdlar('yozuvlar');
-    (S.yozuvlar || []).forEach(function (x) { M.yozuvlar.push(x); });
-    (L.yozuvlar || []).forEach(function (l) {
-      if (yid[l.id]) return;
-      var y = Object.assign({}, l), ozgardi = false;
-      ['hisob_id', 'qabul_hisob_id'].forEach(function (k) { if (y[k] && xarita.hisoblar[y[k]]) { y[k] = xarita.hisoblar[y[k]]; ozgardi = true; } });
-      if (y.kategoriya_id && xarita.kategoriyalar[y.kategoriya_id]) { y.kategoriya_id = xarita.kategoriyalar[y.kategoriya_id]; ozgardi = true; }
-      if (ozgardi) y.updated_at = hozirISO;
-      M.yozuvlar.push(y); navbat.yozuvlar[y.id] = y.updated_at;
-      hisobot.faqat_mahalliy.yozuvlar = (hisobot.faqat_mahalliy.yozuvlar || 0) + 1;
-    });
-    // Qarzlar (to'lovlari ichida)
-    var qid = sIdlar('qarzlar');
-    (S.qarzlar || []).forEach(function (x) { M.qarzlar.push(x); });
-    (L.qarzlar || []).forEach(function (l) {
-      var s = qid[l.id];
-      if (s) {                                          // bir xil ID (kam uchraydi): to'lovlar birlashadi, qarz serverdagisi
-        var tid = {}; (s.tolovlar || []).forEach(function (t) { tid[t.id] = true; });
-        var ort = (l.tolovlar || []).filter(function (t) { return !tid[t.id]; });
-        if (ort.length) { var idx = M.qarzlar.indexOf(s); M.qarzlar[idx] = Object.assign({}, s, { tolovlar: (s.tolovlar || []).concat(ort.map(function (t) { return Object.assign({}, t, { hisob_id: havola('hisoblar', t.hisob_id) }); })), updated_at: hozirISO }); navbat.qarzlar[s.id] = hozirISO; }
-        return;
-      }
-      var q = Object.assign({}, l, { hisob_id: havola('hisoblar', l.hisob_id), updated_at: l.updated_at });
-      q.tolovlar = (l.tolovlar || []).map(function (t) { return Object.assign({}, t, { hisob_id: havola('hisoblar', t.hisob_id) }); });
-      if (q.hisob_id !== l.hisob_id || q.tolovlar.some(function (t, i) { return t.hisob_id !== l.tolovlar[i].hisob_id; })) q.updated_at = hozirISO;
-      M.qarzlar.push(q); navbat.qarzlar[q.id] = q.updated_at;
-      hisobot.faqat_mahalliy.qarzlar = (hisobot.faqat_mahalliy.qarzlar || 0) + 1;
-    });
-    // Byudjetlar: kalit — kategoriya (yoki "umumiy"); serverdagisi ustun
-    var sKat = {};
-    (S.byudjetlar || []).forEach(function (b) { M.byudjetlar.push(b); sKat[b.kategoriya_id] = true; });
-    (L.byudjetlar || []).forEach(function (l) {
-      var kat = havola('kategoriyalar', l.kategoriya_id);
-      if (sKat[kat]) { if (l.deleted !== true) hisobot.byudjet_tashlangan++; return; }
-      var b = Object.assign({}, l);
-      if (kat !== l.kategoriya_id) { b.kategoriya_id = kat; b.updated_at = hozirISO; }
-      M.byudjetlar.push(b); navbat.byudjetlar[b.kategoriya_id] = b.updated_at;
-      hisobot.faqat_mahalliy.byudjetlar = (hisobot.faqat_mahalliy.byudjetlar || 0) + 1;
-    });
-    // Sozlamalar
-    var la = (L.sozlamalar || []).filter(function (x) { return x && x.kalit === 'asosiy'; })[0], sa = (S.sozlamalar || [])[0];
-    if (la) {
-      var a = Object.assign({}, la);
-      if (sa && sa.id !== la.id) { a.id = sa.id; a.updated_at = hozirISO; }
-      M.sozlamalar = [a]; navbat.sozlamalar.asosiy = a.updated_at;
-    } else if (sa) M.sozlamalar = [sa];
-    ['hisoblar', 'kategoriyalar', 'yozuvlar', 'qarzlar', 'byudjetlar'].forEach(function (j) { var n = (S[j] || []).length; if (n) hisobot.faqat_server[j] = n; });
-    return { malumot: M, navbat: navbat, hisobot: hisobot };
-  }
-
   function navbatSoni(n) {
     var s = 0;
     if (n) {
@@ -244,7 +153,6 @@ var SinxronSof = (function () {
       case 'xato': return 'Xato' + (h.soni ? ' (' + h.soni + ' ta o\'zgarish kutmoqda)' : '');
       case 'boshlanmagan': return 'Sinxronlash yoqilmagan';
       case 'boshlanmoqda': return 'Sinxronlash boshlanmoqda…';
-      case 'tanlov': return 'Birinchi sinxronlash: tanlash kerak';
       case 'boshqa-akkaunt': return 'Boshqa akkaunt: sinxronlash to\'xtatilgan';
       default: return '';
     }
@@ -252,7 +160,7 @@ var SinxronSof = (function () {
 
   return {
     JADVALLAR: JADVALLAR, serverQatori: serverQatori, tolovQatori: tolovQatori, mahalliyQator: mahalliyQator, bir: bir,
-    tortilganniQollash: tortilganniQollash, serverdanMalumot: serverdanMalumot, mahalliyBoshmi: mahalliyBoshmi, birlashtirish: birlashtirish,
+    tortilganniQollash: tortilganniQollash, serverdanMalumot: serverdanMalumot, mahalliyBoshmi: mahalliyBoshmi,
     navbatSoni: navbatSoni, holatMatni: holatMatni, oldin: oldin, iso: iso
   };
 })();

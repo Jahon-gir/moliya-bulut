@@ -8,13 +8,13 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 
 1. **Kirmasdan:** ilovani oching va ishlating. Hech narsa serverga ketmaydi.
 2. **Sinxronlashni yoqish:** Menyu (☰) → Profil va sinxronlash → "Google bilan kirish". Tugmani bosish — tugma ustidagi rozilik matniga rozilik.
-   Kirgan zahoti birinchi sinxron o'zi ishlaydi: ikkalasi bo'sh bo'lsa yoqiladi; qurilmada bor, server bo'sh bo'lsa yuklanadi; qurilma bo'sh (faqat
-   tayyor "Naqd pul" va kategoriyalar), serverda bor bo'lsa tortiladi; ikkalasida ham bor bo'lsa **tanlov ekrani** chiqadi (Birlashtirish / Faqat
-   serverdagini olish / Faqat shu qurilmadagini yuborish; avval zaxira fayli yuklanadi).
-3. **Keyin:** o'zgarishlar avtomatik yuboriladi, boshqa qurilmadagilari avtomatik olinadi. Asosiy ekran va Profilda holat: "Sinxronlangan",
+   Kirgan zahoti birinchi sinxron o'zi ishlaydi, hech narsa so'ramasdan: serverda ma'lumot BOR bo'lsa, server yutadi (qurilma serverdagidek
+   bo'ladi, shu qurilmadagi serverga yuborilmagan ma'lumot tashlanadi); serverda ma'lumot YO'Q bo'lsa, qurilmadagi ma'lumot serverga yuklanadi;
+   ikkalasi bo'sh bo'lsa shunchaki yoqiladi. Bu faqat birinchi kirishda; keyingi sinxronlashlarda oxirgi yozgan yutadi (TZ-sinxronlash.md, 20-band).
+3. **Keyin:** o'zgarishlar avtomatik yuboriladi, boshqa qurilmadagilari avtomatik olinadi. Holat Menyu → Profil va sinxronlash ichida: "Sinxronlangan",
    "Kutilmoqda (N ta o'zgarish)", "Internet yo'q", "Xato" (sabab "(kod: ...)" bilan va "Qayta urinish").
-4. **Chiqish** faqat shu qurilmadan chiqadi (ma'lumot qoladi). **Hisobni o'chirish** serverdagi akkaunt va hamma ma'lumotni o'chiradi (shu qurilmadagi ma'lumot qoladi; avval zaxira fayli yuklanadi).
-5. **Excelga yuklab olish** (Menyu) — daromad, xarajat va o'tkazmalar chiroyli .xlsx faylga. **Fayldan yuklash** (Menyu → Profil) — Excel (.xlsx) fayldan yozuvlarni oldindan ko'rib, tasdiqlab yuklash; "Oxirgi yuklashni bekor qilish" bor (TZ-sinxronlash.md, 18-band). JSON zaxira oddiy ko'rinishda yashirin (Menyu pastidagi versiya qatorini 7 marta bosing); u sinxronlash o'rnini bosmaydi.
+4. **Chiqish** faqat shu qurilmadan chiqadi (ma'lumot qoladi). **Hisobni o'chirish** serverdagi akkaunt va hamma ma'lumotni o'chiradi (shu qurilmadagi ma'lumot qoladi).
+5. **Excelga yuklab olish** (Menyu) — daromad, xarajat va o'tkazmalar chiroyli .xlsx faylga. **Fayldan yuklash** (Menyu → Profil) — Excel (.xlsx) fayldan yozuvlarni oldindan ko'rib, tasdiqlab yuklash; "Oxirgi yuklashni bekor qilish" bor (TZ-sinxronlash.md, 18-band).
 6. **Telefon yo'qolsa / almashsa:** yangi qurilmada ilovani oching, shu Google bilan kiring: serverdagi ma'lumot o'zi qaytadi.
 
 ## Tuzilma
@@ -35,7 +35,6 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 - **To'qnashuv:** bir qator ikki qurilmada o'zgartirilsa, serverga OXIRGI YETIB BORGAN o'zgarish saqlanadi (maydonlar alohida birlashtirilmaydi). Tafsilot: `TZ-sinxronlash.md`, 15-band.
 - **Takror nomlar:** ikki qurilmada bir vaqtda bir xil nomli hisob/kategoriya qo'shilsa, ikkita bo'lib qoladi (ma'lumot yo'qolmaydi; ortiqchasini arxivlang).
 - **Shifrlanmagan:** serverdagi ma'lumot shifrlanmagan; dasturchi texnik jihatdan ko'ra oladi (maxfiylik sahifasida ochiq aytilgan).
-- Zaxiradan tiklashda zaxirada yo'q, lekin serverda bor qatorlar o'chirilmaydi va qaytib keladi.
 - O'chirilgan qatorlar serverda 90 kun saqlanadi, keyin tozalanadi (`supabase/005_sinxron_xizmat.sql`; pg_cron kerak).
 - Boshqa qurilmada hisob o'chirilsa, bu qurilmada "akkaunt o'chirilgan" xabari chiqadi: chiqib, qayta kiring.
 
@@ -69,7 +68,7 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.28.0 → 0.28.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.29.0 → 0.28.1), `index.html` va `tests.html` da hammasini birdaniga:
 
     sed -i 's/0\.23\.0/0.28.1/g' index.html tests.html
 

@@ -3910,12 +3910,20 @@
     bloklar.forEach(function (b) { ekran.appendChild(b); });
     window.scrollTo(0, scrollniSaqla ? y : 0);
     Sigdir.hammasi(ekran);   // raqamlar kartadan chiqib ketmasin
+    Yordamchi.yangila();   // suzuvchi tugma faqat Asosiy sahifada ko'rinadi
     // data-fokus belgili maydon (yozuv qo'shishning 1-qadamida summa) tayyor turadi: telefonda raqamli klaviatura ochiladi
     var f = ekran.querySelector('[data-fokus]');
     if (f) f.focus();
   }
 
   Sigdir.kuzat(ekran);
+
+  // AI yordamchi (24-band): suzuvchi tugma va chat ekrani js/yordamchi.js da; bu yerdan faqat ma'lumot, joy va xabar beriladi
+  Yordamchi.boshlash({
+    malumot: function () { return malumot; },
+    korinadi: function () { return joriy === 'bosh' && !stek.length; },
+    xabar: function (m) { qisqaXabar(m); }
+  });
 
   function korsat(nom) {
     if (nom === 'yana' || nom === 'hisobot' || nom === 'byudjet') nom = 'koproq';   // eski saqlangan tanlov

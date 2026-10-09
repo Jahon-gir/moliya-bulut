@@ -15,25 +15,27 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.31.0"></script>
-  <script src="js/tema.js?v=0.31.0"></script>
-  <script src="js/ikonlar.js?v=0.31.0"></script>
-  <script src="js/belgilar.js?v=0.31.0"></script>
-  <script src="js/calc.js?v=0.31.0"></script>
-  <script src="js/xlsx.js?v=0.31.0"></script>
-  <script src="js/xlsx-oqi.js?v=0.31.0"></script>
-  <script src="js/import-sof.js?v=0.31.0"></script>
-  <script src="js/sinxron-sof.js?v=0.31.0"></script>
-  <script src="js/data.js?v=0.31.0"></script>
-  <script src="js/sigdir.js?v=0.31.0"></script>
-  <script src="js/diagramma.js?v=0.31.0"></script>
-  <script src="js/pin.js?v=0.31.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.31.0"></script>
-  <script src="js/kirish.js?v=0.31.0"></script>
-  <script src="js/yuklash.js?v=0.31.0"></script>
-  <script src="js/salom.js?v=0.31.0"></script>
-  <script src="js/sinxron.js?v=0.31.0"></script>
-  <script src="js/pwa.js?v=0.31.0"></script>
+  <script src="js/ilova.js?v=0.32.0"></script>
+  <script src="js/tema.js?v=0.32.0"></script>
+  <script src="js/ikonlar.js?v=0.32.0"></script>
+  <script src="js/belgilar.js?v=0.32.0"></script>
+  <script src="js/calc.js?v=0.32.0"></script>
+  <script src="js/xlsx.js?v=0.32.0"></script>
+  <script src="js/xlsx-oqi.js?v=0.32.0"></script>
+  <script src="js/import-sof.js?v=0.32.0"></script>
+  <script src="js/sinxron-sof.js?v=0.32.0"></script>
+  <script src="js/data.js?v=0.32.0"></script>
+  <script src="js/sigdir.js?v=0.32.0"></script>
+  <script src="js/diagramma.js?v=0.32.0"></script>
+  <script src="js/pin.js?v=0.32.0"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.32.0"></script>
+  <script src="js/kirish.js?v=0.32.0"></script>
+  <script src="js/yuklash.js?v=0.32.0"></script>
+  <script src="js/salom.js?v=0.32.0"></script>
+  <script src="js/sinxron.js?v=0.32.0"></script>
+  <script src="js/pwa.js?v=0.32.0"></script>
+  <script src="js/yordamchi-sof.js?v=0.32.0"></script>
+  <script src="js/yordamchi.js?v=0.32.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -2152,7 +2154,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.31.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.32.0', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -4353,7 +4355,7 @@ function xfix(opts) {
           .then(function (n) { teng(n.ok, true, n.xato); teng(Sinxron.holat().tur, 'tayyor'); teng(Sinxron.holat().xato, ''); teng((Sinxron.holat().rad || []).length, 0); teng(Sinxron.holat().soni, 0); teng(Object.keys(S.jadval.yozuvlar).some(function (id) { return S.jadval.yozuvlar[id].summa === 777; }), true); return sxNavbat(); })
           .then(function (n) { teng(n, 0); S.rad = null; });
       });
-      // ---- 0.31.0: yangi dizayn ----
+      // ---- 0.32.0: yangi dizayn ----
       function sigElement(matn, kenglik, qiymat, plyus) {
         var quti = document.createElement('div'); quti.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + kenglik + 'px';
         var e = document.createElement('div'); e.className = 'sig'; e.style.cssText = 'display:block;white-space:nowrap;overflow:hidden;font:700 20px sans-serif'; e.textContent = matn;
@@ -4402,7 +4404,7 @@ function xfix(opts) {
           teng(/\.belgi-katak \{[^}]*border-radius: 32%/.test(c), true, 'ikon katagi'); teng(/\.sticky-bosh \.oy-yorliqlar::-webkit-scrollbar \{ display: none/.test(c) && /scrollbar-width: none/.test(c), true, 'oylar qatori siljitish chizig\'i yashirin'); teng(/\.qarz-tanlov-tugma\[aria-pressed="true"\]/.test(c), true);
         });
       });
-      // ---- 0.31.0: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
+      // ---- 0.32.0: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
       var ISTALGAN_IKONLAR = 'shopping-cart tools-kitchen-2 coffee bread apple pizza cup cake bus car gas-station taxi train plane bike car-crash home home-2 key bulb droplet flame wifi device-mobile device-laptop tool pill stethoscope heartbeat tooth scissors brush barbell bath school book book-2 certificate baby-carriage baby-bottle mood-kid paw shirt shoe shopping-bag movie device-gamepad-2 music beach gift confetti heart-handshake building-mosque heart package truck-delivery building-store wallet cash coin briefcase trending-up arrow-back-up award building-bank credit-card receipt report-money piggy-bank arrows-exchange repeat shield-check dots help-circle pencil tag percentage meat robot users users-group user chart-line signature file-text menu-2 history search filter'.split(' ');
       var ALMASHTIRILGAN = { 'taxi': 'car-suv', 'tooth': 'dental', 'piggy-bank': 'moneybag' };   // Tabler da yo'q nomlar: yaqin ma'noli ikon
       test('Ikonlar (Tabler): so\'ralgan hamma ikon lokal faylda bor (3 tasi yaqin ma\'noli bilan almashtirilgan), yo\'llar to\'g\'ri, guruhlar 10 ta, takror yo\'q', function () {
@@ -4464,7 +4466,7 @@ function xfix(opts) {
         teng(Belgilar.bormi('car-suv') && Belgilar.bormi('oziq') && !Belgilar.bormi('yoq-kalit'), true);
         Belgilar.standart.forEach(function (x) { teng(Ikonlar.bormi(x.belgi) && Ikonlar.RANGLAR.concat(['#6A4CE0', '#E0356B', '#3F6FE0', '#E08A00', '#5C6BC0', '#1C9AE0', '#12B76A']).indexOf(x.rang) >= 0, true, x.nom); });
       });
-      sxSinov('0.31.0: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
+      sxSinov('0.32.0: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
         var kid = Calc.uuidYarat(), kat = { id: kid, yaratilgan: new Date().toISOString(), nom: 'Taksi', tur: 'xarajat', rang: '#F5A300', belgi: 'car-suv', arxivlangan: false };
         return sxMalumot(2).then(function () { return Sinxron.birinchi('yuklash'); }).then(function (n) { teng(n.ok, true, n.xato); return Data.saqlash('kategoriyalar', kat); })
           .then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) { teng(n.ok, true, n.xato); var r = S.jadval.kategoriyalar[kid]; teng(r.belgi, 'car-suv'); teng(r.rang, '#F5A300'); teng(r.nom, 'Taksi');
@@ -4544,6 +4546,223 @@ function xfix(opts) {
           teng(/Tabler/.test(rd) && /MIT/.test(rd), true, 'README: litsenziya eslatmasi');
           teng(/\.ikon-tarmoq \{[^}]*repeat\(4, minmax\(0, 1fr\)\)/.test(c), true, '4 ustunli katakcha'); teng(/\.kat-ranglar \{/.test(c), true);
           teng(u.indexOf('kategoriyaIkonTanlagich(holat)') > 0 && u.indexOf('kategoriyaRangTanlagich(holat)') > 0 && u.indexOf('Ikonni tanlash') > 0 && u.indexOf('Rangni tanlash') > 0 && u.indexOf('Boshqa rang tanlash') > 0, true, 'ikon va rang tanlash oynasi');
+        });
+      });
+      // ===== AI yordamchi, ilova qismi (24-band): hisoblash, maxfiylik, xatolar, chat (server taqlid qilinadi) =====
+      function yoM() {
+        var h1 = { id: 'h1', nom: 'Naqd pul', tur: 'naqd', boshlangich_qoldiq: 100000, arxivlangan: false }, h2 = { id: 'h2', nom: 'Karta', tur: 'karta', boshlangich_qoldiq: 500000, arxivlangan: false }, h3 = { id: 'h3', nom: 'Eski', tur: 'karta', boshlangich_qoldiq: 999, arxivlangan: true };
+        var k1 = { id: 'k1', nom: 'Oziq-ovqat', tur: 'xarajat' }, k2 = { id: 'k2', nom: 'Taksi', tur: 'xarajat' }, k3 = { id: 'k3', nom: 'Oylik', tur: 'daromad' };
+        function y(id, tur, summa, sana, hisob, kat, izoh) { return { id: id, tur: tur, summa: summa, sana: sana, vaqt: '10:00', hisob_id: hisob, kategoriya_id: kat, izoh: izoh || '' }; }
+        return {
+          hisoblar: [h1, h2, h3], kategoriyalar: [k1, k2, k3],
+          yozuvlar: [y('y1', 'xarajat', 50000, '2026-10-02', 'h1', 'k1', 'bozor Karimovnikida'), y('y2', 'xarajat', 30000, '2026-10-03', 'h2', 'k2', 'taksi'), y('y3', 'xarajat', 20000, '2026-10-05', 'h2', 'k1', 'bozor'),
+            y('y4', 'daromad', 400000, '2026-10-01', 'h2', 'k3', 'oylik'), y('y5', 'xarajat', 40000, '2026-09-10', 'h1', 'k1', 'bozor'), y('y6', 'xarajat', 5000, '2026-10-06', 'h1', 'k2', 'taksi'),
+            { id: 'y7', tur: 'otkazma', summa: 70000, sana: '2026-10-04', vaqt: '10:00', hisob_id: 'h1', qabul_hisob_id: 'h2', izoh: 'o\'tkazma' }],
+          qarzlar: [
+            { id: 'q1', yonalish: 'berdim', shaxs: 'Valijon Sirli', summa: 300000, hisob_id: 'h2', sana: '2026-10-02', vaqt: '09:00', muddat: '2026-10-20', izoh: 'maxfiy izoh', tolovlar: [{ id: 't1', sana: '2026-10-04', vaqt: '09:00', summa: 100000, hisob_id: 'h2' }] },
+            { id: 'q2', yonalish: 'oldim', shaxs: 'Karim Aka', summa: 80000, hisob_id: 'h1', sana: '2026-10-03', vaqt: '09:00', muddat: '2026-10-15', izoh: '', tolovlar: [] },
+            { id: 'q3', yonalish: 'oldim', shaxs: 'Yopilgan Odam', summa: 1000, hisob_id: 'h1', sana: '2026-09-03', vaqt: '09:00', muddat: '', izoh: '', tolovlar: [{ id: 't2', sana: '2026-09-04', vaqt: '09:00', summa: 1000, hisob_id: 'h1' }] }]
+        };
+      }
+      var YO_S = function (o) { return Object.assign({ amal: 'yigindi', davr: { dan: '2026-10-01', gacha: '2026-10-31' }, davr2: null, tur: null, kategoriya: null, hisob: null, matn: null }, o); };
+      var YO_B = '2026-10-09';
+      test('Yordamchi hisoblash: yigindi — Calc.hisobot bilan bir xil (xarajat/daromad, qarz amallari bilan), kategoriya, hisob va izoh filtri', function () {
+        var m = yoM(), h = Calc.hisobot(m.yozuvlar.concat(Calc.qarzYozuvlari(m.qarzlar)), '2026-10-01', '2026-10-31', '');
+        var n = YordamchiSof.hisobla(YO_S({}), m, YO_B);
+        teng(n.jami, h.xarajat); teng(n.tur, 'xarajat'); teng(n.yozuvlar_soni, 5);   // 4 ta oddiy xarajat + 1 ta qarz amali (berilgan qarz)
+        teng(YordamchiSof.hisobla(YO_S({ tur: 'daromad' }), m, YO_B).jami, h.daromad);
+        var t = YordamchiSof.hisobla(YO_S({ kategoriya: 'taksi' }), m, YO_B); teng(t.jami, 35000); teng(t.yozuvlar_soni, 2); teng(t.kategoriya, 'Taksi');
+        teng(YordamchiSof.hisobla(YO_S({ kategoriya: 'Oylik' }), m, YO_B).tur, 'daromad', 'tur kategoriyadan olinadi');
+        teng(YordamchiSof.hisobla(YO_S({ hisob: 'Karta', tur: 'xarajat', kategoriya: 'Oziq-ovqat' }), m, YO_B).jami, 20000);
+        teng(YordamchiSof.hisobla(YO_S({ matn: 'BOZOR' }), m, YO_B).jami, 70000, 'izoh bo\'yicha, qarz shaxs ismi qidirilmaydi');
+        teng(YordamchiSof.hisobla(YO_S({ kategoriya: 'Berilgan qarz' }), m, YO_B).jami, 300000, 'qarz hisobot kategoriyasi');
+        teng(YordamchiSof.hisobla(YO_S({ kategoriya: 'Yo\'q narsa' }), m, YO_B).jami, 0);
+        m.yozuvlar = m.yozuvlar.slice(0, 1); teng(YordamchiSof.hisobla(YO_S({ kategoriya: 'Taksi' }), m, YO_B).jami, 0);
+      });
+      test('Yordamchi hisoblash: o\'tkazma xarajat/daromadga kirmaydi, mantiqiy o\'chirilgan yozuv ko\'rinmaydi (ui.js malumot da jonlilar)', function () {
+        var m = yoM(), n = YordamchiSof.hisobla(YO_S({ tur: 'xarajat', kategoriya: 'Oziq-ovqat' }), m, YO_B);
+        teng(n.jami, 70000);
+        var jonli = Calc.jonlilar('yozuvlar', m.yozuvlar.concat([{ id: 'y8', tur: 'xarajat', summa: 9999999, sana: '2026-10-07', vaqt: '10:00', hisob_id: 'h1', kategoriya_id: 'k1', izoh: '', deleted: true }]));
+        m.yozuvlar = jonli; teng(YordamchiSof.hisobla(YO_S({ tur: 'xarajat', kategoriya: 'Oziq-ovqat' }), m, YO_B).jami, 70000);
+        teng(YordamchiSof.hisobla(YO_S({ qarzlar: 1, amal: 'qidiruv', matn: 'o\'tkazma', tur: 'xarajat' }), m, YO_B).topilgan_soni, 0);
+      });
+      test('Yordamchi hisoblash: kategoriyalar — eng katta 5 ta (Calc.hisobot taqsimoti), qidiruv, taqqoslash (farq va foiz musbat, yo\'nalish alohida)', function () {
+        var m = yoM(), h = Calc.hisobot(m.yozuvlar.concat(Calc.qarzYozuvlari(m.qarzlar)), '2026-10-01', '2026-10-31', '');
+        var k = YordamchiSof.hisobla(YO_S({ amal: 'kategoriyalar' }), m, YO_B);
+        teng(k.jami, h.xarajat); teng(k.eng_katta.length <= 5, true); teng(k.eng_katta[0].nom, 'Berilgan qarz'); teng(k.eng_katta[0].summa, 300000); teng(k.eng_katta[1].nom, 'Oziq-ovqat'); teng(k.eng_katta[1].summa, 70000);
+        var ko = YordamchiSof.hisobla(YO_S({ amal: 'kategoriyalar', tur: 'daromad' }), m, YO_B); teng(ko.jami, h.daromad);
+        for (var i = 0; i < 7; i++) { m.kategoriyalar.push({ id: 'x' + i, nom: 'Kat' + i, tur: 'xarajat' }); m.yozuvlar.push({ id: 'z' + i, tur: 'xarajat', summa: 1000 + i, sana: '2026-10-08', vaqt: '10:00', hisob_id: 'h1', kategoriya_id: 'x' + i, izoh: '' }); }
+        teng(YordamchiSof.hisobla(YO_S({ amal: 'kategoriyalar' }), m, YO_B).eng_katta.length, 5);
+        m = yoM();
+        var q = YordamchiSof.hisobla(YO_S({ amal: 'qidiruv', matn: 'taksi' }), m, YO_B); teng(q.topilgan_soni, 2); teng(q.jami, 35000);
+        var t = YordamchiSof.hisobla(YO_S({ amal: 'taqqoslash', kategoriya: 'Oziq-ovqat', davr2: { dan: '2026-09-01', gacha: '2026-09-30' } }), m, YO_B);
+        teng(t.davr1_jami, 70000); teng(t.davr2_jami, 40000); teng(t.farq, 30000); teng(t.yonalish, 'oshgan'); teng(t.foiz, Calc.taqqoslash(70000, 40000).foiz);
+        var t2 = YordamchiSof.hisobla(YO_S({ amal: 'taqqoslash', davr: { dan: '2026-09-01', gacha: '2026-09-30' }, davr2: { dan: '2026-10-01', gacha: '2026-10-31' }, kategoriya: 'Oziq-ovqat' }), m, YO_B);
+        teng(t2.farq, 30000); teng(t2.yonalish, 'kamaygan'); teng(t2.foiz, 43);
+        var t3 = YordamchiSof.hisobla(YO_S({ amal: 'taqqoslash', kategoriya: 'Oylik', davr2: { dan: '2026-09-01', gacha: '2026-09-30' } }), m, YO_B);
+        teng('foiz' in t3, false, 'oldingi davr 0 bo\'lsa foiz yo\'q'); teng(t3.yonalish, 'oshgan');
+      });
+      test('Yordamchi hisoblash: qarzlar, hisoblar (arxivlangan chiqmaydi; Calc.hisobQoldigi), oylik_hisobot', function () {
+        var m = yoM(), j = Calc.qarzlarJami(m.qarzlar);
+        var q = YordamchiSof.hisobla(YO_S({ amal: 'qarzlar' }), m, YO_B);
+        teng(q.berilgan_jami, j.olishKerak); teng(q.berilgan_jami, 200000); teng(q.olingan_jami, 80000); teng(q.kishi_soni, 2, 'yopilgan qarz hisobga kirmaydi');
+        teng(JSON.stringify(q.eng_yaqin_muddat), JSON.stringify({ sana: '2026-10-15', summa: 80000, otgan: false }));
+        teng(YordamchiSof.hisobla(YO_S({ amal: 'qarzlar' }), m, '2026-10-18').eng_yaqin_muddat.otgan, true);
+        teng(YordamchiSof.hisobla(YO_S({ amal: 'qarzlar' }), { hisoblar: [], kategoriyalar: [], yozuvlar: [], qarzlar: [] }, YO_B).eng_yaqin_muddat, null);
+        var h = YordamchiSof.hisobla(YO_S({ amal: 'hisoblar' }), m, YO_B);
+        teng(h.jami_balans, Calc.umumiyBalans(m.hisoblar, m.yozuvlar, m.qarzlar)); teng(h.hisoblar.length, 2);
+        teng(h.hisoblar[0].nom, 'Naqd pul'); teng(h.hisoblar[0].qoldiq, Calc.hisobQoldigi(m.hisoblar[0], m.yozuvlar, m.qarzlar)); teng(h.hisoblar[1].qoldiq, Calc.hisobQoldigi(m.hisoblar[1], m.yozuvlar, m.qarzlar));
+        teng(YordamchiSof.hisobla(YO_S({ amal: 'hisoblar', hisob: 'karta' }), m, YO_B).hisoblar.length, 1);
+        m.hisoblar[0].boshlangich_qoldiq = -9000000; var neg = YordamchiSof.hisobla(YO_S({ amal: 'hisoblar' }), m, YO_B);
+        teng(neg.hisoblar[0].manfiy, true); teng(neg.hisoblar[0].qoldiq > 0, true); teng(neg.jami_manfiy, true);
+        m = yoM(); var hb = Calc.hisobot(m.yozuvlar.concat(Calc.qarzYozuvlari(m.qarzlar)), '2026-10-01', '2026-10-31', ''), o = YordamchiSof.hisobla(YO_S({ amal: 'oylik_hisobot' }), m, YO_B);
+        teng(o.xarajat, hb.xarajat); teng(o.daromad, hb.daromad); teng(o.sof_balans, Math.abs(hb.qoldiq)); teng(o.sof_yonalish, hb.qoldiq > 0 ? 'ortiqcha' : 'kamomad');
+        teng(o.eng_katta_kategoriya.nom, 'Berilgan qarz'); teng(o.eng_katta_kategoriya.summa, 300000);
+        teng(YordamchiSof.hisobla(YO_S({ amal: 'oylik_hisobot', hisob: 'Naqd pul' }), m, YO_B).hisob, 'Naqd pul');
+        teng(YordamchiSof.hisobla(YO_S({ amal: 'oylik_hisobot', davr: { dan: '2025-01-01', gacha: '2025-01-31' } }), m, YO_B).eng_katta_kategoriya, null);
+        teng(YordamchiSof.hisobla({ amal: 'tushunarsiz' }, m, YO_B), null);
+      });
+      test('Yordamchi maxfiylik: har amal natijasida taqiqlangan kalit yo\'q, izoh va shaxs ismi yo\'q, hammasi server qoidalaridan o\'tadi; nomlar ro\'yxati', function () {
+        var m = yoM(), amallar = ['yigindi', 'kategoriyalar', 'qidiruv', 'taqqoslash', 'qarzlar', 'hisoblar', 'oylik_hisobot'];
+        amallar.forEach(function (a) {
+          var n = YordamchiSof.hisobla(YO_S({ amal: a, matn: a === 'qidiruv' ? 'bozor' : null, davr2: a === 'taqqoslash' ? { dan: '2026-09-01', gacha: '2026-09-30' } : null }), m, YO_B);
+          teng(YordamchiSof.natijaYuborsaBoladimi(n), true, a);
+          var s = JSON.stringify(n);
+          ['Valijon', 'Karim', 'Sirli', 'Yopilgan', 'maxfiy izoh', 'Karimovnikida', 'bozor', '"izoh"', '"shaxs"', '"yozuvlar"'].forEach(function (x) { teng(s.indexOf(x), -1, a + ': ' + x); });
+        });
+        teng(YordamchiSof.natijaYuborsaBoladimi({ jami: 1, shaxs: 'Ali' }), false); teng(YordamchiSof.natijaYuborsaBoladimi({ a: { izoh: 'x' } }), false); teng(YordamchiSof.natijaYuborsaBoladimi({ jami: NaN }), false);
+        teng(YordamchiSof.natijaYuborsaBoladimi([1]), false); teng(YordamchiSof.natijaYuborsaBoladimi({ nom: 'x'.repeat(61) }), false); teng(YordamchiSof.natijaYuborsaBoladimi({ Katta: 1 }), false);
+        var nl = YordamchiSof.nomlar(m);
+        teng(nl.hisoblar.join('|'), 'Naqd pul|Karta|Eski'); teng(nl.kategoriyalar.join('|'), 'Oziq-ovqat|Taksi|Oylik|Olingan qarz|Berilgan qarz');
+        teng(JSON.stringify(nl).indexOf('Valijon'), -1);
+      });
+      test('Yordamchi: tayyor savollar (oy nomi joriy oyga qarab) va xato matnlari "(kod: ...)" bilan', function () {
+        var s = YordamchiSof.tayyorSavollar('2026-10-09'); teng(s.length, 5); teng(s[4], 'Oktabr hisoboti'); teng(YordamchiSof.tayyorSavollar('2027-01-02')[4], 'Yanvar hisoboti'); teng(s[0], 'Shu oy xarajatim');
+        ['NETWORK_OFFLINE', 'NETWORK', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_SXEMA', 'AUTH_EXPIRED', 'HTTP_500', 'JS_X'].forEach(function (k) { var t = YordamchiSof.xatoMatni(k); teng(t.indexOf('(kod: ' + k + ')') > 0, true, k); teng(/^[A-Za-z]/.test(t), true); });
+        teng(/limiti tugadi/.test(YordamchiSof.xatoMatni('AI_LIMIT')), true); teng(/ayta urinib/.test(YordamchiSof.xatoMatni('AI_RAQAM')), true); teng(/Internet yo'q/.test(YordamchiSof.xatoMatni('NETWORK_OFFLINE')), true); teng(/Kirish muddati tugagan/.test(YordamchiSof.xatoMatni('AUTH_EXPIRED')), true);
+      });
+
+      // Server taqlidi: har so'rov yozib olinadi; javoblar navbat bilan beriladi
+      function yoServer(javoblar) {
+        var s = { sorovlar: [], tokenYangilandi: 0, xotira: {} };
+        s.fetch = function (url, init) {
+          var tana = JSON.parse(init.body); s.sorovlar.push({ url: url, tana: tana, sarlavha: init.headers });
+          var j = typeof javoblar === 'function' ? javoblar(tana, s.sorovlar.length) : javoblar.shift();
+          if (j === 'tarmoq') return Promise.reject(new TypeError('Failed to fetch'));
+          return Promise.resolve({ status: j.holat, ok: j.holat >= 200 && j.holat < 300, json: function () { return j.tana === undefined ? Promise.reject(new Error('json emas')) : Promise.resolve(j.tana); } });
+        };
+        Yordamchi.sozla({
+          fetch: s.fetch, tokenOl: function () { return Promise.resolve(s.token === undefined ? 'tok1' : s.token); }, tokenYangila: function () { s.tokenYangilandi++; return Promise.resolve(s.yangiToken === undefined ? 'tok2' : s.yangiToken); },
+          manzil: function () { return 'https://x.invalid'; }, kalit: function () { return 'ochiq-kalit'; }, kirgan: function () { return true; }, foydalanuvchiId: function () { return 'u-1'; }, onlayn: function () { return s.onlayn !== false; },
+          xotira: function () { return { getItem: function (k) { return k in s.xotira ? s.xotira[k] : null; }, setItem: function (k, v) { s.xotira[k] = String(v); }, removeItem: function (k) { delete s.xotira[k]; } }; }
+        });
+        return s;
+      }
+      var YO_REJA = function (o) { return { holat: 200, tana: { ok: true, sorov: YO_S(o || { amal: 'hisoblar' }) } }; };
+      function yoXato(holat, kod) { return { holat: holat, tana: { xato: { kod: kod, sabab: 'x' } } }; }
+      function yoRad(p) { return p.then(function () { throw new Error('rad etilishi kerak edi'); }, function (e) { return e; }); }
+      test('Yordamchi oqim: savol -> reja -> hisoblash -> javob; serverga faqat raqam, sana va nom ketadi (izoh, shaxs ismi, yozuvlar yo\'q)', function () {
+        var s = yoServer([YO_REJA({ amal: 'qarzlar' }), { holat: 200, tana: { ok: true, matn: 'Sizga 200 000 so\'m qarz berilgan.' } }]), m = yoM();
+        return Yordamchi.javobOl('Menga kim qarzdor?', m, YO_B).then(function (r) {
+          teng(r.matn, 'Sizga 200 000 so\'m qarz berilgan.'); teng(s.sorovlar.length, 2);
+          teng(s.sorovlar[0].url, 'https://x.invalid/functions/v1/yordamchi'); teng(s.sorovlar[0].sarlavha.Authorization, 'Bearer tok1'); teng(s.sorovlar[0].sarlavha.apikey, 'ochiq-kalit');
+          teng(s.sorovlar[0].tana.rejim, 'reja'); teng(s.sorovlar[0].tana.bugun, YO_B); teng(s.sorovlar[0].tana.hisoblar.join('|'), 'Naqd pul|Karta|Eski');
+          teng(Object.keys(s.sorovlar[0].tana).sort().join(), 'bugun,hisoblar,kategoriyalar,rejim,savol');
+          teng(s.sorovlar[1].tana.rejim, 'javob'); teng(Object.keys(s.sorovlar[1].tana).sort().join(), 'natija,rejim,savol,sorov'); teng(s.sorovlar[1].tana.natija.berilgan_jami, 200000);
+          var hammasi = JSON.stringify(s.sorovlar);
+          ['Valijon', 'Karim', 'Sirli', 'maxfiy izoh', 'Karimovnikida', 'bozor', 'taksi'].forEach(function (x) { teng(hammasi.indexOf(x), -1, x); });
+        });
+      });
+      test('Yordamchi: amal "tushunarsiz" — tayyor javob, serverga ikkinchi so\'rov yuborilmaydi; sorov yo\'q bo\'lsa AI_SXEMA', function () {
+        var s = yoServer([{ holat: 200, tana: { ok: true, sorov: { amal: 'tushunarsiz', davr: null, davr2: null, tur: null, kategoriya: null, hisob: null, matn: null } } }]);
+        return Yordamchi.javobOl('ob-havo qanday', yoM(), YO_B).then(function (r) {
+          teng(r.matn, 'Savolni tushunmadim. Masalan: «Shu oy taksiga qancha ketdi?»'); teng(r.tushunarsiz, true); teng(s.sorovlar.length, 1);
+          yoServer([{ holat: 200, tana: { ok: true } }]); return yoRad(Yordamchi.javobOl('x', yoM(), YO_B));
+        }).then(function (e) { teng(e.kod, 'AI_SXEMA'); });
+      });
+      test('Yordamchi xatolar: internet yo\'q (so\'rov ketmaydi), tarmoq, AI_LIMIT, AI_PROVAYDER, AI_RAQAM, AI_SXEMA, HTTP, JSON emas', function () {
+        var s = yoServer([]); s.onlayn = false;
+        return yoRad(Yordamchi.javobOl('x', yoM(), YO_B)).then(function (e) {
+          teng(e.kod, 'NETWORK_OFFLINE'); teng(s.sorovlar.length, 0);
+          yoServer(['tarmoq']); return yoRad(Yordamchi.javobOl('x', yoM(), YO_B));
+        }).then(function (e) {
+          teng(e.kod, 'NETWORK');
+          return [['AI_LIMIT', 429], ['AI_PROVAYDER', 502], ['AI_SXEMA', 502]].reduce(function (z, x) {
+            return z.then(function () { yoServer([yoXato(x[1], x[0])]); return yoRad(Yordamchi.javobOl('x', yoM(), YO_B)).then(function (e2) { teng(e2.kod, x[0]); }); });
+          }, Promise.resolve());
+        }).then(function () {
+          yoServer([YO_REJA(), yoXato(502, 'AI_RAQAM')]); return yoRad(Yordamchi.javobOl('x', yoM(), YO_B));
+        }).then(function (e) {
+          teng(e.kod, 'AI_RAQAM');
+          yoServer([{ holat: 404, tana: undefined }]); return yoRad(Yordamchi.javobOl('x', yoM(), YO_B));
+        }).then(function (e) { teng(e.kod, 'HTTP_404'); });
+      });
+      test('Yordamchi kirish: 401 da token bir marta yangilanib qayta yuboriladi; yana 401 yoki token yo\'q bo\'lsa AUTH_EXPIRED', function () {
+        var s = yoServer([yoXato(401, 'AI_RUXSAT'), YO_REJA(), { holat: 200, tana: { ok: true, matn: 'Jami 0 so\'m.' } }]);
+        return Yordamchi.javobOl('x', yoM(), YO_B).then(function (r) {
+          teng(r.matn, 'Jami 0 so\'m.'); teng(s.tokenYangilandi, 1); teng(s.sorovlar[1].sarlavha.Authorization, 'Bearer tok2');
+          var s2 = yoServer([yoXato(401, 'AI_RUXSAT'), yoXato(401, 'AI_RUXSAT')]); return yoRad(Yordamchi.javobOl('x', yoM(), YO_B)).then(function (e) { teng(e.kod, 'AUTH_EXPIRED'); teng(s2.sorovlar.length, 2); });
+        }).then(function () {
+          var s3 = yoServer([]); s3.token = null; return yoRad(Yordamchi.javobOl('x', yoM(), YO_B)).then(function (e) { teng(e.kod, 'AUTH_EXPIRED'); teng(s3.sorovlar.length, 0); });
+        });
+      });
+      test('Yordamchi 403 (AI_RUXSAT): "yopiq" belgisi yoziladi (email emas), tugma yashiriladi; boshqa akkaunt uchun yopiq emas; belgi o\'chsa qaytadi', function () {
+        var s = yoServer([yoXato(403, 'AI_RUXSAT')]);
+        teng(Yordamchi.yopiqmi(), false);
+        return yoRad(Yordamchi.javobOl('x', yoM(), YO_B)).then(function (e) {
+          teng(e.kod, 'AI_RUXSAT'); teng(s.xotira[Yordamchi.YOPIQ_KALIT], 'u-1'); teng(JSON.stringify(s.xotira).indexOf('@'), -1); teng(Yordamchi.yopiqmi(), true);
+          Yordamchi.sozla({ foydalanuvchiId: function () { return 'u-2'; } }); teng(Yordamchi.yopiqmi(), false, 'boshqa akkaunt');
+          Yordamchi.sozla({ foydalanuvchiId: function () { return 'u-1'; } }); teng(Yordamchi.yopiqmi(), true);
+          Yordamchi.belginiOchir(); teng(Yordamchi.yopiqmi(), false);
+        });
+      });
+      test('Yordamchi chat (DOM): tugma faqat kirgan va yopilmagan foydalanuvchiga; chat ochiladi, savol-javob, kutishda yuborish o\'chiq, xatoda "Qayta urinish", tozalash, orqaga', function () {
+        var asosiy = true, javoblar = [YO_REJA(), { holat: 200, tana: { ok: true, matn: 'Jami balans 600 000 so\'m.' } }, yoXato(502, 'AI_PROVAYDER'), YO_REJA(), { holat: 200, tana: { ok: true, matn: 'Yana javob.' } }];
+        var s = yoServer(function () { return javoblar.shift(); }), xabarlar = [], kirgan = true;
+        Yordamchi.sozla({ kirgan: function () { return kirgan; } });
+        Yordamchi.boshlash({ malumot: yoM, korinadi: function () { return asosiy; }, xabar: function (m) { xabarlar.push(m); } });
+        var t = document.getElementById('yordamchi-tugma');
+        teng(!!t && !t.hidden, true); teng(t.getAttribute('aria-label'), 'Yordamchi'); teng(t.querySelectorAll('ellipse').length, 2); teng(t.querySelectorAll('.yo-qorachiq').length, 2);
+        kirgan = false; Yordamchi.yangila(); teng(t.hidden, true, 'kirmagan'); kirgan = true; asosiy = false; Yordamchi.yangila(); teng(t.hidden, true, 'Asosiy emas'); asosiy = true; Yordamchi.yangila(); teng(t.hidden, false);
+        t.click();
+        teng(!!document.querySelector('.yo-ekran'), true); teng(t.hidden, true, 'chat ochiq: tugma yashirin');
+        teng(document.querySelectorAll('.yo-tayyor').length, 5); teng(document.querySelector('.yo-izoh').textContent, 'Faqat sizning yozuvlaringizdan javob beradi');
+        var inp = document.getElementById('yordamchi-kiritish'); teng(inp.maxLength, 300); teng(inp.placeholder, 'Savolingizni yozing…');
+        inp.value = 'Hisoblarimda qancha bor?'; document.querySelector('.yo-pastki').dispatchEvent(new Event('submit', { cancelable: true }));
+        teng(document.getElementById('yordamchi-yubor').disabled, true, 'kutishda o\'chiq'); teng(!!document.querySelector('.yo-kutish .yo-nuqta'), true); teng(document.querySelectorAll('.yo-savol').length, 1);
+        function kut(f) { return new Promise(function (ok, no) { var n = 0; (function q() { if (f()) return ok(); if (++n > 100) return no(new Error('kutildi, bo\'lmadi')); setTimeout(q, 20); })(); }); }
+        return kut(function () { return document.querySelectorAll('.yo-javob').length === 1 && !document.querySelector('.yo-kutish'); }).then(function () {
+          teng(document.querySelector('.yo-javob').textContent, 'Jami balans 600 000 so\'m.'); teng(document.getElementById('yordamchi-yubor').disabled, false);
+          document.querySelectorAll('.yo-tayyor').length; teng(document.querySelectorAll('.yo-tayyor').length, 0, 'suhbat bor: tayyor savollar yo\'q');
+          inp.value = 'ikkinchi'; document.querySelector('.yo-pastki').dispatchEvent(new Event('submit', { cancelable: true }));
+          return kut(function () { return !!document.querySelector('.yo-xato'); });
+        }).then(function () {
+          teng(/\(kod: AI_PROVAYDER\)/.test(document.querySelector('.yo-xato').textContent), true); var q = document.querySelector('.yo-qayta'); teng(!!q && q.textContent, 'Qayta urinish');
+          q.click(); teng(!!document.querySelector('.yo-kutish'), true); teng(document.querySelectorAll('.yo-savol').length, 2, 'qayta urinishda savol takrorlanmaydi');
+          return kut(function () { return !document.querySelector('.yo-kutish') && !document.querySelector('.yo-xato'); });
+        }).then(function () {
+          teng(document.querySelectorAll('.yo-javob')[1].textContent, 'Yana javob.');
+          document.getElementById('yordamchi-tozalash').click(); teng(document.querySelectorAll('.yo-savol, .yo-javob').length, 0); teng(document.querySelectorAll('.yo-tayyor').length, 5);
+          document.getElementById('yordamchi-orqaga').click(); teng(!!document.querySelector('.yo-ekran'), false); teng(t.hidden, false); teng(document.body.style.overflow, '');
+          // 403: xabar, suhbat yopiladi, tugma yashirinadi
+          javoblar.push(yoXato(403, 'AI_RUXSAT')); t.click(); inp = document.getElementById('yordamchi-kiritish'); inp.value = 'x'; document.querySelector('.yo-pastki').dispatchEvent(new Event('submit', { cancelable: true }));
+          return kut(function () { return !document.querySelector('.yo-ekran'); });
+        }).then(function () {
+          teng(xabarlar.join('|'), 'Yordamchi hozircha siz uchun yopiq'); teng(t.hidden, true); teng(Yordamchi.suhbat().length, 0);
+          Yordamchi.belginiOchir(); Yordamchi.yangila(); teng(t.hidden, false);
+        });
+      });
+      test('Yordamchi: suhbat bazaga, serverga va zaxiraga yozilmaydi; kodda maxfiy kalit va email yo\'q; fayllar index.html va sw.js da; CSS: 58 px tugma, 44/48 px tugmalar, reduced-motion', function () {
+        return Promise.all(['js/yordamchi.js', 'js/yordamchi-sof.js', 'index.html', 'sw.js', 'style.css'].map(matnOl)).then(function (t) {
+          var kod = (t[0] + t[1]).replace(/\/\/[^\n]*/g, '');
+          teng(/Data\.|indexedDB|sessionStorage/.test(kod), false); teng((kod.match(/localStorage|xotira\(\)/g) || []).length > 0, true);
+          teng(/setItem\([^)]*suhbat/i.test(kod), false);
+          teng(/OPENAI_API_KEY|ANTHROPIC_API_KEY|AI_RUXSAT_EMAIL|sk-ant-|sk-proj-|service_role|eyJ[A-Za-z0-9_-]{20,}|[A-Za-z0-9._-]+@[A-Za-z0-9-]+\.[a-z]{2,}/.test(kod), false);
+          teng(/js\/yordamchi-sof\.js\?v=[^"]+"><\/script>\s*<script src="js\/yordamchi\.js\?v=[^"]+"><\/script>\s*<script src="js\/ui\.js/.test(t[2]), true);
+          teng(t[3].indexOf("'js/yordamchi-sof.js' + v") > 0 && t[3].indexOf("'js/yordamchi.js' + v") > 0, true);
+          teng(/\.yordamchi-tugma \{[^}]*width: 58px; height: 58px/.test(t[4]) && /border: 3px solid var\(--yo-hoshiya\)/.test(t[4]) && /--yo-tugma: #1f2a3a/.test(t[4]) && /--yo-tugma: #3a64b5/.test(t[4]), true);
+          teng(/\.yo-doira \{[^}]*width: 44px; height: 44px/.test(t[4]) && /\.yo-yubor \{[^}]*width: 48px; height: 48px/.test(t[4]) && /prefers-reduced-motion: reduce\) \{\s*\.yo-koz \{ animation: none/.test(t[4]), true);
+          teng(/--yo-fon: #12161f; --yo-karta: #1b2130; --yo-chegara: #2a3245; --yo-matn: #e8ecf3; --yo-xira: #9aa6ba;\s*--yo-savol-fon: #262e40; --yo-savol-matn: #a9c2f0/.test(t[4]), true);
         });
       });
       var ul = document.getElementById('natija');

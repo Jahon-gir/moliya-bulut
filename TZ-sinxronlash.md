@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 18 (09.10.2026): 23-band (AI yordamchi: server qismi) qo'shildi. Oldingi: 17 (09.10.2026): 22-band (kategoriya ikonlari va Tarix ko'rinishi) qo'shildi. Oldingi: 16 (09.10.2026): 21-band (yangi dizayn) qo'shildi. Oldingi: 15 (09.10.2026): 20-band (soddalashtirish) qo'shildi. Oldingi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 19 (09.10.2026): 24-band (AI yordamchi: tugma, chat ekrani va hisoblash, ilova 0.32.0) qo'shildi. Oldingi: 18 (09.10.2026): 23-band (AI yordamchi: server qismi) qo'shildi. Oldingi: 17 (09.10.2026): 22-band (kategoriya ikonlari va Tarix ko'rinishi) qo'shildi. Oldingi: 16 (09.10.2026): 21-band (yangi dizayn) qo'shildi. Oldingi: 15 (09.10.2026): 20-band (soddalashtirish) qo'shildi. Oldingi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -472,3 +472,44 @@ AI ga yozuvlar ro'yxati, izohlar va qarzdagi shaxs ismlari yuborilmaydi. Yuboril
 - Haqiqiy Supabase'da va haqiqiy AI provayderi bilan sinalmagan (kalit yo'q); foydalanuvchi `supabase/README.md` 5.4 bo'yicha tekshiradi.
 - Ilovada chat ekrani, tugma va hisoblash keyingi PR larda; `natija` ning aniq shakli (qaysi amal qanday kalitlar qaytaradi) o'sha PR da belgilanadi.
 - Versiya raqami (`index.html`) bu PR da oshirilmadi: ilova fayllariga tegilmadi.
+
+## 24. AI yordamchi: tugma, chat ekrani va hisoblash (2-PR, jami 3 tadan, 0.32.0)
+
+Server funksiyasiga (23-band), server sxemasiga va sinxronlash mantig'iga TEGILMAGAN. Javob bu bosqichda ODDIY MATNDA; kartochkali javoblar, ovoz, chek rasmi, pullik obuna va suhbatni saqlash qilinmaydi.
+
+### 24.1. Fayllar
+`js/yordamchi-sof.js` (sof: hisoblash, natija tekshiruvi, xato matnlari, tayyor savollar; `YordamchiSof`), `js/yordamchi.js` (server bilan aloqa, suzuvchi tugma, chat ekrani; `Yordamchi`). `index.html` va `sw.js` `royxat()` ga qo'shildi; `ui.js` da faqat ikki joy: `Yordamchi.boshlash(...)` va `chizish()` oxirida `Yordamchi.yangila()`. Stillar `style.css` oxirida ("0.32.0").
+
+### 24.2. Suzuvchi tugma ("Ko'zlar")
+- Faqat Asosiy sahifada (ichki ekran ochiq bo'lmaganda), pastki menyu ustida, o'ngdan 16 px, menyudan 16 px yuqorida. 58x58, to'liq dumaloq, foni `#1F2A3A`, atrofida 3 px oq hoshiya va yumshoq soya. Tungi rejimda foni `#3A64B5`, hoshiya sahifa foni rangida.
+- Ichida faqat ikki ko'z (o'zim chizgan SVG): ikkita oq tik oval, to'q qorachiq, qorachiqlar biroz o'ngga-pastga qaragan. Har 6 soniyada bir marta pirpiraydi; bosilganda qorachiqlar markazga keladi. `prefers-reduced-motion` yoqiq bo'lsa pirpirash va siljish animatsiyasi yo'q. `aria-label="Yordamchi"`.
+- Faqat Google bilan kirgan foydalanuvchiga ko'rinadi (chiqsa yashirinadi). PIN qulfida yashirin.
+- **Yopiq belgisi:** server 403 (`AI_RUXSAT`) qaytarsa: "Yordamchi hozircha siz uchun yopiq" xabari, chat yopiladi va tugma shu qurilmada yashiriladi. Belgi `localStorage` da (`moliya-yordamchi-yopiq`), qiymati — foydalanuvchi id si (email saqlanmaydi, kodga yozilmaydi). Boshqa akkaunt bilan kirilsa shu akkaunt uchun yopiq emas. Chiqib (sessiya tugab) qayta kirilsa belgi o'chadi. (Haqiqiy server ruxsati o'zgarmaydi: bu faqat ko'rinish.)
+
+### 24.3. Chat ekrani
+To'liq ekran (pastki menyu yopiladi), sarlavha: "Orqaga" (44 px yumaloq), "Yordamchi", o'ngda "Suhbatni tozalash" (44 px). Savol: o'ngda, fon `#E8EEF7`, matn `#2F4A72`, 14 px qalin, burchak 16 px. Javob: to'liq kenglikdagi karta (oq fon, nozik chegara, burchak 18 px, ichki bo'shliq 16 px, 15 px oddiy matn). Bo'sh suhbatda "Faqat sizning yozuvlaringizdan javob beradi" va 5 ta tayyor savol ("Shu oy xarajatim", "Shu oy eng ko'p nimaga sarfladim?", "Menga kim qarzdor?", "Hisoblarimda qancha bor?", "<Joriy oy> hisoboti"). Pastda matn maydoni (300 belgi) va 48 px dumaloq "Yuborish". Kutishda javob o'rnida uch nuqta, yuborish o'chiq. Tungi rejim: fon `#12161F`, karta `#1B2130`, chegara `#2A3245`, matn `#E8ECF3`, kulrang `#9AA6BA`, savol foni `#262E40`, savol matni `#A9C2F0`. **Suhbat faqat xotirada** (o'zgaruvchi): bazaga, serverga, zaxiraga va `localStorage` ga yozilmaydi; ilova yopilsa yoki "Tozalash" bosilsa o'chadi (chatdan chiqib qaytsa, ilova ochiq turguncha saqlanadi). Qo'shimcha: Escape yopadi; iPhone klaviaturasi ochilganda ekran ko'rinadigan oynaga moslanadi.
+
+### 24.4. Oqim
+Savol -> `rejim: "reja"` (savol, bugungi sana, kategoriya va hisob nomlari) -> tuzilgan so'rov -> ilova telefonda hisoblaydi -> `rejim: "javob"` (savol, so'rov, natija) -> matn. `amal = "tushunarsiz"` bo'lsa serverga ikkinchi so'rov yuborilmaydi: "Savolni tushunmadim. Masalan: «Shu oy taksiga qancha ketdi?»". Internet yo'q bo'lsa so'rov umuman ketmaydi. 401 bo'lsa token bir marta yangilanib qayta yuboriladi.
+**Serverga faqat** raqamlar, sanalar, kategoriya va hisob nomlari ketadi. Yozuvlar ro'yxati, izoh matni va qarzdagi shaxs ismlari yuborilmaydi: natijada bunday kalit yo'q va ilova yuborishdan oldin natijani server qoidalari bilan (taqiqlangan kalitlar, kalit nomi, uzunlik, chuqurlik) o'zi tekshiradi. Kategoriya nomlari ro'yxatiga hisobotdagi "Olingan qarz" va "Berilgan qarz" ham qo'shiladi (Asosiy sahifadagi hisobotda bor). Nomlar ≤ 60 belgi, ≤ 100 ta.
+
+### 24.5. Natija shakllari (har amal)
+Hisob-kitoblar mavjud `Calc` funksiyalari bilan (`hisobot`, `yozuvlarniSuz`, `hisobQoldigi`, `umumiyBalans`, `qarzlarJami`, `taqqoslash`); yozuvlar: o'chirilmaganlar + qarz amallari (20.4: "Olingan qarz" daromad, "Berilgan qarz" xarajat, Asosiy sahifadagi hisobot bilan bir xil); o'tkazma hisobotga kirmaydi, qarz qoldig'i `qarzQolgan` dan. `tur` bo'sh bo'lsa: kategoriyaning turi, u ham bo'lmasa `xarajat`. Barcha sonlar butun va MANFIY EMAS (server raqam tekshiruvi minusni tanimaydi): yo'nalish alohida so'z bilan. Qidiruv izohdan (qarz amallari qidirilmaydi, chunki ularning "izohi" shaxs ismi).
+- `yigindi`: `{ tur, jami, yozuvlar_soni, kategoriya?, hisob? }`.
+- `kategoriyalar`: `{ tur, jami, eng_katta: [{ nom, summa }] (ko'pi bilan 5 ta), hisob? }`.
+- `qidiruv`: `{ tur, topilgan_soni, jami, kategoriya?, hisob? }`.
+- `taqqoslash`: `{ tur, davr1_jami, davr2_jami, farq (≥ 0), yonalish: "oshgan" | "kamaygan" | "teng", foiz? (≥ 0; davr2 jami 0 bo'lsa yo'q), kategoriya?, hisob? }`.
+- `qarzlar`: `{ berilgan_jami, olingan_jami, kishi_soni, eng_yaqin_muddat: { sana, summa, otgan } | null }` (ochiq qarzlar; kishi — ism bo'yicha noyob; eng yaqin muddat — eng erta muddat, o'tib ketgan bo'lsa ham, `otgan: true`; summa — shu sanadagi qarzlar qoldig'i).
+- `hisoblar`: `{ jami_balans, jami_manfiy?, hisoblar: [{ nom, qoldiq, manfiy? }] }` (arxivlanmaganlar, ≤ 30 ta; `hisob` berilsa faqat shu).
+- `oylik_hisobot`: `{ xarajat, daromad, sof_balans, sof_yonalish: "ortiqcha" | "kamomad" | "nol", eng_katta_kategoriya: { nom, summa } | null, hisob? }`.
+
+### 24.6. Xatolar
+Har xato: oddiy o'zbekcha gap + "(kod: ...)", javob kartasi o'rnida (qizil chegara), "Qayta urinish" tugmasi bilan (savol takrorlanmaydi): `NETWORK_OFFLINE` (internet yo'q), `NETWORK`, `AI_LIMIT` (bugungi limit tugadi), `AI_PROVAYDER`, `AI_RAQAM` / `AI_SXEMA` (qayta urinib ko'ring), `AUTH_EXPIRED` / 401 (kirish muddati tugagan: chiqib qayta kiring), `HTTP_<holat>`, `JS_<nom>`. `AI_UZUN` da qayta urinish tugmasi yo'q.
+
+### 24.7. Qabul qilingan taxminlar va cheklovlar
+- `tur` ko'rsatilmasa `xarajat` deb olinadi (yuqorida). Savolda "daromad" aytilsa AI `tur: "daromad"` beradi deb kutiladi.
+- Qarz amallari hisobotga kiradi (20.4), shuning uchun "xarajatim" jamiga "Berilgan qarz" ham kiradi: Asosiy sahifadagi raqam bilan bir xil bo'lishi uchun.
+- Server `reja` va `javob` ni alohida so'rov deb sanaydi (23.5): bir savol = 2 ta so'rov.
+- Server natijadagi raqamlarni tekshiradi, shuning uchun yo'nalish ("oshgan", "kamaygan", "manfiy") so'z bilan beriladi.
+- Tungi rejimda "Yuborish" tugmasi `#3A64B5` (yorug' rejimda `#2F4A72`): `#2F4A72` qora fonda yomon ko'rinadi.
+- Android "orqaga" tugmasi chatni yopmaydi (brauzer tarixiga yozilmaydi); ekrandagi "Orqaga" va Escape yopadi.

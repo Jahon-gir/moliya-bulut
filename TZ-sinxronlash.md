@@ -1,6 +1,6 @@
 # TZ: Chuntak AI, profil va sinxronlash (3-versiya, 1-qism)
 
-Hujjat versiyasi: 15 (09.10.2026): 20-band (soddalashtirish) qo'shildi. Oldingi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
+Hujjat versiyasi: 16 (09.10.2026): 21-band (yangi dizayn) qo'shildi. Oldingi: 15 (09.10.2026): 20-band (soddalashtirish) qo'shildi. Oldingi: 14 (24.10.2026): 19-band (qarz amallari hisobotda) qo'shildi. Oldingi: 13 (23.10.2026): 18.5 (daromad/xarajat rangi va bog'liqlik xatosi) qo'shildi. Oldingi: 12 (22.10.2026): 18.4 (importdagi jiddiy xatolarni tuzatish, hisob qoldiqlarini moslash, sinxron xatosini ko'rsatish) qo'shildi. Oldingi: 11 (21.10.2026): 18.3 (qarz qatorlarini yuklash) qo'shildi. Oldingi: 10 (20.10.2026): 18-band (kirish ekrani va fayldan yuklash) qo'shildi. Oldingi: 8 (19.10.2026): S8 (yakuniy bosqich) bajarildi (17-band). Oldingi: 7 (18.10.2026): S6 va S7 bajarildi (16-band). Oldingi: 6 (17.10.2026): 0.20.1 xato tuzatish (15-band oxiri). Oldingi: 5 (16.10.2026): S5 bajarildi (15-band). S4: 14-band. Oldingi: S1 va S2 bajarildi (S2: faqat Google bilan kirish), 7-band "Menyu" ga moslandi, 13-band (S2 natijasi) qo'shildi. Bu TZ asosiy TZ.md ga qo'shimcha: undagi qoidalar (bir vaqtda bitta bosqich, TZ'da yo'q narsani qo'shmaslik, noaniq joyda so'rash, o'zbekcha matn, "vaqt hozirdan keyin bo'lmaydi", zaxira va migratsiya qoidalari) o'z kuchida.
 
 ## 1. Maqsad
 
@@ -371,3 +371,29 @@ v0.28.0 dagi "Qarzlarni hisobotga qo'shish" tugmasi olib tashlanadi. Qarz amalla
 
 ### 20.5 Saqlagandan keyin Tarixga o'tish
 Xarajat, daromad yoki o'tkazma yozuvi TO'LIQ saqlangach forma yopiladi, ilova avtomatik "Tarix" bo'limiga o'tadi va yangi yozuvning oyi ko'rinadi (yangi yozuv ro'yxatda ko'rinadi). Forma qayta ochilmaydi.
+
+## 21. Yangi dizayn (0.30.0)
+
+Faqat ko'rinish va joylashuv o'zgaradi. Ma'lumot mantig'i, sinxronlash va hisob-kitoblar o'zgarmaydi. Hamma ekran yorug' va qora (tungi) rejimda; ranglar CSS o'zgaruvchilarida (`style.css`, "0.30.0" bo'limi).
+
+### 21.1 Umumiy
+- Kartalar yumaloq (burchak 18 px), nozik chegara, ichida yetarli bo'sh joy.
+- Kategoriya belgisi: 40 px yumaloq-kvadrat katak, ikonning o'zi ≈23 px, katak foni ikon rangining ≈15% tusi (qisqa chip va ro'yxatlarda 28 px).
+- Ekran tepasidagi sarlavha qatori (Asosiy: yumaloq menyu tugmasi va ekran nomi) `position: sticky; top: 0`: sahifa aylanganda joyida turadi, orqa foni to'liq qoplangan, pastida nozik chiziq.
+- Pastki navigatsiya (Asosiy / Tarix / "+" / Qarzlar / Ko'proq): chetdan ichkarida suzuvchi, ≈22 px burchakli panel; tanlangan bo'lim engil rangli yumaloq fonda. iPhone pastki xavfsiz zonasi (safe-area) hisobga olinadi.
+- Raqamlar kartadan chiqmaydi: bitta qator, tekis (tabular) raqamlar; katak ichiga sig'masa shrift 1 pikseldan kichrayadi (eng kichigi 11 px), shunda ham sig'masa qisqa ko'rinishga o'tadi ("10,8 mln"). Gorizontal siljish yo'q (`js/sigdir.js`).
+
+### 21.2 Naqd pul oqimi ("C varianti")
+Karta engil ko'k-kulrang fonda (yorug' `#E8EEF7`, qora `#1B2130`). Tepada "Naqd pul oqimi" va oy nomi (pill, hamon oy tanlagichi). Ikki kichik katak yonma-yon: Xarajat (yorug' `#B3412F`, qora `#FF8A78`, "−8 400 000") va Daromad (yorug' `#2F7A3F`, qora `#5FD38A`, "+10 850 000"); katak foni yorug' oq, qora `#262E40`. Eng pastida to'liq kenglikdagi tasma: "Sof balans" va yirik raqam (yorug' `#2F4A72`, qora `#3A64B5`, matn oq).
+
+### 21.3 Donut diagramma (Kategoriyalar)
+- Yarqin ranglar: binafsha `#7C5CFF`, ko'k `#1E9BFF`, yashil `#19C37D`, sariq `#FFB020`, pushti `#FF5C8A` va yana `#14C8C8`, `#FF7A3D`, `#B25CFF`; har bo'lak boshqa rang; "Boshqalar" kulrang.
+- Tilimlar orasida ≈7 px ochiq joy, uchlari tekis (`stroke-linecap: butt`), halqa qalinligi 22 (viewBox 180, radius 64). Markazda "Xarajat" (yoki "Daromad") va qisqa jami summa ("8,4 mln").
+- Eng katta 5 ta kategoriya alohida; qolgani va jami summaning 3% idan kichiklari bitta "Boshqalar" bo'lagiga yig'iladi (faqat ko'rinish: summalar o'zgarmaydi; yig'iladigan kategoriya bittagina bo'lsa, u o'z bo'lagida qoladi).
+- Ro'yxat: har kategoriya uchun ikon katagi, nomi, foizi (va summasi). "Boshqalar" qatori "N ta, bosib oching" bilan yopiq; bosilsa ichidagi kategoriyalar shu qator ostida ochiladi, yana bossa yopiladi. Diagrammadagi "Boshqalar" bo'lagi bosilsa, o'sha kategoriyalarning yozuvlari ochiladi (avvalgidek).
+
+### 21.4 Tarix
+Tepada engil rangli karta: "Oy balansi" va oy nomi (pill), ostida katta raqam (oy sof balansi), undan keyin Xarajat va Daromad ikki katakda YONMA-YON. Ostida sana sarlavhasi ("9-oktabr") va har kun uchun yumaloq kartada yozuvlar. Har yozuvda faqat kategoriya belgisi (40 px); hisob belgisi yo'q, hisob nomi kategoriya nomi ostida kichik oddiy matn. Summa o'ngda: xarajat qizil, daromad yashil.
+
+### 21.5 Qarzlar
+Tepada ikkita katta tugma-karta yonma-yon: "Berilgan qarzlar" va "Olingan qarzlar", har birida jami summa; tanlangani rangli fon va rangli chegara bilan. Boshlang'ich holat — Berilgan. Pastda tanlangan tur ro'yxati: odam belgisi, ism, "Muddat: …", o'ngda qolgan summa. Qatorni bosish qarz tafsilotini ochadi (avvalgidek).

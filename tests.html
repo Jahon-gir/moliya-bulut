@@ -15,23 +15,24 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.29.0"></script>
-  <script src="js/tema.js?v=0.29.0"></script>
-  <script src="js/belgilar.js?v=0.29.0"></script>
-  <script src="js/calc.js?v=0.29.0"></script>
-  <script src="js/xlsx.js?v=0.29.0"></script>
-  <script src="js/xlsx-oqi.js?v=0.29.0"></script>
-  <script src="js/import-sof.js?v=0.29.0"></script>
-  <script src="js/sinxron-sof.js?v=0.29.0"></script>
-  <script src="js/data.js?v=0.29.0"></script>
-  <script src="js/diagramma.js?v=0.29.0"></script>
-  <script src="js/pin.js?v=0.29.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.29.0"></script>
-  <script src="js/kirish.js?v=0.29.0"></script>
-  <script src="js/yuklash.js?v=0.29.0"></script>
-  <script src="js/salom.js?v=0.29.0"></script>
-  <script src="js/sinxron.js?v=0.29.0"></script>
-  <script src="js/pwa.js?v=0.29.0"></script>
+  <script src="js/ilova.js?v=0.30.0"></script>
+  <script src="js/tema.js?v=0.30.0"></script>
+  <script src="js/belgilar.js?v=0.30.0"></script>
+  <script src="js/calc.js?v=0.30.0"></script>
+  <script src="js/xlsx.js?v=0.30.0"></script>
+  <script src="js/xlsx-oqi.js?v=0.30.0"></script>
+  <script src="js/import-sof.js?v=0.30.0"></script>
+  <script src="js/sinxron-sof.js?v=0.30.0"></script>
+  <script src="js/data.js?v=0.30.0"></script>
+  <script src="js/sigdir.js?v=0.30.0"></script>
+  <script src="js/diagramma.js?v=0.30.0"></script>
+  <script src="js/pin.js?v=0.30.0"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.30.0"></script>
+  <script src="js/kirish.js?v=0.30.0"></script>
+  <script src="js/yuklash.js?v=0.30.0"></script>
+  <script src="js/salom.js?v=0.30.0"></script>
+  <script src="js/sinxron.js?v=0.30.0"></script>
+  <script src="js/pwa.js?v=0.30.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -921,20 +922,20 @@
       // --- DOM: diagrammadagi raqamlar va matnli muqobillar (aria-label) ---
       function sinovKartasi(el) { var q = document.createElement('div'); q.style.width = '320px'; q.appendChild(el); return q; }
       function tilimlarOl(quti) { return Array.prototype.slice.call(quti.querySelectorAll('.dona-tilim')); }
-      test('DOM doira (TZ): 2 ta tilim, rangi kategoriya rangi bilan bir xil, summa va foiz hisobotdagidek', function () {
+      test('DOM doira (TZ): 2 ta tilim, har biri boshqa yarqin rang (palitra), summa va foiz hisobotdagidek', function () {
         var h = oyHisoboti(TZ), quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: katOl, bosilganda: function () {} });
         var t = tilimlarOl(quti); teng(t.length, 2);
-        teng(t.map(function (e) { return e.getAttribute('data-kategoriya') + ':' + e.getAttribute('data-summa') + ':' + e.getAttribute('data-foiz') + ':' + e.getAttribute('fill'); }).join(),
-          'oziq:450000:90:#e57373,trans:50000:10:#64b5f6');
+        teng(t.map(function (e) { return e.getAttribute('data-kategoriya') + ':' + e.getAttribute('data-summa') + ':' + e.getAttribute('data-foiz') + ':' + e.getAttribute('stroke'); }).join(),
+          'oziq:450000:90:var(--dona-1),trans:50000:10:var(--dona-2)');   // yarqin palitra: har bo'lak boshqa rang
       });
       test('DOM doira: har tilim va ro\'yxat qatorida aria-label (nom, summa, foiz) bor; ro\'yxatda hammasi ko\'rinadi', function () {
         var h = oyHisoboti(TZ), quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: katOl, bosilganda: function () {} });
         teng(tilimlarOl(quti)[0].getAttribute('aria-label').indexOf('Oziq-ovqat: 450 000 so\'m, 90 foiz') === 0, true);
         teng(tilimlarOl(quti)[1].getAttribute('aria-label').indexOf('Transport: 50 000 so\'m, 10 foiz') === 0, true);
         var q = quti.querySelectorAll('.dona-qator'); teng(q.length, 2);
-        teng(q[0].textContent, 'Oziq-ovqat450 000 so\'m · 90%'); teng(q[1].textContent, 'Transport50 000 so\'m · 10%');
+        teng(q[0].textContent, 'Oziq-ovqat450 000 so\'m90%'); teng(q[1].textContent, 'Transport50 000 so\'m10%');
         teng(quti.querySelector('svg').getAttribute('aria-label').indexOf('Jami 500 000 so\'m') > 0, true);
-        teng(/Jami xarajat/.test(quti.querySelector('.dona-markaz-1').textContent), true); teng(quti.querySelector('.dona-markaz-2').textContent, '500 000 so\'m');
+        teng(quti.querySelector('.dona-markaz-1').textContent, 'Xarajat'); teng(quti.querySelector('.dona-markaz-2').textContent, '500 ming');   // markazda qisqa summa
       });
       test('DOM doira: tilim yoki qator bosilganda o\'sha kategoriya ochiladi', function () {
         var ochilgan = [], h = oyHisoboti(TZ), quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: katOl, bosilganda: function (id) { ochilgan.push(id); } });
@@ -945,21 +946,22 @@
         var Y = [{ tur: 'xarajat', summa: 777000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'oziq' }], h = oyHisoboti(Y);
         var quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: katOl, bosilganda: function () {} });
         teng(quti.querySelectorAll('circle.dona-tilim').length, 1); teng(quti.querySelector('.dona-tilim').getAttribute('data-foiz'), '100');
-        teng(quti.querySelectorAll('.dona-qator').length, 1); teng(quti.querySelector('.dona-qiymat').textContent, '777 000 so\'m · 100%');
+        teng(quti.querySelectorAll('.dona-qator').length, 1); teng(quti.querySelector('.dona-qiymat').textContent, '777 000 so\'m'); teng(quti.querySelector('.dona-foiz').textContent, '100%');
+        var c1 = quti.querySelector('circle.dona-tilim'); teng(parseFloat(c1.getAttribute('stroke-dasharray')) > 400, true);   // bitta tilim: butun halqa (aylana uzunligi ≈402), ochiq joy yo'q
       });
-      test('DOM doira: 15 ta kategoriya — 7 tilim (6 + Boshqalar), 15 ta qator, ranglar o\'z kategoriyasiniki, foizlar yig\'indisi 100', function () {
+      test('DOM doira: 15 ta kategoriya — 6 tilim (5 + Boshqalar), 15 ta qator, har tilim boshqa rang, foizlar yig\'indisi 100', function () {
         var Y = [], K = {}; for (var i = 0; i < 15; i++) { Y.push({ tur: 'xarajat', summa: (i + 1) * 1000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'k' + i }); K['k' + i] = { nom: 'Kategoriya ' + i, rang: '#' + ('00' + (i * 17).toString(16)).slice(-2) + '8080' }; }
         var h = oyHisoboti(Y), quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: function (id) { return K[id]; }, bosilganda: function () {}, guruhBosilganda: function () {} });
-        var t = tilimlarOl(quti); teng(t.length, 7); teng(quti.querySelectorAll('.dona-qator').length, 16);   // 15 kategoriya + "Boshqalar" sarlavhasi
+        var t = tilimlarOl(quti); teng(t.length, 6); teng(quti.querySelectorAll('.dona-qator').length, 16);   // 15 kategoriya + "Boshqalar" sarlavhasi
         teng(quti.querySelectorAll('.dona-qator[data-kategoriya^="k"]').length, 15);
-        teng(t.filter(function (e) { return e.getAttribute('data-kategoriya') !== 'boshqalar'; }).every(function (e) { return e.getAttribute('fill') === K[e.getAttribute('data-kategoriya')].rang; }), true);
+        var rr = t.map(function (e) { return e.getAttribute('stroke'); }); teng(rr.filter(function (v, i) { return rr.indexOf(v) === i; }).length, 6, 'har bo\'lak boshqa rang'); teng(rr[5], 'var(--g-boshqa)');
         teng(t.reduce(function (a, e) { return a + Number(e.getAttribute('data-foiz')); }, 0), 100);
         teng(t.reduce(function (a, e) { return a + Number(e.getAttribute('data-summa')); }, 0), h.xarajat);
       });
-      test('DOM doira: o\'chirilgan (noma\'lum) kategoriya "Kategoriyasiz" bo\'lib, kulrang bilan chiziladi', function () {
+      test('DOM doira: o\'chirilgan (noma\'lum) kategoriya "Kategoriyasiz" bo\'lib ro\'yxatda chiqadi', function () {
         var Y = [{ tur: 'xarajat', summa: 10, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'yoq' }, { tur: 'xarajat', summa: 5, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'oziq' }], h = oyHisoboti(Y);
         var quti = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: katOl, bosilganda: function () {} });
-        teng(quti.querySelector('.dona-nom').textContent, 'Kategoriyasiz'); teng(quti.querySelector('.dona-tilim').getAttribute('fill'), '#90a4ae');
+        teng(quti.querySelector('.dona-nom').textContent, 'Kategoriyasiz'); teng(quti.querySelectorAll('.dona-tilim').length, 2);
       });
       test('DOM doira: juda katta summa (jami 9 999 999 999 999 so\'m) va juda kichik (1 so\'m) — markaz matni sig\'adigan, qiymatlar aniq', function () {
         var Y = [{ tur: 'xarajat', summa: 9999999999999, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'oziq' }, { tur: 'xarajat', summa: 1, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'trans' }], h = oyHisoboti(Y);
@@ -1032,39 +1034,63 @@
         var d = Diagramma.dona({ taqsimot: h.xarajatTaqsimoti, jami: h.xarajat, kategoriya: function (id) { return K[id]; }, bosilganda: function () {}, guruhBosilganda: function () {} });
         var u = Diagramma.ustunli({ vaqt: v, bosilganda: function () {} }); var vaqt = performance.now() - t0;
         teng(vaqt < 1000, true);
-        teng(v.jami.xarajat, h.xarajat); teng(v.jami.daromad, h.daromad); teng(tilimlarOl(d).length, 7); teng(ustunOl(u).length, 31);
+        teng(v.jami.xarajat, h.xarajat); teng(v.jami.daromad, h.daromad); teng(tilimlarOl(d).length, 6); teng(ustunOl(u).length, 31);
       });
 
 
       // --- 7-bosqich: doira "Boshqalar" tilimi ---
       function taqsim(n) { var Y = []; for (var i = 0; i < n; i++) Y.push({ tur: 'xarajat', summa: (n - i) * 1000 + i, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'k' + i }); return oyHisoboti(Y).xarajatTaqsimoti; }
-      test('donaGuruhlash: 6 va 7 ta kategoriya birlashmaydi (qolgan bitta bo\'lsa ma\'nosiz)', function () {
-        teng(Calc.donaGuruhlash(taqsim(6)).boshqalar, null); teng(Calc.donaGuruhlash(taqsim(7)).tilimlar.length, 7); teng(Calc.donaGuruhlash(taqsim(7)).boshqalar, null);
+      test('donaGuruhlash: 5 ta kategoriya birlashmaydi; 6 ta bo\'lsa oxirgisi bitta — u ham alohida (bittani birlashtirish ma\'nosiz)', function () {
+        teng(Calc.donaGuruhlash(taqsim(5)).boshqalar, null); teng(Calc.donaGuruhlash(taqsim(6)).boshqalar, null); teng(Calc.donaGuruhlash(taqsim(6)).tilimlar.length, 6);
+        teng(Calc.donaGuruhlash(taqsim(7)).tilimlar.length, 6); teng(Calc.donaGuruhlash(taqsim(7)).boshqalar.soni, 2);
       });
-      test('donaGuruhlash: 8 ta kategoriya — 6 ta alohida + Boshqalar (2 ta), summa va foiz yig\'indisi saqlanadi', function () {
+      test('donaGuruhlash: 8 ta kategoriya — 5 ta alohida + Boshqalar (3 ta), summa va foiz yig\'indisi saqlanadi', function () {
         var t = taqsim(8), g = Calc.donaGuruhlash(t);
-        teng(g.tilimlar.length, 7); teng(g.boshqalar.soni, 2); teng(g.boshqalar.idlar.join(), 'k6,k7');
-        teng(g.boshqalar.summa, t[6].summa + t[7].summa); teng(g.boshqalar.foiz, t[6].foiz + t[7].foiz);
+        teng(g.tilimlar.length, 6); teng(g.boshqalar.soni, 3); teng(g.boshqalar.idlar.join(), 'k5,k6,k7');
+        teng(g.boshqalar.summa, t[5].summa + t[6].summa + t[7].summa); teng(g.boshqalar.foiz, t[5].foiz + t[6].foiz + t[7].foiz);
         teng(g.tilimlar.reduce(function (a, x) { return a + x.summa; }, 0), t.reduce(function (a, x) { return a + x.summa; }, 0));
         teng(g.tilimlar.reduce(function (a, x) { return a + x.foiz; }, 0), 100);
       });
-      test('donaGuruhlash: eng katta 6 tasi alohida qoladi (tartib saqlanadi)', function () {
+      test('donaGuruhlash: eng katta 5 tasi alohida qoladi (tartib saqlanadi)', function () {
         var t = taqsim(20), g = Calc.donaGuruhlash(t);
-        teng(g.tilimlar.slice(0, 6).map(function (x) { return x.kategoriya_id; }).join(), 'k0,k1,k2,k3,k4,k5'); teng(g.boshqalar.soni, 14); teng(g.dum.length, 14);
+        teng(g.tilimlar.slice(0, 5).map(function (x) { return x.kategoriya_id; }).join(), 'k0,k1,k2,k3,k4'); teng(g.boshqalar.soni, 15); teng(g.dum.length, 15); teng(g.tilimlar[5].kategoriya_id, 'boshqalar');
+      });
+      test('donaGuruhlash: jami summaning 3% idan kichik kategoriyalar eng katta 5 tadan bo\'lsa ham "Boshqalar"ga yig\'iladi', function () {
+        var t = oyHisoboti([{ tur: 'xarajat', summa: 1000000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'k0' }, { tur: 'xarajat', summa: 900000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'k1' },
+          { tur: 'xarajat', summa: 20000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'k2' }, { tur: 'xarajat', summa: 10000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'k3' }]).xarajatTaqsimoti;
+        var g = Calc.donaGuruhlash(t); teng(g.tilimlar.map(function (x) { return x.kategoriya_id; }).join(), 'k0,k1,boshqalar'); teng(g.boshqalar.idlar.join(), 'k2,k3'); teng(g.boshqalar.summa, 30000);
+        // aynan 3% — hali alohida; 3% dan kichik bitta kategoriya (juft emas) — birlashmaydi
+        var t3 = oyHisoboti([{ tur: 'xarajat', summa: 970, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'a' }, { tur: 'xarajat', summa: 30, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'b' }]).xarajatTaqsimoti;
+        teng(Calc.donaGuruhlash(t3).boshqalar, null); teng(Calc.donaGuruhlash(t3).tilimlar.length, 2);
       });
       test('donaGuruhlash: bo\'sh taqsimot', function () { var g = Calc.donaGuruhlash([]); teng(g.tilimlar.length, 0); teng(g.boshqalar, null); });
-      test('DOM doira: 10 ta kategoriya — Boshqalar tilimi va ro\'yxatda hamma kategoriya, guruh bosilsa idlar uzatiladi', function () {
+      test('DOM doira: 10 ta kategoriya — Boshqalar tilimi; ro\'yxatdagi "Boshqalar" qatori "N ta, bosib oching" bilan yopiq, bosilsa ichidagilar ochiladi, yana bossa yopiladi', function () {
         var t = taqsim(10), K = {}; t.forEach(function (x) { K[x.kategoriya_id] = { nom: 'N-' + x.kategoriya_id, rang: '#336699' }; });
         var olingan = null, bitta = null, quti = Diagramma.dona({ taqsimot: t, jami: t.reduce(function (a, x) { return a + x.summa; }, 0), kategoriya: function (id) { return K[id]; }, bosilganda: function (id) { bitta = id; }, guruhBosilganda: function (idlar) { olingan = idlar; } });
-        var tl = tilimlarOl(quti); teng(tl.length, 7);
-        var b = quti.querySelector('.dona-boshqalar'); teng(b.getAttribute('data-soni'), '4'); teng(b.getAttribute('data-kategoriya'), 'boshqalar');
+        var tl = tilimlarOl(quti); teng(tl.length, 6);
+        var b = quti.querySelector('.dona-boshqalar'); teng(b.getAttribute('data-soni'), '5'); teng(b.getAttribute('data-kategoriya'), 'boshqalar');
         teng(quti.querySelectorAll('.dona-qator[data-kategoriya^="k"]').length, 10);
-        teng(quti.querySelectorAll('.dona-ichki').length, 4); teng(quti.querySelector('.dona-guruh .dona-nom').textContent, 'Boshqalar (4 ta kategoriya)');
-        quti.querySelector('.dona-guruh .dona-qator').click(); teng(olingan.join(), 'k6,k7,k8,k9'); teng(bitta, null);
-        b.dispatchEvent(new MouseEvent('click', { bubbles: true })); teng(olingan.join(), 'k6,k7,k8,k9');
-        quti.querySelector('.dona-ichki .dona-qator').click(); teng(bitta, 'k6');
+        var ichkilar = Array.prototype.slice.call(quti.querySelectorAll('.dona-ichki')); teng(ichkilar.length, 5);
+        var g = quti.querySelector('.dona-guruh .dona-qator'); teng(quti.querySelector('.dona-guruh .dona-nom').textContent, 'Boshqalar'); teng(quti.querySelector('.dona-guruh .dona-qiymat').textContent, '5 ta, bosib oching');
+        teng(g.getAttribute('aria-expanded'), 'false'); teng(ichkilar.every(function (li) { return li.hidden; }), true, 'dastlab yopiq');
+        g.click(); teng(g.getAttribute('aria-expanded'), 'true'); teng(ichkilar.every(function (li) { return !li.hidden; }), true, 'ochildi'); teng(olingan, null, 'ro\'yxat qatori yozuvlarni ochmaydi, faqat ochadi');
+        g.click(); teng(g.getAttribute('aria-expanded'), 'false'); teng(ichkilar.every(function (li) { return li.hidden; }), true, 'yopildi');
+        b.dispatchEvent(new MouseEvent('click', { bubbles: true })); teng(olingan.join(), 'k5,k6,k7,k8,k9');   // diagrammadagi Boshqalar bo'lagi yozuvlarni ochadi
+        quti.querySelector('.dona-ichki .dona-qator').click(); teng(bitta, 'k5');
         quti.querySelectorAll('.dona-tilim')[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); teng(bitta, 'k0');
         teng(/Boshqalar/.test(quti.querySelector('svg').getAttribute('aria-label')), true);
+      });
+      test('DOM doira: tilimlar orasida ≈7 px ochiq joy, uchlari tekis (butt), halqa qalinligi 22 (viewBox 180, radius 64); markazda "Xarajat" va qisqa summa', function () {
+        var t = taqsim(6), K = {}; t.forEach(function (x) { K[x.kategoriya_id] = { nom: 'N-' + x.kategoriya_id, rang: '#336699' }; });
+        var quti = Diagramma.dona({ taqsimot: t, jami: t.reduce(function (a, x) { return a + x.summa; }, 0), kategoriya: function (id) { return K[id]; }, bosilganda: function () {}, guruhBosilganda: function () {} });
+        var svgE = quti.querySelector('svg'); teng(svgE.getAttribute('viewBox'), '0 0 180 180');
+        var tl = tilimlarOl(quti), C = 2 * Math.PI * 64;
+        tl.forEach(function (e) { teng(e.getAttribute('r'), '64'); teng(e.getAttribute('stroke-width'), '22'); teng(e.getAttribute('stroke-linecap'), 'butt'); });
+        var jami = 0; tl.forEach(function (e, i) { var ko = parseFloat(e.getAttribute('stroke-dasharray')); jami += ko; teng(ko < Number(e.getAttribute('data-summa')) / t.reduce(function (a, x) { return a + x.summa; }, 0) * C, true, 'har tilim o\'z ulushidan qisqa'); });
+        teng(Math.abs((C - jami) - 6 * 7) < 0.5, true, 'ochiq joylar yig\'indisi 6×7 px: ' + (C - jami));   // har tilim orasida 7 px
+        teng(quti.querySelector('.dona-markaz-1').textContent, 'Xarajat'); teng(/^\d+(,\d)? (ming|mln)$/.test(quti.querySelector('.dona-markaz-2').textContent), true, quti.querySelector('.dona-markaz-2').textContent);
+        var q = Diagramma.dona({ taqsimot: t, jami: 8400000, kategoriya: function (id) { return K[id]; }, bosilganda: function () {}, guruhBosilganda: function () {} }); teng(q.querySelector('.dona-markaz-2').textContent, '8,4 mln');
+        var yashirin = Diagramma.dona({ taqsimot: t, jami: 8400000, yashirin: true, kategoriya: function (id) { return K[id]; }, bosilganda: function () {}, guruhBosilganda: function () {} }); teng(yashirin.querySelector('.dona-markaz-2').textContent, '••••');
       });
       test('yozuvlarniSuz: kategoriyalar ro\'yxati bo\'yicha filtr (Boshqalar ro\'yxati)', function () {
         var Y = [
@@ -1251,13 +1277,13 @@
         var d = Calc.diagrammaOraliq([], '2026-10-03', '2026-10-03', ''); teng(d.bucketlar.length, 1); teng(d.eng, 0);
         var e = Calc.diagrammaOraliq(oraliqY(5), '2026-01-03', '2026-01-03', ''); teng(e.bucketlar[0].toliq, '03.01.2026'); teng(e.bucketlar[0].soni, 1);
       });
-      test('DOM doira: davr nomi markazda (ikki qator), daromad turi, aria-label', function () {
+      test('DOM doira: markazda tur nomi ("Daromad") va qisqa summa; aria-label davr nomi bilan', function () {
         var t = [{ kategoriya_id: 'a', summa: 600, foiz: 60 }, { kategoriya_id: 'b', summa: 400, foiz: 40 }];
         var quti = Diagramma.dona({ taqsimot: t, jami: 1000, kategoriya: katOl, turNomi: 'Daromadlar', markazNom: '01.10.2026 – 07.10.2026', bosilganda: function () {}, guruhBosilganda: function () {} });
-        var m1 = quti.querySelector('.dona-markaz-1'); teng(m1.textContent, '01.10.2026 –07.10.2026'); teng(m1.querySelectorAll('tspan').length, 2);
-        teng(quti.querySelector('.dona-markaz-2').textContent, '1 000 so\'m'); teng(/^Daromadlar kategoriyalar bo'yicha doira diagrammasi, 01.10.2026/.test(quti.querySelector('svg').getAttribute('aria-label')), true);
+        teng(quti.querySelector('.dona-markaz-1').textContent, 'Daromad'); teng(quti.querySelector('.dona-markaz-2').textContent, '1 ming');
+        teng(/^Daromadlar kategoriyalar bo'yicha doira diagrammasi, 01.10.2026/.test(quti.querySelector('svg').getAttribute('aria-label')), true);
         var q = Diagramma.dona({ taqsimot: t, jami: 1000, kategoriya: katOl, markazNom: 'Oktabr 2026', bosilganda: function () {}, guruhBosilganda: function () {} });
-        teng(q.querySelector('.dona-markaz-1').textContent, 'Oktabr 2026'); teng(q.querySelectorAll('.dona-markaz-1 tspan').length, 1);
+        teng(q.querySelector('.dona-markaz-1').textContent, 'Xarajat');
       });
       test('DOM ustunlar (erkin davr): haftalar, aria-label, jadval, bosilganda chegara', function () {
         var Y = oraliqY(200), v = Calc.diagrammaOraliq(Y, '2026-01-01', '2026-06-30', ''), tanlangan = null;
@@ -2125,7 +2151,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.29.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.30.0', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -2393,7 +2419,7 @@
           teng(r[1][0].tur, 'naqd'); teng(r[1][0].belgi, 'naqd'); teng(r[1][0].oxirgi4, ''); teng(typeof r[1][0].rang, 'string');
         });
       });
-      test('DOM doira: halqa ingichka (qalinligi 20), kichik tilim ham ko\'rinadi (0,1%), ro\'yxatda belgi, yon tugmalar (44 px, aria-label, o\'chiq)', function () {
+      test('DOM doira: kichik tilim ham ko\'rinadi (0,1%), ro\'yxatda ikon katagi (40 px), yon tugmalar (44 px, aria-label, o\'chiq)', function () {
         var K = { a: { nom: 'A', rang: '#e57373', belgi: 'oziq', tur: 'xarajat' }, b: { nom: 'B', rang: '#64b5f6', belgi: 'transport', tur: 'xarajat' }, c: { nom: 'Juda kichik', rang: '#81c784', belgi: 'sport', tur: 'xarajat' } };
         var t = Calc.hisobot([{ tur: 'xarajat', summa: 600000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'a' }, { tur: 'xarajat', summa: 399000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'b' }, { tur: 'xarajat', summa: 1000, sana: '2026-10-03', hisob_id: 'a', kategoriya_id: 'c' }], '2026-10-01', '2026-10-31', '').xarajatTaqsimoti;
         var bos = 0, bosildi = 0, yon = [{ belgi: '‹', ariya: 'Oldingi oy', bosilganda: function () { bosildi++; }, ochiq: true }, { belgi: '›', ariya: 'Keyingi oy', bosilganda: function () { bos++; }, ochiq: false }];
@@ -2402,15 +2428,15 @@
         try {
           var tl = tilimlarOl(quti); teng(tl.length, 3);
           var kichik = tl.filter(function (e) { return e.getAttribute('data-kategoriya') === 'c'; })[0], bb = kichik.getBBox(); teng(bb.width > 2 || bb.height > 2, true);   // ko'rinadigan o'lcham
-          var qatorlar = quti.querySelectorAll('.dona-qator[data-kategoriya] .dona-belgi svg'); teng(qatorlar.length, 3);
+          var qatorlar = quti.querySelectorAll('.dona-qator[data-kategoriya] .belgi-katak svg'); teng(qatorlar.length, 3); teng(quti.querySelector('.belgi-katak').style.width, '40px');
           var tugmalar = quti.querySelectorAll('.yon-tugma'); teng(tugmalar.length, 2); teng(tugmalar[0].getAttribute('aria-label'), 'Oldingi oy'); teng(tugmalar[1].getAttribute('aria-label'), 'Keyingi oy'); teng(tugmalar[0].disabled, false); teng(tugmalar[1].disabled, true);
           tugmalar[0].click(); tugmalar[1].click(); teng(bosildi, 1); teng(bos, 0);   // o'chiq tugma bosilmaydi
           Array.prototype.forEach.call(tugmalar, function (b) { teng(parseFloat(getComputedStyle(b).width) >= 44 || b.className.indexOf('yon-tugma') >= 0, true); });
         } finally { document.body.removeChild(quti); }
       });
-      test('DOM doira: bitta kategoriya — to\'liq ingichka halqa (qalinlik 20), tilimlar soni va ranglar o\'zgarmagan', function () {
+      test('DOM doira: bitta kategoriya — to\'liq halqa (qalinlik 22, radius 64), butun aylana', function () {
         var quti = Diagramma.dona({ taqsimot: [{ kategoriya_id: 'a', summa: 777, foiz: 100 }], jami: 777, kategoriya: function () { return { nom: 'A', rang: '#e57373', belgi: 'oziq', tur: 'xarajat' }; }, bosilganda: function () {}, guruhBosilganda: function () {} });
-        var c = quti.querySelector('circle.dona-tilim'); teng(c.getAttribute('stroke-width'), '20'); teng(c.getAttribute('stroke'), '#e57373'); teng(c.getAttribute('r'), '98');
+        var c = quti.querySelector('circle.dona-tilim'); teng(c.getAttribute('stroke-width'), '22'); teng(c.getAttribute('stroke'), 'var(--dona-1)'); teng(c.getAttribute('r'), '64');
       });
 
       // --- Data: boshlang'ich ma'lumot (alohida sinov bazasida) ---
@@ -4321,6 +4347,55 @@ function xfix(opts) {
           .then(function (n) { teng(n, 2); return Sinxron.yurgiz('qolda'); })
           .then(function (n) { teng(n.ok, true, n.xato); teng(Sinxron.holat().tur, 'tayyor'); teng(Sinxron.holat().xato, ''); teng((Sinxron.holat().rad || []).length, 0); teng(Sinxron.holat().soni, 0); teng(Object.keys(S.jadval.yozuvlar).some(function (id) { return S.jadval.yozuvlar[id].summa === 777; }), true); return sxNavbat(); })
           .then(function (n) { teng(n, 0); S.rad = null; });
+      });
+      // ---- 0.30.0: yangi dizayn ----
+      function sigElement(matn, kenglik, qiymat, plyus) {
+        var quti = document.createElement('div'); quti.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + kenglik + 'px';
+        var e = document.createElement('div'); e.className = 'sig'; e.style.cssText = 'display:block;white-space:nowrap;overflow:hidden;font:700 20px sans-serif'; e.textContent = matn;
+        if (qiymat !== undefined) e.setAttribute('data-qiymat', String(qiymat)); if (plyus) e.setAttribute('data-plyus', '1');
+        quti.appendChild(e); document.body.appendChild(quti); return { e: e, quti: quti, tozala: function () { document.body.removeChild(quti); } };
+      }
+      test('Sigdir (fit-text): sig\'sa o\'zgarmaydi; sig\'masa shrift kichrayadi va sig\'adi; qayta o\'lchash asl matndan boshlanadi', function () {
+        var a = sigElement('1 200', 300, 1200);
+        try {
+          teng(Sigdir.sigdir(a.e), 'asl'); teng(a.e.textContent, '1 200'); teng(a.e.style.fontSize, '');
+        } finally { a.tozala(); }
+        var b = sigElement('−10 712 345 so\'m', 110, -10712345);
+        try {
+          var h = Sigdir.sigdir(b.e); teng(h, 'kichik'); teng(parseFloat(b.e.style.fontSize) < 20, true, b.e.style.fontSize); teng(parseFloat(b.e.style.fontSize) >= Sigdir.MIN_SHRIFT, true);
+          teng(b.e.scrollWidth <= b.e.clientWidth + 1, true, 'sig\'adi'); teng(b.e.textContent, '−10 712 345 so\'m', 'matn o\'zgarmadi');
+          b.quti.style.width = '400px'; teng(Sigdir.sigdir(b.e), 'asl'); teng(b.e.style.fontSize, '', 'keng joyda shrift asl holatga qaytdi');
+        } finally { b.tozala(); }
+      });
+      test('Sigdir: eng kichik shriftda ham sig\'masa qisqa ko\'rinish ("10,8 mln", "+10,9 mln", "−8,4 mln"); qiymat bo\'lmasa matn o\'zgarmaydi; ko\'rinmas element o\'lchanmaydi', function () {
+        var a = sigElement('10 850 000', 50, 10850000);
+        try { teng(Sigdir.sigdir(a.e), 'qisqa'); teng(a.e.textContent, '10,9 mln'); teng(a.e.getAttribute('data-qisqa'), '1'); teng(a.e.getAttribute('data-toli'), '10 850 000'); teng(Sigdir.sigdir(a.e), 'qisqa'); teng(a.e.textContent, '10,9 mln', 'qayta o\'lchash barqaror'); } finally { a.tozala(); }
+        var b = sigElement('+10 850 000', 50, 10850000, true);
+        try { Sigdir.sigdir(b.e); teng(b.e.textContent, '+10,9 mln'); } finally { b.tozala(); }
+        var c = sigElement('−8 400 000', 50, -8400000, true);
+        try { Sigdir.sigdir(c.e); teng(c.e.textContent, '−8,4 mln'); } finally { c.tozala(); }
+        var d = sigElement('Juda uzun matn qiymatsiz', 40);
+        try { teng(Sigdir.sigdir(d.e) === 'kichik', true); teng(d.e.textContent, 'Juda uzun matn qiymatsiz'); } finally { d.tozala(); }
+        var q = document.createElement('div'); q.className = 'sig'; q.textContent = '123'; teng(Sigdir.sigdir(q), 'yashirin');
+      });
+      test('Sigdir.hammasi: ildiz ichidagi hamma .sig elementini o\'lchaydi', function () {
+        var a = sigElement('10 850 000', 50, 10850000), b = sigElement('5', 200, 5);
+        try { Sigdir.hammasi(document.body); teng(a.e.textContent, '10,9 mln'); teng(b.e.textContent, '5'); } finally { a.tozala(); b.tozala(); }
+      });
+      test('Dizayn (CSS): sticky sarlavha, suzuvchi pastki panel (safe-area), kartalar yumaloq, ranglar o\'zgaruvchilarda — yorug\' va qora rejim uchun', function () {
+        return matnOl('style.css').then(function (c) {
+          teng(/\.asosiy-bosh \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: var\(--fon\);[^}]*border-bottom: 1px solid var\(--chiziq\)/.test(c), true, 'sticky sarlavha');
+          teng(/\.pastki \{[^}]*bottom: calc\(10px \+ env\(safe-area-inset-bottom\)\);[^}]*border-radius: 22px/.test(c), true, 'suzuvchi panel');
+          teng(/\.karta \{[^}]*border-radius: 18px/.test(c), true, 'karta burchagi'); teng(/#ekran \{[^}]*safe-area-inset-bottom/.test(c), true, 'pastki bo\'sh joy');
+          teng(/\.nav-tugma\.faol \{[^}]*background: var\(--asosiy-yengil\)/.test(c), true);
+          teng(/\.sig \{[^}]*white-space: nowrap;[^}]*tabular-nums/.test(c), true, 'fit-text elementi');
+          // "C varianti" ranglari: yorug' va qora rejimda (media va data-tema="qorongi") aynan berilgan qiymatlar
+          [['--oqim-fon', '#e8eef7', '#1b2130'], ['--oqim-xarajat', '#b3412f', '#ff8a78'], ['--oqim-daromad', '#2f7a3f', '#5fd38a'], ['--oqim-katak', '#ffffff', '#262e40'], ['--oqim-sof', '#2f4a72', '#3a64b5']].forEach(function (r) {
+            teng(c.indexOf(r[0] + ': ' + r[1]) >= 0, true, r[0] + ' yorug\''); teng(c.split(r[0] + ': ' + r[2]).length - 1 >= 2, true, r[0] + ' qora (media va data-tema)');
+          });
+          ['#7c5cff', '#1e9bff', '#19c37d', '#ffb020', '#ff5c8a'].forEach(function (h, i) { teng(c.indexOf('--dona-' + (i + 1) + ': ' + h) >= 0, true, 'donut ' + h); });
+          teng(/\.belgi-katak \{[^}]*border-radius: 30%/.test(c), true); teng(/\.qarz-tanlov-tugma\[aria-pressed="true"\]/.test(c), true);
+        });
       });
       var ul = document.getElementById('natija');
       var otdi = 0;

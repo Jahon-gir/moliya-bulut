@@ -49,6 +49,7 @@
     { kalit: 'boshqa', nom: 'Boshqa', guruh: 'umumiy', soz: ['boshqa', 'other'], yol: ['M5 12h.01M12 12h.01M19 12h.01'] },
     { kalit: 'umumiy', nom: 'Umumiy', guruh: 'umumiy', soz: [], yol: ['M3 12V4h8l10 10-8 8z', 'o7.5,8.5,1'] },
     { kalit: 'almashuv', nom: 'O\'tkazma', guruh: 'tizim', soz: [], yol: ['M7 7h11l-3-3M17 17H6l3 3'] },
+    { kalit: 'odam', nom: 'Odam', guruh: 'tizim', soz: [], yol: ['o12,8,4', 'M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7'] },
     // --- hisob ---
     { kalit: 'naqd', nom: 'Naqd pul', guruh: 'hisob', soz: ['naqd', 'cash'], yol: ['r2,6,20,12,2', 'o12,12,3', 'M6 12h.01M18 12h.01'] },
     { kalit: 'karta', nom: 'Karta', guruh: 'hisob', soz: ['karta', 'card', 'uzcard', 'humo', 'visa', 'mastercard'], yol: ['r2,5,20,14,2', 'M2 10h20', 'M6 15h4'] },

@@ -311,21 +311,25 @@
   }
 
   // ---- Doira: eng katta kategoriyalar alohida, qolganlari "Boshqalar" ----
-  var DONA_ENG_KATTA = 6;
-  // taqsimot — kattasidan kichigiga [{ kategoriya_id, summa, foiz }]. Eng katta `soni` (6) ta kategoriya alohida tilim,
-  // qolganlari bitta "Boshqalar" tilimiga birlashadi: summa — yig'indi, foiz — kategoriyalar foizlari yig'indisi
-  // (shunda ro'yxat va diagramma foizlari mos, jami 100 qoladi). Qolgani bitta kategoriya bo'lsa, birlashtirish ma'nosiz,
-  // u o'z tilimida qoladi (7 ta kategoriya = 7 tilim). Natija: { tilimlar, boshqalar | null, dum: [birlashganlar] }
+  var DONA_ENG_KATTA = 5, DONA_KICHIK_FOIZ = 3;
+  // taqsimot — kattasidan kichigiga [{ kategoriya_id, summa, foiz }]. Eng katta `soni` (5) ta kategoriya alohida tilim; qolganlari va jami
+  // summaning 3% idan kichik kategoriyalar bitta "Boshqalar" tilimiga birlashadi: summa — yig'indi, foiz — kategoriyalar foizlari yig'indisi
+  // (shunda ro'yxat va diagramma foizlari mos, jami 100 qoladi). Birlashadigan kategoriya bittagina bo'lsa, birlashtirish ma'nosiz,
+  // u o'z tilimida qoladi. Faqat ko'rinish guruhlanadi: summalar va foizlar o'zgarmaydi.
+  // Natija: { tilimlar, boshqalar | null, dum: [birlashganlar] }
   function donaGuruhlash(taqsimot, soni) {
     soni = soni || DONA_ENG_KATTA;
-    if (taqsimot.length < soni + 2) return { tilimlar: taqsimot.slice(), boshqalar: null, dum: [] };
-    var dum = taqsimot.slice(soni);
+    var jami = taqsimot.reduce(function (a, x) { return a + x.summa; }, 0), asosiy = [], dum = [];
+    taqsimot.forEach(function (x, i) {
+      if (i < soni && x.summa * 100 >= DONA_KICHIK_FOIZ * jami) asosiy.push(x); else dum.push(x);
+    });
+    if (dum.length < 2) return { tilimlar: taqsimot.slice(), boshqalar: null, dum: [] };
     var guruh = {
       kategoriya_id: 'boshqalar', soni: dum.length,
       summa: dum.reduce(function (a, x) { return a + x.summa; }, 0), foiz: dum.reduce(function (a, x) { return a + x.foiz; }, 0),
       idlar: dum.map(function (x) { return x.kategoriya_id; })
     };
-    return { tilimlar: taqsimot.slice(0, soni).concat([guruh]), boshqalar: guruh, dum: dum };
+    return { tilimlar: asosiy.concat([guruh]), boshqalar: guruh, dum: dum };
   }
 
   // ---- Byudjet (TZ F7): joriy kalendar oyi xarajatlari bo'yicha oylik chegaralar ----
@@ -1465,7 +1469,7 @@
     HISOB_TURLARI: HISOB_TURLARI, HISOB_TURI_NOMI: HISOB_TURI_NOMI, HISOB_RANGLARI: HISOB_RANGLARI, HISOB_BELGISI: HISOB_BELGISI, belgiTaxmin: belgiTaxmin, hisobTuriTaxmin: hisobTuriTaxmin,
     hisobniYangilash: hisobniYangilash, kategoriyaniYangilash: kategoriyaniYangilash, hisobBelgisiOl: hisobBelgisiOl, hisobRangiOl: hisobRangiOl, oxirgi4Tekshir: oxirgi4Tekshir,
     hisobMaskasi: hisobMaskasi, hisoblarniSuz: hisoblarniSuz, standartHolati: standartHolati, oyKochir: oyKochir,
-    donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
+    donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, DONA_KICHIK_FOIZ: DONA_KICHIK_FOIZ, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
     BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,
     hozir: hozir, kelajakmi: kelajakmi, vaqtTekshir: vaqtTekshir, yozuvVaqti: yozuvVaqti,

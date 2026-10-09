@@ -41,7 +41,7 @@ body {
 #ekran {
   max-width: 560px;
   margin: 0 auto;
-  padding: 16px 16px 110px;
+  padding: 16px 16px calc(112px + env(safe-area-inset-bottom));
 }
 h1 { font-size: 22px; margin: 4px 0 16px; }
 h2 { font-size: 16px; margin: 0 0 8px; color: var(--xira); font-weight: 600; }
@@ -49,8 +49,8 @@ h2 { font-size: 16px; margin: 0 0 8px; color: var(--xira); font-weight: 600; }
 .karta {
   background: var(--karta);
   border: 1px solid var(--chiziq);
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 18px;
+  padding: 16px 18px;
   margin-bottom: 12px;
 }
 .qator { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 32px; }
@@ -392,7 +392,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .g-m-nom { color: var(--xira); }
 
 /* "Boshqalar" tilimi va guruhlangan ro'yxat */
-.dona-boshqalar { fill: var(--g-boshqa); }
+.dona-boshqalar { fill: none; }
 .dona-boshqalar-kalit { background: var(--g-boshqa); }
 .dona-guruh .dona-qator { font-weight: 700; }
 .dona-ichki .dona-qator { padding-left: 22px; }
@@ -754,3 +754,134 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .soxta-qator:first-child { border-top: 0; }
 .import-keyin { font-weight: 600; }
 
+
+
+/* ===== 0.30.0: yangi dizayn (TZ-sinxronlash.md 21-band). Ranglar CSS o'zgaruvchilarida: yorug' va qora (tungi) rejim ===== */
+:root {
+  --asosiy-yengil: rgba(15, 139, 109, .13);
+  --oqim-fon: #e8eef7; --oqim-chegara: #d3deee; --oqim-katak: #ffffff;
+  --oqim-xarajat: #b3412f; --oqim-daromad: #2f7a3f; --oqim-sof: #2f4a72; --oqim-sof-matn: #ffffff;
+  --dona-1: #7c5cff; --dona-2: #1e9bff; --dona-3: #19c37d; --dona-4: #ffb020; --dona-5: #ff5c8a; --dona-6: #14c8c8; --dona-7: #ff7a3d; --dona-8: #b25cff;
+  --qarz-berdim-fon: #e3f3e8; --qarz-berdim-chegara: #2f7a3f; --qarz-oldim-fon: #fbe8e4; --qarz-oldim-chegara: #b3412f;
+  --nav-soya: 0 6px 22px rgba(20, 30, 28, .16);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="yorug"]) {
+    --asosiy-yengil: rgba(43, 181, 143, .2);
+    --oqim-fon: #1b2130; --oqim-chegara: #2a3248; --oqim-katak: #262e40;
+    --oqim-xarajat: #ff8a78; --oqim-daromad: #5fd38a; --oqim-sof: #3a64b5; --oqim-sof-matn: #ffffff;
+    --qarz-berdim-fon: #1a3026; --qarz-berdim-chegara: #5fd38a; --qarz-oldim-fon: #3a2421; --qarz-oldim-chegara: #ff8a78;
+    --nav-soya: 0 6px 22px rgba(0, 0, 0, .5);
+  }
+}
+:root[data-tema="qorongi"] {
+    --asosiy-yengil: rgba(43, 181, 143, .2);
+    --oqim-fon: #1b2130; --oqim-chegara: #2a3248; --oqim-katak: #262e40;
+    --oqim-xarajat: #ff8a78; --oqim-daromad: #5fd38a; --oqim-sof: #3a64b5; --oqim-sof-matn: #ffffff;
+    --qarz-berdim-fon: #1a3026; --qarz-berdim-chegara: #5fd38a; --qarz-oldim-fon: #3a2421; --qarz-oldim-chegara: #ff8a78;
+    --nav-soya: 0 6px 22px rgba(0, 0, 0, .5);
+}
+
+/* Raqamlar kartadan chiqib ketmasin (js/sigdir.js): bitta qator, tekis raqamlar */
+.sig { display: block; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }
+
+/* Kategoriya belgisi: yumaloq-kvadrat katak, fon — rangning ≈15% tusi, ikon — shu rangda */
+.belgi-katak {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 30%; vertical-align: middle;
+  background: var(--r-tus, rgba(128, 128, 128, .15)); color: var(--r, var(--xira));
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .belgi-katak { color: color-mix(in srgb, var(--r) 82%, var(--matn)); }
+}
+.belgi-katak svg { display: block; }
+
+/* Yuqori sarlavha qatori: sahifa aylanganda ham joyida turadi, orqa foni to'liq qoplangan */
+.asosiy-bosh {
+  position: sticky; top: 0; z-index: 30; margin: -16px -16px 14px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; background: var(--fon); border-bottom: 1px solid var(--chiziq);
+}
+
+/* Pastki navigatsiya: chetdan ichkarida suzuvchi, yumaloq panel */
+.pastki {
+  left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); max-width: 536px; margin: 0 auto;
+  border: 1px solid var(--chiziq); border-radius: 22px; box-shadow: var(--nav-soya); padding: 6px;
+}
+.nav-tugma { border-radius: 16px; transition: background .15s; }
+.nav-tugma.faol { background: var(--asosiy-yengil); color: var(--asosiy); }
+
+/* Naqd pul oqimi ("C varianti") */
+.oqim-karta { background: var(--oqim-fon); border-color: var(--oqim-chegara); }
+.oqim-bosh h2 { color: var(--matn); font-size: 17px; font-weight: 700; }
+.oy-pill { border-radius: 999px; background: var(--oqim-katak); border: 1px solid var(--oqim-chegara); font-size: 14px; font-weight: 600; }
+select.oy-pill { min-height: 44px; padding: 6px 30px 6px 14px; }
+.oqim-qator { display: block; padding: 4px 0 0; min-height: 0; }
+.oqim-juft { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.oqim-juft .oqim-katak { background: var(--oqim-katak); border-radius: 14px; padding: 10px 12px; }
+.oqim-nom { display: block; font-size: 13px; color: var(--xira); }
+.oqim-raqam { font-size: 18px; font-weight: 700; }
+.oqim-xarajat .oqim-raqam { color: var(--oqim-xarajat); }
+.oqim-daromad .oqim-raqam { color: var(--oqim-daromad); }
+.oqim-sof { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding: 12px 16px; border-radius: 14px; background: var(--oqim-sof); color: var(--oqim-sof-matn); }
+.oqim-sof .oqim-nom { color: var(--oqim-sof-matn); opacity: .85; flex: none; font-size: 14px; }
+.oqim-sof .oqim-sof-raqam { flex: 1 1 0; text-align: right; font-size: 24px; font-weight: 800; color: var(--oqim-sof-matn); }
+
+/* Doira diagramma: yarqin ranglar, tilimlar orasida ochiq joy, uchlari tekis */
+.dona-rasm { max-width: 240px; }
+.dona-tilim { transition: opacity .15s; }
+.dona-tilim.vurgulangan { filter: none; }
+.dona-markaz-1 { fill: var(--xira); font-size: 13px; }
+.dona-markaz-2 { fill: var(--matn); font-size: 18px; font-weight: 800; }
+.dona-markaz-1.kichik { font-size: 11px; }
+.dona-markaz-2.kichik { font-size: 14px; }
+.dona-qator { flex-wrap: nowrap; gap: 12px; min-height: 60px; padding: 8px 4px; }
+.dona-qator.vurgulangan { border-radius: 12px; }
+.dona-matn { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dona-nom { flex: none; min-width: 0; font-size: 16px; overflow-wrap: anywhere; }
+.dona-qiymat { margin-left: 0; white-space: normal; overflow-wrap: anywhere; font-size: 13px; font-weight: 500; color: var(--xira); }
+.dona-foiz { flex: none; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dona-guruh .dona-qator::after { content: "›"; flex: none; margin-left: 2px; color: var(--xira); font-size: 22px; line-height: 1; transition: transform .15s; }
+.dona-guruh .dona-qator[aria-expanded="true"]::after { transform: rotate(90deg); }
+.dona-ichki .dona-qator { padding-left: 18px; background: var(--g-yoritish); border-top: 0; border-radius: 12px; margin: 2px 0; }
+
+/* Yozuvlar (Tarix, ro'yxatlar): faqat kategoriya belgisi (40 px), sana sarlavhasi kartadan tashqarida */
+.yozuv-kv { gap: 12px; padding: 10px 0; }
+.yozuv-kv .yozuv-chap { flex: 1 1 0; }
+.yozuv-kv .yozuv-summa { flex: none; text-align: right; }
+.kun { padding-top: 4px; padding-bottom: 4px; margin-bottom: 4px; }
+.kun-sarlavha { margin: 16px 4px 6px; padding: 0; font-size: 15px; align-items: baseline; }
+.kun-sarlavha strong { color: var(--matn); font-size: 16px; }
+
+/* Tarix: oy balansi kartasi */
+.tarix-jami { display: block; background: var(--oqim-fon); border-color: var(--oqim-chegara); }
+.tj-bosh { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tj-sarlavha { font-size: 15px; font-weight: 600; color: var(--xira); }
+.tj-bosh .oy-pill { padding: 4px 12px; font-size: 13px; white-space: nowrap; }
+.tj-katta { margin: 6px 0 10px; font-size: 30px; font-weight: 800; }
+.tj-juft { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tj-katak { min-width: 0; padding: 10px 12px; border-radius: 14px; background: var(--oqim-katak); }
+.tj-raqam { font-size: 17px; font-weight: 700; }
+.tj-katak .xira { font-size: 13px; }
+.tarix-jami .plus { color: var(--oqim-daromad); }
+.tarix-jami .minus { color: var(--oqim-xarajat); }
+
+/* Qarzlar: ikkita katta tugma-karta va tanlangan ro'yxat */
+.qarz-tanlov { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.qarz-tanlov-tugma {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 88px; padding: 14px; text-align: left; font: inherit; cursor: pointer;
+  color: var(--matn); background: var(--karta); border: 2px solid var(--chiziq); border-radius: 18px;
+}
+.qt-nom { font-size: 14px; font-weight: 600; color: var(--xira); }
+.qt-summa { font-size: 20px; font-weight: 800; }
+.qarz-tanlov-tugma.berdim .qt-summa { color: var(--oqim-daromad); }
+.qarz-tanlov-tugma.oldim .qt-summa { color: var(--oqim-xarajat); }
+.qarz-tanlov-tugma.berdim[aria-pressed="true"] { background: var(--qarz-berdim-fon); border-color: var(--qarz-berdim-chegara); }
+.qarz-tanlov-tugma.oldim[aria-pressed="true"] { background: var(--qarz-oldim-fon); border-color: var(--qarz-oldim-chegara); }
+.qarz-tanlov-tugma[aria-pressed="true"] .qt-nom { color: var(--matn); }
+.qarz-royxat { padding-top: 4px; padding-bottom: 4px; }
+.qarz-royxat > p { margin: 10px 0; }
+.qarz-ism { overflow-wrap: anywhere; }
+.qarz-summa { flex: 0 1 auto; max-width: 42%; text-align: right; font-size: 16px; font-weight: 700; }
+.qarz-summa.plus { color: var(--oqim-daromad); }
+.qarz-summa.minus { color: var(--oqim-xarajat); }
+.qarz-qator .yozuv-izoh { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.muddat-matn { white-space: nowrap; }

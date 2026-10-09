@@ -54,8 +54,34 @@
     d.appendChild(Belgilar.chiz(kalit, Math.round(olcham * 0.58)));
     return d;
   }
+  // Kategoriya belgisi (0.30.0): yumaloq-kvadrat katak; fon — kategoriya rangining engil (≈15%) tusi, ikon — shu rangda.
+  // Katta joylarda 40 px (ikon ≈23 px), qisqa ro'yxat/chiplarda (22–24 deb so'ralganda) 28 px.
+  function rangTusi(rang, alfa) {
+    var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(rang || '');
+    return m ? 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + alfa + ')' : 'rgba(144,164,174,' + alfa + ')';
+  }
+  function belgiKatak(kalit, rang, olcham) {
+    var d = el('span', undefined, 'belgi-katak');
+    d.style.width = d.style.height = olcham + 'px';
+    d.style.setProperty('--r', rang || '#90a4ae');
+    d.style.setProperty('--r-tus', rangTusi(rang, 0.15));
+    d.appendChild(Belgilar.chiz(kalit, Math.round(olcham * 0.58)));
+    return d;
+  }
   function kategBadge(k, olcham) {
-    return belgiDumi(k ? (k.belgi || Calc.belgiTaxmin(k.nom, k.tur)) : 'umumiy', k ? k.rang : '#90a4ae', olcham || 28);
+    var o = olcham === undefined || olcham >= 26 ? 40 : 28;
+    return belgiKatak(k ? (k.belgi || Calc.belgiTaxmin(k.nom, k.tur)) : 'umumiy', k ? k.rang : '#90a4ae', o);
+  }
+  // Raqam elementi: kartadan chiqib ketmasin (js/sigdir.js): bitta qator, sig'masa shrift kichrayadi, eng kichikda ham sig'masa "10,8 mln"
+  function sigRaqam(matn, qiymat, plyus, klass) {
+    var e = el('div', matn, 'sig ' + (klass || ''));
+    if (typeof qiymat === 'number') { e.setAttribute('data-qiymat', String(Math.round(qiymat))); if (plyus) e.setAttribute('data-plyus', '1'); }
+    return e;
+  }
+  // Raqam so'mlarsiz: "8 400 000", belgi bilan "+10 850 000" / "−8 400 000"
+  function raqam(n, belgili) {
+    var s = String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return (n < 0 ? '−' : belgili && n > 0 ? '+' : '') + s;
   }
   function hisobBadge(h, olcham) {
     return belgiDumi(Calc.hisobBelgisiOl(h), Calc.hisobRangiOl(h), olcham || 28);
@@ -208,10 +234,11 @@
   function yozuvQatori(y, hozirgi) {
     var otkazma = y.tur === 'otkazma';
     var k = kategoriyaOl(y.kategoriya_id);
-    var q = tugma(undefined, 'yozuv', function () { ochish(function () { return tahrirShakli(y); }, true); });
+    var q = tugma(undefined, 'yozuv yozuv-kv', function () { ochish(function () { return tahrirShakli(y); }, true); });
+    // 0.30.0: faqat kategoriya belgisi (40 px katak); hisob belgisi yo'q, hisob nomi kichik oddiy matn
+    q.appendChild(otkazma ? belgiKatak('almashuv', '#7a8aa0', 40) : kategBadge(k));
     var chap = el('div', undefined, 'yozuv-chap');
     var nom = el('div', undefined, 'yozuv-nom');
-    nom.appendChild(otkazma ? belgiDumi('almashuv', '#90a4ae', 26) : kategBadge(k, 26));
     nom.appendChild(document.createTextNode(otkazma ? 'O\'tkazma' : (k ? k.nom : 'Kategoriyasiz')));
     // Bazada oldindan qolgan, vaqti hozirdan keyingi yozuvlar belgilab ko'rsatiladi
     if (hozirgi && Calc.kelajakmi(y.sana, Calc.yozuvVaqti(y), hozirgi)) nom.appendChild(el('span', 'Kelajak', 'belgi-kelajak'));
@@ -220,11 +247,7 @@
       ? hisobNomi(y.hisob_id) + ' → ' + hisobNomi(y.qabul_hisob_id)
       : hisobNomi(y.hisob_id));
     if (y.izoh) tafsilot += ' · ' + y.izoh;
-    var izohQator = el('div', undefined, 'yozuv-izoh yozuv-hisob');
-    var hb = hisobOl(y.hisob_id);
-    if (hb) { var mini = hisobBadge(hb, 16); mini.classList.add('mini'); izohQator.appendChild(mini); }
-    izohQator.appendChild(document.createTextNode(tafsilot));
-    chap.appendChild(izohQator);
+    chap.appendChild(el('div', tafsilot, 'yozuv-izoh'));
     q.appendChild(chap);
     if (otkazma) {
       q.appendChild(el('div', Calc.sumFormat(y.summa), 'yozuv-summa'));
@@ -236,6 +259,12 @@
     return q;
   }
 
+  // Kun sarlavhasi: "9-oktabr" (boshqa yilda: "9-oktabr 2025")
+  function kunNomi(iso) {
+    var q = String(iso).split('-'), bu = Calc.bugun().slice(0, 4);
+    return parseInt(q[2], 10) + '-' + OY_NOMLARI_UI[parseInt(q[1], 10) - 1].toLowerCase() + (q[0] !== bu ? ' ' + q[0] : '');
+  }
+
   // Kunlar bo'yicha guruhlangan ro'yxat; har kun sarlavhasida o'sha kunning jami xarajati
   function yozuvlarRoyxati(guruhlar) {
     var quti = document.createElement('div');
@@ -244,9 +273,9 @@
       var kun = karta();
       kun.classList.add('kun');
       var sarlavha = el('div', undefined, 'kun-sarlavha');
-      sarlavha.appendChild(el('strong', Calc.sanaKorsat(g.sana)));
+      sarlavha.appendChild(el('strong', kunNomi(g.sana)));
       sarlavha.appendChild(el('span', 'Xarajat: ' + Calc.sumFormat(g.xarajat)));
-      kun.appendChild(sarlavha);
+      quti.appendChild(sarlavha);
       g.yozuvlar.forEach(function (y) { kun.appendChild(yozuvQatori(y, hozirgi)); });
       quti.appendChild(kun);
     });
@@ -1290,11 +1319,11 @@
   // Tarixdagi qarz amali qatori: qarz yoki to'lov. Hisobga ta'sir qiladi, lekin xarajat/daromadga kirmaydi ("Qarz" belgisi)
   function qarzSatri(x) {
     var berdim = x.yonalish === 'berdim', kirim = x.turi === 'qarz' ? !berdim : berdim;   // pul hisobga kirdimi
-    var q = tugma(undefined, 'yozuv qarz-satr', function () { ochish(function () { return qarzEkrani(x.qarz_id); }, false); });
+    var q = tugma(undefined, 'yozuv yozuv-kv qarz-satr', function () { ochish(function () { return qarzEkrani(x.qarz_id); }, false); });
     q.setAttribute('data-turi', x.turi);
     var chap = el('div', undefined, 'yozuv-chap');
+    q.appendChild(belgiKatak('kredit', '#7a8aa0', 40));
     var nom = el('div', undefined, 'yozuv-nom');
-    nom.appendChild(belgiDumi('kredit', '#90a4ae', 26));
     nom.appendChild(document.createTextNode((x.turi === 'qarz' ? (berdim ? 'Qarz berdim' : 'Qarz oldim') : (berdim ? 'Qaytarildi' : 'Qaytardim')) + ' · ' + x.shaxs));
     nom.appendChild(el('span', 'Qarz', 'qarz-belgi-tarix'));
     chap.appendChild(nom);
@@ -1311,12 +1340,12 @@
       var kun = karta();
       kun.classList.add('kun');
       var sarlavha = el('div', undefined, 'kun-sarlavha');
-      sarlavha.appendChild(el('strong', Calc.sanaKorsat(g.sana)));
+      sarlavha.appendChild(el('strong', kunNomi(g.sana)));
       var jami = el('span', undefined, 'kun-jami');
       if (g.xarajat || !g.daromad) jami.appendChild(el('span', 'Xarajat: ' + Calc.sumFormat(g.xarajat)));
       if (g.daromad) jami.appendChild(el('span', (g.xarajat ? ' · ' : '') + 'Daromad: ' + Calc.sumFormat(g.daromad)));
       sarlavha.appendChild(jami);
-      kun.appendChild(sarlavha);
+      quti.appendChild(sarlavha);
       g.elementlar.forEach(function (e) { kun.appendChild(e.turi === 'yozuv' ? yozuvQatori(e.yozuv, hozirgi) : qarzSatri(e.satr)); });
       quti.appendChild(kun);
     });
@@ -1362,12 +1391,21 @@
       // oylik jami: hisobot() bilan bir xil qoida (o'tkazma va qarz kirmaydi)
       var oj = Calc.oyJami(malumot.yozuvlar, tarixOy), jk = karta();
       jk.classList.add('tarix-jami');
-      [['Balans', (oj.qoldiq > 0 ? '+' : '') + Calc.sumFormat(oj.qoldiq), oj.qoldiq < 0 ? 'minus' : '', 'tj-balans'], ['Xarajat', Calc.sumFormat(oj.xarajat), 'minus', 'tj-xarajat'], ['Daromad', Calc.sumFormat(oj.daromad), 'plus', 'tj-daromad']].forEach(function (x) {
-        var c = el('div', undefined, 'tarix-jami-katak ' + x[3]);
+      // 0.30.0: tepada "Oy balansi" va oy nomi (pill), ostida katta raqam, undan keyin Xarajat va Daromad yonma-yon
+      var tBosh = el('div', undefined, 'tj-bosh');
+      tBosh.appendChild(el('span', 'Oy balansi', 'tj-sarlavha'));
+      tBosh.appendChild(el('span', OY_NOMLARI_UI[parseInt(tarixOy.slice(5, 7), 10) - 1] + (tarixOy.slice(0, 4) !== bugun.slice(0, 4) ? ' ' + tarixOy.slice(0, 4) : ''), 'oy-pill tj-oy'));
+      jk.appendChild(tBosh);
+      var tKatta = sigRaqam((oj.qoldiq > 0 ? '+' : '') + Calc.sumFormat(oj.qoldiq), oj.qoldiq, true, 'tj-katta tj-balans ' + (oj.qoldiq < 0 ? 'minus' : ''));
+      jk.appendChild(tKatta);
+      var tJuft = el('div', undefined, 'tj-juft');
+      [['Xarajat', Calc.sumFormat(oj.xarajat), oj.xarajat, 'minus', 'tj-xarajat'], ['Daromad', Calc.sumFormat(oj.daromad), oj.daromad, 'plus', 'tj-daromad']].forEach(function (x) {
+        var c = el('div', undefined, 'tj-katak ' + x[4]);
         c.appendChild(el('div', x[0], 'xira'));
-        c.appendChild(el('strong', x[1], x[2]));
-        jk.appendChild(c);
+        c.appendChild(sigRaqam(x[1], x[2], false, 'tj-raqam ' + x[3]));
+        tJuft.appendChild(c);
       });
+      jk.appendChild(tJuft);
       bloklar.push(jk);
     }
     var qidiruv = document.createElement('input');
@@ -2943,6 +2981,25 @@
     return k;
   }
 
+  var qarzTanlov = 'berdim';   // Qarzlar bo'limida qaysi ro'yxat ochiq: 'berdim' (Berilgan qarzlar, boshlang'ich) yoki 'oldim' (Olingan qarzlar)
+
+  // Qarzlar ro'yxatidagi qator: odam belgisi, ism, "Muddat: …", o'ngda qolgan summa. Bosilsa qarz tafsiloti ochiladi (qarzEkrani)
+  function qarzQatori(q, bugun) {
+    var b = tugma(undefined, 'yozuv yozuv-kv qarz-qator', function () { ochish(function () { return qarzEkrani(q.id); }, false); });
+    b.setAttribute('data-shaxs', q.shaxs);
+    b.setAttribute('data-yonalish', q.yonalish);
+    b.appendChild(belgiKatak('odam', q.yonalish === 'berdim' ? '#2f7a3f' : '#b3412f', 40));
+    var chap = el('div', undefined, 'yozuv-chap');
+    chap.appendChild(el('div', q.shaxs, 'yozuv-nom qarz-ism'));
+    var muddat = el('div', undefined, 'yozuv-izoh');
+    muddat.appendChild(el('span', q.muddat ? 'Muddat: ' + Calc.sanaKorsat(q.muddat) : 'Muddat yo\'q', 'muddat-matn'));
+    if (Calc.qarzMuddatiOtdimi(q, bugun)) muddat.appendChild(muddatBelgisi(q));
+    chap.appendChild(muddat);
+    b.appendChild(chap);
+    b.appendChild(sigRaqam(Calc.sumFormat(Calc.qarzQolgan(q)), Calc.qarzQolgan(q), false, 'qarz-summa ' + (q.yonalish === 'berdim' ? 'plus' : 'minus')));
+    return b;
+  }
+
   function qarzlarBolimi() {
     var bloklar = [], bugun = Calc.bugun(), jami = Calc.qarzlarJami(malumot.qarzlar), g = Calc.qarzlarShaxsBoyicha(malumot.qarzlar, bugun);
     var bosh = el('div', undefined, 'hisobot-bosh');
@@ -2952,12 +3009,16 @@
     bosh.appendChild(bl);
     bloklar.push(bosh);
 
-    var juft = el('div', undefined, 'juft');
-    [['Berilgan qarzlar', jami.olishKerak, 'plus', 'olish-jami'], ['Olingan qarzlar', jami.qaytarishKerak, 'minus', 'qaytarish-jami']].forEach(function (x) {
-      var c = karta();
-      c.classList.add(x[3]);
-      c.appendChild(el('div', x[0], 'xira'));
-      c.appendChild(el('div', Calc.sumFormat(x[1]), 'oy-summa ' + x[2]));
+    // Ikkita katta tugma-karta yonma-yon (0.30.0): tanlangani rangli fon va rangli chegara bilan; tanlangan ro'yxat pastda
+    var juft = el('div', undefined, 'qarz-tanlov');
+    juft.setAttribute('role', 'group');
+    juft.setAttribute('aria-label', 'Qarz turi');
+    [['berdim', 'Berilgan qarzlar', jami.olishKerak, 'olish-jami'], ['oldim', 'Olingan qarzlar', jami.qaytarishKerak, 'qaytarish-jami']].forEach(function (x) {
+      var c = tugma(undefined, 'qarz-tanlov-tugma ' + x[3] + (x[0] === 'berdim' ? ' berdim' : ' oldim'), function () { qarzTanlov = x[0]; chizish(bolimlar.qarzlar(), true); });
+      c.setAttribute('aria-pressed', String(qarzTanlov === x[0]));
+      c.setAttribute('data-tanlov', x[0]);
+      c.appendChild(el('div', x[1], 'qt-nom'));
+      c.appendChild(sigRaqam(Calc.sumFormat(x[2]), x[2], false, 'qt-summa'));
       juft.appendChild(c);
     });
     bloklar.push(juft);
@@ -2966,13 +3027,15 @@
     bloklar.push(qosh);
 
     var ochiq = [];
-    g.ochiq.forEach(function (gr) { gr.qarzlar.forEach(function (q) { ochiq.push(q); }); });   // tartib: muddati o'tganlar, keyin qolgani kattasi
+    g.ochiq.forEach(function (gr) { gr.qarzlar.forEach(function (q) { if (q.yonalish === qarzTanlov) ochiq.push(q); }); });   // tartib: muddati o'tganlar, keyin qolgani kattasi
+    var royxat = karta();
+    royxat.classList.add('qarz-royxat');
+    royxat.id = 'qarz-royxat';
     if (!ochiq.length) {
-      var bos = karta();
-      bos.appendChild(el('p', malumot.qarzlar.length ? 'Ochiq qarzlar yo\'q.' : 'Hozircha qarzlar yo\'q. Birovga qarz bersangiz yoki olsangiz, shu yerga yozing.', 'xira'));
-      bloklar.push(bos);
+      royxat.appendChild(el('p', malumot.qarzlar.length ? (qarzTanlov === 'berdim' ? 'Berilgan ochiq qarzlar yo\'q.' : 'Olingan ochiq qarzlar yo\'q.') : 'Hozircha qarzlar yo\'q. Birovga qarz bersangiz yoki olsangiz, shu yerga yozing.', 'xira'));
     }
-    ochiq.forEach(function (q) { bloklar.push(qarzKartasi(q, bugun, false)); });
+    ochiq.forEach(function (q) { royxat.appendChild(qarzQatori(q, bugun)); });
+    bloklar.push(royxat);
     return bloklar;
   }
 
@@ -3505,14 +3568,14 @@
   function oqimKartasi() {
     var k = karta();
     k.classList.add('oqim-karta');
-    var bosh = el('div', undefined, 'bolim-bosh');
+    var bosh = el('div', undefined, 'bolim-bosh oqim-bosh');
     bosh.appendChild(el('h2', 'Naqd pul oqimi'));
     var birinchi = hisobotYozuvlari().reduce(function (a, y) { return !a || y.sana < a ? y.sana : a; }, '');
     var oylar = Calc.oqimOylari(birinchi, Calc.bugun());
     if (oylar.indexOf(asosiyOy) === -1) asosiyOy = oylar[0];
     var sel = document.createElement('select');
     sel.id = 'asosiy-oy';
-    sel.className = 'oy-tanlagich';
+    sel.className = 'oy-tanlagich oy-pill';
     sel.setAttribute('aria-label', 'Oyni tanlash');
     oylar.forEach(function (o) {
       var op = el('option', OY_NOMLARI_UI[parseInt(o.slice(5, 7), 10) - 1] + ' ' + o.slice(0, 4));
@@ -3527,12 +3590,23 @@
     var b = tugma(undefined, 'oqim-qator', function () { hisobotniOchish(asosiyOy); });
     b.id = 'oqim-qator';
     b.setAttribute('aria-label', 'Hisobotni ochish: ' + OY_NOMLARI_UI[parseInt(asosiyOy.slice(5, 7), 10) - 1] + ' ' + asosiyOy.slice(0, 4));
-    [['Xarajat', pul(oj.xarajat), 'minus', 'oqim-xarajat'], ['Daromad', pul(oj.daromad), 'plus', 'oqim-daromad'], ['Sof balans', pulBelgili(oj.qoldiq), oj.qoldiq < 0 ? 'minus' : '', 'oqim-sof']].forEach(function (x) {
-      var c = el('div', undefined, 'oqim-katak ' + x[3]);
-      c.appendChild(el('div', x[0], 'xira'));
-      c.appendChild(el('strong', x[1], x[2]));
-      b.appendChild(c);
+    // 0.30.0 ("C varianti"): Xarajat va Daromad yonma-yon kichik kataklarda, eng pastida to'liq kenglikdagi "Sof balans" tasmasi
+    function oqimRaqami(n, belgili, klass) {
+      var e = sigRaqam(malumot.balansYashirin ? '••••' : raqam(n, belgili), malumot.balansYashirin ? undefined : n, belgili, klass);
+      return e;
+    }
+    var juft = el('div', undefined, 'oqim-juft');
+    [['Xarajat', -oj.xarajat, false, 'minus', 'oqim-xarajat'], ['Daromad', oj.daromad, true, 'plus', 'oqim-daromad']].forEach(function (x) {
+      var c = el('div', undefined, 'oqim-katak ' + x[4]);
+      c.appendChild(el('div', x[0], 'oqim-nom'));
+      c.appendChild(oqimRaqami(x[1], x[2], 'oqim-raqam ' + x[3]));
+      juft.appendChild(c);
     });
+    b.appendChild(juft);
+    var sof = el('div', undefined, 'oqim-katak oqim-sof');
+    sof.appendChild(el('span', 'Sof balans', 'oqim-nom'));
+    sof.appendChild(oqimRaqami(oj.qoldiq, true, 'oqim-raqam oqim-sof-raqam'));
+    b.appendChild(sof);
     k.appendChild(b);
     return k;
   }
@@ -3730,10 +3804,13 @@
     ekran.textContent = '';
     bloklar.forEach(function (b) { ekran.appendChild(b); });
     window.scrollTo(0, scrollniSaqla ? y : 0);
+    Sigdir.hammasi(ekran);   // raqamlar kartadan chiqib ketmasin
     // data-fokus belgili maydon (yozuv qo'shishning 1-qadamida summa) tayyor turadi: telefonda raqamli klaviatura ochiladi
     var f = ekran.querySelector('[data-fokus]');
     if (f) f.focus();
   }
+
+  Sigdir.kuzat(ekran);
 
   function korsat(nom) {
     if (nom === 'yana' || nom === 'hisobot' || nom === 'byudjet') nom = 'koproq';   // eski saqlangan tanlov

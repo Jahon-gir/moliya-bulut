@@ -68,7 +68,7 @@ Ilova versiyasi `index.html` dagi `<meta name="versiya" content="...">` da yozil
 pastida ko'rinadi. Shu raqam `style.css?v=...` va `js/*.js?v=...` havolalarida ham turadi, service worker esa `sw.js?v=...`
 orqali shu versiyadagi keshni yaratadi va eski keshni o'chiradi.
 
-**Har yangilanishda versiyani oshiring** (misol: 0.29.0 → 0.28.1), `index.html` va `tests.html` da hammasini birdaniga:
+**Har yangilanishda versiyani oshiring** (misol: 0.30.0 → 0.28.1), `index.html` va `tests.html` da hammasini birdaniga:
 
     sed -i 's/0\.23\.0/0.28.1/g' index.html tests.html
 

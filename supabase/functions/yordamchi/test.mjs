@@ -134,6 +134,16 @@ test('javob: mos matn qaytadi; mos kelmasa AI_RAQAM va matn qaytarilmaydi', asyn
   assert.equal(yomon.r.status, 502); assert.equal(yomon.j.xato.kod, 'AI_RAQAM'); assert.equal(yomon.j.matn, undefined);
   assert.equal(JSON.stringify(yomon.j).includes('1 300 000'), false);
 });
+test('raqam: savoldagi raqamlar ham ruxsat etiladi ("2-haftasida"), boshqa raqam esa yo\'q', async () => {
+  const savol = "Sentabrning 2-haftasida eng ko'p xarajat nimaga bo'lgan?";
+  const yaxshi = await chaqir(JAVOB({ savol }), { holat: { aiMatn: "Sentabrning 2-haftasida eng ko'p 1 250 000 so'm ketgan." } });
+  assert.equal(yaxshi.r.status, 200);
+  const yomon = await chaqir(JAVOB({ savol }), { holat: { aiMatn: "Sentabrning 3-haftasida 1 250 000 so'm ketgan." } });
+  assert.equal(yomon.j.xato.kod, 'AI_RAQAM');
+  const yomon2 = await chaqir(JAVOB({ savol }), { holat: { aiMatn: "2-haftasida 1 300 000 so'm ketgan." } });
+  assert.equal(yomon2.j.xato.kod, 'AI_RAQAM', 'natijadagi raqam tekshiruvi o\'zgarmagan');
+  assert.ok(M.raqamlarMosmi('2-haftasida 14 ta', [{ soni: 14 }, SOROV.davr, 'Sentabrning 2-haftasida']));
+});
 test('javob: bo\'sh yoki juda uzun AI matni -> xato kodi (matn qaytmaydi)', async () => {
   const a = await chaqir(JAVOB(), { holat: { aiMatn: '   ' } }); assert.equal(a.j.xato.kod, 'AI_PROVAYDER');
   const b = await chaqir(JAVOB(), { holat: { aiMatn: 'a '.repeat(300) } }); assert.equal(b.j.xato.kod, 'AI_SXEMA');

@@ -23,7 +23,7 @@ var Yordamchi = (function () {
   };
   function sozla(o) { Object.keys(o || {}).forEach(function (k) { dep[k] = o[k]; }); }
 
-  var ui = { malumot: null, korinadi: null, xabar: null };
+  var ui = { malumot: null, korinadi: null, xabar: null, belgi: null, ochish: null };
   var suhbat = [];      // [{ rol: 'savol' | 'javob' | 'kutish' | 'xato', matn, savol, kod, qayta }]  (faqat xotirada)
   var tugmaEl = null, ekranEl = null, royxatEl = null, kirishEl = null, yuborEl = null, tozalashEl = null;
 
@@ -67,7 +67,9 @@ var Yordamchi = (function () {
     return tokenBilan(false);
   }
 
-  // Savolga javob: Promise -> { matn, tushunarsiz }  yoki rad (Error.kod)
+  // Savolga javob: Promise -> { matn, karta, tushunarsiz, zaxira }  yoki rad (Error.kod)
+  // "javob" rejimi AI_RAQAM yoki AI_SXEMA bilan tugasa xato ko'rsatilmaydi: karta ilova hisoblagan raqamlar bilan, AI gapisiz (zaxira javob);
+  // karta bo'lmagan amalda ilovaning o'z sodda gapi chiqadi. Tarmoq, limit va ruxsat xatolari xato bo'lib qoladi.
   function javobOl(savol, malumot, bugunSana) {
     if (!dep.onlayn()) return Promise.reject(xato('NETWORK_OFFLINE'));   // internet yo'q: serverga so'rov ketmaydi
     var n = YordamchiSof.nomlar(malumot);
@@ -75,11 +77,15 @@ var Yordamchi = (function () {
       var sorov = j.sorov;
       if (!sorov || typeof sorov !== 'object') throw xato('AI_SXEMA');
       if (sorov.amal === 'tushunarsiz') return { matn: YordamchiSof.TUSHUNARSIZ_MATNI, tushunarsiz: true };   // ikkinchi so'rov yuborilmaydi
-      var natija = YordamchiSof.hisobla(sorov, malumot, bugunSana);
-      if (!natija || !YordamchiSof.natijaYuborsaBoladimi(natija)) throw xato('JS_NATIJA');
-      return chaqir({ rejim: 'javob', savol: savol, sorov: sorov, natija: natija }).then(function (j2) {
-        if (typeof j2.matn !== 'string' || !j2.matn) throw xato('AI_SXEMA');
-        return { matn: j2.matn };
+      var t = YordamchiSof.tahlil(sorov, malumot, bugunSana, savol);
+      if (!t || !YordamchiSof.natijaYuborsaBoladimi(t.natija)) throw xato('JS_NATIJA');
+      function zaxira() { return { matn: t.karta ? '' : t.gap, karta: t.karta, zaxira: true }; }
+      return chaqir({ rejim: 'javob', savol: savol, sorov: sorov, natija: t.natija }).then(function (j2) {
+        if (typeof j2.matn !== 'string' || !j2.matn) return zaxira();
+        return { matn: j2.matn, karta: t.karta };
+      }, function (e) {
+        if (e && (e.kod === 'AI_RAQAM' || e.kod === 'AI_SXEMA')) return zaxira();
+        throw e;
       });
     });
   }
@@ -89,7 +95,7 @@ var Yordamchi = (function () {
   function band() { return suhbat.some(function (x) { return x.rol === 'kutish'; }); }
 
   function natijaniQoy(kutish, p) {
-    p.then(function (r) { return { rol: 'javob', matn: r.matn }; }, function (e) {
+    p.then(function (r) { return { rol: 'javob', matn: r.matn, karta: r.karta || null }; }, function (e) {
       var kod = (e && e.kod) || ('JS_' + String((e && e.name) || 'XATO').replace(/[^A-Za-z0-9]/g, '').toUpperCase());
       return { rol: 'xato', matn: YordamchiSof.xatoMatni(kod), savol: kutish.savol, kod: kod, qayta: YordamchiSof.xatoQaytaMi(kod), yopiq: kod === 'AI_RUXSAT' && yopiqmi() };
     }).then(function (yangi) {
@@ -180,6 +186,15 @@ var Yordamchi = (function () {
     q.appendChild(r);
     return q;
   }
+  // Kartalardagi tugmalar: tegishli bo'limni ochadi va chat yopiladi (suhbat xotirada qoladi)
+  function hamyon() {
+    return {
+      belgi: function (k, o) { return ui.belgi ? ui.belgi(k, o) : e('span'); },
+      ochish: function (nom, p) { yop(); if (ui.ochish) ui.ochish(nom, p || {}); }
+    };
+  }
+  function oynaKattaldi() { if (royxatEl) Sigdir.hammasi(royxatEl); }
+
   function chiz() {
     if (!royxatEl) return;
     var ichki = royxatEl.scrollTop;
@@ -188,7 +203,11 @@ var Yordamchi = (function () {
     suhbat.forEach(function (x) {
       if (x.rol === 'savol') royxatEl.appendChild(e('div', x.matn, 'yo-savol'));
       else if (x.rol === 'kutish') royxatEl.appendChild(nuqtalar());
-      else {
+      else if (x.rol === 'javob' && x.karta) {   // kartochkali javob: AI gapi (bo'lsa) karta ustida oddiy matn
+        var kk = YordamchiKarta.yasa(x.karta, hamyon());
+        if (x.matn) royxatEl.appendChild(e('p', x.matn, 'yo-matn'));
+        if (kk) royxatEl.appendChild(kk);
+      } else {
         var k = e('div', x.matn, 'yo-javob' + (x.rol === 'xato' ? ' yo-xato' : ''));
         if (x.rol === 'xato') {
           k.setAttribute('role', 'alert');
@@ -197,6 +216,7 @@ var Yordamchi = (function () {
         royxatEl.appendChild(k);
       }
     });
+    Sigdir.hammasi(royxatEl);   // raqamlar kartadan chiqib ketmasin
     royxatEl.scrollTop = suhbat.length ? royxatEl.scrollHeight : ichki;
     var kutmoqda = band();
     if (yuborEl) yuborEl.disabled = kutmoqda;
@@ -207,7 +227,7 @@ var Yordamchi = (function () {
     var ek = e('div', undefined, 'yo-ekran');
     ek.setAttribute('role', 'dialog'); ek.setAttribute('aria-modal', 'true'); ek.setAttribute('aria-label', 'Yordamchi');
     var bosh = e('div', undefined, 'yo-bosh');
-    var orqa = tugmaYasa('yo-doira', 'Orqaga', yop); orqa.appendChild(svg('0 0 24 24', ORQAGA_SVG)); orqa.id = 'yordamchi-orqaga';
+    var orqa = tugmaYasa('yo-doira', 'Orqaga', function () { yop(); }); orqa.appendChild(svg('0 0 24 24', ORQAGA_SVG)); orqa.id = 'yordamchi-orqaga';
     bosh.appendChild(orqa);
     bosh.appendChild(e('h1', 'Yordamchi'));
     tozalashEl = tugmaYasa('yo-doira', 'Suhbatni tozalash', tozala); tozalashEl.appendChild(svg('0 0 24 24', TOZALASH_SVG)); tozalashEl.id = 'yordamchi-tozalash';
@@ -242,6 +262,9 @@ var Yordamchi = (function () {
     ekranEl.style.top = v.offsetTop + 'px';
   }
   function tugmaBosildi(h) { if (h.key === 'Escape' && ekranEl) yop(); }
+  // Telefonning "orqaga" tugmasi (Android) chatni yopadi, ilovadan chiqarib yubormaydi: chat ochilganda bitta tarix yozuvi qo'shiladi
+  var tarixBor = false;
+  function orqagaBosildi() { if (ekranEl) yop(true); }
 
   function ochish() {
     if (ekranEl) return;
@@ -250,11 +273,16 @@ var Yordamchi = (function () {
     document.body.style.overflow = 'hidden';
     if (window.visualViewport) { window.visualViewport.addEventListener('resize', oynaniMoslash); window.visualViewport.addEventListener('scroll', oynaniMoslash); }
     document.addEventListener('keydown', tugmaBosildi);
+    window.addEventListener('resize', oynaKattaldi);
+    try { history.pushState({ yordamchi: true }, ''); tarixBor = true; window.addEventListener('popstate', orqagaBosildi); } catch (x) { tarixBor = false; }
     chiz();
     yangila();
   }
-  function yop() {
+  function yop(tarixdan) {
     if (!ekranEl) return;
+    window.removeEventListener('resize', oynaKattaldi);
+    window.removeEventListener('popstate', orqagaBosildi);
+    if (tarixBor) { tarixBor = false; if (tarixdan !== true && history.state && history.state.yordamchi) { try { history.back(); } catch (x) { /* ahamiyatsiz */ } } }
     if (window.visualViewport) { window.visualViewport.removeEventListener('resize', oynaniMoslash); window.visualViewport.removeEventListener('scroll', oynaniMoslash); }
     document.removeEventListener('keydown', tugmaBosildi);
     if (ekranEl.parentNode) ekranEl.parentNode.removeChild(ekranEl);
@@ -266,7 +294,7 @@ var Yordamchi = (function () {
 
   // ui.js chaqiradi: malumot() — ilovaning joriy ma'lumoti, korinadi() — Asosiy sahifa ochiqmi, xabar(matn) — qisqa xabar
   function boshlash(o) {
-    ui.malumot = o.malumot; ui.korinadi = o.korinadi; ui.xabar = o.xabar;
+    ui.malumot = o.malumot; ui.korinadi = o.korinadi; ui.xabar = o.xabar; ui.belgi = o.belgi; ui.ochish = o.ochish;
     var oldingiKirgan = dep.kirgan();
     if (typeof Kirish !== 'undefined' && Kirish.kuzat) {
       Kirish.kuzat(function (h) {

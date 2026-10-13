@@ -805,6 +805,26 @@ export function shaxsniTozala(x: unknown, tur: string): string | null {
   return t;
 }
 
+// "N ta X, summa" gapida summa jami hisoblanadi. Dona narxi faqat gapda shuni bildiruvchi belgi bo'lsagina olinadi:
+// "har biri", "har bir", "donasi(ga)", "bittasi", "bittadan", "tadan", "25 mingdan" (summa + -dan) va miqdordan KEYIN kelgan "dona".
+// "2 dona non" dagi "dona" — sanoq so'zi (ta kabi), belgi emas.
+export function donaNarxiBelgisiBormi(gap: string): boolean {
+  const s = nomKalit(gap);
+  if (/\bhar\s+bir(i|ini)?\b/.test(s) || /\bdonasi\w*/.test(s) || /\bbittasi\w*/.test(s) || /\b(bitta|ta)dan\b/.test(s)) return true;
+  const w = s.split(/[\s,;:!?.()"«»]+/).filter(Boolean);
+  for (let i = 0; i < w.length; i++) {
+    const t = w[i];
+    if (t === "dona") { const o = i > 0 ? w[i - 1] : ""; if (o && !/^\d+$/.test(o) && !(SON_SOZLAR.get(o) && SON_SOZLAR.get(o)!.t === "birlik")) return true; }
+    if (t.length > 3 && t.endsWith("dan")) {
+      const r = t.slice(0, -3);
+      if (/^\d[\d.,]*(k|ming|mln|million|mlrd|milliard|som|sum|uzs)?$/.test(r)) return true;
+      const x = SON_SOZLAR.get(r);
+      if (x && (x.t === "miqyos" || x.t === "yuz" || x.t === "k" || (x.t === "belgi" && r !== "ta"))) return true;
+    }
+  }
+  return false;
+}
+
 export function yozuvniTozala(xom: unknown, k: { gap: string; bugun: string; kategoriyalar: string[]; hisobTurlari: HisobTuri[] }): Yozuv | null {
   if (!oddiyObyektmi(xom)) return null;
   const tur = (qisqaMatn(xom.tur) || "").toLowerCase();
@@ -831,7 +851,10 @@ export function yozuvniTozala(xom: unknown, k: { gap: string; bugun: string; kat
   let narx: number | null = null, summa: number | null = null;
   if (soni !== null && xom.narx_matn !== undefined && xom.narx_matn !== null) {
     narx = sonGaylik(xom.narx_matn);
-    if (narx !== null) { const p = soni * narx; if (p > 0 && p <= SUMMA_MAX) summa = p; else narx = null; }
+    if (narx !== null) {
+      if (donaNarxiBelgisiBormi(k.gap)) { const p = soni * narx; if (p > 0 && p <= SUMMA_MAX) summa = p; else narx = null; }
+      else { summa = narx; narx = null; ogohQosh("Summa jami deb olindi"); }   // "2 ta non ... 18 ming": 18 ming — jami, dona narxi emas
+    }
   }
   if (summa === null) summa = sonGaylik(xom.summa_matn);
   if (summa === null) ogohQosh("summa aniqlanmadi");

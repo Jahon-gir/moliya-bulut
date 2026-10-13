@@ -701,6 +701,15 @@
     return [k, forma, qadamXatosi('izoh')];
   }
 
+  // Tekshirilgan yozuvni (Calc.yozuvniTayyorlash natijasi) bazaga yozadi va xotiraga qo'shadi. Yozuv qo'shish shakli ham, "Gap bilan qo'shish" ham shuni ishlatadi.
+  function yozuvniSaqlash(tayyor) {
+    var yozuv = Object.assign({ id: Data.yangiId(), yaratilgan: new Date().toISOString() }, tayyor);
+    return Data.saqlash('yozuvlar', yozuv).then(function () {
+      malumot.yozuvlar.push(yozuv);
+      return yozuv;
+    });
+  }
+
   // To'liq yoki tezkor saqlash: kiritilmagan qadamlar standart qiymat oladi (hisob — oxirgi ishlatilgani,
   // sana va vaqt — hozirgi). Tekshiruvlar avvalgidek, vaqt tekshiruvi esa saqlash paytidagi hozirgi vaqt bilan.
   function wizardSaqlash() {
@@ -715,10 +724,8 @@
       wizardChiz();
       return;
     }
-    var yozuv = Object.assign({ id: Data.yangiId(), yaratilgan: new Date().toISOString() }, natija.yozuv);
     wiz.saqlanmoqda = true;
-    Data.saqlash('yozuvlar', yozuv).then(function () {
-      malumot.yozuvlar.push(yozuv);
+    yozuvniSaqlash(natija.yozuv).then(function (yozuv) {
       wiz = null;            // saqlangach shakl tozalanadi
       qoshishRejimi = 'yozuv';
       tarixOy = yozuv.sana.slice(0, 7);   // Tarixda yangi yozuvning oyi ochiladi
@@ -3003,6 +3010,15 @@
     });
   }
 
+  // Yangi qarz obyekti (Calc.qarzniTekshir natijasidan) va mavjud qarzga qo'shilgan yangi to'lov (Calc.tolovniTekshir natijasidan).
+  // Qarz shakli, to'lov shakli va "Gap bilan qo'shish" shularni ishlatadi; saqlash qarzniSaqlash orqali.
+  function yangiQarzObyekti(tayyor) {
+    return Object.assign({ id: Data.yangiId(), yaratilgan: new Date().toISOString(), tolovlar: [] }, tayyor);
+  }
+  function tolovQoshilganQarz(q, tolov) {
+    return Object.assign({}, q, { tolovlar: q.tolovlar.concat([Object.assign({ id: Data.yangiId(), yaratilgan: new Date().toISOString() }, tolov)]) });
+  }
+
   // Hisob tanlovi: faol hisoblar (tanlangan arxivlangan bo'lsa, u ham ko'rinadi)
   function hisobTanloviQarz(id, tanlangan) {
     var s = document.createElement('select');
@@ -3315,7 +3331,7 @@
         else qisqaXabar(r.xato);
         return;
       }
-      var yangi = Object.assign({}, q || { id: Data.yangiId(), yaratilgan: new Date().toISOString(), tolovlar: [] }, r.qarz);
+      var yangi = q ? Object.assign({}, q, r.qarz) : yangiQarzObyekti(r.qarz);
       saqla.disabled = true;
       qarzniSaqlash(yangi).then(function () {
         qisqaXabar(q ? 'Qarz yangilandi' : 'Qarz qo\'shildi');
@@ -3379,7 +3395,7 @@
         return;
       }
       var yangiTolov = Object.assign({ id: Data.yangiId(), yaratilgan: new Date().toISOString() }, t || {}, r.tolov);
-      var yangi = Object.assign({}, q, { tolovlar: t ? q.tolovlar.map(function (x) { return x.id === t.id ? yangiTolov : x; }) : q.tolovlar.concat([yangiTolov]) });
+      var yangi = t ? Object.assign({}, q, { tolovlar: q.tolovlar.map(function (x) { return x.id === t.id ? yangiTolov : x; }) }) : tolovQoshilganQarz(q, r.tolov);
       saqla.disabled = true;
       qarzniSaqlash(yangi).then(function (s) {
         qisqaXabar(Calc.qarzYopilganmi(s) ? 'Qarz to\'liq yopildi' : (t ? 'To\'lov yangilandi' : 'To\'lov qo\'shildi'));
@@ -3943,6 +3959,25 @@
     xabar: function (m) { qisqaXabar(m); },
     belgi: function (k, o) { return kategBadge(k, o); },
     ochish: yordamchiOchish
+  });
+
+  // "Gap bilan qo'shish" (29-band): js/gap.js. Saqlash AYNAN mavjud funksiyalar bilan: yozuv — yozuvniSaqlash (yozuv qo'shish shakli bilan bir xil),
+  // qarz va to'lov — qarzniSaqlash (qarz va to'lov shakllari bilan bir xil). Tekshiruv Calc funksiyalarida (js/gap-sof.js ularni chaqiradi).
+  function gapSaqlash(r) {
+    if (r.amal === 'yozuv') return yozuvniSaqlash(r.yozuv);
+    if (r.amal === 'qarz') return qarzniSaqlash(yangiQarzObyekti(r.qarz));
+    var q = qarzniOl(r.qarzId);
+    if (!q) return Promise.reject(new Error('Qarz topilmadi'));
+    return qarzniSaqlash(tolovQoshilganQarz(q, r.tolov));
+  }
+  Gap.boshlash({
+    malumot: function () { return malumot; },
+    xabar: function (m) { qisqaXabar(m); },
+    saqla: gapSaqlash,
+    tugadi: function (n) {
+      if (joriy === 'bosh' && !stek.length) asosiyniQayta();   // yangi yozuvlar Asosiy sahifada ko'rinsin
+      qisqaXabar(n + ' ta yozuv saqlandi');
+    }
   });
 
   function korsat(nom) {

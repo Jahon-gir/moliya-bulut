@@ -17,6 +17,7 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 | `008_ai_limit_testi.sql` | 007 ni tekshiradi (11 tekshiruv). Supabase'da ishga tushiriladi |
 | `functions/yordamchi/index.ts` | AI yordamchi Edge Function (bitta fayl). Supabase Dashboard'ga nusxalab joylanadi (5-bo'lim) |
 | `functions/yordamchi/test.mjs` | Funksiya sinovi (kompyuterda, `node --test`). AI taqlid qilinadi, haqiqiy kalit kerak emas |
+| `../model-server/kopri.py`, `test_kopri.py` | "Ko'prik": uyingizdagi Ollama oldidagi kalit tekshiruvchi darvoza va uning sinovi (yozuv rejimi uchun, 6-bo'lim) |
 | `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–008) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
@@ -136,6 +137,8 @@ Edge Functions → **Secrets** (yoki Project Settings → Edge Functions → Sec
 | `ANTHROPIC_API_KEY` | Anthropic kaliti (faqat `AI_PROVAYDER=claude` bo'lsa kerak) |
 | `AI_RUXSAT_EMAIL` | ruxsat berilgan Google email(lar), vergul bilan: `bir@gmail.com, ikki@gmail.com` |
 
+Yozuv rejimi (gapdan yozuv) uchun qo'shimcha Secrets: 6.3-bo'lim.
+
 `SUPABASE_URL` va `SUPABASE_ANON_KEY` ni Supabase o'zi beradi, ularni kiritmaysiz. Secret o'zgarsa funksiyani qayta Deploy qilish shart emas (yangi so'rovlar yangi qiymatni oladi). `AI_RUXSAT_EMAIL` bo'sh yoki yo'q bo'lsa funksiya HAMMAGA 403 qaytaradi.
 
 ### 5.4. Bitta sinov so'rovi
@@ -180,3 +183,127 @@ Faqat: savol matni, bugungi sana, kategoriya va hisob nomlari, ilova hisoblagan 
     node --test supabase/functions/yordamchi/test.mjs
 
 Node 22.18 yoki yangisi kerak. Haqiqiy kalit va tarmoq ishlatilmaydi.
+
+## 6. AI yordamchi: yozuv rejimi (o'z modelingiz uchun qadamlar)
+
+**Bu nima.** Ilova keyinroq gapni ("bozorda 18 ming sarfladim") yozuvga aylantirishni so'raydi. Server buni avval **sizning kompyuteringizdagi modelga** (Ollama, `chuntak-v5`) yuboradi; kompyuter o'chiq bo'lsa OpenAI ga o'tadi. Bu bo'limda siz ikki narsani tayyorlaysiz: (1) kompyuterda himoya darvozasi ("ko'prik"), (2) uni internetga chiqarish va Supabase'ga manzilni aytish. Ilova hozircha bunga ulanmagan: 6.5 dagi sinov so'rovi bilan tekshirasiz.
+
+**Muhim:** kalitni (parolni) o'zingiz o'ylab toping (kamida 16 belgi, harf va raqam aralash, masalan 30 ta tasodifiy belgi). Uni **chatga, repozitoriyga, rasmga yozmang**. Faqat PowerShell'ga va Supabase Secrets'ga kiritasiz. Quyida kalit o'rniga `<...>` turadi.
+
+### 6.1. Ko'prikni Windows'da ishga tushirish
+
+Oldindan: Ollama o'rnatilgan va `chuntak-v5` modeli bor (`ollama list` da ko'rinadi); Python 3 o'rnatilgan (`python --version`).
+
+1. Repozitoriyni kompyuteringizga yuklab oling (yoki `git pull`), papkani oching.
+2. Papkada **PowerShell** oching (papka ichida o'ng tugma, "Terminalda ochish").
+3. Kalitni bering (qo'shtirnoq ichiga o'zingiz o'ylab topgan kalitni yozing):
+
+       $env:MODEL_KALIT="<o'zingiz-o'ylab-topgan-uzun-kalit>"
+
+4. Ko'prikni ishga tushiring:
+
+       python model-server/kopri.py
+
+5. Kutilgan natija: `Ko'prik ishga tushdi: http://127.0.0.1:8787 ...`. **Bu oynani yopmang**: yopsangiz ko'prik to'xtaydi. To'xtatish: `Ctrl+C`.
+6. Kalit yo'q yoki 16 belgidan qisqa bo'lsa, dastur tushunarli xato bilan o'zi to'xtaydi.
+7. Tekshirish (boshqa PowerShell oynasida): kalitsiz so'rov rad etilishi kerak:
+
+       curl.exe -i -X POST http://127.0.0.1:8787/api/chat
+
+   Kutilgan: `401`. Ko'prik logida faqat vaqt va raqam (`[2026-.. ..] 401`) chiqadi, so'rov matni chiqmaydi.
+
+Ixtiyoriy: `$env:KOPRI_PORT="8788"` (port o'zgartirish), `$env:MODEL_RUXSAT="chuntak-v5,boshqa-model"` (ruxsat etilgan model nomlari). Odatda kerak emas.
+
+### 6.2. Internetga chiqarish (Supabase sizning kompyuteringizga yetib kelishi uchun)
+
+Supabase serveri internetda, kompyuteringiz uyda. Ko'prikni internetga xavfsiz chiqarishning ikki yo'li bor. **Bittasini tanlang.**
+
+**A) Tailscale Funnel (tavsiya: manzil o'zgarmaydi).**
+
+1. [tailscale.com](https://tailscale.com) da hisob oching (Google bilan kirish mumkin) va Windows uchun Tailscale'ni o'rnating, kiring.
+2. Tailscale boshqaruv sahifasida (Admin console) **DNS** bo'limida **MagicDNS** va **HTTPS Certificates** ni yoqing.
+3. Funnel ruxsatini yoqing: Admin console → **Access controls** (yoki Settings) da Funnel yoqish taklifi chiqadi; birinchi marta `tailscale funnel 8787` ni ishga tushirsangiz, buyruq o'zi havola beradi: shu havolani ochib, ruxsat bering.
+4. Ko'prik ishlab turgan holda yangi PowerShell'da:
+
+       tailscale funnel 8787
+
+5. Natijada manzil chiqadi: `https://<kompyuter>.<tailnet>.ts.net`. Shu manzilni yozib oling (6.3 da `MODEL_URL` bo'ladi). Manzil oxirida `/` va `/api/chat` **bo'lmasin**.
+6. Funnel o'chirish: `tailscale funnel reset`.
+
+**B) Muqobil: Cloudflare "quick tunnel" (hisob kerak emas, lekin manzil o'zgaradi).**
+
+1. `cloudflared` ni [Cloudflare sahifasidan](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) yuklab oling (Windows).
+2. Ko'prik ishlab turgan holda:
+
+       cloudflared tunnel --url http://127.0.0.1:8787
+
+3. Chiqqan `https://<tasodifiy-nom>.trycloudflare.com` manzilini `MODEL_URL` ga qo'yasiz.
+4. **Ogohlantirish:** bu manzil har ishga tushirganingizda **o'zgaradi**. Kompyuterni qayta yoqsangiz yoki buyruqni qayta ishga tushirsangiz, Supabase'da `MODEL_URL` ni yangilashingiz kerak, aks holda funksiya OpenAI ga tushib ketadi (xato chiqmaydi, faqat sekinroq va gap OpenAI ga ketadi). Doimiy ishlatish uchun A yo'li qulayroq.
+
+### 6.3. Supabase Secrets
+
+Supabase → Edge Functions → **Secrets** → **Add new secret**. Bittadan kiriting:
+
+| Nom | Qiymat |
+|---|---|
+| `MODEL_URL` | 6.2 dagi manzil, masalan `https://<kompyuter>.<tailnet>.ts.net` (oxirida `/` yo'q) |
+| `MODEL_KALIT` | 6.1 da PowerShell'ga bergan kalitingiz (aynan bir xil) |
+| `MODEL_NOMI` | `chuntak-v5` (ixtiyoriy; yozmasangiz shu nom ishlatiladi) |
+| `MODEL_VAQT` | `25` (ixtiyoriy; o'z model javobini necha sekund kutish. Model sovuq bo'lsa `40` qilish mumkin, eng ko'pi 120) |
+| `YOZUV_PROVAYDER` | `oz_openai` (sukut: avval o'z model, bo'lmasa OpenAI) · `oz` (faqat o'z model; kompyuter o'chiq bo'lsa xato, gap OpenAI ga HECH QACHON chiqmaydi) · `openai` (faqat OpenAI) |
+
+OpenAI zaxirasi uchun 5.3 dagi `AI_PROVAYDER`, `AI_MODEL`, `OPENAI_API_KEY` kiritilgan bo'lishi kerak (`oz` rejimida shart emas). Secret o'zgarsa funksiyani qayta joylash shart emas.
+
+**Maxfiylik haqida:** `oz_openai` rejimida kompyuter o'chiq bo'lsa, gap (va unda aytilgan ismlar) OpenAI ga ketadi. Oldingi izohlar (`eski`) OpenAI ga hech qachon ketmaydi. Gap OpenAI ga umuman chiqmasin desangiz, `YOZUV_PROVAYDER=oz` qo'ying.
+
+### 6.4. Funksiyani qayta joylash
+
+`index.ts` yangilandi (yangi `yozuv` rejimi). Dashboard'dagi funksiyaga **qayta joylang**: Edge Functions → `yordamchi` → muharrirdagi hamma matnni o'chirib, yangi `supabase/functions/yordamchi/index.ts` ni **to'liq** nusxalab qo'ying → **Deploy**. "Verify JWT" yoqilgan qolsin. Boshqa rejimlar (savol-javob) o'zgarmagan.
+
+### 6.5. Tekshirish
+
+**Avval ko'prikni tashqaridan tekshiring** (PowerShell; `<manzil>` va `<kalit>` o'rniga o'zingiznikini qo'ying):
+
+    curl.exe -i -X POST "<manzil>/api/chat"
+
+Kutilgan: `401` (kalitsiz rad etildi: darvoza ishlayapti). Keyin kalit bilan:
+
+    curl.exe -s -X POST "<manzil>/api/chat" -H "X-Model-Kalit: <kalit>" -H "Content-Type: application/json" -d "{\"model\":\"chuntak-v5\",\"messages\":[{\"role\":\"user\",\"content\":\"salom\"}]}"
+
+Kutilgan: Ollama javobi (JSON, ichida `"message"`). Birinchi javob sekin bo'lishi mumkin (model xotiraga yuklanadi).
+
+**Keyin funksiyani tekshiring.** Ilovani GitHub Pages manzilida ochib kiring, brauzerda **F12** → **Console** ga yopishtiring:
+
+    Kirish.tokenOl().then(function (t) {
+      return fetch(Kirish.SUPABASE_MANZIL + '/functions/v1/yordamchi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: Kirish.OCHIQ_KALIT, Authorization: 'Bearer ' + t },
+        body: JSON.stringify({ rejim: 'yozuv', gap: 'bugun bozorda 2 ta non va sut oldim 18 ming', bugun: new Date().toISOString().slice(0, 10),
+          kategoriyalar: ['Ovqatlanish', 'Transport', 'Boshqa xarajat'], hisoblar: [{ nom: 'Naqd pul', turi: 'naqd' }, { nom: 'Karta', turi: 'karta' }] })
+      });
+    }).then(function (r) { return r.json(); }).then(console.log);
+
+Kutilgan: `{ ok: true, manba: 'model', yozuvlar: [ { tur: 'xarajat', summa: 18000, ... } ] }`. `manba: 'model'` — javobni sizning kompyuteringiz berdi; `manba: 'openai'` — zaxira ishladi (ko'prik/kompyuter/manzil bilan muammo bor, 6.6 ga qarang).
+
+### 6.6. Nosozliklar
+
+| Belgi | Sababi va yechimi |
+|---|---|
+| Doim `manba: 'openai'` (o'z model hech qachon ishlamaydi) | `MODEL_URL` yoki `MODEL_KALIT` Secrets'da yo'q yoki xato yozilgan; ko'prik oynasi yopilgan; Funnel/tunnel to'xtagan; Cloudflare manzili o'zgargan. 6.5 dagi `curl.exe` sinovini bajaring: u ishlamasa muammo kompyuter tomonda |
+| `401` (curl da) | Kalit noto'g'ri yoki yo'q. PowerShell'dagi `$env:MODEL_KALIT` va Supabase'dagi `MODEL_KALIT` **aynan bir xil** bo'lsin (bo'shliq, qo'shtirnoq qo'shilmasin). PowerShell oynasi yopilsa kalit unutiladi: qayta bering |
+| `502` `AI_PROVAYDER` (`YOZUV_PROVAYDER=oz` da) | O'z model javob bermadi. Ko'prik ishlayaptimi, Ollama ishlayaptimi (`ollama ps`) tekshiring. Ko'prik logida `502` chiqsa — Ollama o'chiq |
+| `502` `AI_PROVAYDER` (sukut rejimda) | O'z model ham, OpenAI ham sozlanmagan yoki OpenAI kaliti/modeli noto'g'ri. 5.3 ni tekshiring |
+| `sabab: 'tushunarsiz'` | Ikkala provayderdan ham o'qiladigan javob kelmadi (ikkalasi band yoki noto'g'ri JSON). Qayta urinib ko'ring; takrorlansa 6.5 sinovlarini bajaring |
+| `sabab: 'yozuv_yoq'` | Model gapda yozuv topmadi (masalan kelajak rejasi). Bu xato emas |
+| Birinchi javob sekin (20–40 s) | Model sovuq: Ollama uni xotiraga yuklayapti. `keep_alive` 30 daqiqa, shundan keyin tez. 25 s dan oshsa OpenAI ga o'tiladi: `MODEL_VAQT` ni `40` qiling |
+| Kompyuter uxlab qoldi | Uyqu rejimida kompyuter javob bermaydi, zaxira ishlaydi. Windows: Sozlamalar → Tizim → Quvvat → "Uyqu" ni "Hech qachon" qiling (ishlatayotgan paytingizda) |
+| `ollama ps` da `100% GPU` emas (masalan `100% CPU` yoki `40%/60% CPU/GPU`) | Model to'liq videokartaga sig'magan, shuning uchun sekin. Boshqa og'ir dasturlarni (o'yin, brauzer videolari) yoping va modelni qayta yuklang: `ollama stop chuntak-v5`, keyin yangi so'rov. Baribir `100% GPU` bo'lmasa video xotira yetmaydi: `MODEL_VAQT` ni oshiring yoki `YOZUV_PROVAYDER=oz_openai` da qoldiring |
+| Kalit sizib chiqdi deb o'ylasangiz | Ko'prikni to'xtating (`Ctrl+C`), yangi kalit o'ylab toping, 6.1 va 6.3 da almashtiring |
+| Windows Firewall so'rasa | Ko'prik faqat `127.0.0.1` da tinglaydi (tashqi tarmoqqa ochilmaydi): "Ruxsat bermaslik" (Cancel) ni tanlash mumkin, Funnel/tunnel baribir ishlaydi |
+
+### 6.7. Sinash (dasturchi uchun)
+
+    python3 model-server/test_kopri.py
+    node --test supabase/functions/yordamchi/test.mjs
+
+Ikkalasida ham Ollama, OpenAI va Supabase taqlid qilinadi; haqiqiy kalit va tarmoq kerak emas.

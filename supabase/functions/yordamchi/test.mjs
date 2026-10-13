@@ -391,3 +391,265 @@ test('repo qidiruvi: supabase/ ichida maxfiy kalit, haqiqiy email, parol yo\'q',
     assert.equal(/(OPENAI_API_KEY|ANTHROPIC_API_KEY|AI_RUXSAT_EMAIL)\s*[:=]\s*["']?[A-Za-z0-9@]/.test(t.replace(/'(sinov|ega|boshqa)[^']*'/g, '')), false, f);
   }
 });
+
+// =====================================================================
+// YOZUV REJIMI (gap -> yozuv). O'z model va OpenAI taqlid qilinadi, tarmoqqa chiqilmaydi.
+// =====================================================================
+const MODEL_MANZIL = 'https://model.sinov.invalid';
+const YOZ_ASL = "Gapdan moliyaviy yozuvlarni ajrat. tur: xarajat, daromad, qarz_berdim, qarz_oldim, qarz_qaytardim, qarz_qaytarildi yoki otkazma. Qarz turlari faqat gapda qarz, qarzga, berib turdim, olib turdim, qaytardim kabi so'z bo'lsa; oddiy \"berdim\" va komissiya xarajat. otkazma faqat o'z hisoblaring orasida. Kategoriya, hisob va hisob2 ni ro'yxatdagi nom bilan aynan yoz. Kimga yoki qayerga ekanini bildiruvchi kategoriya ro'yxatda bo'lsa o'shani tanla. Eski yozuvlar berilsa, o'sha narsa uchun o'sha kategoriyani tanla. Mos kategoriya bo'lmasa ro'yxatdagi umumiy (Boshqa ...) kategoriyani, bo'lmasa null. Hisob nomi ro'yxatdagi aniq bitta hisobga mos kelmasa hisob null. summa_matn ga summani gapda qanday aytilgan bo'lsa shunday ko'chir. Narx dona uchun aytilsa soni va narx_matn ni to'ldir. izoh ga nima uchunligini yoz. Kelajakdagi reja yozuv emas. Yozuv bo'lmasa bo'sh ro'yxat. Faqat JSON ro'yxat qaytar.";
+const YKAT = ['Taksi', 'Ovqatlanish', "Uy-ro'zg'or", 'Boshqa xarajat', 'Maosh'];
+const YHIS = [{ nom: 'Cash UZS', turi: 'naqd' }, { nom: 'Uzum', turi: 'karta' }, { nom: 'Humo kartam', turi: 'karta' }];
+const YOZUV = (o = {}) => ({ rejim: 'yozuv', gap: 'bugun bozorda 2 ta non va sut oldim 18 ming', bugun: '2026-10-13', kategoriyalar: YKAT, hisoblar: YHIS, ...o });
+const MY = (o = {}) => ({ tur: 'xarajat', summa_matn: '18 ming', soni: null, narx_matn: null, kategoriya: "Uy-ro'zg'or", hisob: null, hisob_turi: null, hisob2: null, shaxs: null, sana: 'bugun', izoh: 'non va sut', ...o });
+const YE = (o = {}) => ({ ...o });
+// holat.oz: { matn } | { xato: 'tarmoq'|'vaqt'|500 } ; holat.openai: { matn } | { xato: 500 }
+function tarmoqY(holat = {}) {
+  holat.chaqiruvlar = holat.chaqiruvlar || []; holat.hisob = holat.hisob || { n: 0 };
+  return async (url, init = {}) => {
+    holat.chaqiruvlar.push({ url, init });
+    const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
+    if (url.endsWith('/auth/v1/user')) return J({ id: 'u-1', email: holat.email || 'ega@example.invalid' });
+    if (url.endsWith('/rest/v1/rpc/ai_limit_oshir')) { holat.hisob.n = holat.limitBoshi !== undefined && holat.hisob.n === 0 ? holat.limitBoshi : holat.hisob.n + 1; return J(holat.hisob.n); }
+    if (url === MODEL_MANZIL + '/api/chat') {
+      const oz = holat.oz || {};
+      if (oz.xato === 'tarmoq') throw new TypeError('fetch failed');
+      if (oz.xato === 'vaqt') throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      if (typeof oz.xato === 'number') return J({}, oz.xato);
+      return J({ model: 'chuntak-v5', message: { role: 'assistant', content: oz.matn } });
+    }
+    if (url === 'https://api.openai.com/v1/chat/completions') {
+      const o = holat.openai || {};
+      if (o.xato) return J({}, o.xato);
+      return J({ choices: [{ message: { content: o.matn } }] });
+    }
+    throw new Error('Kutilmagan manzil: ' + url);
+  };
+}
+const YENV = { MODEL_URL: MODEL_MANZIL, MODEL_KALIT: 'sinov-model-kalit-123456' };
+async function yoz(tana, { holat = {}, env = YENV, ...opt } = {}) {
+  const r = await M.ishlov(so(tana, opt), muhitYasa(env), tarmoqY(holat));
+  return { r, j: await r.json(), holat };
+}
+const ozSoz = (h) => h.chaqiruvlar.filter((c) => c.url === MODEL_MANZIL + '/api/chat').map((c) => ({ ...c, tana: JSON.parse(c.init.body) }));
+const oaSoz = (h) => h.chaqiruvlar.filter((c) => c.url.includes('openai.com')).map((c) => ({ ...c, tana: JSON.parse(c.init.body) }));
+const CTX = { gap: 'bugun bozorda 2 ta non va sut oldim 18 ming', bugun: '2026-10-13', kategoriyalar: YKAT, hisobTurlari: YHIS };
+
+// ---------------- so'z -> son ----------------
+test('sonOgir: barcha misollar (raqam, so\'z, aralash, qo\'shimcha, qisqartma)', () => {
+  const jadval = {
+    '20 ming': 20000, '20 000': 20000, '20000': 20000, '1,5 million': 1500000, '1.5 mln': 1500000, '5 million': 5000000,
+    'yigirma ming': 20000, 'yigirma besh ming': 25000, 'yuz ellik ming': 150000, 'ikki yuz ming': 200000, 'bir yarim million': 1500000,
+    'ikki yarim ming': 2500, 'uch million besh yuz ming': 3500000, '1 mlrd': 1000000000, 'ming': 1000, 'bir ming': 1000,
+    "o'n ming so'm": 10000, '15 mingga': 15000, '50k': 50000, 'yarim million': 500000, '5 yuz ming': 500000,
+    // qo'shimcha misollar
+    "O‘N MING": 10000, 'o`n ming': 10000, "to'rt yuz ming": 400000, "to'qson to'qqiz ming to'qqiz yuz to'qson to'qqiz": 99999, 'sakkiz yuz': 800, 'nol': 0, 'yuz': 100,
+    '18 000 so\'m': 18000, '1 250 000': 1250000, '1.250.000': 1250000, '5,000': 5000, '2,5 ming': 2500, '0,5 million': 500000, '1,25 mln': 1250000,
+    '2 mlrd 500 mln': 2500000000, 'ikkita': 2, '20ming': 20000, '15 mingdan': 15000, 'bir million ikki yuz ming': 1200000, '3k': 3000, '1.5k': 1500, '20 ming.': 20000, 'ikki ming besh yuz': 2500,
+  };
+  for (const [kirish, kutilgan] of Object.entries(jadval)) assert.equal(M.sonOgir(kirish), kutilgan, JSON.stringify(kirish));
+  assert.equal(M.sonOgir(18000), 18000); assert.equal(M.sonOgir(1.5), null); assert.equal(M.sonOgir(-5), null); assert.equal(M.sonOgir(null), null); assert.equal(M.sonOgir(undefined), null); assert.equal(M.sonOgir({}), null);
+});
+test('sonOgir: noaniq yoki ma\'nosiz bo\'lsa null (taxmin qilinmaydi); "mingi" = null (qaror)', () => {
+  const yomon = ['', '   ', 'abc', 'salom dunyo', 'mingi', 'minglab', 'yarim', 'ikki yarim', 'bir yarim', '12,5', '12.5', '1,500 million', '2.500 ming', '1.250,5', '2 3', 'besh yigirma', 'bir ikki', 'yigirma yigirma',
+    'ming ming', 'million ming million', 'so\'m', 'ta', '20 ming olma', 'taxminan 20 ming', 'yigirma besh yuz', 'yuz yuz', '-5', '.5 million', ',5 ming', '5 ming 3000', 'k', 'yigirma k', '007', '1 2 3', '5%', '$20', '20 so\'m ming', 'x'.repeat(200), '9'.repeat(30), '99999999999 mlrd'];
+  for (const y of yomon) assert.equal(M.sonOgir(y), null, JSON.stringify(y));
+});
+
+// ---------------- konstanta va kirish ----------------
+test('YOZ matni bir harfigacha asl nusxa; model so\'rovi ATAYIN bitta user xabar; KIRISH qator tartibi aynan', async () => {
+  assert.equal(M.YOZ, YOZ_ASL);
+  const holat = { oz: { matn: JSON.stringify([MY()]) } };
+  const { r, j } = await yoz(YOZUV({ eski: [{ izoh: 'non', kategoriya: "Uy-ro'zg'or" }, { izoh: 'taksi', kategoriya: 'Taksi' }] }), { holat });
+  assert.equal(r.status, 200); assert.equal(j.manba, 'model');
+  const c = ozSoz(holat); assert.equal(c.length, 1); const t = c[0].tana;
+  assert.equal(c[0].init.headers['X-Model-Kalit'], 'sinov-model-kalit-123456');
+  assert.equal(t.model, 'chuntak-v5'); assert.equal(t.stream, false); assert.equal(t.keep_alive, '30m'); assert.deepEqual(t.options, { temperature: 0, num_predict: 600, num_ctx: 2048 });
+  assert.equal(t.messages.length, 1); assert.equal(t.messages[0].role, 'user'); assert.deepEqual(Object.keys(t).sort(), ['keep_alive', 'messages', 'model', 'options', 'stream']);
+  assert.equal(t.messages[0].content, YOZ_ASL + '\n\n' + "Kategoriyalar: Taksi, Ovqatlanish, Uy-ro'zg'or, Boshqa xarajat, Maosh\nHisoblar: Cash UZS (naqd), Uzum (karta), Humo kartam (karta)\nEski yozuvlar: non -> Uy-ro'zg'or; taksi -> Taksi\nGap: bugun bozorda 2 ta non va sut oldim 18 ming");
+  assert.ok(c[0].init.signal, 'vaqt chegarasi (signal) bor');
+  // eski bo'sh yoki yo'q bo'lsa qator umuman yo'q
+  for (const eski of [undefined, [], null]) {
+    const h = { oz: { matn: '[]' } }; await yoz(YOZUV({ eski }), { holat: h });
+    assert.equal(ozSoz(h)[0].tana.messages[0].content.split('\n\n')[1], "Kategoriyalar: Taksi, Ovqatlanish, Uy-ro'zg'or, Boshqa xarajat, Maosh\nHisoblar: Cash UZS (naqd), Uzum (karta), Humo kartam (karta)\nGap: bugun bozorda 2 ta non va sut oldim 18 ming");
+  }
+  // MODEL_NOMI o'zgartirsa
+  const h2 = { oz: { matn: '[]' } }; await yoz(YOZUV(), { holat: h2, env: { ...YENV, MODEL_NOMI: 'chuntak-v6' } }); assert.equal(ozSoz(h2)[0].tana.model, 'chuntak-v6');
+});
+test('yozuv kirishi: noto\'g\'ri shakl -> 400 AI_KIRISH, uzun gap -> 413 AI_UZUN (AI chaqirilmaydi, limit sanalmaydi)', async () => {
+  const yomon = [YOZUV({ gap: '   ' }), YOZUV({ gap: 5 }), YOZUV({ gap: undefined }), YOZUV({ bugun: '2026-99-99' }), YOZUV({ kategoriyalar: 'x' }), YOZUV({ kategoriyalar: Array(101).fill('a') }),
+    YOZUV({ hisoblar: ['Uzum'] }), YOZUV({ hisoblar: [{ nom: 'Uzum', turi: 'boshqa' }] }), YOZUV({ hisoblar: [{ nom: '', turi: 'naqd' }] }), YOZUV({ hisoblar: Array(101).fill({ nom: 'a', turi: 'naqd' }) }),
+    YOZUV({ eski: 'x' }), YOZUV({ eski: Array(21).fill({ izoh: 'non', kategoriya: 'Taksi' }) }), YOZUV({ eski: [{ izoh: 5, kategoriya: 'Taksi' }] }), YOZUV({ eski: [{ izoh: 'non' }] })];
+  for (const [i, t] of yomon.entries()) { const { r, j, holat } = await yoz(t, { holat: { oz: { matn: '[]' } } }); assert.equal(r.status, 400, 'yomon #' + i); assert.equal(j.xato.kod, 'AI_KIRISH'); assert.equal(holat.chaqiruvlar.filter((c) => c.url.includes('model.') || c.url.includes('ai_limit')).length, 0); }
+  const u = await yoz(YOZUV({ gap: 'a'.repeat(301) }), { holat: { oz: { matn: '[]' } } });
+  assert.equal(u.r.status, 413); assert.equal(u.j.xato.kod, 'AI_UZUN'); assert.equal(u.holat.chaqiruvlar.filter((c) => c.url.includes('model.') || c.url.includes('ai_limit')).length, 0);
+  assert.equal((await yoz(YOZUV({ gap: 'a'.repeat(300) }), { holat: { oz: { matn: '[]' } } })).r.status, 200);
+  // eski: kategoriyasi ro'yxatda yo'q element tashlanadi, izoh qirqiladi
+  const h = { oz: { matn: '[]' } }; await yoz(YOZUV({ eski: [{ izoh: 'x'.repeat(100), kategoriya: "uy-ro‘zg'or" }, { izoh: 'yo\'q', kategoriya: 'Begona' }] }), { holat: h });
+  assert.ok(ozSoz(h)[0].tana.messages[0].content.includes("Eski yozuvlar: " + 'x'.repeat(60) + " -> Uy-ro'zg'or\nGap:"));
+});
+
+// ---------------- tozalash ----------------
+test('tozalash: kategoriya/hisob moslash (harf, bo\'shliq, apostrof turlari), hisob turi ustun, topilmasa null + ogohlantirish', () => {
+  const T = (o) => M.yozuvniTozala(MY(o), CTX);
+  for (const nom of ["uy-ro'zg'or", "UY-RO‘ZG‘OR", "Uy-roʻzgʻor", "  uy-ro’zg’or ", "Uy-ro`zg`or", "Uy-roʼzgʼor"]) assert.equal(T({ kategoriya: nom }).kategoriya, "Uy-ro'zg'or", nom);
+  const a = T({ kategoriya: 'Yo\'q kategoriya', hisob: 'uzum', hisob_turi: 'naqd' });
+  assert.equal(a.kategoriya, null); assert.deepEqual(a.ogohlantirish, ['kategoriya topilmadi']);
+  assert.equal(a.hisob, 'Uzum'); assert.equal(a.hisob_turi, 'karta', 'hisob topilsa uning turi ustun');
+  const b = T({ hisob: 'Begona hisob', hisob_turi: 'Karta' }); assert.equal(b.hisob, null); assert.equal(b.hisob_turi, 'karta'); assert.ok(b.ogohlantirish.includes('hisob topilmadi'));
+  assert.equal(T({ hisob: null, hisob_turi: 'boshqa' }).hisob_turi, null); assert.equal(T({ hisob: null, hisob_turi: null }).hisob_turi, null);
+  assert.deepEqual(T({ kategoriya: null }).ogohlantirish, [], 'model null bergan bo\'lsa ogohlantirish yo\'q');
+  assert.equal(T({ hisob: 'cash  uzs' }).hisob, 'Cash UZS'); assert.equal(T({ hisob: 'cash  uzs' }).hisob_turi, 'naqd');
+});
+test('tozalash: tur ro\'yxatda bo\'lmasa element tashlanadi; kalitlar yo\'q yoki null bo\'lsa ham qabul qilinadi', () => {
+  for (const x of [{ ...MY(), tur: 'sovga' }, null, 'matn', [], { summa_matn: '5 ming' }, { ...MY(), tur: 5 }]) assert.equal(M.yozuvniTozala(x, CTX), null, JSON.stringify(x));
+  for (const tur of ['xarajat', 'daromad', 'qarz_berdim', 'qarz_oldim', 'qarz_qaytardim', 'qarz_qaytarildi', 'otkazma', 'XARAJAT']) assert.ok(M.yozuvniTozala({ tur, summa_matn: '5 ming' }, CTX), tur);
+  const k = M.yozuvniTozala({ tur: 'xarajat', summa_matn: '5 ming' }, CTX);   // faqat ikki kalit
+  assert.deepEqual(k, { tur: 'xarajat', summa: 5000, soni: null, narx: null, kategoriya: null, hisob: null, hisob_turi: null, hisob2: null, shaxs: null, sana: null, izoh: CTX.gap, ogohlantirish: [] });
+  assert.deepEqual(Object.keys(k), ['tur', 'summa', 'soni', 'narx', 'kategoriya', 'hisob', 'hisob_turi', 'hisob2', 'shaxs', 'sana', 'izoh', 'ogohlantirish']);
+});
+test('tozalash: summa — son(summa_matn); soni x narx; son olinmasa null + "summa aniqlanmadi"; chegaralar', () => {
+  const S = (o) => M.yozuvniTozala(MY(o), CTX);
+  assert.equal(S({ summa_matn: 'yigirma besh ming' }).summa, 25000); assert.equal(S({ summa_matn: 18000 }).summa, 18000);
+  const d = S({ soni: 2, narx_matn: '9 ming', summa_matn: '18 ming' }); assert.deepEqual([d.summa, d.soni, d.narx], [18000, 2, 9000]);
+  const e = S({ soni: '3', narx_matn: 'besh yuz', summa_matn: null }); assert.deepEqual([e.summa, e.soni, e.narx], [1500, 3, 500]);
+  assert.equal(S({ soni: 2, narx_matn: 'arzon', summa_matn: '18 ming' }).summa, 18000, 'narx o\'qilmasa summa_matn');
+  assert.equal(S({ soni: 2, narx_matn: null, summa_matn: '30 ming' }).summa, 30000);
+  for (const sm of ['', null, 'ancha', '0', 'nol', '-5', '2000 mlrd', 'mingi']) { const x = S({ summa_matn: sm }); assert.equal(x.summa, null, String(sm)); assert.deepEqual(x.ogohlantirish, ['summa aniqlanmadi']); }
+  assert.equal(S({ soni: 1000000, narx_matn: '999 mlrd', summa_matn: null }).summa, null, 'ko\'paytma 1 000 000 000 000 dan oshdi');
+  assert.equal(S({ summa_matn: '1000 mlrd' }).summa, 1000000000000, 'aynan chegara');
+});
+test('tozalash: shaxs — qarz turlarida ga/dan/ning olinadi (qolgan ≥ 3 harf bo\'lsa), boshqa turlarda saqlanadi', () => {
+  const Q = (tur, shaxs) => M.yozuvniTozala(MY({ tur, shaxs }), CTX).shaxs;
+  assert.equal(Q('qarz_berdim', 'Aliga'), 'Ali'); assert.equal(Q('qarz_qaytarildi', 'Sardordan'), 'Sardor'); assert.equal(Q('qarz_oldim', 'Valining'), 'Vali'); assert.equal(Q('qarz_qaytardim', 'Olga'), 'Olga');
+  assert.equal(Q('qarz_berdim', 'Ali'), 'Ali'); assert.equal(Q('qarz_berdim', 'Madan'), 'Madan'); assert.equal(Q('qarz_berdim', 'Aziz akaga'), 'Aziz aka'); assert.equal(Q('qarz_berdim', '  '), null); assert.equal(Q('qarz_berdim', null), null);
+  assert.equal(Q('xarajat', 'Aliga'), 'Aliga'); assert.equal(Q('otkazma', 'Sardordan'), 'Sardordan'); assert.equal(Q('daromad', 'Anvar'), 'Anvar');
+});
+test('tozalash: sana — bugun, kecha, "N kun oldin" (raqam va so\'z), ertaga/kelajak (element qoladi), YYYY-MM-DD, qolgani null', () => {
+  const D = (sana) => M.yozuvniTozala(MY({ sana }), CTX);
+  assert.equal(D('bugun').sana, '2026-10-13'); assert.equal(D('Bugun').sana, '2026-10-13'); assert.equal(D('kecha').sana, '2026-10-12');
+  assert.equal(D('2 kun oldin').sana, '2026-10-11'); assert.equal(D('uch kun oldin').sana, '2026-10-10'); assert.equal(D('10 kun oldin').sana, '2026-10-03'); assert.equal(D('15 kun oldin').sana, '2026-09-28');
+  const e = D('ertaga'); assert.ok(e); assert.equal(e.sana, null); assert.equal(e.ogohlantirish.length, 1); assert.match(e.ogohlantirish[0], /kelajak/);
+  assert.equal(D('2026-10-14').sana, null); assert.equal(D('2026-10-14').ogohlantirish.length, 1); assert.equal(D('2027-01-01').sana, null);
+  assert.equal(D('2026-10-13').sana, '2026-10-13'); assert.equal(D('2026-09-30').sana, '2026-09-30'); assert.deepEqual(D('2026-09-30').ogohlantirish, []);
+  for (const x of [null, '', 'o\'tgan juma', '0 kun oldin', 'mingi kun oldin', '2026-02-30', '13.10.2026', 5, 'kun oldin', 'indin']) { const r = D(x); assert.equal(r.sana, null, String(x)); assert.deepEqual(r.ogohlantirish, [], String(x)); }
+  const y = M.yozuvniTozala(MY({ sana: '1 kun oldin' }), { ...CTX, bugun: '2026-03-01' }); assert.equal(y.sana, '2026-02-28');
+  const z = M.yozuvniTozala(MY({ sana: 'kecha' }), { ...CTX, bugun: '2026-01-01' }); assert.equal(z.sana, '2025-12-31');
+});
+test('tozalash: izoh (bo\'sh bo\'lsa gap ≤ 120, tozalangan, ≤ 200) va otkazma hisob2', () => {
+  const I = (izoh, gap = CTX.gap) => M.yozuvniTozala(MY({ izoh }), { ...CTX, gap }).izoh;
+  assert.equal(I('  non   va\n sut '), 'non va sut'); assert.equal(I(''), CTX.gap); assert.equal(I(null), CTX.gap); assert.equal(I('   ', 'g'.repeat(200)), 'g'.repeat(120)); assert.equal(I('x'.repeat(300)).length, 200);
+  assert.equal(M.yozuvniTozala(MY({ izoh: '\u0000ab\u0007c' }), CTX).izoh, 'abc');
+  const O = (hisob, hisob2, tur = 'otkazma') => M.yozuvniTozala(MY({ tur, hisob, hisob2 }), CTX);
+  const a = O('Uzum', 'cash uzs'); assert.deepEqual([a.hisob, a.hisob2, a.ogohlantirish], ['Uzum', 'Cash UZS', []]);
+  const b = O('Uzum', 'UZUM'); assert.deepEqual([b.hisob, b.hisob2], ['Uzum', null]); assert.deepEqual(b.ogohlantirish, ['ikkala hisob bir xil']);
+  assert.ok(O('Uzum', 'Yo\'q hisob').ogohlantirish.length === 1 && O('Uzum', 'Yo\'q hisob').hisob2 === null);
+  assert.equal(O('Uzum', 'Cash UZS', 'xarajat').hisob2, null, 'otkazma bo\'lmasa hisob2 kerak emas');
+});
+
+// ---------------- ishlov: to'liq oqim ----------------
+test('yozuv: o\'z model javob beradi -> manba "model", tozalangan yozuvlar; OpenAI chaqirilmaydi', async () => {
+  const javob = [MY({ summa_matn: '18 ming', kategoriya: 'uy-ro‘zg‘or' }), MY({ tur: 'qarz_berdim', summa_matn: 'yigirma ming', shaxs: 'Aliga', kategoriya: null, sana: 'kecha', izoh: 'qarz' })];
+  const { r, j, holat } = await yoz(YOZUV(), { holat: { oz: { matn: JSON.stringify(javob) } } });
+  assert.equal(r.status, 200); assert.equal(j.ok, true); assert.equal(j.manba, 'model'); assert.equal(j.sabab, undefined); assert.equal(j.yozuvlar.length, 2);
+  assert.deepEqual(j.yozuvlar[0], { tur: 'xarajat', summa: 18000, soni: null, narx: null, kategoriya: "Uy-ro'zg'or", hisob: null, hisob_turi: null, hisob2: null, shaxs: null, sana: '2026-10-13', izoh: 'non va sut', ogohlantirish: [] });
+  assert.deepEqual([j.yozuvlar[1].tur, j.yozuvlar[1].summa, j.yozuvlar[1].shaxs, j.yozuvlar[1].sana], ['qarz_berdim', 20000, 'Ali', '2026-10-12']);
+  assert.equal(oaSoz(holat).length, 0);
+  // ```json o'rami va oldidan matn
+  const f = await yoz(YOZUV(), { holat: { oz: { matn: '```json\n' + JSON.stringify([MY()]) + '\n```' } } }); assert.equal(f.j.manba, 'model'); assert.equal(f.j.yozuvlar.length, 1);
+  const g = await yoz(YOZUV(), { holat: { oz: { matn: 'Mana natija: ' + JSON.stringify([MY()]) + ' tayyor.' } } }); assert.equal(g.j.manba, 'model');
+});
+test('yozuv: natija ≤ 6 ta; bo\'sh ro\'yxat -> yozuv_yoq; yaroqsiz elementlar tashlanadi (hammasi yaroqsiz bo\'lsa ham yozuv_yoq)', async () => {
+  const yetti = await yoz(YOZUV(), { holat: { oz: { matn: JSON.stringify(Array(9).fill(MY())) } } }); assert.equal(yetti.j.yozuvlar.length, 6);
+  const bosh = await yoz(YOZUV({ gap: 'ertaga bozorga boraman' }), { holat: { oz: { matn: '[]' } } });
+  assert.deepEqual(bosh.j, { ok: true, manba: 'model', yozuvlar: [], sabab: 'yozuv_yoq' });
+  const yar = await yoz(YOZUV(), { holat: { oz: { matn: JSON.stringify([{ tur: 'sovga' }, 5, null, MY()]) } } }); assert.equal(yar.j.yozuvlar.length, 1);
+  const hammasi = await yoz(YOZUV(), { holat: { oz: { matn: JSON.stringify([{ tur: 'sovga' }]) } } }); assert.equal(hammasi.j.sabab, 'yozuv_yoq'); assert.equal(hammasi.j.manba, 'model');
+});
+test('zaxira zanjiri: vaqt tugadi / tarmoq / HTTP xato / JSON emas -> OpenAI (manba "openai")', async () => {
+  const oa = { matn: JSON.stringify([MY({ summa_matn: '18 ming' })]) };
+  for (const oz of [{ xato: 'vaqt' }, { xato: 'tarmoq' }, { xato: 500 }, { xato: 401 }, { matn: 'bu JSON emas' }, { matn: '' }, { matn: '{"x":1}' }, { matn: '"matn"' }]) {
+    const { r, j, holat } = await yoz(YOZUV(), { holat: { oz, openai: oa } });
+    assert.equal(r.status, 200, JSON.stringify(oz)); assert.equal(j.manba, 'openai', JSON.stringify(oz)); assert.equal(j.yozuvlar[0].summa, 18000); assert.equal(ozSoz(holat).length, 1); assert.equal(oaSoz(holat).length, 1);
+  }
+  // OpenAI zaxirasi: faqat bitta user xabar, JSON obyekt rejimi ISHLATILMAYDI (ro'yxat qaytishi kerak)
+  const h = { oz: { xato: 'vaqt' }, openai: oa }; await yoz(YOZUV({ eski: [{ izoh: 'non', kategoriya: "Uy-ro'zg'or" }] }), { holat: h });
+  const t = oaSoz(h)[0].tana; assert.equal(t.messages.length, 1); assert.equal(t.messages[0].role, 'user'); assert.equal(t.response_format, undefined); assert.ok(t.max_completion_tokens > 0);
+  assert.equal(t.messages[0].content, YOZ_ASL + '\n\n' + "Kategoriyalar: Taksi, Ovqatlanish, Uy-ro'zg'or, Boshqa xarajat, Maosh\nHisoblar: Cash UZS (naqd), Uzum (karta), Humo kartam (karta)\nGap: bugun bozorda 2 ta non va sut oldim 18 ming");
+});
+test('zaxira zanjiri: ikkalasi ham javob bermasa -> ok:true, yozuvlar:[], sabab "tushunarsiz"', async () => {
+  for (const holat of [{ oz: { xato: 'vaqt' }, openai: { xato: 500 } }, { oz: { matn: 'JSON emas' }, openai: { matn: 'ham JSON emas' } }, { oz: { xato: 'tarmoq' }, openai: { matn: '' } }]) {
+    const { r, j } = await yoz(YOZUV(), { holat });
+    assert.equal(r.status, 200); assert.deepEqual(j, { ok: true, manba: null, yozuvlar: [], sabab: 'tushunarsiz' });
+  }
+  // OpenAI sozlanmagan bo'lsa bu sozlash xatosi: tushunarsiz bilan yashirilmaydi
+  const { r, j } = await yoz(YOZUV(), { holat: { oz: { xato: 'vaqt' } }, env: { ...YENV, OPENAI_API_KEY: '' } }); assert.equal(r.status, 502); assert.equal(j.xato.kod, 'AI_PROVAYDER');
+});
+test('YOZUV_PROVAYDER: oz_openai (sukut, noma\'lum qiymat ham), oz, openai', async () => {
+  const oa = { matn: JSON.stringify([MY()]) }, oz = { matn: JSON.stringify([MY()]) };
+  for (const yp of [undefined, '', 'oz_openai', 'OZ_OPENAI', 'nomalum']) {
+    const h = { oz, openai: oa }; const x = await yoz(YOZUV(), { holat: h, env: { ...YENV, YOZUV_PROVAYDER: yp } }); assert.equal(x.j.manba, 'model', String(yp)); assert.equal(oaSoz(h).length, 0);
+  }
+  // oz: faqat o'z model
+  const a = { oz: { xato: 'vaqt' }, openai: oa }; const ra = await yoz(YOZUV(), { holat: a, env: { ...YENV, YOZUV_PROVAYDER: 'oz' } });
+  assert.equal(ra.r.status, 502); assert.equal(ra.j.xato.kod, 'AI_PROVAYDER'); assert.equal(oaSoz(a).length, 0); assert.equal(JSON.stringify(ra.j).includes('sinov-model-kalit'), false); assert.equal(JSON.stringify(ra.j).includes('model.sinov'), false);
+  const b = { oz: { matn: 'JSON emas' }, openai: oa }; const rb = await yoz(YOZUV(), { holat: b, env: { ...YENV, YOZUV_PROVAYDER: 'oz' } }); assert.equal(rb.r.status, 200); assert.equal(rb.j.sabab, 'tushunarsiz'); assert.equal(oaSoz(b).length, 0);
+  const c = await yoz(YOZUV(), { holat: { oz, openai: oa }, env: { ...YENV, YOZUV_PROVAYDER: 'oz' } }); assert.equal(c.j.manba, 'model');
+  // openai: faqat OpenAI, o'z modelga umuman so'rov yo'q
+  const d = { oz, openai: oa }; const rd = await yoz(YOZUV(), { holat: d, env: { ...YENV, YOZUV_PROVAYDER: 'openai' } }); assert.equal(rd.j.manba, 'openai'); assert.equal(ozSoz(d).length, 0);
+  const e = await yoz(YOZUV(), { holat: { openai: { xato: 500 } }, env: { ...YENV, YOZUV_PROVAYDER: 'openai' } }); assert.equal(e.r.status, 502); assert.equal(e.j.xato.kod, 'AI_PROVAYDER');
+});
+test('MODEL_URL yoki MODEL_KALIT yo\'q: o\'z model jimgina o\'tkaziladi (OpenAI); YOZUV_PROVAYDER=oz bo\'lsa xato', async () => {
+  const oa = { matn: JSON.stringify([MY()]) };
+  for (const env of [{ MODEL_URL: '' , MODEL_KALIT: 'x'.repeat(20) }, { MODEL_URL: MODEL_MANZIL, MODEL_KALIT: '' }, {}]) {
+    const h = { openai: oa }; const x = await yoz(YOZUV(), { holat: h, env }); assert.equal(x.r.status, 200); assert.equal(x.j.manba, 'openai'); assert.equal(ozSoz(h).length, 0);
+  }
+  const z = await yoz(YOZUV(), { holat: { openai: oa }, env: { MODEL_URL: '', MODEL_KALIT: '', YOZUV_PROVAYDER: 'oz' } }); assert.equal(z.r.status, 502); assert.equal(z.j.xato.kod, 'AI_PROVAYDER');
+});
+test('MODEL_VAQT: sukut 25 sekund, sozlansa o\'sha (1..120), noto\'g\'ri qiymat sukutga qaytadi', async () => {
+  // ruxsat/limit/OpenAI chaqiruvlari ham AbortSignal.timeout ishlatadi (20000); model uchun qiymat ro'yxatda bo'lishi kerak
+  const olch = async (v) => { const orig = AbortSignal.timeout; const hammasi = []; AbortSignal.timeout = (n) => { hammasi.push(n); return orig.call(AbortSignal, n); }; try { await yoz(YOZUV(), { holat: { oz: { matn: '[]' } }, env: { ...YENV, MODEL_VAQT: v } }); } finally { AbortSignal.timeout = orig; } return hammasi; };
+  assert.ok((await olch(undefined)).includes(25000)); assert.ok((await olch('40')).includes(40000)); assert.ok((await olch('abc')).includes(25000)); assert.ok((await olch('0')).includes(25000)); assert.ok((await olch('9999')).includes(120000));
+});
+test('maxfiylik: `eski` o\'z modelda BOR, OpenAI so\'rovida YO\'Q; OpenAI ga faqat gap va nomlar ketadi', async () => {
+  const eski = [{ izoh: 'maxfiy-izoh-belgisi', kategoriya: 'Taksi' }];
+  const a = { oz: { matn: '[]' } }; await yoz(YOZUV({ eski }), { holat: a });
+  assert.ok(ozSoz(a)[0].tana.messages[0].content.includes('maxfiy-izoh-belgisi'));
+  const b = { oz: { xato: 'tarmoq' }, openai: { matn: '[]' } }; await yoz(YOZUV({ eski }), { holat: b });
+  const oaTana = oaSoz(b)[0].init.body; assert.equal(oaTana.includes('maxfiy-izoh-belgisi'), false); assert.equal(oaTana.includes('Eski yozuvlar:'), false); assert.equal(oaTana.includes('sinov-model-kalit'), false);
+  const c = { openai: { matn: '[]' } }; await yoz(YOZUV({ eski }), { holat: c, env: { ...YENV, YOZUV_PROVAYDER: 'openai' } }); assert.equal(oaSoz(c)[0].init.body.includes('maxfiy-izoh-belgisi'), false);
+});
+test('yozuv rejimida ham: kirish, ruxsat, kunlik limit (1 ta so\'rov), CORS', async () => {
+  const oz = { matn: JSON.stringify([MY()]) };
+  const a = await yoz(YOZUV(), { jwt: null, holat: { oz } }); assert.equal(a.r.status, 401); assert.equal(a.j.xato.kod, 'AI_RUXSAT'); assert.equal(a.holat.chaqiruvlar.length, 0);
+  const b = await yoz(YOZUV(), { holat: { oz, email: 'begona@example.invalid' } }); assert.equal(b.r.status, 403); assert.equal(ozSoz(b.holat).length + oaSoz(b.holat).length, 0); assert.equal(b.holat.chaqiruvlar.filter((c) => c.url.includes('ai_limit')).length, 0);
+  const l1 = await yoz(YOZUV(), { holat: { oz, limitBoshi: 200 } }); assert.equal(l1.r.status, 200);
+  const h = { oz, limitBoshi: 201 }; const l2 = await yoz(YOZUV(), { holat: h }); assert.equal(l2.r.status, 429); assert.equal(l2.j.xato.kod, 'AI_LIMIT'); assert.equal(ozSoz(h).length + oaSoz(h).length, 0);
+  const h3 = { oz }; await yoz(YOZUV(), { holat: h3 }); assert.equal(h3.chaqiruvlar.filter((c) => c.url.includes('ai_limit')).length, 1, 'yozuv = 1 ta so\'rov');
+  assert.equal(h3.hisob.n, 1);
+  for (const o of ['https://jahon-gir.github.io', 'http://localhost:8000']) assert.equal((await yoz(YOZUV(), { origin: o, holat: { oz } })).r.headers.get('Access-Control-Allow-Origin'), o);
+  assert.equal((await yoz(YOZUV(), { origin: 'https://yomon.example', holat: { oz } })).r.headers.get('Access-Control-Allow-Origin'), null);
+  const x = await yoz(YOZUV(), { jwt: null, origin: 'https://jahon-gir.github.io', holat: { oz } }); assert.equal(x.r.headers.get('Access-Control-Allow-Origin'), 'https://jahon-gir.github.io');
+});
+test('yozuv: eski reja/javob rejimlari o\'zgarmagan (kodlar to\'plami, savol maydoni shart)', async () => {
+  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'NETWORK']);
+  const { r, j } = await chaqir({ rejim: 'reja', gap: 'salom', bugun: '2026-10-13', kategoriyalar: [], hisoblar: [] }, { holat: { aiMatn: PLAN(SOROV) } });
+  assert.equal(r.status, 400); assert.equal(j.xato.kod, 'AI_KIRISH', 'reja rejimi hanuz "savol" talab qiladi');
+});
+
+// ---------------- repo: yozuv qismi uchun qo'shimcha qidiruv ----------------
+test('repo: model-server/ va hujjatlarda haqiqiy manzil, kalit, email yo\'q (faqat <...> belgilar)', () => {
+  const ildiz = join(BU, '..', '..', '..');
+  const royxat = [];
+  (function yur(d) { for (const n of readdirSync(d)) { if (n === '.git' || n === 'node_modules') continue; const p = join(d, n); const s = statSync(p); if (s.isDirectory()) yur(p); else if (/\.(ts|mjs|py|md|sh|toml)$/.test(n)) royxat.push(p); } })(join(ildiz, 'model-server'));
+  royxat.push(join(ildiz, 'supabase', 'README.md'), join(ildiz, 'supabase', 'functions', 'yordamchi', 'index.ts'), join(ildiz, 'TZ-sinxronlash.md'));
+  assert.ok(royxat.length >= 4);
+  for (const f of royxat) {
+    if (/test(_kopri)?\.(mjs|py)$/.test(f)) continue;
+    const t = readFileSync(f, 'utf8');
+    assert.equal(/[a-z0-9-]+\.ts\.net|[a-z0-9-]+\.trycloudflare\.com|ngrok|\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b(?<!127\.0\.0\.1)/.test(t.replace(/127\.0\.0\.1/g, '')), false, f + ': haqiqiy manzil');
+    assert.equal(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/.test(t.replace(/(bir|ikki)@gmail\.com/g, '').replace(/noreply@anthropic\.com/g, '')), false, f + ': email');
+    assert.equal(/(MODEL_KALIT)\s*[:=]\s*["']?[A-Za-z0-9]{8,}/.test(t), false, f + ': kalit qiymati');
+    assert.equal(/\bMODEL_KALIT\s*=\s*"[^"<]/.test(t), false, f);
+  }
+  assert.equal(/\bconsole\./.test(readFileSync(join(BU, 'index.ts'), 'utf8').replace(/\/\/[^\n]*/g, '')), false);
+});

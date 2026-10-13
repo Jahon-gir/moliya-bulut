@@ -625,3 +625,58 @@ Oxirgi 3 almashinuv (savol, reja, javob matni) faqat xotirada (o'zgaruvchi): baz
 **Filtr va qidiruv bilan (kun jamlari).** Qarz amali faqat ro'yxatda ko'ringan bo'lsagina kun jamiga qo'shiladi (`Calc.qarzSatrlariniSuz`): kategoriya filtri yoki tur filtri yoqilsa qarz amallari ko'rinmaydi va sanalmaydi (qarzda kategoriya yo'q); hisob filtri — faqat shu hisobdagi qarz amallari (asosiy summa va qaytarish o'z hisobi bo'yicha); sana oralig'i — shu oraliqdagi amallar; qidiruv — izoh yoki shaxs ismi bo'yicha. "Oy balansi" kartasi filtrga bog'liq emas (avvalgidek butun oy).
 
 **Tekshiruv (testlar).** Bir oy uchun Tarixdagi kun jamlari yig'indisi va "Oy balansi" Asosiy "Naqd pul oqimi" raqamlariga (xarajat, daromad, sof balans) aynan teng (qarzli va qarzsiz uydirma ma'lumotda, olingan qarz va qaytarishlar bilan, o'chirilganlar sanalmasligi); AI yordamchining `oylik_hisobot` natijasi ham shu raqamlarga teng. Brauzerda sentabr sinovi: Asosiy "3 880 000 / 25 894 026 / +22 014 026", Tarix kartasi va kun belgilari yig'indisi shuncha.
+
+## 28. AI yordamchi: yozuv rejimi, server qismi
+
+Bu PR da ilova ko'rinishiga va ilova fayllariga (`index.html`, `js/`, `style.css`, `sw.js`) TEGILMAYDI, shuning uchun ilova versiyasi o'zgarmadi. Qilinmaydi: ilova ekrani, tasdiqlash kartasi, ovoz, chat rejimini (savollar) o'z modelga o'tkazish, yozuvni bazaga saqlash. Ilova qismi keyingi PR da.
+
+### 28.1. Qaror
+Foydalanuvchi gap yozadi ("bugun bozorda 2 ta non va sut oldim 18 ming"); server uni tuzilgan yozuv(lar)ga aylantiradi; ilova (keyingi PR) tasdiqlash kartasini ko'rsatadi. Mavjud `yordamchi` Edge Function ga uchinchi rejim `yozuv` qo'shildi (`reja` va `javob` o'zgarmadi). Gapni avval foydalanuvchining O'Z modeli (uyidagi kompyuterda Ollama, `chuntak-v5`) ishlaydi; u javob bermasa OpenAI zaxira. **22.1 qoida o'zgarmagan: AI raqam hisoblamaydi.** Model faqat matnni ajratadi (`summa_matn`: "yigirma besh ming"); sonni `sonOgir()` (index.ts ichida) chiqaradi, sana, nom moslash va shaxs tozalash ham serverda, deterministik.
+
+### 28.2. Protokol
+- **Kirish:** `{ rejim:"yozuv", gap (≤ 300 belgi), bugun:"YYYY-MM-DD", kategoriyalar:[nom…≤100], hisoblar:[{nom, turi:"karta"|"naqd"}…≤100], eski?:[{izoh, kategoriya}…≤20] }`. `eski` — avvalgi izohlar va ularning kategoriyasi (model "non" ni qaysi kategoriyaga qo'yganingizni bilishi uchun); ro'yxatda yo'q kategoriyali element tashlanadi, izoh 60 belgigacha qirqiladi. JWT, `AI_RUXSAT_EMAIL`, uzunlik, CORS va kunlik limit boshqa rejimlar bilan bir xil; yozuv = limitda 1 ta so'rov.
+- **Chiqish:** `{ ok:true, manba:"model"|"openai"|null, yozuvlar:[Yozuv…], sabab?:"yozuv_yoq"|"tushunarsiz" }`.
+- **Yozuv:** `{ tur, summa:int|null, soni:int|null, narx:int|null, kategoriya:nom|null, hisob:nom|null, hisob_turi:"karta"|"naqd"|null, hisob2:nom|null, shaxs:string|null, sana:"YYYY-MM-DD"|null, izoh:string, ogohlantirish:[string…] }`. `tur`: xarajat, daromad, qarz_berdim, qarz_oldim, qarz_qaytardim, qarz_qaytarildi, otkazma.
+- **O'z modelga so'rov:** Ollama `POST {MODEL_URL}/api/chat`, sarlavha `X-Model-Kalit`; tana `{ model, stream:false, keep_alive:"30m", messages:[ BITTA user xabar ], options:{ temperature:0, num_predict:600, num_ctx:2048 } }`. Xabar = `YOZ` matni + bo'sh qator + `KIRISH`. Model shunday o'qitilgan, shuning uchun system xabar YO'Q va `YOZ` matni bir harfigacha o'zgartirilmaydi (sinov asl nusxa bilan solishtiradi). `KIRISH`: `Kategoriyalar: …` / `Hisoblar: Cash UZS (naqd), Uzum (karta)` / `Eski yozuvlar: non -> Uy-ro'zg'or; …` (faqat `eski` bo'sh bo'lmasa) / `Gap: …`.
+- **Model chiqishi:** JSON ro'yxat (```json o'rami, matn ichidagi ro'yxat, `{"yozuvlar":[…]}` ham o'qiladi). Kalitlari: tur, summa_matn, soni, narx_matn, kategoriya, hisob, hisob_turi, hisob2, shaxs, sana, izoh (ba'zilari null yoki yo'q bo'lishi mumkin).
+
+### 28.3. Zaxira zanjiri
+`YOZUV_PROVAYDER`: `oz_openai` (sukut va noma'lum qiymat) — avval o'z model, xato/vaqt tugashi/JSON emas bo'lsa OpenAI; `oz` — faqat o'z model; `openai` — faqat OpenAI. `MODEL_URL` yoki `MODEL_KALIT` yo'q bo'lsa o'z model bosqichi jimgina o'tkaziladi (`oz` bo'lsa xato). OpenAI uchun mavjud sozlama (`AI_PROVAYDER`, `AI_MODEL`, kalitlar); xabar ham bitta user xabar, JSON-obyekt rejimisiz (ro'yxat kerak).
+
+| Holat | Natija |
+|---|---|
+| O'z model javob berdi | `manba:"model"` |
+| O'z model xato / vaqt tugadi (`MODEL_VAQT`, sukut 25 s) / JSON emas | OpenAI, `manba:"openai"` |
+| Ikkalasidan ham JSON o'qilmadi (tarmoq, HTTP xato, JSON emas) | 200, `yozuvlar:[]`, `sabab:"tushunarsiz"` |
+| `YOZUV_PROVAYDER=oz`, o'z model javob bermadi | 502 `AI_PROVAYDER` (JSON emas bo'lsa `tushunarsiz`) |
+| Sozlash xatosi (OpenAI kaliti/modeli yo'q, `oz` da `MODEL_URL` yo'q) | 502 `AI_PROVAYDER` (`tushunarsiz` bilan yashirilmaydi) |
+| Model to'g'ri `[]` qaytardi yoki hamma element yaroqsiz | 200, `sabab:"yozuv_yoq"` |
+
+Yangi xato kodi yo'q.
+
+### 28.4. Tozalash (har element uchun, AI emas)
+- `tur` ro'yxatda bo'lmasa element tashlanadi. Natija ≤ 6 yozuv.
+- `kategoriya`, `hisob`, `hisob2`: yuborilgan ro'yxatdagi nomga moslanadi (harf, bo'shliq, apostrof turlariga e'tiborsiz; ro'yxatdagi aniq yozuv qaytadi). Model nom bergan-u topilmasa: `null` + ogohlantirish ("kategoriya topilmadi", "hisob topilmadi", "ikkinchi hisob topilmadi"); model `null` bergan bo'lsa ogohlantirish yo'q. `hisob_turi`: hisob topilsa uning turi, bo'lmasa modelning "karta"/"naqd" qiymati.
+- `summa`: `soni` va `narx_matn` bo'lsa soni × son(narx_matn) (`narx` ham qaytadi); narx o'qilmasa son(summa_matn). Son olinmasa `null` + "summa aniqlanmadi". Summa ≤ 0 yoki > 1 000 000 000 000 bo'lsa `null`.
+- `shaxs`: faqat qarz turlarida oxiridagi `ga`/`dan`/`ning` olinadi, qolgan qism ≥ 3 harf bo'lsa ("Aliga" → "Ali", "Olga" o'zgarmaydi). Boshqa turlarda model bergan ism saqlanadi.
+- `sana`: "bugun", "kecha", "N kun oldin" (N raqam yoki so'z), haqiqiy `YYYY-MM-DD` (kelajak bo'lmasa). "ertaga" yoki kelajakdagi sana: element tashlanmaydi, `sana:null` + ogohlantirish. Qolgani `null` (ilova bugunni qo'yadi).
+- `izoh`: bo'sh bo'lsa gapning o'zi (≤ 120 belgi), umuman ≤ 200 belgi.
+- `otkazma`da `hisob` = `hisob2` bo'lsa `hisob2:null` + "ikkala hisob bir xil". `otkazma` bo'lmagan turlarda `hisob2` doim `null`.
+
+### 28.5. So'z → son (`sonOgir`)
+`nol … to'qqiz`, `o'n … to'qson`, `yuz`, `ming`, `million/mln`, `milliard/mlrd`, `yarim`, `k`; raqam va so'z aralash ("5 yuz ming"); apostrof turlari va katta-kichik harfga e'tiborsiz; qo'shimchalar (`ga, da, dan, ni, ning, lik, ta, cha`: "15 mingga"); so'm/sum/uzs oxirda ruxsat. Kasr ("1,5 million") faqat ming/million/mlrd/k oldida; "5,000" = 5000 (so'm kasrli bo'lmaydi). **Noaniq bo'lsa null:** "12,5", "2,500 ming", "ikki yarim" (miqyossiz), "yigirma besh yuz", "5 ming 3000". Qaror: **"mingi" → null** (egalik qo'shimchasi `-i` ruxsat etilgan ro'yxatda yo'q), "ming" → 1000.
+
+### 28.6. Kompyuterdagi himoya: `model-server/kopri.py`
+Ollama'ning o'zida parol yo'q, shuning uchun uning oldida kichik (faqat standart kutubxona) darvoza: `127.0.0.1:8787` da tinglaydi, faqat `POST /api/chat`, kalit `MODEL_KALIT` (≥ 16 belgi) `X-Model-Kalit` sarlavhasi bilan `hmac.compare_digest` orqali solishtiriladi (401), tana ≤ 20 KB (413), `model` faqat `MODEL_RUXSAT` (sukut `chuntak-v5`) ro'yxatida (403), `stream` majburan `false`, kalit Ollama'ga uzatilmaydi. Log: faqat vaqt va holat kodi. Internetga uni Tailscale Funnel yoki Cloudflare quick tunnel chiqaradi (`supabase/README.md` 6-bo'lim). Sinov: `python3 model-server/test_kopri.py` (12 tekshiruv, Ollama taqlid qilinadi).
+
+### 28.7. Maxfiylik va ochiq xavflar
+- Model chaqiruvi uy kompyuteriga ketadi; `eski` (oldingi izohlar) FAQAT o'z modelga yuboriladi, OpenAI so'rovida YO'Q (23.8 qoidasi saqlanadi; sinov tekshiradi).
+- **Ochiq xavf:** OpenAI zaxirasi gapni va unda aytilgan ismlarni (masalan qarz olgan odamning ismi) ko'radi. Kompyuter o'chiq bo'lsa yoki model javob bermasa, gap shu yo'l bilan tashqariga chiqadi. Buni istamasangiz `YOZUV_PROVAYDER=oz` qo'ying (kompyuter o'chiq bo'lsa yozuv rejimi ishlamaydi).
+- Funksiya gapni va javobni logga yozmaydi (`console.*` yo'q; sinov tekshiradi) va bazaga saqlamaydi. `MODEL_URL`, `MODEL_KALIT` faqat Supabase Secrets da; repoda faqat `<...>` belgilar.
+- Kalit sizib chiqsa, kim bo'lsa ham modelingizga so'rov yubora oladi (faqat `chuntak-v5`, 20 KB gacha): kalitni almashtiring (6.6-bo'lim).
+
+### 28.8. Qabul qilingan taxminlar
+- Kompyuter o'chiq (yoki uxlab qolgan) bo'lsa o'z model javob bermaydi va OpenAI zaxira ishlaydi (taxminan `MODEL_VAQT` sekund kutgandan keyin).
+- Model sovuq ishga tushganda (`keep_alive` 30 daqiqa o'tgach yoki kompyuter yangi yoqilganda) birinchi javob sekin bo'ladi; 25 sekunddan oshsa OpenAI ga o'tiladi. Kerak bo'lsa `MODEL_VAQT` ni oshiring.
+- Server `summa_matn` ning gapda borligini TEKSHIRMAYDI (model gapda yo'q summani to'qishi mumkin); bunga ishonch yo'q, shuning uchun yozuv ilovada foydalanuvchi tasdiqlagandan keyingina saqlanishi shart (keyingi PR).
+- Haqiqiy model, haqiqiy Ollama, Tailscale/Cloudflare va haqiqiy Supabase bilan SINALMAGAN: sinovlar taqlid bilan (57 ta Edge Function tekshiruvi, 12 ta ko'prik tekshiruvi).

@@ -11,10 +11,15 @@
 //   3) rejim "javob": savol + tarix + so'rovlar + ilova hisoblagan natijalar -> AI 1–4 gapli o'zbekcha matn va 2–3 davom savoli.
 //      Matndagi har raqam natijada yoki savolda bo'lishi shart; bo'lmasa matn qaytarilmaydi (AI_RAQAM).
 //
+//   4) rejim "yozuv": gap -> tuzilgan yozuv(lar). Avval foydalanuvchining O'Z modeli (Ollama, uy kompyuteri), bo'lmasa OpenAI zaxira.
+//      Summa FAQAT gapdagi matndan sonOgir() orqali olinadi (AI raqam hisoblamaydi). Hamma tozalash deterministik (yozuvniTozala).
+//
 // Maxfiy o'zgaruvchilar (FAQAT Supabase -> Edge Functions -> Secrets; kodga, repoga, testga yozilmaydi):
 //   AI_PROVAYDER ("openai" yoki "claude"), AI_MODEL, OPENAI_API_KEY, ANTHROPIC_API_KEY, AI_RUXSAT_EMAIL (vergul bilan).
+//   Yozuv rejimi uchun: MODEL_URL, MODEL_KALIT, MODEL_NOMI (sukut chuntak-v5), MODEL_VAQT (sekund, sukut 25), YOZUV_PROVAYDER (oz_openai | oz | openai).
 //   SUPABASE_URL va SUPABASE_ANON_KEY ni Supabase o'zi beradi.
-// Savol va natija logga YOZILMAYDI (bu faylda console.* yo'q). AI ga yozuvlar, izohlar, qarzdagi shaxs ismlari yuborilmaydi.
+// Savol, gap va natija logga YOZILMAYDI (bu faylda console.* yo'q). "reja"/"javob" da AI ga yozuvlar, izohlar, qarzdagi shaxs ismlari yuborilmaydi.
+// "yozuv" da gap (unda ism bo'lishi mumkin) o'z modelga, zaxirada OpenAI ga ketadi; `eski` (oldingi izohlar) FAQAT o'z modelga ketadi.
 // =====================================================================
 
 export type Amal = "yigindi" | "kategoriyalar" | "qidiruv" | "taqqoslash" | "qarzlar" | "hisoblar" | "oylik_hisobot"
@@ -107,9 +112,13 @@ export function sanaTogrimi(s: unknown): s is string {
 // ---------------------------------------------------------------------
 // Kirish (so'rov tanasi) tekshiruvi
 // ---------------------------------------------------------------------
+export interface HisobTuri { nom: string; turi: "karta" | "naqd" }
+export interface EskiYozuv { izoh: string; kategoriya: string }
 export interface Kirish {
-  rejim: "reja" | "javob";
-  savol: string;
+  rejim: "reja" | "javob" | "yozuv";
+  savol: string;                       // yozuv rejimida: gap
+  hisobTurlari?: HisobTuri[];          // faqat yozuv rejimi
+  eski?: EskiYozuv[];                  // faqat yozuv rejimi
   tarix: TarixElementi[];
   bugun?: string;
   kategoriyalar?: string[];
@@ -181,6 +190,7 @@ export function tarixniQirq(t: TarixElementi[]): TarixElementi[] {
 export function kirishniTekshir(tana: unknown): { kirish: Kirish } | { kod: XatoKodi } {
   if (!oddiyObyektmi(tana)) return { kod: "AI_KIRISH" };
   const rejim = tana.rejim;
+  if (rejim === "yozuv") return yozuvKirishiniTekshir(tana);
   if (rejim !== "reja" && rejim !== "javob") return { kod: "AI_KIRISH" };
   if (typeof tana.savol !== "string") return { kod: "AI_KIRISH" };
   const savol = toza(tana.savol);
@@ -438,35 +448,38 @@ export function raqamlarMosmi(aiMatn: string, kirishlar: unknown[]): boolean {
 // ---------------------------------------------------------------------
 export class ProvayderXatosi extends Error {
   kod: XatoKodi;
-  constructor(kod: XatoKodi, m: string) { super(m); this.kod = kod; }
+  sozlama: boolean;   // true = sozlash xatosi (kalit/model yo'q), false = ish vaqtidagi xato (tarmoq, HTTP)
+  constructor(kod: XatoKodi, m: string, sozlama = false) { super(m); this.kod = kod; this.sozlama = sozlama; }
 }
 
 type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
 
-async function aiChaqir(muhit: Muhit, fetchFn: FetchFn, tizim: string, foydalanuvchi: string, maxToken: number, jsonRejim: boolean): Promise<string> {
+async function aiChaqir(muhit: Muhit, fetchFn: FetchFn, tizim: string | null, foydalanuvchi: string, maxToken: number, jsonRejim: boolean): Promise<string> {
   const provayder = (muhit.get("AI_PROVAYDER") || "").trim().toLowerCase();
   const model = (muhit.get("AI_MODEL") || "").trim();
   if ((provayder !== "openai" && provayder !== "claude") || !model) {
-    throw new ProvayderXatosi("AI_PROVAYDER", "AI sozlanmagan (AI_PROVAYDER yoki AI_MODEL yo'q).");
+    throw new ProvayderXatosi("AI_PROVAYDER", "AI sozlanmagan (AI_PROVAYDER yoki AI_MODEL yo'q).", true);
   }
   let url: string, headers: Record<string, string>, tana: unknown;
   if (provayder === "openai") {
     const kalit = muhit.get("OPENAI_API_KEY");
-    if (!kalit) throw new ProvayderXatosi("AI_PROVAYDER", "OPENAI_API_KEY kiritilmagan.");
+    if (!kalit) throw new ProvayderXatosi("AI_PROVAYDER", "OPENAI_API_KEY kiritilmagan.", true);
     url = "https://api.openai.com/v1/chat/completions";
     headers = { "Content-Type": "application/json", "Authorization": "Bearer " + kalit };
     const t: Record<string, unknown> = {
       model, max_completion_tokens: maxToken,
-      messages: [{ role: "system", content: tizim }, { role: "user", content: foydalanuvchi }],
+      messages: tizim === null ? [{ role: "user", content: foydalanuvchi }] : [{ role: "system", content: tizim }, { role: "user", content: foydalanuvchi }],
     };
     if (jsonRejim) t.response_format = { type: "json_object" };
     tana = t;
   } else {
     const kalit = muhit.get("ANTHROPIC_API_KEY");
-    if (!kalit) throw new ProvayderXatosi("AI_PROVAYDER", "ANTHROPIC_API_KEY kiritilmagan.");
+    if (!kalit) throw new ProvayderXatosi("AI_PROVAYDER", "ANTHROPIC_API_KEY kiritilmagan.", true);
     url = "https://api.anthropic.com/v1/messages";
     headers = { "Content-Type": "application/json", "x-api-key": kalit, "anthropic-version": "2023-06-01" };
-    tana = { model, max_tokens: maxToken, system: tizim, messages: [{ role: "user", content: foydalanuvchi }] };
+    const t: Record<string, unknown> = { model, max_tokens: maxToken, messages: [{ role: "user", content: foydalanuvchi }] };
+    if (tizim !== null) t.system = tizim;
+    tana = t;
   }
   let javob: Response;
   try {
@@ -550,6 +563,365 @@ const TIZIM_JAVOB = [
 ].join("\n");
 
 // ---------------------------------------------------------------------
+// YOZUV REJIMI: gap -> tuzilgan yozuv(lar)
+// Model faqat matnni ajratadi; summa, sana, nom moslash, shaxs tozalash — hammasi shu yerda, deterministik.
+// ---------------------------------------------------------------------
+export const YOZUV_TURLARI = ["xarajat", "daromad", "qarz_berdim", "qarz_oldim", "qarz_qaytardim", "qarz_qaytarildi", "otkazma"];
+export interface Yozuv {
+  tur: string; summa: number | null; soni: number | null; narx: number | null;
+  kategoriya: string | null; hisob: string | null; hisob_turi: "karta" | "naqd" | null; hisob2: string | null;
+  shaxs: string | null; sana: string | null; izoh: string; ogohlantirish: string[];
+}
+
+const YOZUV_MAX = 6;                   // natijada ko'pi bilan nechta yozuv
+const ESKI_MAX = 20;                   // `eski` ro'yxati uzunligi
+const ESKI_IZOH_MAX = 60;              // eski izoh uzunligi (belgi)
+const SUMMA_MAX = 1_000_000_000_000;
+const IZOH_MAX = 200;
+const IZOH_GAP_MAX = 120;
+const YOZUV_TOKEN = 700;
+const MODEL_VAQT_SUKUT = 25;           // sekund
+const MODEL_NOMI_SUKUT = "chuntak-v5";
+
+// Model shu matn bilan o'qitilgan: BIR HARFIGACHA o'zgartirilmaydi.
+export const YOZ = "Gapdan moliyaviy yozuvlarni ajrat. tur: xarajat, daromad, qarz_berdim, qarz_oldim, qarz_qaytardim, qarz_qaytarildi yoki otkazma. Qarz turlari faqat gapda qarz, qarzga, berib turdim, olib turdim, qaytardim kabi so'z bo'lsa; oddiy \"berdim\" va komissiya xarajat. otkazma faqat o'z hisoblaring orasida. Kategoriya, hisob va hisob2 ni ro'yxatdagi nom bilan aynan yoz. Kimga yoki qayerga ekanini bildiruvchi kategoriya ro'yxatda bo'lsa o'shani tanla. Eski yozuvlar berilsa, o'sha narsa uchun o'sha kategoriyani tanla. Mos kategoriya bo'lmasa ro'yxatdagi umumiy (Boshqa ...) kategoriyani, bo'lmasa null. Hisob nomi ro'yxatdagi aniq bitta hisobga mos kelmasa hisob null. summa_matn ga summani gapda qanday aytilgan bo'lsa shunday ko'chir. Narx dona uchun aytilsa soni va narx_matn ni to'ldir. izoh ga nima uchunligini yoz. Kelajakdagi reja yozuv emas. Yozuv bo'lmasa bo'sh ro'yxat. Faqat JSON ro'yxat qaytar.";
+
+// ---- so'z -> son o'giruvchi ----
+// sonOgir("yigirma besh ming") = 25000. Noaniq bo'lsa taxmin QILMAYDI: null. Natija: manfiy bo'lmagan butun son.
+interface SonTok { t: "son" | "birlik" | "onlik" | "yuz" | "miqyos" | "yarim" | "k" | "belgi"; v?: number; s?: string }
+const SON_SOZLAR = new Map<string, SonTok>();
+{
+  ["nol", "bir", "ikki", "uch", "tort", "besh", "olti", "yetti", "sakkiz", "toqqiz"].forEach((w, i) => SON_SOZLAR.set(w, { t: "birlik", v: i }));
+  ["on", "yigirma", "ottiz", "qirq", "ellik", "oltmish", "yetmish", "sakson", "toqson"].forEach((w, i) => SON_SOZLAR.set(w, { t: "onlik", v: (i + 1) * 10 }));
+  SON_SOZLAR.set("yuz", { t: "yuz" }); SON_SOZLAR.set("yarim", { t: "yarim" }); SON_SOZLAR.set("k", { t: "k", v: 1e3 });
+  SON_SOZLAR.set("ming", { t: "miqyos", v: 1e3 });
+  SON_SOZLAR.set("million", { t: "miqyos", v: 1e6 }); SON_SOZLAR.set("mln", { t: "miqyos", v: 1e6 });
+  SON_SOZLAR.set("milliard", { t: "miqyos", v: 1e9 }); SON_SOZLAR.set("mlrd", { t: "miqyos", v: 1e9 });
+  ["som", "sum", "uzs", "ta"].forEach((w) => SON_SOZLAR.set(w, { t: "belgi" }));   // faqat son oxirida turishi mumkin
+}
+const SON_QOSHIMCHA = ["ning", "dan", "lik", "ga", "da", "ni", "ta", "cha"];       // "15 mingga", "ikkita"
+
+function sonSozi(w: string): SonTok | null {
+  const t = SON_SOZLAR.get(w);
+  if (t) return t;
+  for (const q of SON_QOSHIMCHA) {
+    if (w.length > q.length && w.endsWith(q)) {
+      const r = SON_SOZLAR.get(w.slice(0, -q.length));
+      if (r && r.t !== "k") return r;
+    }
+  }
+  return null;
+}
+
+// Raqam yozuvi: "20000", "20 000", "1.250.000", "5,000", "1,5" (kasr — faqat ming/million/mlrd/k oldidan).
+function sonLiteral(s: string, miqyosOldinda: boolean): { son: number; mahraj: number } | null {
+  const t = s.replace(/[   ]/g, "");
+  const qismlar = t.split(/[.,]/);
+  const butun = (x: string) => /^(0|[1-9]\d*)$/.test(x) && x.length <= 15;
+  if (qismlar.length === 1) return butun(t) ? { son: Number(t), mahraj: 1 } : null;
+  if (new Set(t.replace(/[^.,]/g, "")).size > 1) return null;             // "1.250,5" — aralash
+  if (qismlar.length > 2) {                                                // "1.250.000"
+    const [b, ...q] = qismlar;
+    if (!/^[1-9]\d{0,2}$/.test(b) || !q.every((x) => /^\d{3}$/.test(x))) return null;
+    return { son: Number(qismlar.join("")), mahraj: 1 };
+  }
+  const [a, b] = qismlar;
+  if (b.length === 3) {                                                    // "5,000" = 5000 (so'm kasrli bo'lmaydi); "2,500 ming" noaniq
+    if (miqyosOldinda || !/^[1-9]\d{0,2}$/.test(a)) return null;
+    return { son: Number(a + b), mahraj: 1 };
+  }
+  if (!miqyosOldinda || !butun(a) || b.length > 6) return null;           // "12,5" yoki "1,5 million"
+  return { son: Number(a + b), mahraj: 10 ** b.length };
+}
+
+function sonTokenlar(matn: string): SonTok[] | null {
+  const s = matn.normalize("NFKC").toLowerCase().replace(/[‘’ʻʼʹ`´']/g, "");   // o'n = o‘n = on
+  if (!s.trim() || s.length > 100) return null;
+  const re = /(\d{1,3}(?:[   ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)*)|([a-z]+)|([\s.,;:!?"«»()\-–—]+)|(.)/g;
+  const chiq: SonTok[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    if (m[1] !== undefined) chiq.push({ t: "son", s: m[1] });
+    else if (m[2] !== undefined) { const w = sonSozi(m[2]); if (!w) return null; chiq.push(w); }
+    else if (m[3] !== undefined) {
+      if (/[.,\-–—]$/.test(m[3]) && /\d/.test(s.charAt(re.lastIndex))) return null;   // ".5", "-5"
+    } else return null;
+  }
+  return chiq;
+}
+
+function sonHisobla(tok: SonTok[]): number | null {
+  let jami = 0, oxirgi = Infinity;
+  let holat = "bosh";                         // bosh | lit | b0 (guruh boshidagi birlik) | yuz | on | b
+  let yuzlar = 0, onlar = 0, birlar = 0, mahraj = 1, yarim = false, belgi = false;
+  const tozalash = () => { holat = "bosh"; yuzlar = onlar = birlar = 0; mahraj = 1; yarim = false; };
+  const tugat = (miqyos: number): boolean => {
+    let son = holat === "bosh" && !yarim ? 1 : yuzlar * 100 + onlar + birlar, m = mahraj;   // "ming" = bir ming
+    if (yarim) { if (m !== 1) return false; son = son * 2 + 1; m = 2; }
+    const v = son * miqyos;
+    if (v % m !== 0 || !Number.isSafeInteger(v / m)) return false;
+    jami += v / m; oxirgi = miqyos; tozalash();
+    return true;
+  };
+  for (let i = 0; i < tok.length; i++) {
+    const t = tok[i], keyin = tok[i + 1];
+    if (belgi && t.t !== "belgi") return null;
+    if (t.t === "belgi") { if (holat === "bosh" && jami === 0) return null; belgi = true; continue; }
+    if (t.t === "son") {
+      if (holat !== "bosh" || yarim) return null;
+      const l = sonLiteral(t.s as string, !!keyin && (keyin.t === "miqyos" || keyin.t === "k"));
+      if (!l) return null;
+      birlar = l.son; mahraj = l.mahraj; holat = "lit";
+    } else if (t.t === "birlik") {
+      if (holat === "bosh") holat = "b0"; else if (holat === "yuz" || holat === "on") holat = "b"; else return null;
+      birlar = t.v as number;
+    } else if (t.t === "onlik") {
+      if (holat !== "bosh" && holat !== "yuz") return null;
+      onlar = t.v as number; holat = "on";
+    } else if (t.t === "yuz") {
+      if (holat === "bosh") yuzlar = 1;
+      else if (holat === "b0" || (holat === "lit" && mahraj === 1)) { yuzlar = birlar; birlar = 0; }
+      else return null;
+      holat = "yuz";
+    } else if (t.t === "yarim") {
+      if (yarim || !keyin || keyin.t !== "miqyos") return null;           // "ikki yarim" (miqyossiz) = noaniq
+      yarim = true;
+    } else if (t.t === "miqyos" || t.t === "k") {
+      if (t.t === "k" && holat !== "lit") return null;
+      if ((t.v as number) >= oxirgi || !tugat(t.v as number)) return null;
+    }
+  }
+  if (yarim) return null;
+  if (holat !== "bosh") {                                                  // miqyossiz oxirgi guruh
+    const son = yuzlar * 100 + onlar + birlar;
+    if (mahraj !== 1 || son >= oxirgi) return null;
+    jami += son;
+  } else if (jami === 0) return null;
+  return Number.isSafeInteger(jami) ? jami : null;
+}
+
+export function sonOgir(matn: unknown): number | null {
+  if (typeof matn === "number") return Number.isSafeInteger(matn) && matn >= 0 ? matn : null;
+  if (typeof matn !== "string") return null;
+  const tok = sonTokenlar(matn);
+  return tok && tok.length ? sonHisobla(tok) : null;
+}
+
+// ---- kirish tekshiruvi ----
+function yozuvKirishiniTekshir(tana: Record<string, unknown>): { kirish: Kirish } | { kod: XatoKodi } {
+  if (typeof tana.gap !== "string") return { kod: "AI_KIRISH" };
+  const gap = toza(tana.gap).replace(/\s+/g, " ");
+  if (!gap) return { kod: "AI_KIRISH" };
+  if (gap.length > SAVOL_MAX) return { kod: "AI_UZUN" };
+  const kat = nomlarRoyxati(tana.kategoriyalar);
+  if (!sanaTogrimi(tana.bugun) || !kat) return { kod: "AI_KIRISH" };
+  if (!Array.isArray(tana.hisoblar) || tana.hisoblar.length > RO_YXAT_MAX) return { kod: "AI_KIRISH" };
+  const his: HisobTuri[] = [];
+  for (const h of tana.hisoblar) {
+    if (!oddiyObyektmi(h) || typeof h.nom !== "string" || (h.turi !== "karta" && h.turi !== "naqd")) return { kod: "AI_KIRISH" };
+    const nom = toza(h.nom).replace(/\s+/g, " ");
+    if (!nom || nom.length > NOM_MAX) return { kod: "AI_KIRISH" };
+    his.push({ nom, turi: h.turi });
+  }
+  const eski: EskiYozuv[] = [];
+  if (tana.eski !== undefined && tana.eski !== null) {
+    if (!Array.isArray(tana.eski) || tana.eski.length > ESKI_MAX) return { kod: "AI_KIRISH" };
+    for (const e of tana.eski) {
+      if (!oddiyObyektmi(e) || typeof e.izoh !== "string" || typeof e.kategoriya !== "string") return { kod: "AI_KIRISH" };
+      const izoh = toza(e.izoh).replace(/\s+/g, " ").slice(0, ESKI_IZOH_MAX).trim();
+      const k = kat.find((r) => nomKalit(r) === nomKalit(toza(e.kategoriya)));
+      if (izoh && k !== undefined) eski.push({ izoh, kategoriya: k });     // ro'yxatda yo'q kategoriya tashlanadi
+    }
+  }
+  return { kirish: { rejim: "yozuv", savol: gap, bugun: tana.bugun, kategoriyalar: kat, hisobTurlari: his, eski, tarix: [] } };
+}
+
+// Model kirishi. Qator tartibi va yozuvi model o'qitilgan shaklda; `eski` qatori bo'sh bo'lsa umuman yo'q.
+export function yozuvKirishMatni(k: Kirish, eskiBilan: boolean): string {
+  const bir = (x: string) => x.replace(/\s+/g, " ");
+  const q = [
+    "Kategoriyalar: " + (k.kategoriyalar || []).map(bir).join(", "),
+    "Hisoblar: " + (k.hisobTurlari || []).map((h) => bir(h.nom) + " (" + h.turi + ")").join(", "),
+  ];
+  if (eskiBilan && k.eski && k.eski.length) q.push("Eski yozuvlar: " + k.eski.map((e) => bir(e.izoh) + " -> " + bir(e.kategoriya)).join("; "));
+  q.push("Gap: " + k.savol);
+  return q.join("\n");
+}
+
+// ---- model chiqishini o'qish ----
+export function yozuvRoyxatiOl(matn: string): unknown[] | null {
+  let j = jsonAjrat(matn);
+  if (j === undefined) {
+    const a = matn.indexOf("["), b = matn.lastIndexOf("]");
+    if (a >= 0 && b > a) j = jsonAjrat(matn.slice(a, b + 1));
+  }
+  if (Array.isArray(j)) return j;
+  if (oddiyObyektmi(j)) {                                                  // {"yozuvlar":[...]} yoki bitta yozuv
+    const r = Object.keys(j).map((k) => j[k]).filter((v) => Array.isArray(v));
+    if (r.length === 1) return r[0] as unknown[];
+    if (typeof j.tur === "string") return [j];
+  }
+  return null;
+}
+
+// ---- tozalash ----
+function qisqaMatn(x: unknown): string | null {
+  if (typeof x !== "string") return null;
+  const t = toza(x).replace(/\s+/g, " ");
+  return t || null;
+}
+function sonGaylik(x: unknown): number | null {
+  const n = sonOgir(x);
+  return n !== null && n > 0 && n <= SUMMA_MAX ? n : null;
+}
+
+// "bugun" | "kecha" | "ertaga" | "N kun oldin" | "YYYY-MM-DD" -> { sana, ogoh }
+export function yozuvSanasi(x: unknown, bugun: string): { sana: string | null; ogoh?: string } {
+  const KELAJAK = "kelajakdagi sana qabul qilinmaydi";
+  const t = qisqaMatn(x);
+  if (!t) return { sana: null };
+  const k = nomKalit(t);
+  if (k === "bugun") return { sana: bugun };
+  if (k === "kecha") return { sana: kunQosh(bugun, -1) };
+  if (k === "ertaga") return { sana: null, ogoh: KELAJAK };
+  const m = k.match(/^(.+?)\s+kun\s+(?:oldin|avval)$/);
+  if (m) {
+    const n = sonOgir(m[1]);
+    if (n !== null && n >= 1 && n <= 3650) { const s = kunQosh(bugun, -n); return sanaTogrimi(s) ? { sana: s } : { sana: null }; }
+    return { sana: null };
+  }
+  if (sanaTogrimi(t)) return t > bugun ? { sana: null, ogoh: KELAJAK } : { sana: t };
+  return { sana: null };
+}
+
+export function shaxsniTozala(x: unknown, tur: string): string | null {
+  let t = qisqaMatn(x);
+  if (!t) return null;
+  t = t.slice(0, NOM_MAX);
+  if (tur.indexOf("qarz_") === 0) {
+    const m = t.match(/^(.*?)(ning|dan|ga)$/i);
+    if (m && m[1].replace(/\s/g, "").length >= 3) t = m[1].trim();
+  }
+  return t;
+}
+
+export function yozuvniTozala(xom: unknown, k: { gap: string; bugun: string; kategoriyalar: string[]; hisobTurlari: HisobTuri[] }): Yozuv | null {
+  if (!oddiyObyektmi(xom)) return null;
+  const tur = (qisqaMatn(xom.tur) || "").toLowerCase();
+  if (YOZUV_TURLARI.indexOf(tur) < 0) return null;
+  const ogoh: string[] = [];
+  const ogohQosh = (m: string) => { if (ogoh.indexOf(m) < 0) ogoh.push(m); };
+
+  const nomTop = <T>(v: unknown, royxat: T[], nomi: (x: T) => string, xabar: string): T | null => {
+    const t = qisqaMatn(v);
+    if (!t) return null;
+    const r = royxat.find((x) => nomKalit(nomi(x)) === nomKalit(t));
+    if (r === undefined) { ogohQosh(xabar); return null; }
+    return r;
+  };
+  const kategoriya = nomTop(xom.kategoriya, k.kategoriyalar, (x) => x, "kategoriya topilmadi");
+  const hisobObj = nomTop(xom.hisob, k.hisobTurlari, (x) => x.nom, "hisob topilmadi");
+  let hisob2Obj = tur === "otkazma" ? nomTop(xom.hisob2, k.hisobTurlari, (x) => x.nom, "ikkinchi hisob topilmadi") : null;
+  if (hisobObj && hisob2Obj && hisobObj.nom === hisob2Obj.nom) { hisob2Obj = null; ogohQosh("ikkala hisob bir xil"); }
+  const modelTuri = (qisqaMatn(xom.hisob_turi) || "").toLowerCase();
+  const hisobTuri = hisobObj ? hisobObj.turi : (modelTuri === "karta" || modelTuri === "naqd") ? modelTuri : null;
+
+  // summa: soni x narx, aks holda summa_matn. Hammasi sonOgir orqali
+  const soni = sonGaylik(xom.soni);
+  let narx: number | null = null, summa: number | null = null;
+  if (soni !== null && xom.narx_matn !== undefined && xom.narx_matn !== null) {
+    narx = sonGaylik(xom.narx_matn);
+    if (narx !== null) { const p = soni * narx; if (p > 0 && p <= SUMMA_MAX) summa = p; else narx = null; }
+  }
+  if (summa === null) summa = sonGaylik(xom.summa_matn);
+  if (summa === null) ogohQosh("summa aniqlanmadi");
+
+  const sana = yozuvSanasi(xom.sana, k.bugun);
+  if (sana.ogoh) ogohQosh(sana.ogoh);
+
+  let izoh = (qisqaMatn(xom.izoh) || "").slice(0, IZOH_MAX).trim();
+  if (!izoh) izoh = k.gap.slice(0, IZOH_GAP_MAX).trim();
+
+  return {
+    tur, summa, soni, narx, kategoriya, hisob: hisobObj ? hisobObj.nom : null, hisob_turi: hisobTuri,
+    hisob2: hisob2Obj ? hisob2Obj.nom : null, shaxs: shaxsniTozala(xom.shaxs, tur), sana: sana.sana, izoh, ogohlantirish: ogoh,
+  };
+}
+
+// ---- provayderlar ----
+function ozSozlanganmi(muhit: Muhit): boolean {
+  return !!(muhit.get("MODEL_URL") || "").trim() && !!(muhit.get("MODEL_KALIT") || "").trim();
+}
+
+async function ozModelChaqir(muhit: Muhit, fetchFn: FetchFn, kirish: string): Promise<string> {
+  const url = (muhit.get("MODEL_URL") || "").trim().replace(/\/+$/, "") + "/api/chat";
+  const n = Number((muhit.get("MODEL_VAQT") || "").trim());
+  const vaqt = Number.isFinite(n) && n > 0 ? Math.min(n, 120) : MODEL_VAQT_SUKUT;
+  const tana = {
+    model: (muhit.get("MODEL_NOMI") || "").trim() || MODEL_NOMI_SUKUT, stream: false, keep_alive: "30m",
+    messages: [{ role: "user", content: YOZ + "\n\n" + kirish }],          // ATAYIN faqat bitta user xabar (system emas): model shunday o'qitilgan
+    options: { temperature: 0, num_predict: 600, num_ctx: 2048 },
+  };
+  let javob: Response;
+  try {
+    javob = await fetchFn(url, { method: "POST", headers: { "Content-Type": "application/json", "X-Model-Kalit": (muhit.get("MODEL_KALIT") || "").trim() }, body: JSON.stringify(tana), signal: AbortSignal.timeout(vaqt * 1000) });
+  } catch (_e) { throw new ProvayderXatosi("AI_PROVAYDER", "O'z model javob bermadi (tarmoq yoki vaqt tugadi)."); }
+  if (!javob.ok) throw new ProvayderXatosi("AI_PROVAYDER", "O'z model xato qaytardi (HTTP " + javob.status + ").");
+  let d: unknown;
+  try { d = await javob.json(); } catch (_e) { throw new ProvayderXatosi("AI_PROVAYDER", "O'z model noto'g'ri javob berdi."); }
+  // deno-lint-ignore no-explicit-any
+  const matn = (d as any)?.message?.content;
+  if (typeof matn !== "string" || !matn.trim()) throw new ProvayderXatosi("AI_PROVAYDER", "O'z model bo'sh javob berdi.");
+  return matn;
+}
+
+// Tartib: YOZUV_PROVAYDER = oz_openai (sukut) | oz | openai. null = hech bir JSON o'qilmadi.
+async function yozuvOl(kirish: Kirish, muhit: Muhit, fetchFn: FetchFn): Promise<{ manba: "model" | "openai"; royxat: unknown[] } | null> {
+  const yp = (muhit.get("YOZUV_PROVAYDER") || "").trim().toLowerCase();
+  const tartib = yp === "oz" ? ["oz"] : yp === "openai" ? ["openai"] : ["oz", "openai"];
+  let ozSinandi = false;
+  for (const p of tartib) {
+    if (p === "oz") {
+      if (!ozSozlanganmi(muhit)) {
+        if (tartib.length === 1) throw new ProvayderXatosi("AI_PROVAYDER", "O'z model sozlanmagan (MODEL_URL yoki MODEL_KALIT yo'q).", true);
+        continue;                                                           // jimgina OpenAI ga o'tadi
+      }
+      ozSinandi = true;
+      let matn: string;
+      try { matn = await ozModelChaqir(muhit, fetchFn, yozuvKirishMatni(kirish, true)); } catch (e) { if (tartib.length === 1) throw e; continue; }
+      const r = yozuvRoyxatiOl(matn);
+      if (r) return { manba: "model", royxat: r };
+    } else {
+      let matn: string;
+      try {
+        // OpenAI ga `eski` (oldingi izohlar) HECH QACHON yuborilmaydi
+        matn = await aiChaqir(muhit, fetchFn, null, YOZ + "\n\n" + yozuvKirishMatni(kirish, false), YOZUV_TOKEN, false);
+      } catch (e) {
+        if (e instanceof ProvayderXatosi && !e.sozlama && ozSinandi) continue;   // ikkalasi ham ishlamadi
+        throw e;
+      }
+      const r = yozuvRoyxatiOl(matn);
+      if (r) return { manba: "openai", royxat: r };
+    }
+  }
+  return null;
+}
+
+async function yozuvIshlov(kirish: Kirish, muhit: Muhit, fetchFn: FetchFn, cors: Record<string, string>): Promise<Response> {
+  const n = await yozuvOl(kirish, muhit, fetchFn);
+  if (n === null) return json({ ok: true, manba: null, yozuvlar: [], sabab: "tushunarsiz" }, 200, cors);
+  const ctx = { gap: kirish.savol, bugun: kirish.bugun as string, kategoriyalar: kirish.kategoriyalar as string[], hisobTurlari: kirish.hisobTurlari as HisobTuri[] };
+  const yozuvlar: Yozuv[] = [];
+  for (const el of n.royxat.slice(0, 20)) {
+    const y = yozuvniTozala(el, ctx);
+    if (y) yozuvlar.push(y);
+    if (yozuvlar.length >= YOZUV_MAX) break;
+  }
+  if (!yozuvlar.length) return json({ ok: true, manba: n.manba, yozuvlar: [], sabab: "yozuv_yoq" }, 200, cors);
+  return json({ ok: true, manba: n.manba, yozuvlar }, 200, cors);
+}
+
+// ---------------------------------------------------------------------
 // Ruxsat, limit
 // ---------------------------------------------------------------------
 async function foydalanuvchi(muhit: Muhit, fetchFn: FetchFn, jwt: string, anon: string): Promise<{ email: string } | "kirmagan" | "xato"> {
@@ -622,6 +994,7 @@ export async function ishlov(req: Request, muhit: Muhit, fetchFn: FetchFn): Prom
   if (soni > KUNLIK_LIMIT) return xatoJavob("AI_LIMIT", 429, cors);
 
   try {
+    if (kirish.rejim === "yozuv") return await yozuvIshlov(kirish, muhit, fetchFn, cors);
     if (kirish.rejim === "reja") {
       const kat = kirish.kategoriyalar as string[], his = kirish.hisoblar as string[];
       const foydalanuvchiMatni = JSON.stringify({ savol: kirish.savol, ...sanaTayanchlari(kirish.bugun as string), kategoriyalar: kat, hisoblar: his, tarix: tarixniQirq(kirish.tarix) });

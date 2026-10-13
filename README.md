@@ -25,11 +25,13 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 | `js/calc.js`, `js/data.js` | Hisob-kitob qoidalari (sof), mahalliy baza (IndexedDB `moliya`, sxema 7, navbat) |
 | `js/ui.js`, `js/glidirak.js`, `js/diagramma.js`, `js/tema.js`, `js/pin*.js`, `js/pwa.js` | Ekranlar va ular bilan bog'liq narsalar |
 | `js/kirish.js`, `js/sinxron-sof.js`, `js/sinxron.js`, `js/yuklash.js` | Google bilan kirish, sinxron qoidalari (sof), sinxron tsikli va birinchi sinxron, serverga yuborish yordamchilari |
+| `js/yordamchi*.js`, `js/gap-sof.js`, `js/gap.js` | AI yordamchi (chat, kartalar) va "Gap bilan qo'shish" (sof mantiq va ekran; `TZ-sinxronlash.md` 24–29-bandlar) |
 | `js/vendor/` | Ichki kutubxonalar (`@supabase/auth-js`, `@supabase/postgrest-js`, MIT); CDN yo'q |
 | `js/ikonlar.js` | Kategoriya ikonlari: [Tabler Icons](https://tabler.io/icons) (MIT litsenziya, © Paweł Kuna) dan faqat kerakli outline SVG yo'llari; internet kerak emas |
 | `supabase/` | Serverdagi baza: SQL fayllar (001–006), testlar, `README.md` (qadamma-qadam) |
 | `maxfiylik.html` | Maxfiylik va foydalanish shartlari (alohida ochiq sahifa) |
 | `tests.html` | Avtomatik birlik testlari (brauzerda) |
+| `tools/gap-brauzer-sinovi.js` | "Gap bilan qo'shish" brauzer sinovi: haqiqiy ilova, soxta server javobi, 360 px yorug'/qorong'i (`python3 -m http.server 8000`, so'ng `node tools/gap-brauzer-sinovi.js`; Playwright kerak) |
 
 ## Ma'lum cheklovlar
 

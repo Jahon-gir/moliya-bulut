@@ -42,21 +42,29 @@ var Yordamchi = (function () {
   // ---- Server bilan aloqa ----
   function xato(kod, holat) { var e = new Error(kod); e.kod = kod; e.holat = holat || 0; return e; }
 
-  function yubor(tana, token) {
-    return dep.fetch(dep.manzil() + FUNKSIYA_YOLI, {
+  // ms berilsa: shu vaqtdan keyin so'rov to'xtatiladi (xato kodi VAQT). Chat uchun berilmaydi (o'zgarishsiz).
+  function yubor(tana, token, ms) {
+    var ac = ms && typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var p = dep.fetch(dep.manzil() + FUNKSIYA_YOLI, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: dep.kalit(), Authorization: 'Bearer ' + token },
-      body: JSON.stringify(tana)
+      body: JSON.stringify(tana),
+      signal: ac ? ac.signal : undefined
     }).then(function (r) {
       return r.json().then(function (j) { return { holat: r.status, ok: r.ok, j: j }; }, function () { return { holat: r.status, ok: r.ok, j: null }; });
     }, function () { throw xato('NETWORK'); });
+    if (!ms) return p;
+    return new Promise(function (ok, no) {
+      var t = setTimeout(function () { if (ac) { try { ac.abort(); } catch (x) { /* ahamiyatsiz */ } } no(xato('VAQT')); }, ms);
+      p.then(function (v) { clearTimeout(t); ok(v); }, function (e) { clearTimeout(t); no(e); });
+    });
   }
   // Bitta so'rov. 401 bo'lsa token bir marta yangilanib qayta yuboriladi; shunda ham 401 bo'lsa kirish muddati tugagan.
-  function chaqir(tana) {
+  function chaqir(tana, ms) {
     function tokenBilan(qayta) {
       return (qayta ? dep.tokenYangila() : dep.tokenOl()).then(function (t) {
         if (!t) throw xato('AUTH_EXPIRED');
-        return yubor(tana, t);
+        return yubor(tana, t, ms);
       }, function (e) { if (e && e.kod) throw e; throw xato('NETWORK'); }).then(function (r) {
         if (r.holat === 401) { if (!qayta) return tokenBilan(true); throw xato('AUTH_EXPIRED', 401); }
         if (r.ok && r.j && r.j.ok === true) return r.j;
@@ -193,6 +201,7 @@ var Yordamchi = (function () {
     if (!ui.malumot) return;
     if (!tugmaEl) tugmaEl = tugmaYasash();
     tugmaEl.hidden = !korinadimi();
+    if (typeof Gap !== 'undefined' && Gap.yangila) Gap.yangila();   // "Gap bilan" tugmasi ham shu qoida bilan ko'rinadi
   }
 
   function nuqtalar() {
@@ -338,7 +347,7 @@ var Yordamchi = (function () {
 
   return {
     boshlash: boshlash, yangila: yangila, sozla: sozla, ochish: ochish, yop: yop, tozala: tozala, savolBer: savolBer,
-    javobOl: javobOl, suhbat: function () { return suhbat; }, xotira: function () { return xotira; }, yopiqmi: yopiqmi, belginiOchir: belginiOchir,
+    javobOl: javobOl, chaqir: chaqir, korinishi: korinadimi, suhbat: function () { return suhbat; }, xotira: function () { return xotira; }, yopiqmi: yopiqmi, belginiOchir: belginiOchir,
     YOPIQ_KALIT: YOPIQ_KALIT, YOPIQ_XABARI: YOPIQ_XABARI
   };
 })();

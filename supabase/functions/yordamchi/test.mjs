@@ -509,14 +509,30 @@ test('tozalash: tur ro\'yxatda bo\'lmasa element tashlanadi; kalitlar yo\'q yoki
 });
 test('tozalash: summa — son(summa_matn); soni x narx; son olinmasa null + "summa aniqlanmadi"; chegaralar', () => {
   const S = (o) => M.yozuvniTozala(MY(o), CTX);
+  const SD = (o) => M.yozuvniTozala(MY(o), { ...CTX, gap: 'kecha 2 ta tarvuz oldim, har biri 25 ming' });   // dona narxi belgisi bor gap
   assert.equal(S({ summa_matn: 'yigirma besh ming' }).summa, 25000); assert.equal(S({ summa_matn: 18000 }).summa, 18000);
-  const d = S({ soni: 2, narx_matn: '9 ming', summa_matn: '18 ming' }); assert.deepEqual([d.summa, d.soni, d.narx], [18000, 2, 9000]);
-  const e = S({ soni: '3', narx_matn: 'besh yuz', summa_matn: null }); assert.deepEqual([e.summa, e.soni, e.narx], [1500, 3, 500]);
-  assert.equal(S({ soni: 2, narx_matn: 'arzon', summa_matn: '18 ming' }).summa, 18000, 'narx o\'qilmasa summa_matn');
+  const d = SD({ soni: 2, narx_matn: '9 ming', summa_matn: '18 ming' }); assert.deepEqual([d.summa, d.soni, d.narx], [18000, 2, 9000]);
+  const e = SD({ soni: '3', narx_matn: 'besh yuz', summa_matn: null }); assert.deepEqual([e.summa, e.soni, e.narx], [1500, 3, 500]);
+  assert.equal(SD({ soni: 2, narx_matn: 'arzon', summa_matn: '18 ming' }).summa, 18000, 'narx o\'qilmasa summa_matn');
   assert.equal(S({ soni: 2, narx_matn: null, summa_matn: '30 ming' }).summa, 30000);
   for (const sm of ['', null, 'ancha', '0', 'nol', '-5', '2000 mlrd', 'mingi']) { const x = S({ summa_matn: sm }); assert.equal(x.summa, null, String(sm)); assert.deepEqual(x.ogohlantirish, ['summa aniqlanmadi']); }
-  assert.equal(S({ soni: 1000000, narx_matn: '999 mlrd', summa_matn: null }).summa, null, 'ko\'paytma 1 000 000 000 000 dan oshdi');
+  assert.equal(SD({ soni: 1000000, narx_matn: '999 mlrd', summa_matn: null }).summa, null, 'ko\'paytma 1 000 000 000 000 dan oshdi');
   assert.equal(S({ summa_matn: '1000 mlrd' }).summa, 1000000000000, 'aynan chegara');
+
+test('tozalash: "N ta X, summa" — summa JAMI (dona narxi faqat belgi bo\'lsa)', () => {
+  const G = (gap, o) => M.yozuvniTozala(MY(o), { ...CTX, gap });
+  const j = G('bugun bozorda 2 ta non va sut oldim 18 ming', { soni: 2, narx_matn: '18 ming', summa_matn: '36 ming' });
+  assert.deepEqual([j.summa, j.narx, j.soni], [18000, null, 2]); assert.deepEqual(j.ogohlantirish, ['Summa jami deb olindi']); assert.equal(j.izoh, 'non va sut');
+  const k = G('kecha 2 ta tarvuz oldim, har biri 25 ming', { soni: 2, narx_matn: '25 ming', summa_matn: '50 ming' });
+  assert.deepEqual([k.summa, k.narx, k.soni, k.ogohlantirish], [50000, 25000, 2, []]);
+  const l = G('3 ta kitob oldim 90 ming', { soni: 3, narx_matn: '90 ming', summa_matn: null }); assert.deepEqual([l.summa, l.narx], [90000, null]);
+  const m = G('2 tadan 25 mingdan oldim', { soni: 2, narx_matn: '25 ming', summa_matn: null }); assert.deepEqual([m.summa, m.narx], [50000, 25000]);
+  const n = G('2 ta olma oldim, 25 mingdan', { soni: 2, narx_matn: '25 ming', summa_matn: null }); assert.deepEqual([n.summa, n.narx], [50000, 25000], '-dan');
+  for (const g of ['3 ta nonni donasi 4 ming', 'har bir non 4 ming', 'bittasi 4 ming', 'bittadan 4 ming', '3 non 4 ming dona']) assert.equal(M.donaNarxiBelgisiBormi(g), true, g);
+  for (const g of ['2 dona non oldim 18 ming', 'ikki dona non 18 ming', 'bugun 3 ta non, jami 12 ming', 'Aliga 5 ming berdim', '2 ta nondan 18 ming']) assert.equal(M.donaNarxiBelgisiBormi(g), false, g);
+  const o = G('2 dona non oldim 18 ming', { soni: 2, narx_matn: '18 ming', summa_matn: null }); assert.deepEqual([o.summa, o.narx], [18000, null]);
+  const p = G('3 ta kitob oldim 90 ming', { soni: null, narx_matn: '90 ming', summa_matn: '90 ming' }); assert.deepEqual([p.summa, p.ogohlantirish], [90000, []], 'soni yo\'q — qoida ishlamaydi');
+});
 });
 test('tozalash: shaxs — qarz turlarida ga/dan/ning olinadi (qolgan ≥ 3 harf bo\'lsa), boshqa turlarda saqlanadi', () => {
   const Q = (tur, shaxs) => M.yozuvniTozala(MY({ tur, shaxs }), CTX).shaxs;

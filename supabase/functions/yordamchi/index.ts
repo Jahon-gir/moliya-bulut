@@ -21,7 +21,7 @@
 //   SUPABASE_URL va SUPABASE_ANON_KEY ni Supabase o'zi beradi.
 //   5) rejim "ovoz": audio (base64 + mime) -> Google Gemini o'zbekchadan matnga o'giradi -> { ok:true, matn }. Audio hech qayerda SAQLANMAYDI
 //      (faqat so'rov davomida xotirada), matn loglanmaydi, GEMINI_API_KEY faqat sarlavhada (x-goog-api-key) ketadi: URL, javob va logga tushmaydi.
-// Savol, gap va natija logga YOZILMAYDI (bu faylda console.* yo'q). "reja"/"javob" da AI ga yozuvlar, izohlar, qarzdagi shaxs ismlari yuborilmaydi.
+// Savol, gap va natija logga YOZILMAYDI. Yagona istisno: ovoz rejimida Gemini xatosi (HTTP kod, error.message ≤ 300 belgi, mime) console.error bilan; kalit, audio va tanilgan matn HECH QACHON. "reja"/"javob" da AI ga yozuvlar, izohlar, qarzdagi shaxs ismlari yuborilmaydi.
 // "yozuv" da gap (unda ism bo'lishi mumkin) o'z modelga, zaxirada OpenAI ga ketadi; `eski` (oldingi izohlar) FAQAT o'z modelga ketadi.
 // =====================================================================
 
@@ -71,8 +71,10 @@ const XATO_MATNI: Record<XatoKodi, string> = {
   AI_HAJM: "Ovoz yozuvi juda katta.",
 };
 
-function xatoJavob(kod: XatoKodi, holat: number, cors: Record<string, string>, sabab?: string): Response {
-  return json({ xato: { kod, sabab: sabab || XATO_MATNI[kod] } }, holat, cors);
+function xatoJavob(kod: XatoKodi, holat: number, cors: Record<string, string>, sabab?: string, debug?: string): Response {
+  const x: Record<string, string> = { kod, sabab: sabab || XATO_MATNI[kod] };
+  if (debug && /^[a-z0-9_]{1,40}$/.test(debug)) x.debug = debug;   // faqat qisqa kod: erkin matn (kalit, audio, tanilgan matn) bu yerga tushmaydi
+  return json({ xato: x }, holat, cors);
 }
 
 function json(tana: unknown, holat: number, cors: Record<string, string>): Response {
@@ -220,11 +222,18 @@ export function ovozKirishiniTekshir(tana: Record<string, unknown>): { ovoz: Ovo
   if (bayt > OVOZ_MAX_BAYT) return { kod: "AI_HAJM" };
   return { ovoz: { audio: a, mime } };
 }
+// Gemini xatosi logga: HTTP kod, Gemini error.message (≤ 300 belgi, kalit bo'lsa yashiriladi) va ilova yuborgan mime. Audio, kalit va tanilgan matn HECH QACHON loglanmaydi.
+function ovozLogla(debug: string, holat: number | null, xabar: string, mime: string, kalit: string): void {
+  let x = xabar.replace(/\s+/g, " ").trim();
+  if (kalit) x = x.split(kalit).join("***");
+  x = x.replace(/AIza[0-9A-Za-z_-]{20,}/g, "***").slice(0, 300);
+  console.error("ovoz: " + debug + " http=" + (holat === null ? "-" : holat) + " mime=" + mime + (x ? " xabar=" + x : ""));
+}
 async function ovozniMatnga(ovoz: OvozKirishi, muhit: Muhit, fetchFn: FetchFn): Promise<string | null> {
   const kalit = (muhit.get("GEMINI_API_KEY") || "").trim();
-  if (!kalit) throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati sozlanmagan (GEMINI_API_KEY yo'q).", true);
+  if (!kalit) { ovozLogla("gemini_kalit_yoq", null, "GEMINI_API_KEY sozlanmagan", ovoz.mime, ""); throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati sozlanmagan (GEMINI_API_KEY yo'q).", true, "gemini_kalit_yoq"); }
   const model = (muhit.get("GEMINI_MODEL") || "").trim() || GEMINI_MODEL_SUKUT;
-  if (!/^[A-Za-z0-9._-]+$/.test(model)) throw new ProvayderXatosi("AI_PROVAYDER", "GEMINI_MODEL noto'g'ri.", true);
+  if (!/^[A-Za-z0-9._-]+$/.test(model)) { ovozLogla("gemini_model_nom", null, "GEMINI_MODEL noto'g'ri", ovoz.mime, kalit); throw new ProvayderXatosi("AI_PROVAYDER", "GEMINI_MODEL noto'g'ri.", true, "gemini_model_nom"); }
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
   const tana = {
     contents: [{ role: "user", parts: [{ text: OVOZ_PROMPT }, { inline_data: { mime_type: ovoz.mime, data: ovoz.audio } }] }],
@@ -233,15 +242,31 @@ async function ovozniMatnga(ovoz: OvozKirishi, muhit: Muhit, fetchFn: FetchFn): 
   let javob: Response;
   try {
     javob = await fetchFn(url, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": kalit }, body: JSON.stringify(tana), signal: AbortSignal.timeout(OVOZ_TAYM_AUT_MS) });
-  } catch (_e) { throw new ProvayderXatosi("NETWORK", XATO_MATNI.NETWORK); }
-  if (!javob.ok) throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati xato qaytardi (HTTP " + javob.status + ").");
+  } catch (_e) { ovozLogla("gemini_tarmoq", null, "so'rov yuborilmadi (tarmoq yoki vaqt)", ovoz.mime, kalit); throw new ProvayderXatosi("NETWORK", XATO_MATNI.NETWORK, false, "gemini_tarmoq"); }
+  if (!javob.ok) {
+    let xabar = "";
+    try {
+      const tx = await javob.text();
+      try { const m = JSON.parse(tx)?.error?.message; xabar = typeof m === "string" ? m : ""; } catch (_e) { xabar = ""; }
+    } catch (_e) { xabar = ""; }
+    const mimeMi = /mime|audio format|unsupported|not supported|invalid.*argument.*audio/i.test(xabar);
+    const debug = "gemini_" + javob.status + (mimeMi ? "_mime" : "");
+    ovozLogla(debug, javob.status, xabar, ovoz.mime, kalit);
+    throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati xato qaytardi (HTTP " + javob.status + ").", false, debug);
+  }
   let d: unknown;
-  try { d = await javob.json(); } catch (_e) { throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati noto'g'ri javob berdi."); }
+  try { d = await javob.json(); } catch (_e) { ovozLogla("gemini_json", javob.status, "javob JSON emas", ovoz.mime, kalit); throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati noto'g'ri javob berdi.", false, "gemini_json"); }
   // deno-lint-ignore no-explicit-any
   const qismlar = (d as any)?.candidates?.[0]?.content?.parts;
   const xom = Array.isArray(qismlar) ? qismlar.map((q: { text?: unknown }) => typeof q?.text === "string" ? q.text : "").join(" ") : "";
   const matn = toza(xom).replace(/\s+/g, " ").trim().slice(0, OVOZ_MATN_MAX).trim();
-  return matn || null;
+  if (!matn) {   // bo'sh javob: sababi faqat Gemini kodlari (matn emas)
+    const kod = (v: unknown) => typeof v === "string" && /^[A-Z_]{1,40}$/.test(v) ? v : "-";
+    // deno-lint-ignore no-explicit-any
+    ovozLogla("gemini_bosh", javob.status, "finish=" + kod((d as any)?.candidates?.[0]?.finishReason) + " block=" + kod((d as any)?.promptFeedback?.blockReason), ovoz.mime, kalit);
+    return null;
+  }
+  return matn;
 }
 
 export function kirishniTekshir(tana: unknown): { kirish: Kirish } | { kod: XatoKodi } {
@@ -506,7 +531,8 @@ export function raqamlarMosmi(aiMatn: string, kirishlar: unknown[]): boolean {
 export class ProvayderXatosi extends Error {
   kod: XatoKodi;
   sozlama: boolean;   // true = sozlash xatosi (kalit/model yo'q), false = ish vaqtidagi xato (tarmoq, HTTP)
-  constructor(kod: XatoKodi, m: string, sozlama = false) { super(m); this.kod = kod; this.sozlama = sozlama; }
+  debug?: string;     // javobga qo'shiladigan qisqa sabab (masalan "gemini_400_mime"); faqat [a-z0-9_], kalit/audio/matn HECH QACHON
+  constructor(kod: XatoKodi, m: string, sozlama = false, debug?: string) { super(m); this.kod = kod; this.sozlama = sozlama; this.debug = debug; }
 }
 
 type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
@@ -1125,8 +1151,8 @@ async function ovozIshlov(xom: Record<string, unknown>, _email: string, muhit: M
     if (matn === null) return json({ ok: false, sabab: "ovoz_yoq" }, 200, cors);   // gap eshitilmadi
     return json({ ok: true, matn }, 200, cors);
   } catch (e) {
-    if (e instanceof ProvayderXatosi) return xatoJavob(e.kod, e.kod === "NETWORK" ? 503 : 502, cors, e.kod === "AI_PROVAYDER" ? e.message : undefined);
-    return xatoJavob("AI_PROVAYDER", 500, cors, "Kutilmagan xato.");
+    if (e instanceof ProvayderXatosi) return xatoJavob(e.kod, e.kod === "NETWORK" ? 503 : 502, cors, e.kod === "AI_PROVAYDER" ? e.message : undefined, e.debug);
+    return xatoJavob("AI_PROVAYDER", 500, cors, "Kutilmagan xato.", "ovoz_kutilmagan");
   }
 }
 

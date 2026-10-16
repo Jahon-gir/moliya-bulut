@@ -76,6 +76,19 @@ var Gap = (function () {
       r.readAsDataURL(blob);
     });
   }
+  // Yozilgan audio (webm/mp4) -> 16 kHz mono WAV (Gemini qabul qiladigan format). Brauzer ichida, tarmoqsiz. Bo'lmasa null (asl format yuboriladi).
+  function wavgaAylantir(blob) {
+    var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OAC || !blob.arrayBuffer) return Promise.resolve(null);
+    return blob.arrayBuffer().then(function (buf) {
+      var ctx = new OAC(1, 1, GapSof.OVOZ_WAV_HZ);   // decodeAudioData audioni shu chastotaga keltiradi
+      return new Promise(function (ok, no) { var p = ctx.decodeAudioData(buf, ok, no); if (p && p.then) p.then(ok, no); });
+    }).then(function (ab) {
+      var kanallar = [];
+      for (var i = 0; i < ab.numberOfChannels; i++) kanallar.push(ab.getChannelData(i));
+      return new Blob([GapSof.wavYasa(GapSof.monoQil(kanallar), ab.sampleRate)], { type: 'audio/wav' });
+    }).then(null, function () { return null; });
+  }
   function kodXato(kod) { var x = new Error(kod); x.kod = kod; return x; }
   // Haqiqiy yozgich: { bor(), boshla() -> Promise<{ toxtat() -> Promise<{audio, mime}|null>, bekor() }> }
   var haqiqiyYozgich = {
@@ -98,8 +111,11 @@ var Gap = (function () {
                 var tur = (rec.mimeType || mime || 'audio/webm'), blob = new Blob(bolaklar, { type: tur });
                 bolaklar = [];
                 if (blob.size < GapSof.OVOZ_MIN_BAYT) return ok(null);
-                if (blob.size > GapSof.OVOZ_MAX_BAYT) return no(kodXato('AI_HAJM'));
-                blobBase64(blob).then(function (a) { ok({ audio: a, mime: tur.split(';')[0] }); }, no);
+                wavgaAylantir(blob).then(function (wav) {
+                  var son = wav || blob, mime = wav ? 'audio/wav' : tur.split(';')[0];
+                  if (son.size > GapSof.OVOZ_MAX_BAYT) throw kodXato('AI_HAJM');
+                  return blobBase64(son).then(function (a) { ok({ audio: a, mime: mime }); });
+                }).then(null, no);
               });
               try { rec.state !== 'inactive' ? rec.stop() : rec.dispatchEvent(new Event('stop')); } catch (x) { qoyib(); no(kodXato('MIK_BAND')); }
             });
@@ -139,7 +155,7 @@ var Gap = (function () {
     else if (m.bosqich === 'tinglanmoqda') { var a = e('span', undefined, 'gp-aylana'); a.setAttribute('aria-hidden', 'true'); h.appendChild(a); h.appendChild(e('span', 'Tinglanyapti…')); }
     else if (m.bosqich === 'ulanmoqda') h.appendChild(e('span', 'Mikrofon ochilmoqda…'));
   }
-  function mikXato(kod) { xatoKorsat(GapSof.ovozXatoMatni(kod)); }
+  function mikXato(kod, debug) { xatoKorsat(GapSof.ovozXatoMatni(kod, debug)); }
   function mikBosildi() {
     var m = mikHolat();
     if (!m || holat.band) return;
@@ -188,7 +204,7 @@ var Gap = (function () {
       m.bosqich = 'bosh'; mikYangila();
       var kod = (err && err.kod) || ('JS_' + String((err && err.name) || 'XATO').replace(/[^A-Za-z0-9]/g, '').toUpperCase());
       if (kod === 'AI_RUXSAT' && dep.yopiqmi()) { yop(); if (ui.xabar) ui.xabar(dep.yopiqXabari()); Yordamchi.yangila(); return; }
-      mikXato(kod);
+      mikXato(kod, err && err.debug);
     });
   }
 

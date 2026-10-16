@@ -749,3 +749,28 @@ Haqiqiy sinovda: "2 ta non va sut oldim 18 ming" -> model soni 2, narx 18 000 be
 - Qaytarish eng eski ochiq qarzga yoziladi; summa shu qarzning qolganidan oshsa xato chiqadi (bir nechta qarzga bo'lib yozilmaydi).
 - Gapdagi sana (kecha, 3 kun oldin) serverda hisoblanadi, ilova faqat qurilma sanasini yuboradi; sana tanlagich brauzer lokalida ko'rinadi.
 
+
+## 30. Gap kartasi: Soat maydoni va oxirgi ishlatilgan hisob (0.36.1)
+
+Faqat ilova qismi (`js/gap-sof.js`, `js/gap.js`, `js/ui.js`, `style.css`). Server (Edge Function), IndexedDB sxemasi, server jadvallari, sinxronlash va zaxira formati O'ZGARMAGAN; qo'lda qo'shish ekrani ham o'zgarmagan.
+
+### 30.1. Soat maydoni
+- Yozuvlar soatni allaqachon saqlaydi: `sana` ("YYYY-MM-DD") va `vaqt` ("HH:MM") alohida maydonlar (qarz va to'lovda ham). Shuning uchun YANGI maydon, migratsiya va sinxronlash o'zgarishi YO'Q; eski yozuvlar buzilmaydi.
+- Kartada "Sana" yonida (bir qatorda, 360 px da ikki teng ustun) "Soat" maydoni (`type="time"`, HH:MM). Standart qiymat — gap tahlil qilingan paytdagi qurilmaning hozirgi soati. Foydalanuvchi o'zgartira oladi. Model soat chiqarmaydi, serverga tegilmagan.
+- **Saqlashda:** soat kiritilgan bo'lsa (yaroqli `HH:MM`) o'sha soat yoziladi (boshqa sanada ham). Soat bo'sh qoldirilsa ESKICHA: sana bugun bo'lsa saqlash paytidagi hozirgi soat, aks holda `00:00`. Yaroqsiz qiymat ("Soatni to'g'ri kiriting") rad etiladi.
+- **Kelajak:** sana + soat hozirdan keyin bo'lsa mavjud `Calc` tekshiruvi rad etadi (xato matni sana maydoni ostida chiqadi); qarz va to'lovga ham tegishli (qaytarish muddati bundan mustasno).
+- Tur almashsa soat saqlanadi.
+
+### 30.2. Oxirgi ishlatilgan hisob
+- Gapda hisob aytilmagan (hisob bo'sh) bo'lsa, kartada "Tanlang" o'rniga shu YOZUV TURI bo'yicha oxirgi ishlatilgan hisob oldindan tanlanadi. Turlar alohida eslab qolinadi: xarajat, daromad, qarz (Berdim/Oldim/Qaytardim/Qaytarildi umumiy), o'tkazma (ikkala hisob: "qaysi hisobdan" va "qaysi hisobga").
+- **Model topgan hisob ustun:** hisob bo'sh bo'lsagina oxirgisi qo'yiladi. O'tkazmada ikkinchi hisob birinchisiga teng bo'lsa qo'yilmaydi.
+- Eslab qolingan hisob endi faol bo'lmasa (o'chirilgan yoki arxivlangan) yoki noma'lum bo'lsa — "Tanlang" qoladi. Buzuq saqlangan qiymat xato bermaydi.
+- Tur almashtirilganda hisob bo'sh bo'lsa, yangi tur uchun oxirgi hisob qo'yiladi (to'ldirilgan hisob saqlanadi).
+- Foydalanuvchi baribir o'zgartira oladi. **Avto-saqlash YO'Q:** "Saqlash" avvalgidek qo'lda bosiladi.
+- Oxirgi hisob faqat karta MUVAFFAQIYATLI saqlanganda yangilanadi (to'ldirilgan hisob turi bo'yicha yoziladi).
+
+### 30.3. Qayerda saqlanadi
+Faqat shu qurilmada, `localStorage` kaliti `moliya-oxirgi-hisob` (qiymat: `{ tur: { hisob, hisob2 } }`, faqat hisob identifikatorlari). Hamma `localStorage` chaqiruvi `try/catch` ichida (maxfiy rejimda ishlamasa, "Tanlang" qoladi). IndexedDB, zaxira, Excel, sinxronlash (outbox) va serverga TUSHMAYDI. Saqlash ui.js da (gap.js va gap-sof.js xotiraga tegmaydi: 29.6 maxfiylik sinovi shuni tekshiradi); `moliya-` prefiksi tufayli PIN tiklashda boshqa qurilma kalitlari qatori tozalanadi. Gap matni hali ham hech qayerda saqlanmaydi.
+
+### 30.4. Sinov
+`tests.html`: 2 ta yangi (`GapSof` soat maydoni; oxirgi ishlatilgan hisob). Brauzer sinovi `tools/gap-brauzer-sinovi.js` yangi maydonlarga moslanmagan; haqiqiy telefonda sinalmagan.

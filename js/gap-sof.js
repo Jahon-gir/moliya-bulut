@@ -117,9 +117,36 @@ var GapSof = (function () {
     var k = kalitNom(nom);
     return royxat.filter(function (x) { return kalitNom(x.nom) === k; })[0] || null;
   }
+  // ---- Soat va oxirgi ishlatilgan hisob (30-band) ----
+  function soatYaroqli(s) { return typeof s === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
+  // Oxirgi hisob qurilmada turga qarab eslab qolinadi: oxirgi = { xarajat: { hisob, hisob2 }, ... } (qarz amallari "qarz" ostida). Hisob endi faol bo'lmasa — '' (Tanlang)
+  function oxirgiHisob(oxirgi, tur, m, qaysi) {
+    var yozuv = oxirgi && oxirgi[tur], id = yozuv && typeof yozuv[qaysi] === 'string' ? yozuv[qaysi] : '';
+    return id && faolHisoblar(m).some(function (h) { return h.id === id; }) ? id : '';
+  }
+  // Hisob bo'sh bo'lsa oxirgi ishlatilgani qo'yiladi (model topgan hisob ustun). O'tkazmada ikkinchi hisob birinchisiga teng bo'lmasin.
+  function oxirgiHisobQoy(k, m, oxirgi) {
+    var o = {};
+    if (!k.hisob) { var h = oxirgiHisob(oxirgi, k.tur, m, 'hisob'); if (h) o.hisob = h; }
+    if (k.tur === 'otkazma' && !k.hisob2) {
+      var h2 = oxirgiHisob(oxirgi, k.tur, m, 'hisob2');
+      if (h2 && h2 !== (o.hisob || k.hisob)) o.hisob2 = h2;
+    }
+    return Object.keys(o).length ? nusxa(k, o) : k;
+  }
+  // Saqlangan karta uchun yangilangan `oxirgi` (xotiradagi obyektga tegmaydi). Faqat to'ldirilgan hisoblar yoziladi.
+  function oxirgiYangila(oxirgi, k) {
+    var r = nusxa(oxirgi || {}), y = nusxa(r[k.tur] || {});
+    if (k.hisob) y.hisob = k.hisob;
+    if (k.tur === 'otkazma' && k.hisob2) y.hisob2 = k.hisob2;
+    r[k.tur] = y;
+    return r;
+  }
   function sanaYaroqli(s, bugun) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && s <= bugun; }
   // Serverning Yozuv'i -> tahrirlanadigan karta (ilova yozuvi shaklida: id lar, summa matn ko'rinishida)
-  function kartaYasash(y, m, bugun) {
+  // qosh (ixtiyoriy): { soat: 'HH:MM' (soat maydonining standart qiymati), oxirgi: oxirgi ishlatilgan hisoblar }
+  function kartaYasash(y, m, bugun, qosh) {
+    qosh = qosh || {};
     var t = SERVER_TUR[y.tur] || SERVER_TUR.xarajat;
     var katTop = t[0] === 'xarajat' || t[0] === 'daromad' ? nomBilanTop(faolKategoriyalar(m).filter(function (k) { return k.tur === t[0]; }), y.kategoriya) : null;
     var his = faolHisoblar(m);
@@ -127,24 +154,25 @@ var GapSof = (function () {
     var summa = typeof y.summa === 'number' && isFinite(y.summa) && y.summa > 0 && y.summa === Math.floor(y.summa) ? summaFormat(y.summa) : '';
     var ogoh = (Array.isArray(y.ogohlantirish) ? y.ogohlantirish : []).filter(function (x) { return typeof x === 'string' && birQator(x); })
       .map(function (x) { return birQator(x).slice(0, OGOH_MAX); }).slice(0, 5);
-    return {
+    var karta = {
       tur: t[0], qarzAmal: t[1], summa: summa, kategoriya: katTop ? katTop.id : '', hisob: h ? h.id : '', hisob2: h2 && (!h || h2.id !== h.id) ? h2.id : '',
       shaxs: typeof y.shaxs === 'string' ? birQator(y.shaxs).slice(0, NOM_MAX) : '', sana: sanaYaroqli(y.sana, bugun) ? y.sana : bugun,
-      izoh: birQator(y.izoh).slice(0, IZOH_MAX), ogohlantirish: ogoh, xatolar: {}, saqlanmoqda: false
+      izoh: birQator(y.izoh).slice(0, IZOH_MAX), vaqt: soatYaroqli(qosh.soat) ? qosh.soat : '', ogohlantirish: ogoh, xatolar: {}, saqlanmoqda: false
     };
+    return oxirgiHisobQoy(karta, m, qosh.oxirgi);
   }
   // Tepada doim bitta qator, undan keyin serverning ogohlantirishlari
   function ogohlantirishlar(k) { return [UMUMIY_OGOHLANTIRISH].concat(k.ogohlantirish || []); }
 
   // ---- Tur almashtirish: summa, izoh, sana, hisob saqlanadi; kategoriya faqat yangi tur uchun mos bo'lsa ----
-  function turAlmashtir(k, yangiTur, m) {
+  function turAlmashtir(k, yangiTur, m, oxirgi) {
     var o = { tur: yangiTur, xatolar: {} };
     if (yangiTur === 'qarz') o.qarzAmal = k.qarzAmal || 'berdim';
     if (yangiTur === 'xarajat' || yangiTur === 'daromad') {
       var kat = faolKategoriyalar(m).filter(function (x) { return x.id === k.kategoriya; })[0];
       o.kategoriya = kat && kat.tur === yangiTur ? kat.id : '';
     } else o.kategoriya = '';
-    return nusxa(k, o);
+    return oxirgiHisobQoy(nusxa(k, o), m, oxirgi);
   }
   function qarzAmalAlmashtir(k, amal) { return nusxa(k, { qarzAmal: amal, xatolar: {} }); }
 
@@ -189,6 +217,7 @@ var GapSof = (function () {
     if (k.tur === 'otkazma' && !hisobBor(k.hisob2)) x.hisob2 = 'Tanlang';
     if (k.tur === 'qarz' && !birQator(k.shaxs)) x.shaxs = 'Kiriting';
     if (!k.sana) x.sana = 'Kiriting';
+    if (k.vaqt && !soatYaroqli(k.vaqt)) x.vaqt = 'Soatni to\'g\'ri kiriting';
     return x;
   }
   var QADAM_MAYDON = { summa: 'summa', kategoriya: 'kategoriya', hisob: 'hisob', qayerdan: 'hisob', qayerga: 'hisob2', vaqt: 'sana' };
@@ -198,7 +227,8 @@ var GapSof = (function () {
   function saqlashNatijasi(k, m, hozir) {
     var xatolar = majburiyXatolar(k, m);
     if (Object.keys(xatolar).length) return { xatolar: xatolar };
-    var vaqt = k.sana === hozir.sana ? hozir.vaqt : '00:00';
+    // Soat kiritilgan bo'lsa shu, bo'sh bo'lsa eskicha: sana bugun bo'lsa hozirgi soat, aks holda 00:00
+    var vaqt = soatYaroqli(k.vaqt) ? k.vaqt : k.sana === hozir.sana ? hozir.vaqt : '00:00';
     var izoh = birQator(k.izoh).slice(0, IZOH_MAX);
     var xato = function (maydon, matn) { var e = {}; e[maydon] = matn; return { xatolar: e }; };
     if (k.tur === 'qarz' && (k.qarzAmal === 'qaytardim' || k.qarzAmal === 'qaytarildi')) {
@@ -222,7 +252,7 @@ var GapSof = (function () {
   return {
     GAP_MAX: GAP_MAX, HISOBLAGICH_BOSHI: HISOBLAGICH_BOSHI, ESKI_MAX: ESKI_MAX, ESKI_IZOH_MAX: ESKI_IZOH_MAX, IZOH_MAX: IZOH_MAX, KARTA_MAX: KARTA_MAX, KUTISH_MS: KUTISH_MS,
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
-    xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
+    soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
     kategoriyaNomlari: kategoriyaNomlari, hisobRoyxati: hisobRoyxati, eskiTanla: eskiTanla, sorovTanasi: sorovTanasi,
     yozuvlarniOl: yozuvlarniOl, kartaYasash: kartaYasash, ogohlantirishlar: ogohlantirishlar,
     turAlmashtir: turAlmashtir, qarzAmalAlmashtir: qarzAmalAlmashtir, kategoriyaRoyxati: kategoriyaRoyxati, shaxslar: shaxslar,

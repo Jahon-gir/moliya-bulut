@@ -1164,3 +1164,6 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 /* "N ta yozuv saqlandi" xabari suzuvchi tugmalar ("Gap bilan", "Ko'zlar") ostida qolib ketmasin */
 .toast { z-index: 30; }
 .gp-karta .xato-matn { overflow-wrap: anywhere; }
+/* 0.36.1: gap kartasida Sana va Soat bir qatorda */
+.gp-qator { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.gp-qator input { min-width: 0; width: 100%; }

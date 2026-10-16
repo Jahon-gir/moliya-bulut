@@ -3974,6 +3974,9 @@
     malumot: function () { return malumot; },
     xabar: function (m) { qisqaXabar(m); },
     saqla: gapSaqlash,
+    // Oxirgi ishlatilgan hisoblar: faqat shu qurilmada (localStorage), serverga va sinxronlashga tushmaydi (TZ-sinxronlash.md 30-band)
+    oxirgiOl: function () { try { var o = JSON.parse(localStorage.getItem('moliya-oxirgi-hisob') || 'null'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } },
+    oxirgiYoz: function (o) { try { localStorage.setItem('moliya-oxirgi-hisob', JSON.stringify(o)); } catch (e) { /* ahamiyatsiz */ } },
     tugadi: function (n) {
       if (joriy === 'bosh' && !stek.length) asosiyniQayta();   // yangi yozuvlar Asosiy sahifada ko'rinsin
       qisqaXabar(n + ' ta yozuv saqlandi');

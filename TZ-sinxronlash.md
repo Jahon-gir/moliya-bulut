@@ -891,3 +891,50 @@ Faqat ilova qismi (`js/chat-sof.js` yangi, `js/yordamchi.js`, `js/kirish.js` (fa
 - `tests.html`: 579 / 579 (yangi 8 ta; eski 3 ta test yangi maketga moslandi: salom, "Yangi chat" tugmasi, "setItem suhbat" taqiqi o'rniga kalit tekshiruvi).
 - `tools/chat-brauzer-sinovi.js`: HAQIQIY ilova, soxta server va uydirma ism ("Sinov Foydalanuvchi"), 360 px yorug'/qorong'i, 100 tekshiruv: salom, tugmalar ≥ 44 px, panel eni, guruhlar va vaqtlar, qidiruv, menyu, nomni o'zgartirish, o'chirish tasdig'i, fon/Escape, davom ettirish (xotira shu suhbatdan), chiqilganda tozalash, gorizontal aylanish yo'qligi. Rasmlar ko'zdan kechirilgan.
 - Tekshirilmagan: haqiqiy telefon (iPhone klaviaturasi, safe-area) va haqiqiy Google ismi bilan salom.
+
+## 34. Statistika (1-qism, 0.40.0)
+
+Faqat ilova qismi: **"Ko'proq" → "Statistika"** (to'liq ekran, "Orqaga" bilan). **Server o'zgarmagan, ma'lumot tuzilishi (sxema) o'zgarmagan, qayta Deploy kerak emas.** Yangi so'rov, baza yozuvi, sinxronlash yo'q. Boshqa ekranlarga tegilmagan (faqat "Ko'proq" ro'yxatiga bir qator qo'shildi).
+
+### 34.1. Fayllar
+- `js/stat-sof.js` — toza hisoblash mantiqi (DOM, xotira, soat yo'q: bugun tashqaridan beriladi). Hamma raqam mavjud `Calc` funksiyalaridan (`hisobot`, `diagrammaVaqt`, `taqqoslash`, `oyJami`, `foizlar`, `davrChegarasi`, ...).
+- `js/stat.js` — ekran (SVG o'zimiz chizamiz, kutubxonasiz). `ui.js` ga faqat `statistikaEkrani()` va menyu qatori qo'shilgan; yozuvlar `hisobotYozuvlari()` dan (yozuvlar + qarz amallari).
+- `js/ikonlar.js` ga Tabler ikonlari qo'shildi: `chart-bar`, `chart-area`, `chart-pie`, `arrow-up`, `arrow-down`, `chevron-left`, `chevron-right`, `chevron-down` (`chart-line` bor edi). Emoji yo'q.
+- `index.html` (`?v=0.40.0`) va `sw.js` `royxat()` ga ikkala fayl qo'shilgan.
+
+### 34.2. Umumiy qoidalar
+- **Qarzlar hisobotdagi qoida bilan** (19-band, 27-band): Olingan qarz — kirim, Berilgan qarz — chiqim (olingan qarzni qaytarish ham chiqim, berilgan qarz qaytsa kirim). O'tkazma va daromad xarajat statistikasiga kirmaydi. "Berilgan qarz" kategoriyasi ro'yxatda alohida qator bo'lib ko'rinadi.
+- **Jami = Asosiy "Naqd pul oqimi" xarajati** (`Calc.oyJami`); grafikning "Oy" jami ham shu qiymat. Sinov: `StatSof.oyXarajati` = `Calc.oyJami`, brauzer sinovida ekrandagi "Jami" Asosiy sahifadagi son bilan solishtirilgan.
+- **Tanlangan oy** (tepadagi oy chiplari, Tarixdagi chiplar uslubida, eng eskisidan bugungisigacha, kamida 12 oy) hamma kartalarni boshqaradi. Grafik davri ham shu oyga bog'langan: chip bosilsa grafik sanasi joriy oyda — bugun, boshqa oyda — oyning oxirgi kuni; grafikdagi ‹ › bilan davr surilsa chip ham ko'chadi. Kelajakka chiqib bo'lmaydi; orqaga — birinchi yozuv davrigacha.
+- **"Hozirgi kun" (marka):** tanlangan oy joriy bo'lsa — bugun, o'tgan oy bo'lsa — uning oxirgi kuni. Kartalar 3 va 4 shu kungacha hisoblanadi.
+- Summalar yashirilgan (••••, Asosiy "ko'zcha") bo'lsa statistikadagi summalar ham yashiriladi.
+
+### 34.3. Kartalar
+**1) Xarajat grafigi.** Tepada "Xarajat grafigi" va ochiladigan bitta tugma (Ustun / Chiziq / Maydon / Doira, har birida ikonka; Escape va tashqariga bosish yopadi). Ostida davr tugmalari Kun / Hafta / Oy / Yil, ‹ davr nomi ›, "Jami: N so'm".
+- **Kun:** 6 ta 4 soatlik oraliq (0–4, 4–8, …, 20–24), yozuvning `vaqt` maydonidan. Vaqti yo'q (yoki noto'g'ri) yozuvlar ustunlarga kirmaydi; ostida izoh "Vaqti yozilmagan yozuvlar kunlik grafikka kirmaydi." (Kun davrida doim ko'rinadi). **Qabul qilingan taxmin:** "Jami" kun uchun HAMMA xarajatni (vaqtsizlarni ham) sanaydi, shunda Jami hamma davrda bir xil qoidada. Eslatma: eski yozuvlarda vaqt `00:00` bo'lib ko'chgan bo'lsa, ular 0–4 oraliqqa tushadi (vaqti "bor" hisoblanadi).
+- **Hafta:** dushanbadan yakshanbagacha 7 ustun. **Oy:** oyning kunlari, yorliqlar har 3-sida (1, 4, 7, …). **Yil:** 12 oy. Y o'qi — `Calc.chiroyliTiklar`, qisqa yozuv ("100 ming", "1,2 mln"). Ustun bosilsa (yoki Enter) qiymati tagida chiqadi.
+- **Doira:** faqat xarajat ulushi (kategoriyalar bo'yicha), HAR DOIM tanlangan oy bo'yicha: doira tanlanganda davr tugmalari xira (o'chiq) bo'ladi va ‹ › oyma-oy suradi. Legenda ko'pi bilan 6 ta: 6 tadan ko'p kategoriya bo'lsa eng kattalari 5 ta + qolganlari "Boshqa"ga qo'shiladi (aniq 6 ta bo'lsa birlashmaydi). Foizlar `Calc.foizlar` bilan, yig'indisi 100.
+- **Saqlash:** tur va davr `localStorage` da, kalit `moliya-stat-grafik` (`{"tur","davr"}`), hamma o'qish/yozish `try/catch` ichida; yaroqsiz yozuv bo'lsa boshlang'ich (Ustun, Oy). Ekran har ochilganda sana — bugun. "PINni unutdim" to'liq tozalashi bu kalitni ham o'chiradi ("moliya-" prefiksi).
+- Yozuv bo'lmasa "Bu davrda yozuv yo'q."
+
+**2) Kunlik o'rtacha xarajat.** Sizning o'rtachangiz = tanlangan oyning 1-kunidan marka kunigacha xarajat / o'sha kunlar soni (joriy oyda bugun ham sanaladi). Katta raqam o'ngda. 4 ta teng katak, har birida foiz + strelka, summa, nomi:
+| Katak | Taqqoslanadigan qiymat |
+|---|---|
+| Shu hafta | marka kuni tushgan haftaning (dushanbadan) marka kunigacha kunlik o'rtachasi (o'tgan kunlar soniga bo'lib) |
+| O'tgan oy shu kuni | o'tgan oyning AYNAN shu sanasidagi bitta kun xarajati (o'tgan oy qisqa bo'lsa — uning oxirgi kuni) |
+| O'tgan oy | o'tgan oyning kunlik o'rtachasi (oy xarajati / oy kunlari) |
+| Hamma vaqt | birinchi yozuv (daromad yoki xarajat) kunidan marka kunigacha xarajat / kunlar soni |
+- **Foiz** = sizning o'rtachangiz taqqoslanayotganiga nisbatan: `Calc.taqqoslash(sizniki, taqqoslanadigan)` (yaxlitlangan butun foiz). Baland — qizil, strelka tepaga (`arrow-up`); past — yashil, strelka pastga (`arrow-down`); 0% — kulrang, strelkasiz. Taqqoslanadigan qiymat 0 bo'lsa foiz o'rniga "—" (strelkasiz). Summalar butun so'mga yaxlitlanadi.
+- **Taxmin kartasi qo'shilmagan** (talab shunday).
+
+**3) Eng qimmat kun.** Sarlavha o'ngida eng qimmat kun nomi (qizil: "Shanba" yoki "15-kun"). Ikki bo'lakli almashtirgich "Hafta kuni" | "Oy kuni" (har ochilganda "Hafta kuni").
+- Hafta kuni: 7 ustun (Du…Ya), eng qimmati qizil. Izoh: "Shanba kuni o'rtacha N so'm sarflaysiz (oxirgi 3 oy)."
+- Oy kuni: 1–31 ustun (yorliqlar siyrak), eng qimmati qizil. Izoh: "Oyning N-kuni eng qimmat: o'rtacha X so'm (oxirgi 3 oy)."
+- **O'rtacha oxirgi 3 oy:** tanlangan oy va undan oldingi 2 oyning 1-kunidan marka kunigacha (birinchi yozuvdan oldingi kunlar sanalmaydi, aks holda yangi foydalanuvchida o'rtacha sun'iy past chiqardi). Har hafta kuni uchun: o'sha hafta kunidagi jami xarajat / shunday kunlar soni; oy kuni uchun: shu raqamli kunlardagi jami / shunday kunlar soni (31-kun faqat 31 kunlik oylarda sanaladi). Teng bo'lsa birinchisi (dushanba, 1-kun) tanlanadi. Oyna ichida xarajat bo'lmasa "Hali yetarli ma'lumot yo'q."
+
+**4) Kategoriyalar o'tgan oyga nisbatan.** Shu oyning top 5 xarajat kategoriyasi (summasi bo'yicha; qarz kategoriyasi ham qatnashadi). Qatorda: ikon, nom, shu oy summasi; o'ngda strelka + foiz, ostida farq so'mda ("+190 000" / "−52 000"). Ko'proq — qizil, strelka tepaga; kamroq — yashil, strelka pastga; o'zgarmagan — "0%". O'tgan oyda 0 bo'lsa foiz o'rniga "yangi" (qizil, tepaga). Taqqoslash: butun shu oy (joriy oyda hozirgacha) butun o'tgan oyga.
+
+### 34.4. Sinov
+- `tests.html`: 588 / 588 (yangi 9 ta, uydirma raqamlar: davr bo'laklari, kunlik o'rtacha, o'tgan oy shu kuni, foiz va 0 holat, eng qimmat kun, kategoriya farqi, jami = Asosiy, surish va oy chiplari, tanlovni o'qish, ekran (DOM) va kod/fayl/CSS tekshiruvlari).
+- `tools/stat-brauzer-sinovi.js`: HAQIQIY ilova, uydirma yozuvlar, 360 px yorug'/qorong'i, 100 tekshiruv (Jami Asosiy bilan teng, tugmalar ≥ 44 px, gorizontal aylanish yo'q, hamma tur va davr, doira legendasi 100%, ‹ ›, saqlangan tanlov, eng qimmati qizil). Rasmlar ko'zdan kechirilgan.
+- Tekshirilmagan: haqiqiy telefon va haqiqiy ma'lumot bilan katta tarix (ko'p yillik) tezligi.

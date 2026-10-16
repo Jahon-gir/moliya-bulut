@@ -19,7 +19,7 @@ var Gap = (function () {
   };
   function sozla(o) { Object.keys(o || {}).forEach(function (k) { dep[k] = o[k]; }); }
 
-  var ui = { malumot: null, xabar: null, saqla: null, tugadi: null };
+  var ui = { malumot: null, xabar: null, saqla: null, tugadi: null, oxirgiOl: null, oxirgiYoz: null };
   var tugmaEl = null, ekranEl = null, tanaEl = null;
   // holat: { bosqich: 'yozish' | 'karta', gap, xato, band, kartalar, indeks, saqlangan, sessiya } (faqat xotirada)
   var holat = null;
@@ -131,7 +131,8 @@ var Gap = (function () {
       h.band = false;
       if (!royxat.length) { yuborTugmaYangila(); xatoKorsat(GapSof.sababMatni(j && j.sabab)); return; }
       var m = ui.malumot(), bugun = dep.bugun();
-      h.kartalar = royxat.map(function (y) { return GapSof.kartaYasash(y, m, bugun); });
+      var qosh = { soat: dep.hozir().vaqt, oxirgi: oxirgiOl() };
+      h.kartalar = royxat.map(function (y) { return GapSof.kartaYasash(y, m, bugun, qosh); });
       h.indeks = 0; h.bosqich = 'karta';
       chiz();
     }, function (err) {
@@ -210,7 +211,7 @@ var Gap = (function () {
     forma.addEventListener('submit', function (h) { h.preventDefault(); saqlash(); });
 
     var turQuti = e('div', undefined, 'maydon'); turQuti.appendChild(e('span', 'Turi', 'belgi'));
-    turQuti.appendChild(segment(GapSof.TURLAR, k.tur, 'Yozuv turi', function (t) { if (t === k.tur) return; holat.kartalar[holat.indeks] = GapSof.turAlmashtir(k, t, ui.malumot()); chiz(); }));
+    turQuti.appendChild(segment(GapSof.TURLAR, k.tur, 'Yozuv turi', function (t) { if (t === k.tur) return; holat.kartalar[holat.indeks] = GapSof.turAlmashtir(k, t, ui.malumot(), oxirgiOl()); chiz(); }));
     forma.appendChild(turQuti);
     if (k.tur === 'qarz') {
       var qq = e('div', undefined, 'maydon'); qq.appendChild(e('span', 'Qarz amali', 'belgi'));
@@ -218,7 +219,7 @@ var Gap = (function () {
       forma.appendChild(qq);
     }
 
-    function qosh(nom, mm) { maydonlar[nom] = mm; if (k.xatolar[nom]) { mm.xato.textContent = k.xatolar[nom]; mm.input.classList.add('xatoli'); mm.input.setAttribute('aria-invalid', 'true'); } forma.appendChild(mm.quti); }
+    function qosh(nom, mm) { maydonlar[nom] = mm; if (k.xatolar[nom]) { mm.xato.textContent = k.xatolar[nom]; mm.input.classList.add('xatoli'); mm.input.setAttribute('aria-invalid', 'true'); } if (nom !== 'sana' && nom !== 'vaqt') forma.appendChild(mm.quti); }
     qosh('summa', summaMaydoni(k)); maydonlar.summa.input.addEventListener('input', function () { ozgardi('summa')(k.summa); });
 
     var hisoblar = m.hisoblar.filter(function (h) { return !h.arxivlangan && h.deleted !== true; }).map(function (h) { return [h.id, h.nom]; });
@@ -237,7 +238,12 @@ var Gap = (function () {
 
     var sana = matnMaydoni('gk-sana', 'Sana', k.sana, ozgardi('sana'), function (i) { i.type = 'date'; i.max = dep.bugun(); });
     sana.input.addEventListener('change', function () { k.sana = sana.input.value; ozgardi('sana')(k.sana); });
-    qosh('sana', sana);
+    // Soat sana yonida (bo'sh qoldirilsa eskicha: sana bugun bo'lsa hozirgi soat, aks holda 00:00)
+    var soat = matnMaydoni('gk-soat', 'Soat', k.vaqt || '', ozgardi('vaqt'), function (i) { i.type = 'time'; });
+    soat.input.addEventListener('change', function () { k.vaqt = soat.input.value; ozgardi('vaqt')(k.vaqt); });
+    var qator = e('div', undefined, 'gp-qator');
+    qosh('sana', sana); qosh('vaqt', soat);
+    qator.appendChild(sana.quti); qator.appendChild(soat.quti); forma.appendChild(qator);
     qosh('izoh', matnMaydoni('gk-izoh', 'Izoh', k.izoh, function (v) { k.izoh = v; }, function (i) { i.maxLength = GapSof.IZOH_MAX; }));
 
     var umumiy = e('div', k.xatolar.umumiy || '', 'xato-matn'); umumiy.setAttribute('role', 'alert'); forma.appendChild(umumiy);
@@ -251,7 +257,9 @@ var Gap = (function () {
     return maydonlar;
   }
 
-  var KETMA_KETLIK = ['summa', 'kategoriya', 'shaxs', 'hisob', 'hisob2', 'sana'];
+  // Oxirgi ishlatilgan hisoblar (faqat shu qurilmada, ui.js saqlaydi): { tur: { hisob, hisob2 } }
+  function oxirgiOl() { try { return ui.oxirgiOl ? ui.oxirgiOl() || {} : {}; } catch (x) { return {}; } }
+  var KETMA_KETLIK = ['summa', 'kategoriya', 'shaxs', 'hisob', 'hisob2', 'sana', 'vaqt'];
   function saqlash() {
     var k = holat && holat.kartalar[holat.indeks];
     if (!k || k.saqlanmoqda) return;   // ikki marta bosishdan himoya
@@ -268,7 +276,9 @@ var Gap = (function () {
     var sessiya = holat.sessiya, h = holat;
     Promise.resolve().then(function () { return ui.saqla(r); }).then(function () {
       if (!holat || holat.sessiya !== sessiya) return;
-      h.saqlangan++; keyingi();
+      h.saqlangan++;
+      try { if (ui.oxirgiYoz) ui.oxirgiYoz(GapSof.oxirgiYangila(oxirgiOl(), k)); } catch (x) { /* eslab qolish ixtiyoriy */ }
+      keyingi();
     }, function (err) {
       if (!holat || holat.sessiya !== sessiya) return;
       k.saqlanmoqda = false; k.xatolar = { umumiy: 'Saqlab bo\'lmadi: ' + (err && err.message ? err.message : err) };
@@ -352,7 +362,7 @@ var Gap = (function () {
   // ui.js chaqiradi: malumot() — ilovaning joriy ma'lumoti, xabar(matn) — qisqa xabar, saqla(natija) — Promise (mavjud saqlash funksiyalari),
   // tugadi(n) — n ta yozuv saqlangan holda yopilganda (Asosiy yangilanadi va xabar chiqadi)
   function boshlash(o) {
-    ui.malumot = o.malumot; ui.xabar = o.xabar; ui.saqla = o.saqla; ui.tugadi = o.tugadi;
+    ui.malumot = o.malumot; ui.xabar = o.xabar; ui.saqla = o.saqla; ui.tugadi = o.tugadi; ui.oxirgiOl = o.oxirgiOl; ui.oxirgiYoz = o.oxirgiYoz;
     yangila();
   }
 

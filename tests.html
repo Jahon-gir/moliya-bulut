@@ -15,30 +15,30 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.36.0"></script>
-  <script src="js/tema.js?v=0.36.0"></script>
-  <script src="js/ikonlar.js?v=0.36.0"></script>
-  <script src="js/belgilar.js?v=0.36.0"></script>
-  <script src="js/calc.js?v=0.36.0"></script>
-  <script src="js/xlsx.js?v=0.36.0"></script>
-  <script src="js/xlsx-oqi.js?v=0.36.0"></script>
-  <script src="js/import-sof.js?v=0.36.0"></script>
-  <script src="js/sinxron-sof.js?v=0.36.0"></script>
-  <script src="js/data.js?v=0.36.0"></script>
-  <script src="js/sigdir.js?v=0.36.0"></script>
-  <script src="js/diagramma.js?v=0.36.0"></script>
-  <script src="js/pin.js?v=0.36.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.36.0"></script>
-  <script src="js/kirish.js?v=0.36.0"></script>
-  <script src="js/yuklash.js?v=0.36.0"></script>
-  <script src="js/salom.js?v=0.36.0"></script>
-  <script src="js/sinxron.js?v=0.36.0"></script>
-  <script src="js/pwa.js?v=0.36.0"></script>
-  <script src="js/yordamchi-sof.js?v=0.36.0"></script>
-  <script src="js/yordamchi-karta.js?v=0.36.0"></script>
-  <script src="js/yordamchi.js?v=0.36.0"></script>
-  <script src="js/gap-sof.js?v=0.36.0"></script>
-  <script src="js/gap.js?v=0.36.0"></script>
+  <script src="js/ilova.js?v=0.36.1"></script>
+  <script src="js/tema.js?v=0.36.1"></script>
+  <script src="js/ikonlar.js?v=0.36.1"></script>
+  <script src="js/belgilar.js?v=0.36.1"></script>
+  <script src="js/calc.js?v=0.36.1"></script>
+  <script src="js/xlsx.js?v=0.36.1"></script>
+  <script src="js/xlsx-oqi.js?v=0.36.1"></script>
+  <script src="js/import-sof.js?v=0.36.1"></script>
+  <script src="js/sinxron-sof.js?v=0.36.1"></script>
+  <script src="js/data.js?v=0.36.1"></script>
+  <script src="js/sigdir.js?v=0.36.1"></script>
+  <script src="js/diagramma.js?v=0.36.1"></script>
+  <script src="js/pin.js?v=0.36.1"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.36.1"></script>
+  <script src="js/kirish.js?v=0.36.1"></script>
+  <script src="js/yuklash.js?v=0.36.1"></script>
+  <script src="js/salom.js?v=0.36.1"></script>
+  <script src="js/sinxron.js?v=0.36.1"></script>
+  <script src="js/pwa.js?v=0.36.1"></script>
+  <script src="js/yordamchi-sof.js?v=0.36.1"></script>
+  <script src="js/yordamchi-karta.js?v=0.36.1"></script>
+  <script src="js/yordamchi.js?v=0.36.1"></script>
+  <script src="js/gap-sof.js?v=0.36.1"></script>
+  <script src="js/gap.js?v=0.36.1"></script>
   <script>
     (function () {
       var testlar = [];
@@ -2197,7 +2197,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.36.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.36.1', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -4398,7 +4398,7 @@ function xfix(opts) {
           .then(function (n) { teng(n.ok, true, n.xato); teng(Sinxron.holat().tur, 'tayyor'); teng(Sinxron.holat().xato, ''); teng((Sinxron.holat().rad || []).length, 0); teng(Sinxron.holat().soni, 0); teng(Object.keys(S.jadval.yozuvlar).some(function (id) { return S.jadval.yozuvlar[id].summa === 777; }), true); return sxNavbat(); })
           .then(function (n) { teng(n, 0); S.rad = null; });
       });
-      // ---- 0.36.0: yangi dizayn ----
+      // ---- 0.36.1: yangi dizayn ----
       function sigElement(matn, kenglik, qiymat, plyus) {
         var quti = document.createElement('div'); quti.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + kenglik + 'px';
         var e = document.createElement('div'); e.className = 'sig'; e.style.cssText = 'display:block;white-space:nowrap;overflow:hidden;font:700 20px sans-serif'; e.textContent = matn;
@@ -4447,7 +4447,7 @@ function xfix(opts) {
           teng(/\.belgi-katak \{[^}]*border-radius: 32%/.test(c), true, 'ikon katagi'); teng(/\.sticky-bosh \.oy-yorliqlar::-webkit-scrollbar \{ display: none/.test(c) && /scrollbar-width: none/.test(c), true, 'oylar qatori siljitish chizig\'i yashirin'); teng(/\.qarz-tanlov-tugma\[aria-pressed="true"\]/.test(c), true);
         });
       });
-      // ---- 0.36.0: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
+      // ---- 0.36.1: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
       var ISTALGAN_IKONLAR = 'shopping-cart tools-kitchen-2 coffee bread apple pizza cup cake bus car gas-station taxi train plane bike car-crash home home-2 key bulb droplet flame wifi device-mobile device-laptop tool pill stethoscope heartbeat tooth scissors brush barbell bath school book book-2 certificate baby-carriage baby-bottle mood-kid paw shirt shoe shopping-bag movie device-gamepad-2 music beach gift confetti heart-handshake building-mosque heart package truck-delivery building-store wallet cash coin briefcase trending-up arrow-back-up award building-bank credit-card receipt report-money piggy-bank arrows-exchange repeat shield-check dots help-circle pencil tag percentage meat robot users users-group user chart-line signature file-text menu-2 history search filter'.split(' ');
       var ALMASHTIRILGAN = { 'taxi': 'car-suv', 'tooth': 'dental', 'piggy-bank': 'moneybag' };   // Tabler da yo'q nomlar: yaqin ma'noli ikon
       test('Ikonlar (Tabler): so\'ralgan hamma ikon lokal faylda bor (3 tasi yaqin ma\'noli bilan almashtirilgan), yo\'llar to\'g\'ri, guruhlar 10 ta, takror yo\'q', function () {
@@ -4509,7 +4509,7 @@ function xfix(opts) {
         teng(Belgilar.bormi('car-suv') && Belgilar.bormi('oziq') && !Belgilar.bormi('yoq-kalit'), true);
         Belgilar.standart.forEach(function (x) { teng(Ikonlar.bormi(x.belgi) && Ikonlar.RANGLAR.concat(['#6A4CE0', '#E0356B', '#3F6FE0', '#E08A00', '#5C6BC0', '#1C9AE0', '#12B76A']).indexOf(x.rang) >= 0, true, x.nom); });
       });
-      sxSinov('0.36.0: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
+      sxSinov('0.36.1: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
         var kid = Calc.uuidYarat(), kat = { id: kid, yaratilgan: new Date().toISOString(), nom: 'Taksi', tur: 'xarajat', rang: '#F5A300', belgi: 'car-suv', arxivlangan: false };
         return sxMalumot(2).then(function () { return Sinxron.birinchi('yuklash'); }).then(function (n) { teng(n.ok, true, n.xato); return Data.saqlash('kategoriyalar', kat); })
           .then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) { teng(n.ok, true, n.xato); var r = S.jadval.kategoriyalar[kid]; teng(r.belgi, 'car-suv'); teng(r.rang, '#F5A300'); teng(r.nom, 'Taksi');
@@ -5232,6 +5232,35 @@ function xfix(opts) {
         teng(GapSof.turAlmashtir(GapSof.qarzAmalAlmashtir(q, 'qaytarildi'), 'otkazma', m).qarzAmal, 'qaytarildi'); teng(GapSof.turAlmashtir(q, 'xarajat', m).kategoriya, '', 'qarzdan qaytganda kategoriya bo\'sh');
         var k3 = GapSof.kartaYasash(GAP_Y({ tur: 'daromad', kategoriya: 'Oylik' }), m, GAP_BUGUN); teng(GapSof.turAlmashtir(k3, 'xarajat', m).kategoriya, '');
         k.xatolar = { summa: 'Kiriting' }; teng(JSON.stringify(GapSof.turAlmashtir(k, 'daromad', m).xatolar), '{}'); teng(JSON.stringify(k.xatolar), '{"summa":"Kiriting"}', 'asl karta o\'zgarmaydi');
+      });
+      test('GapSof soat maydoni (30-band): standart soat, bo\'sh soat eskicha, kiritilgan soat saqlanadi, noto\'g\'ri soat va kelajak rad etiladi', function () {
+        var m = gapM(), K = function (o, soat) { return GapSof.kartaYasash(GAP_Y(o), m, GAP_BUGUN, { soat: soat }); };
+        teng(K({}, '12:30').vaqt, '12:30', 'standart soat — hozirgi'); teng(K({}).vaqt, '', 'soat berilmasa bo\'sh'); teng(K({}, '25:99').vaqt, '', 'yaroqsiz standart soat tashlanadi');
+        var bugun = K({ sana: GAP_BUGUN }, '12:30'); bugun.vaqt = '09:05';
+        teng(GapSof.saqlashNatijasi(bugun, m, GAP_HOZIR).yozuv.vaqt, '09:05', 'kiritilgan soat saqlanadi');
+        bugun.vaqt = ''; teng(GapSof.saqlashNatijasi(bugun, m, GAP_HOZIR).yozuv.vaqt, '12:30', 'bo\'sh soat, sana bugun: hozirgi soat (eskicha)');
+        var o = K({}, ''); teng(GapSof.saqlashNatijasi(o, m, GAP_HOZIR).yozuv.vaqt, '00:00', 'bo\'sh soat, boshqa sana: 00:00 (eskicha)');
+        o.vaqt = '18:45'; teng(GapSof.saqlashNatijasi(o, m, GAP_HOZIR).yozuv.vaqt, '18:45', 'boshqa sanada ham kiritilgan soat');
+        bugun.vaqt = '12:31'; var r = GapSof.saqlashNatijasi(bugun, m, GAP_HOZIR); teng(!!r.xatolar && !!r.xatolar.sana, true, 'kelajak soat rad etiladi'); teng(r.yozuv, undefined);
+        bugun.vaqt = 'abc'; teng(GapSof.majburiyXatolar(bugun, m).vaqt, 'Soatni to\'g\'ri kiriting');
+        var q = K({ tur: 'qarz_berdim', shaxs: 'Ali', sana: GAP_BUGUN }, '12:30'); q.vaqt = '08:00'; teng(GapSof.saqlashNatijasi(q, m, GAP_HOZIR).qarz.vaqt, '08:00', 'qarzda ham');
+        teng(GapSof.turAlmashtir(K({}, '12:30'), 'daromad', m).vaqt, '12:30', 'tur almashsa soat saqlanadi');
+      });
+      test('GapSof oxirgi ishlatilgan hisob (30-band): hisob bo\'sh bo\'lsa oxirgisi, model topgani ustun, o\'chirilgan bo\'lsa Tanlang, tur bo\'yicha alohida', function () {
+        var m = gapM(), ox = { xarajat: { hisob: 'h1' }, daromad: { hisob: 'h3' }, qarz: { hisob: 'h4' }, otkazma: { hisob: 'h2', hisob2: 'h1' } };
+        var K = function (o) { return GapSof.kartaYasash(GAP_Y(o), m, GAP_BUGUN, { oxirgi: ox }); };
+        teng(K({ hisob: null }).hisob, 'h1', 'xarajat: oxirgi hisob'); teng(K({ hisob: 'Karta' }).hisob, 'h2', 'model topgan hisob ustun');
+        teng(K({ tur: 'daromad', hisob: null, kategoriya: 'Oylik' }).hisob, 'h3', 'daromad alohida eslab qolinadi');
+        teng(K({ tur: 'qarz_berdim', hisob: null, shaxs: 'Ali' }).hisob, '', 'arxivlangan (mavjud emas) hisob: Tanlang');
+        var o = K({ tur: 'otkazma', hisob: null, hisob2: null }); teng(o.hisob + '|' + o.hisob2, 'h2|h1', 'o\'tkazma: ikkala hisob');
+        teng(K({ tur: 'otkazma', hisob: 'Naqd pul', hisob2: null }).hisob2, '', 'ikkinchi hisob birinchisiga teng bo\'lmaydi');
+        teng(GapSof.kartaYasash(GAP_Y({ hisob: null }), m, GAP_BUGUN).hisob, '', 'oxirgi berilmasa bo\'sh');
+        teng(GapSof.kartaYasash(GAP_Y({ hisob: null }), m, GAP_BUGUN, { oxirgi: { xarajat: { hisob: 'yoq' } } }).hisob, '', 'noma\'lum id: Tanlang');
+        teng(GapSof.kartaYasash(GAP_Y({ hisob: null }), m, GAP_BUGUN, { oxirgi: 'xato' }).hisob, '', 'buzuq qiymat xato bermaydi');
+        teng(JSON.stringify(GapSof.majburiyXatolar(K({ hisob: null }), m)), '{}', 'oldindan tanlangan hisob majburiy tekshiruvdan o\'tadi');
+        var t = GapSof.turAlmashtir(K({ hisob: null, tur: 'qarz_berdim', shaxs: 'Ali' }), 'daromad', m, ox); teng(t.hisob, 'h3', 'tur almashganda bo\'sh hisob yangi tur oxirgisi bilan');
+        var y = GapSof.oxirgiYangila({ xarajat: { hisob: 'h1' } }, { tur: 'otkazma', hisob: 'h2', hisob2: 'h3' });
+        teng(JSON.stringify(y), '{"xarajat":{"hisob":"h1"},"otkazma":{"hisob":"h2","hisob2":"h3"}}', 'saqlangandan keyin yangilanadi'); teng(JSON.stringify(GapSof.oxirgiYangila(null, { tur: 'daromad', hisob: 'h1' })), '{"daromad":{"hisob":"h1"}}');
       });
       test('GapSof.saqlashNatijasi: yozuv — Calc.yozuvniTayyorlash bilan bir xil; qarz — Calc.qarzniTekshir; qaytarish — eng eski ochiq qarzga to\'lov; xatolar maydonlarga', function () {
         var m = gapM(), K = function (o) { return GapSof.kartaYasash(GAP_Y(o), m, GAP_BUGUN); };

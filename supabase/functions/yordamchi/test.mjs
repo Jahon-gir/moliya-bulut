@@ -42,6 +42,11 @@ function tarmoq(holat = {}) {
       if (holat.aiHolat) return J({}, holat.aiHolat);
       return J({ content: [{ type: 'text', text: holat.aiMatn }] });
     }
+    if (url.startsWith('https://generativelanguage.googleapis.com/')) {
+      if (holat.geminiTarmoq) throw new Error("tarmoq yo'q");
+      if (holat.geminiHolat) return J({ error: { message: 'x' } }, holat.geminiHolat);
+      return J(holat.geminiJavob || { candidates: [{ content: { parts: [{ text: holat.geminiMatn }] } }] });
+    }
     throw new Error('Kutilmagan manzil: ' + url);
   };
   return fn;
@@ -364,7 +369,7 @@ test('xato javoblari: faqat belgilangan kodlar, o\'zbekcha sabab bilan', async (
     chaqir(REJA(), { holat: { aiHolat: 500 } }), chaqir(JAVOB(), { holat: { aiMatn: JSON.stringify({ x: 1 }) } }), chaqir(JAVOB(), { holat: { aiMatn: AIJ('999') } })];
   for (const { j } of await Promise.all(hs)) { assert.ok(M.XATO_KODLARI.includes(j.xato.kod)); assert.ok(j.xato.sabab.length > 5); kodlar.add(j.xato.kod); }
   assert.deepEqual([...kodlar].sort(), ['AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN']);
-  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'NETWORK']);
+  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_HAJM', 'AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'NETWORK']);
 });
 
 // ---------------- fayl xususiyatlari (repo ochiq) ----------------
@@ -647,7 +652,7 @@ test('yozuv rejimida ham: kirish, ruxsat, kunlik limit (1 ta so\'rov), CORS', as
   const x = await yoz(YOZUV(), { jwt: null, origin: 'https://jahon-gir.github.io', holat: { oz } }); assert.equal(x.r.headers.get('Access-Control-Allow-Origin'), 'https://jahon-gir.github.io');
 });
 test('yozuv: eski reja/javob rejimlari o\'zgarmagan (kodlar to\'plami, savol maydoni shart)', async () => {
-  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'NETWORK']);
+  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_HAJM', 'AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'NETWORK']);
   const { r, j } = await chaqir({ rejim: 'reja', gap: 'salom', bugun: '2026-10-13', kategoriyalar: [], hisoblar: [] }, { holat: { aiMatn: PLAN(SOROV) } });
   assert.equal(r.status, 400); assert.equal(j.xato.kod, 'AI_KIRISH', 'reja rejimi hanuz "savol" talab qiladi');
 });
@@ -668,4 +673,62 @@ test('repo: model-server/ va hujjatlarda haqiqiy manzil, kalit, email yo\'q (faq
     assert.equal(/\bMODEL_KALIT\s*=\s*"[^"<]/.test(t), false, f);
   }
   assert.equal(/\bconsole\./.test(readFileSync(join(BU, 'index.ts'), 'utf8').replace(/\/\/[^\n]*/g, '')), false);
+});
+
+// ---------------- ovoz rejimi (31-band) ----------------
+const AUDIO = (bayt = 1000, o = {}) => ({ rejim: 'ovoz', audio: Buffer.alloc(bayt, 7).toString('base64'), mime: 'audio/webm;codecs=opus', ...o });
+const GEMINI = (h) => h.chaqiruvlar.filter((c) => c.url.startsWith('https://generativelanguage.googleapis.com/'));
+test('ovoz: audio Gemini ga ketadi (kalit sarlavhada, URL da emas; prompt, mime, standart model), javob { ok, matn }', async () => {
+  const { r, j, holat } = await chaqir(AUDIO(), { holat: { geminiMatn: "  taksiga   o'n besh ming  " }, env: { GEMINI_API_KEY: 'gk-sinov-123' } });
+  assert.equal(r.status, 200); assert.deepEqual(j, { ok: true, matn: "taksiga o'n besh ming" });
+  const g = GEMINI(holat); assert.equal(g.length, 1);
+  assert.equal(g[0].url, 'https://generativelanguage.googleapis.com/v1beta/models/' + M.GEMINI_MODEL_SUKUT + ':generateContent');
+  assert.equal(g[0].url.indexOf('gk-sinov'), -1, 'kalit URL da yo\'q'); assert.equal(g[0].init.headers['x-goog-api-key'], 'gk-sinov-123');
+  const t = JSON.parse(g[0].init.body), q = t.contents[0].parts;
+  assert.equal(q[0].text, M.OVOZ_PROMPT); assert.match(q[0].text, /so'zma-so'z lotin yozuvida/);
+  assert.equal(q[1].inline_data.mime_type, 'audio/webm', 'codecs qismi olib tashlanadi'); assert.ok(q[1].inline_data.data.length > 100);
+  assert.equal(JSON.stringify(j).indexOf('gk-sinov'), -1);
+});
+test("ovoz: GEMINI_MODEL sozlamasi ustun; noto'g'ri nom rad etiladi; GEMINI_API_KEY yo'q bo'lsa AI_PROVAYDER (Gemini chaqirilmaydi)", async () => {
+  let x = await chaqir(AUDIO(), { holat: { geminiMatn: 'a' }, env: { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'gemini-sinov' } });
+  assert.ok(GEMINI(x.holat)[0].url.includes('/models/gemini-sinov:'));
+  x = await chaqir(AUDIO(), { holat: { geminiMatn: 'a' }, env: { GEMINI_API_KEY: 'k', GEMINI_MODEL: '../x?y=1' } }); assert.equal(x.j.xato.kod, 'AI_PROVAYDER'); assert.equal(GEMINI(x.holat).length, 0);
+  x = await chaqir(AUDIO(), { holat: { geminiMatn: 'a' } }); assert.equal(x.r.status, 502); assert.equal(x.j.xato.kod, 'AI_PROVAYDER'); assert.equal(GEMINI(x.holat).length, 0);
+});
+test("ovoz: hajm — 2 MB gacha o'tadi, undan oshsa AI_HAJM (413), limit sanalmaydi va Gemini chaqirilmaydi", async () => {
+  const env = { GEMINI_API_KEY: 'k' };
+  let x = await chaqir(AUDIO(M.OVOZ_MAX_BAYT), { holat: { geminiMatn: 'ok' }, env }); assert.equal(x.j.ok, true);
+  x = await chaqir(AUDIO(M.OVOZ_MAX_BAYT + 1), { holat: { geminiMatn: 'ok' }, env }); assert.equal(x.r.status, 413); assert.equal(x.j.xato.kod, 'AI_HAJM');
+  assert.equal(GEMINI(x.holat).length, 0); assert.equal(x.holat.hisob.n, 0, 'limit sanalmadi');
+  x = await chaqir(AUDIO(M.OVOZ_MAX_BAYT * 2), { holat: { geminiMatn: 'ok' }, env }); assert.equal(x.j.xato.kod, 'AI_HAJM', 'juda katta tana');
+});
+test("ovoz: kirish tekshiruvi — mime, base64, bo'sh audio -> 400 AI_KIRISH", async () => {
+  const env = { GEMINI_API_KEY: 'k' };
+  for (const [i, t] of [AUDIO(10, { mime: 'text/plain' }), AUDIO(10, { mime: undefined }), AUDIO(10, { audio: '' }), AUDIO(10, { audio: 'abc' }), AUDIO(10, { audio: '!!!!' }), AUDIO(10, { audio: 5 })].entries()) {
+    const x = await chaqir(t, { holat: { geminiMatn: 'a' }, env }); assert.equal(x.r.status, 400, '#' + i); assert.equal(x.j.xato.kod, 'AI_KIRISH', '#' + i); assert.equal(GEMINI(x.holat).length, 0);
+  }
+  for (const m of ['audio/webm', 'audio/mp4', 'AUDIO/MP4;codecs=mp4a.40.2', 'audio/ogg;codecs=opus']) assert.ok(M.ovozMime(m), m);
+});
+test("ovoz: ruxsat va limit boshqa rejimlar bilan bir xil (JWT yo'q 401, ruxsatsiz email 403, limit 429); ovoz so'rovi ham limitga sanaladi", async () => {
+  const env = { GEMINI_API_KEY: 'k' };
+  let x = await chaqir(AUDIO(), { holat: { geminiMatn: 'a' }, env, jwt: null }); assert.equal(x.r.status, 401); assert.equal(GEMINI(x.holat).length, 0);
+  x = await chaqir(AUDIO(), { holat: { geminiMatn: 'a', email: 'begona@example.invalid' }, env }); assert.equal(x.r.status, 403); assert.equal(x.j.xato.kod, 'AI_RUXSAT'); assert.equal(GEMINI(x.holat).length, 0); assert.equal(x.holat.hisob.n, 0);
+  x = await chaqir(AUDIO(), { holat: { geminiMatn: 'a' }, env }); assert.equal(x.holat.hisob.n, 1, "ovoz so'rovi limitga 1 ta");
+  x = await chaqir(AUDIO(), { holat: { geminiMatn: 'a', limitBoshi: M.KUNLIK_LIMIT + 1 }, env }); assert.equal(x.r.status, 429); assert.equal(x.j.xato.kod, 'AI_LIMIT'); assert.equal(GEMINI(x.holat).length, 0);
+});
+test('ovoz: gap eshitilmasa { ok:false, sabab:"ovoz_yoq" }; Gemini xatosi AI_PROVAYDER, tarmoq xatosi NETWORK; matn qirqiladi', async () => {
+  const env = { GEMINI_API_KEY: 'k' };
+  for (const h of [{ geminiMatn: '   ' }, { geminiJavob: { candidates: [] } }, { geminiJavob: { promptFeedback: { blockReason: 'X' } } }]) {
+    const x = await chaqir(AUDIO(), { holat: h, env }); assert.equal(x.r.status, 200); assert.deepEqual(x.j, { ok: false, sabab: 'ovoz_yoq' });
+  }
+  let x = await chaqir(AUDIO(), { holat: { geminiHolat: 500 }, env }); assert.equal(x.r.status, 502); assert.equal(x.j.xato.kod, 'AI_PROVAYDER');
+  x = await chaqir(AUDIO(), { holat: { geminiTarmoq: true }, env }); assert.equal(x.r.status, 503); assert.equal(x.j.xato.kod, 'NETWORK');
+  x = await chaqir(AUDIO(), { holat: { geminiMatn: 'x'.repeat(2000) }, env }); assert.equal(x.j.matn.length <= 600, true);
+});
+test("ovoz: maxfiylik — kalit va audio javobda/xatoda yo'q, kodda kalit qiymati yo'q, README da GEMINI_ sozlamalari", async () => {
+  const x = await chaqir(AUDIO(), { holat: { geminiHolat: 500 }, env: { GEMINI_API_KEY: 'gk-yashirin-777' } });
+  const matn = JSON.stringify(x.j); assert.equal(matn.includes('gk-yashirin'), false); assert.equal(matn.includes(AUDIO().audio.slice(0, 40)), false);
+  const kod = readFileSync(join(BU, 'index.ts'), 'utf8');
+  assert.equal(/GEMINI_API_KEY\s*[:=]\s*["'][A-Za-z0-9]{8,}/.test(kod), false);
+  const readme = readFileSync(join(BU, '..', '..', 'README.md'), 'utf8'); assert.match(readme, /GEMINI_API_KEY/); assert.match(readme, /GEMINI_MODEL/);
 });

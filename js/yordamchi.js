@@ -68,6 +68,7 @@ var Yordamchi = (function () {
       }, function (e) { if (e && e.kod) throw e; throw xato('NETWORK'); }).then(function (r) {
         if (r.holat === 401) { if (!qayta) return tokenBilan(true); throw xato('AUTH_EXPIRED', 401); }
         if (r.ok && r.j && r.j.ok === true) return r.j;
+        if (r.ok && r.j && r.j.ok === false && r.j.sabab === 'ovoz_yoq') throw xato('OVOZ_YOQ', r.holat);   // ovoz rejimi: gap eshitilmadi
         var kod = r.j && r.j.xato && typeof r.j.xato.kod === 'string' ? r.j.xato.kod : '';
         if (r.holat === 403 && kod === 'AI_RUXSAT') { yopiqQil(); throw xato('AI_RUXSAT', 403); }
         throw xato(kod || ('HTTP_' + r.holat), r.holat);

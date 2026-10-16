@@ -15,7 +15,9 @@ var Gap = (function () {
     bugun: function () { return Calc.bugun(); },
     hozir: function () { return Calc.hozir(); },
     tasdiq: function (m) { return window.confirm(m); },
-    vaqt: GapSof.KUTISH_MS
+    vaqt: GapSof.KUTISH_MS,
+    yozgich: null,                       // mikrofon (31-band); null bo'lsa haqiqiy MediaRecorder (pastda), tests.html da almashtiriladi
+    ovozMax: GapSof.OVOZ_MAX_MS          // yozish chegarasi (ms)
   };
   function sozla(o) { Object.keys(o || {}).forEach(function (k) { dep[k] = o[k]; }); }
 
@@ -55,6 +57,141 @@ var Gap = (function () {
   function saqlanmaganBor() { return !!holat && holat.bosqich === 'karta' && holat.indeks < holat.kartalar.length; }
   function chiqsaBoladimi() { return !saqlanmaganBor() || dep.tasdiq('Saqlanmagan yozuvlar bor. Chiqasizmi?'); }
 
+  // ---- Mikrofon (31-band): MediaRecorder; audio faqat xotirada, serverga base64 bo'lib ketadi va hech qayerda saqlanmaydi ----
+  var MIK_YOL = ['M9 2m0 3a3 3 0 0 1 3 -3h0a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3h0a3 3 0 0 1 -3 -3z', 'M5 10a7 7 0 0 0 14 0', 'M12 17v4', 'M8 21h8'];
+  var STOP_YOL = 'M7 7h10v10h-10z';
+  function mikSvg(yol) {
+    var s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false');
+    (Array.isArray(yol) ? yol : [yol]).forEach(function (d) {
+      var p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); p.setAttribute('fill', Array.isArray(yol) ? 'none' : 'currentColor'); p.setAttribute('stroke', 'currentColor');
+      p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); s.appendChild(p);
+    });
+    return s;
+  }
+  function blobBase64(blob) {
+    return new Promise(function (ok, no) {
+      var r = new FileReader();
+      r.onload = function () { var m = String(r.result).match(/^data:[^,]*,(.*)$/); m ? ok(m[1]) : no(new Error('BASE64')); };
+      r.onerror = function () { no(new Error('BASE64')); };
+      r.readAsDataURL(blob);
+    });
+  }
+  function kodXato(kod) { var x = new Error(kod); x.kod = kod; return x; }
+  // Haqiqiy yozgich: { bor(), boshla() -> Promise<{ toxtat() -> Promise<{audio, mime}|null>, bekor() }> }
+  var haqiqiyYozgich = {
+    bor: function () { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && typeof window.MediaRecorder !== 'undefined'); },
+    boshla: function () {
+      return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (oqim) {
+        var bolaklar = [], rec, mime;
+        function qoyib() { try { oqim.getTracks().forEach(function (t) { t.stop(); }); } catch (x) { /* ahamiyatsiz */ } }   // mikrofon indikatori o'chadi
+        try {
+          mime = GapSof.ovozFormatiTanla(function (m) { return MediaRecorder.isTypeSupported(m); });
+          rec = mime ? new MediaRecorder(oqim, { mimeType: mime }) : new MediaRecorder(oqim);
+        } catch (x) { qoyib(); throw kodXato('MIK_QOLLANMAYDI'); }
+        rec.addEventListener('dataavailable', function (h) { if (h.data && h.data.size) bolaklar.push(h.data); });
+        rec.start();
+        return {
+          toxtat: function () {
+            return new Promise(function (ok, no) {
+              rec.addEventListener('stop', function () {
+                qoyib();
+                var tur = (rec.mimeType || mime || 'audio/webm'), blob = new Blob(bolaklar, { type: tur });
+                bolaklar = [];
+                if (blob.size < GapSof.OVOZ_MIN_BAYT) return ok(null);
+                if (blob.size > GapSof.OVOZ_MAX_BAYT) return no(kodXato('AI_HAJM'));
+                blobBase64(blob).then(function (a) { ok({ audio: a, mime: tur.split(';')[0] }); }, no);
+              });
+              try { rec.state !== 'inactive' ? rec.stop() : rec.dispatchEvent(new Event('stop')); } catch (x) { qoyib(); no(kodXato('MIK_BAND')); }
+            });
+          },
+          bekor: function () { bolaklar = []; try { if (rec.state !== 'inactive') { rec.stop(); } } catch (x) { /* ahamiyatsiz */ } qoyib(); }
+        };
+      }, function (err) { throw kodXato(GapSof.mikXatoKodi(err)); });
+    }
+  };
+  function yozgich() { return dep.yozgich || haqiqiyYozgich; }
+
+  // holat.mik: { bosqich: 'bosh' | 'ulanmoqda' | 'yozilmoqda' | 'tinglanmoqda', soniya }. Tutqich va taymer faqat xotirada.
+  var mikTutqich = null, mikTaymer = null;
+  function mikHolat() { return holat && holat.mik ? holat.mik : null; }
+  function mikTaymerToxtat() { if (mikTaymer) { clearInterval(mikTaymer); mikTaymer = null; } }
+  // Ekran yopilsa yoki karta bosqichiga o'tilsa yozuv bekor qilinadi, mikrofon qo'yib yuboriladi
+  function mikBekor() {
+    mikTaymerToxtat();
+    var t = mikTutqich; mikTutqich = null;
+    if (t) { try { t.bekor(); } catch (x) { /* ahamiyatsiz */ } }
+    if (holat && holat.mik) { holat.mik.bosqich = 'bosh'; holat.mik.soniya = 0; }
+  }
+  function mikYangila() {
+    var m = mikHolat(), b = document.getElementById('gap-mik'), h = document.getElementById('gap-mik-holat');
+    if (!m || !b) return;
+    var yoz = m.bosqich === 'yozilmoqda';
+    b.classList.toggle('yozilmoqda', yoz);
+    b.classList.toggle('band', m.bosqich === 'tinglanmoqda' || m.bosqich === 'ulanmoqda');
+    b.textContent = '';
+    b.appendChild(yoz ? mikSvg(STOP_YOL) : mikSvg(MIK_YOL));
+    b.setAttribute('aria-label', yoz ? 'Yozishni to\'xtatish' : 'Ovoz bilan yozish');
+    b.setAttribute('aria-pressed', String(yoz));
+    b.setAttribute('aria-busy', m.bosqich === 'tinglanmoqda' ? 'true' : 'false');
+    h.textContent = '';
+    h.classList.toggle('yozilmoqda', yoz);
+    if (yoz) { h.appendChild(e('span', undefined, 'gp-nuqta')); h.appendChild(e('span', GapSof.sekundMatni(m.soniya) + ' / ' + GapSof.sekundMatni(dep.ovozMax / 1000))); }
+    else if (m.bosqich === 'tinglanmoqda') { var a = e('span', undefined, 'gp-aylana'); a.setAttribute('aria-hidden', 'true'); h.appendChild(a); h.appendChild(e('span', 'Tinglanyapti…')); }
+    else if (m.bosqich === 'ulanmoqda') h.appendChild(e('span', 'Mikrofon ochilmoqda…'));
+  }
+  function mikXato(kod) { xatoKorsat(GapSof.ovozXatoMatni(kod)); }
+  function mikBosildi() {
+    var m = mikHolat();
+    if (!m || holat.band) return;
+    if (m.bosqich === 'yozilmoqda') { mikToxtat(); return; }
+    if (m.bosqich !== 'bosh') return;      // ulanmoqda yoki tinglanmoqda: ikki marta bosishdan himoya
+    if (!dep.onlayn()) { mikXato('NETWORK_OFFLINE'); return; }
+    if (!yozgich().bor()) { mikXato('MIK_QOLLANMAYDI'); return; }
+    var sessiya = holat.sessiya, h = holat;
+    holat.xato = ''; var x = document.getElementById('gap-xato'), mt = document.getElementById('gap-matn'); if (x) x.textContent = ''; if (mt) mt.classList.remove('xatoli');
+    m.bosqich = 'ulanmoqda'; m.soniya = 0; mikYangila();
+    yozgich().boshla().then(function (tutqich) {
+      if (!holat || holat.sessiya !== sessiya) { try { tutqich.bekor(); } catch (z) { /* ahamiyatsiz */ } return; }
+      mikTutqich = tutqich; m.bosqich = 'yozilmoqda'; m.soniya = 0;
+      var boshi = Date.now();
+      mikTaymer = setInterval(function () {
+        if (!holat || holat.sessiya !== sessiya || m.bosqich !== 'yozilmoqda') { mikTaymerToxtat(); return; }
+        var o = Date.now() - boshi; m.soniya = Math.min(o, dep.ovozMax) / 1000; mikYangila();
+        if (o >= dep.ovozMax) mikToxtat();   // 30 soniyadan keyin o'zi to'xtaydi
+      }, 200);
+      mikYangila();
+    }, function (err) {
+      if (!holat || holat.sessiya !== sessiya) return;
+      m.bosqich = 'bosh'; mikYangila();
+      mikXato((err && err.kod) || 'MIK_BAND');
+    });
+  }
+  function mikToxtat() {
+    var m = mikHolat(), t = mikTutqich;
+    if (!m || m.bosqich !== 'yozilmoqda' || !t) return;
+    var sessiya = holat.sessiya, h = holat;
+    mikTaymerToxtat(); mikTutqich = null;
+    m.bosqich = 'tinglanmoqda'; mikYangila();
+    t.toxtat().then(function (ovoz) {
+      if (!holat || holat.sessiya !== sessiya) return;
+      if (!ovoz) return Promise.reject(kodXato('OVOZ_YOQ'));
+      if (!dep.onlayn()) return Promise.reject(kodXato('NETWORK_OFFLINE'));
+      return dep.chaqir({ rejim: 'ovoz', audio: ovoz.audio, mime: ovoz.mime }, dep.vaqt);   // audio shu yerda ketadi va yo'qoladi
+    }).then(function (j) {
+      if (!j || !holat || holat.sessiya !== sessiya) return;
+      m.bosqich = 'bosh'; mikYangila();
+      h.gap = GapSof.matnQosh(h.gap, j.matn);
+      var ta = document.getElementById('gap-matn');
+      if (ta) { ta.value = h.gap; ta.dispatchEvent(new Event('input')); ta.focus(); }   // matn tahrirlash uchun maydonga tushadi; yozuvga AYLANTIRILMAYDI
+    }).catch(function (err) {
+      if (!holat || holat.sessiya !== sessiya) return;
+      m.bosqich = 'bosh'; mikYangila();
+      var kod = (err && err.kod) || ('JS_' + String((err && err.name) || 'XATO').replace(/[^A-Za-z0-9]/g, '').toUpperCase());
+      if (kod === 'AI_RUXSAT' && dep.yopiqmi()) { yop(); if (ui.xabar) ui.xabar(dep.yopiqXabari()); Yordamchi.yangila(); return; }
+      mikXato(kod);
+    });
+  }
+
   // ---- Gap yozish bosqichi ----
   function yozishChiz() {
     var b = tanaEl;
@@ -74,9 +211,14 @@ var Gap = (function () {
     }
     ta.addEventListener('input', function () { holat.gap = ta.value; holat.xato = ''; xato.textContent = ''; ta.classList.remove('xatoli'); belgilar(); });
     if (holat.xato) ta.classList.add('xatoli');
-    quti.appendChild(belgi); quti.appendChild(ta); quti.appendChild(hisob); quti.appendChild(xato);
+    var qator = e('div', undefined, 'gp-matn-qator');
+    var mik = tugma('yo-doira gp-mik', 'Ovoz bilan yozish', mikBosildi); mik.id = 'gap-mik';
+    qator.appendChild(ta); qator.appendChild(mik);
+    var mikHolatEl = e('div', undefined, 'gp-mik-holat'); mikHolatEl.id = 'gap-mik-holat'; mikHolatEl.setAttribute('role', 'status'); mikHolatEl.setAttribute('aria-live', 'polite');
+    quti.appendChild(belgi); quti.appendChild(qator); quti.appendChild(mikHolatEl); quti.appendChild(hisob); quti.appendChild(xato);
     b.appendChild(quti);
     belgilar();
+    mikYangila();
 
     var misollar = e('div', undefined, 'chiplar gp-misollar');
     GapSof.MISOLLAR.forEach(function (m) {
@@ -114,6 +256,7 @@ var Gap = (function () {
 
   function yuborish() {
     if (!holat || holat.band) return;   // ikki marta yuborishdan himoya
+    if (holat.mik && holat.mik.bosqich !== 'bosh') { xatoKorsat(holat.mik.bosqich === 'yozilmoqda' ? 'Avval yozishni to\'xtating.' : 'Ovoz matnga aylanmoqda, biroz kuting.'); return; }
     var gap = String(holat.gap || '').replace(/\s+/g, ' ').trim();
     if (!gap) { xatoKorsat('Gap yozing'); return; }
     if (!dep.onlayn()) { xatoKorsat(GapSof.xatoMatni('NETWORK_OFFLINE')); return; }
@@ -133,7 +276,7 @@ var Gap = (function () {
       var m = ui.malumot(), bugun = dep.bugun();
       var qosh = { soat: dep.hozir().vaqt, oxirgi: oxirgiOl() };
       h.kartalar = royxat.map(function (y) { return GapSof.kartaYasash(y, m, bugun, qosh); });
-      h.indeks = 0; h.bosqich = 'karta';
+      h.indeks = 0; h.bosqich = 'karta'; mikBekor();
       chiz();
     }, function (err) {
       if (!holat || holat.sessiya !== sessiya) return;
@@ -332,7 +475,7 @@ var Gap = (function () {
 
   function ochish() {
     if (ekranEl || !ui.malumot) return;
-    holat = { bosqich: 'yozish', gap: '', xato: '', band: false, kartalar: [], indeks: 0, saqlangan: 0, sessiya: ++sessiyaSanagich };
+    holat = { bosqich: 'yozish', gap: '', xato: '', band: false, mik: { bosqich: 'bosh', soniya: 0 }, kartalar: [], indeks: 0, saqlangan: 0, sessiya: ++sessiyaSanagich };
     ekranEl = ekranYasash();
     document.body.appendChild(ekranEl);
     document.body.style.overflow = 'hidden';
@@ -347,6 +490,7 @@ var Gap = (function () {
   function yop(tarixdan) {
     if (!ekranEl) return;
     var n = holat ? holat.saqlangan : 0;
+    mikBekor();   // yozilayotgan ovoz bekor qilinadi, mikrofon qo'yib yuboriladi
     window.removeEventListener('popstate', orqagaBosildi);
     if (tarixBor) { tarixBor = false; if (!tarixdan && history.state && history.state.gap) { try { history.back(); } catch (x) { /* ahamiyatsiz */ } } }
     if (window.visualViewport) { window.visualViewport.removeEventListener('resize', oynaniMoslash); window.visualViewport.removeEventListener('scroll', oynaniMoslash); }

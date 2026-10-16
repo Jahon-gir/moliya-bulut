@@ -15,30 +15,30 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.36.1"></script>
-  <script src="js/tema.js?v=0.36.1"></script>
-  <script src="js/ikonlar.js?v=0.36.1"></script>
-  <script src="js/belgilar.js?v=0.36.1"></script>
-  <script src="js/calc.js?v=0.36.1"></script>
-  <script src="js/xlsx.js?v=0.36.1"></script>
-  <script src="js/xlsx-oqi.js?v=0.36.1"></script>
-  <script src="js/import-sof.js?v=0.36.1"></script>
-  <script src="js/sinxron-sof.js?v=0.36.1"></script>
-  <script src="js/data.js?v=0.36.1"></script>
-  <script src="js/sigdir.js?v=0.36.1"></script>
-  <script src="js/diagramma.js?v=0.36.1"></script>
-  <script src="js/pin.js?v=0.36.1"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.36.1"></script>
-  <script src="js/kirish.js?v=0.36.1"></script>
-  <script src="js/yuklash.js?v=0.36.1"></script>
-  <script src="js/salom.js?v=0.36.1"></script>
-  <script src="js/sinxron.js?v=0.36.1"></script>
-  <script src="js/pwa.js?v=0.36.1"></script>
-  <script src="js/yordamchi-sof.js?v=0.36.1"></script>
-  <script src="js/yordamchi-karta.js?v=0.36.1"></script>
-  <script src="js/yordamchi.js?v=0.36.1"></script>
-  <script src="js/gap-sof.js?v=0.36.1"></script>
-  <script src="js/gap.js?v=0.36.1"></script>
+  <script src="js/ilova.js?v=0.37.0"></script>
+  <script src="js/tema.js?v=0.37.0"></script>
+  <script src="js/ikonlar.js?v=0.37.0"></script>
+  <script src="js/belgilar.js?v=0.37.0"></script>
+  <script src="js/calc.js?v=0.37.0"></script>
+  <script src="js/xlsx.js?v=0.37.0"></script>
+  <script src="js/xlsx-oqi.js?v=0.37.0"></script>
+  <script src="js/import-sof.js?v=0.37.0"></script>
+  <script src="js/sinxron-sof.js?v=0.37.0"></script>
+  <script src="js/data.js?v=0.37.0"></script>
+  <script src="js/sigdir.js?v=0.37.0"></script>
+  <script src="js/diagramma.js?v=0.37.0"></script>
+  <script src="js/pin.js?v=0.37.0"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.37.0"></script>
+  <script src="js/kirish.js?v=0.37.0"></script>
+  <script src="js/yuklash.js?v=0.37.0"></script>
+  <script src="js/salom.js?v=0.37.0"></script>
+  <script src="js/sinxron.js?v=0.37.0"></script>
+  <script src="js/pwa.js?v=0.37.0"></script>
+  <script src="js/yordamchi-sof.js?v=0.37.0"></script>
+  <script src="js/yordamchi-karta.js?v=0.37.0"></script>
+  <script src="js/yordamchi.js?v=0.37.0"></script>
+  <script src="js/gap-sof.js?v=0.37.0"></script>
+  <script src="js/gap.js?v=0.37.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -2197,7 +2197,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.36.1', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.37.0', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -4398,7 +4398,7 @@ function xfix(opts) {
           .then(function (n) { teng(n.ok, true, n.xato); teng(Sinxron.holat().tur, 'tayyor'); teng(Sinxron.holat().xato, ''); teng((Sinxron.holat().rad || []).length, 0); teng(Sinxron.holat().soni, 0); teng(Object.keys(S.jadval.yozuvlar).some(function (id) { return S.jadval.yozuvlar[id].summa === 777; }), true); return sxNavbat(); })
           .then(function (n) { teng(n, 0); S.rad = null; });
       });
-      // ---- 0.36.1: yangi dizayn ----
+      // ---- 0.37.0: yangi dizayn ----
       function sigElement(matn, kenglik, qiymat, plyus) {
         var quti = document.createElement('div'); quti.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + kenglik + 'px';
         var e = document.createElement('div'); e.className = 'sig'; e.style.cssText = 'display:block;white-space:nowrap;overflow:hidden;font:700 20px sans-serif'; e.textContent = matn;
@@ -4447,7 +4447,7 @@ function xfix(opts) {
           teng(/\.belgi-katak \{[^}]*border-radius: 32%/.test(c), true, 'ikon katagi'); teng(/\.sticky-bosh \.oy-yorliqlar::-webkit-scrollbar \{ display: none/.test(c) && /scrollbar-width: none/.test(c), true, 'oylar qatori siljitish chizig\'i yashirin'); teng(/\.qarz-tanlov-tugma\[aria-pressed="true"\]/.test(c), true);
         });
       });
-      // ---- 0.36.1: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
+      // ---- 0.37.0: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
       var ISTALGAN_IKONLAR = 'shopping-cart tools-kitchen-2 coffee bread apple pizza cup cake bus car gas-station taxi train plane bike car-crash home home-2 key bulb droplet flame wifi device-mobile device-laptop tool pill stethoscope heartbeat tooth scissors brush barbell bath school book book-2 certificate baby-carriage baby-bottle mood-kid paw shirt shoe shopping-bag movie device-gamepad-2 music beach gift confetti heart-handshake building-mosque heart package truck-delivery building-store wallet cash coin briefcase trending-up arrow-back-up award building-bank credit-card receipt report-money piggy-bank arrows-exchange repeat shield-check dots help-circle pencil tag percentage meat robot users users-group user chart-line signature file-text menu-2 history search filter'.split(' ');
       var ALMASHTIRILGAN = { 'taxi': 'car-suv', 'tooth': 'dental', 'piggy-bank': 'moneybag' };   // Tabler da yo'q nomlar: yaqin ma'noli ikon
       test('Ikonlar (Tabler): so\'ralgan hamma ikon lokal faylda bor (3 tasi yaqin ma\'noli bilan almashtirilgan), yo\'llar to\'g\'ri, guruhlar 10 ta, takror yo\'q', function () {
@@ -4509,7 +4509,7 @@ function xfix(opts) {
         teng(Belgilar.bormi('car-suv') && Belgilar.bormi('oziq') && !Belgilar.bormi('yoq-kalit'), true);
         Belgilar.standart.forEach(function (x) { teng(Ikonlar.bormi(x.belgi) && Ikonlar.RANGLAR.concat(['#6A4CE0', '#E0356B', '#3F6FE0', '#E08A00', '#5C6BC0', '#1C9AE0', '#12B76A']).indexOf(x.rang) >= 0, true, x.nom); });
       });
-      sxSinov('0.36.1: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
+      sxSinov('0.37.0: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
         var kid = Calc.uuidYarat(), kat = { id: kid, yaratilgan: new Date().toISOString(), nom: 'Taksi', tur: 'xarajat', rang: '#F5A300', belgi: 'car-suv', arxivlangan: false };
         return sxMalumot(2).then(function () { return Sinxron.birinchi('yuklash'); }).then(function (n) { teng(n.ok, true, n.xato); return Data.saqlash('kategoriyalar', kat); })
           .then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) { teng(n.ok, true, n.xato); var r = S.jadval.kategoriyalar[kid]; teng(r.belgi, 'car-suv'); teng(r.rang, '#F5A300'); teng(r.nom, 'Taksi');
@@ -5262,6 +5262,93 @@ function xfix(opts) {
         var y = GapSof.oxirgiYangila({ xarajat: { hisob: 'h1' } }, { tur: 'otkazma', hisob: 'h2', hisob2: 'h3' });
         teng(JSON.stringify(y), '{"xarajat":{"hisob":"h1"},"otkazma":{"hisob":"h2","hisob2":"h3"}}', 'saqlangandan keyin yangilanadi'); teng(JSON.stringify(GapSof.oxirgiYangila(null, { tur: 'daromad', hisob: 'h1' })), '{"daromad":{"hisob":"h1"}}');
       });
+      test('GapSof mikrofon (31-band): format qurilmaga qarab (webm, mp4), sekundomer, xato matnlari, matn qo\'shish (ustiga yozilmaydi, 300 gacha)', function () {
+        teng(GapSof.ovozFormatiTanla(function (m) { return /webm/.test(m); }), 'audio/webm;codecs=opus', 'Chrome/Android');
+        teng(GapSof.ovozFormatiTanla(function (m) { return m === 'audio/mp4'; }), 'audio/mp4', 'iPhone (Safari)');
+        teng(GapSof.ovozFormatiTanla(function () { return false; }), '', 'hech biri: qurilma o\'zi tanlaydi'); teng(GapSof.ovozFormatiTanla(function () { throw new Error('x'); }), '');
+        teng(GapSof.sekundMatni(0) + '|' + GapSof.sekundMatni(7.9) + '|' + GapSof.sekundMatni(30) + '|' + GapSof.sekundMatni(75), '0:00|0:07|0:30|1:15'); teng(GapSof.OVOZ_MAX_MS, 30000);
+        teng(GapSof.mikXatoKodi({ name: 'NotAllowedError' }) + GapSof.mikXatoKodi({ name: 'NotFoundError' }) + GapSof.mikXatoKodi({ name: 'AbortError' }) + GapSof.mikXatoKodi(null), 'MIK_RUXSATMIK_YOQMIK_BANDMIK_BAND');
+        teng(/^Mikrofon ruxsati rad etildi/.test(GapSof.ovozXatoMatni('MIK_RUXSAT')), true); teng(GapSof.ovozXatoMatni('OVOZ_YOQ'), 'Ovoz eshitilmadi. Yana urinib ko\'ring.');
+        teng(/^Ovoz juda uzun/.test(GapSof.ovozXatoMatni('AI_HAJM')), true); teng(/^Bugungi limit tugadi/.test(GapSof.ovozXatoMatni('AI_LIMIT')), true, 'umumiy xatolar mavjud matn bilan'); teng(/^Serverga ulanib bo'lmadi/.test(GapSof.ovozXatoMatni('NETWORK')), true);
+        teng(GapSof.matnQosh('', ' taksiga   15 ming '), 'taksiga 15 ming'); teng(GapSof.matnQosh('non oldim ', 'sut ham'), 'non oldim sut ham'); teng(GapSof.matnQosh('abc', '   '), 'abc');
+        teng(GapSof.matnQosh('a'.repeat(295), 'b'.repeat(20)).length, 300);
+      });
+      function gapSoxtaYozgich(o) {
+        o = o || {};
+        var y = { boshlandi: 0, toxtatildi: 0, bekor: 0, qoyildi: false, ochiq: null };
+        y.bor = function () { return o.bor !== false; };
+        y.boshla = function () {
+          y.boshlandi++;
+          if (o.rad) return Promise.reject(gapXato(o.rad));
+          return new Promise(function (ok) { y.ochiq = function () { ok({ toxtat: function () { y.toxtatildi++; return o.ovoz === undefined ? Promise.resolve({ audio: 'QUJD', mime: 'audio/webm' }) : (o.ovoz instanceof Error ? Promise.reject(o.ovoz) : Promise.resolve(o.ovoz)); }, bekor: function () { y.bekor++; } }); }; if (!o.kech) y.ochiq(); });
+        };
+        return y;
+      }
+      function mikHolati() { return document.getElementById('gap-mik-holat').textContent; }
+      test('Gap mikrofon: tugma (aria-label), bosilsa yozish (to\'xtatish tugmasi, sekundomer), qayta bosilsa audio serverga (ovoz rejimi), matn maydonga TUSHADI va yozuvga aylantirilmaydi', function () {
+        var y = gapSoxtaYozgich(), s = gapQuru([{ ok: true, matn: 'taksiga o\'n besh ming' }]); Gap.sozla({ yozgich: y });
+        document.getElementById('gap-tugma').click();
+        var m = document.getElementById('gap-mik'); teng(m.getAttribute('aria-label'), 'Ovoz bilan yozish'); teng(m.getAttribute('aria-pressed'), 'false');
+        teng(document.getElementById('gap-matn').nextElementSibling === m || document.getElementById('gap-matn').parentNode === m.parentNode, true, 'maydon yonida');
+        gapYoz('non oldim'); m.click(); m.click();
+        return yoKut(function () { return m.getAttribute('aria-pressed') === 'true'; }).then(function () {
+          teng(y.boshlandi, 1, 'ikki marta bosish bitta yozuv'); teng(m.getAttribute('aria-label'), 'Yozishni to\'xtatish'); teng(m.classList.contains('yozilmoqda'), true); teng(/^0:0\d \/ 0:30$/.test(mikHolati()), true, 'sekundomer: ' + mikHolati());
+          gapYoz('non oldim'); document.getElementById('gap-aylantirish').click(); teng(document.getElementById('gap-xato').textContent, 'Avval yozishni to\'xtating.'); teng(s.sorovlar.length, 0, 'yozish paytida aylantirish yuborilmaydi');
+          m.click(); teng(mikHolati(), 'Tinglanyapti…'); teng(m.getAttribute('aria-busy'), 'true'); m.click(); teng(y.toxtatildi, 1);
+          return yoKut(function () { return s.sorovlar.length === 1 && document.getElementById('gap-matn').value.indexOf('taksiga') >= 0; });
+        }).then(function () {
+          teng(JSON.stringify(s.sorovlar[0].tana), JSON.stringify({ rejim: 'ovoz', audio: 'QUJD', mime: 'audio/webm' })); teng(s.sorovlar[0].ms, 60000);
+          teng(document.getElementById('gap-matn').value, 'non oldim taksiga o\'n besh ming', 'matn mavjud matnga qo\'shiladi'); teng(Gap.holat().gap, 'non oldim taksiga o\'n besh ming'); teng(Gap.holat().bosqich, 'yozish', 'avtomatik yozuvga aylantirilmaydi');
+          teng(s.sorovlar.length, 1, 'yozuv rejimi so\'rovi ketmadi'); teng(mikHolati(), ''); teng(document.getElementById('gap-xato').textContent, ''); teng(s.saqlangan.length, 0); teng(m.getAttribute('aria-pressed'), 'false');
+          return gapTugadi();
+        });
+      });
+      test('Gap mikrofon: 30 soniyadan keyin o\'zi to\'xtaydi (chegara kichraytirilgan); ekran yopilsa yozuv bekor va serverga hech narsa ketmaydi', function () {
+        var y = gapSoxtaYozgich(), s = gapQuru([{ ok: true, matn: 'x' }]); Gap.sozla({ yozgich: y, ovozMax: 450 });
+        document.getElementById('gap-tugma').click(); document.getElementById('gap-mik').click();
+        return yoKut(function () { return s.sorovlar.length === 1; }).then(function () {
+          teng(y.toxtatildi, 1, 'chegarada o\'zi to\'xtadi'); return yoKut(function () { return document.getElementById('gap-matn').value === 'x'; });
+        }).then(function () { return gapTugadi(); }).then(function () {
+          Gap.sozla({ ovozMax: 30000 }); var y2 = gapSoxtaYozgich(), s2 = gapQuru(); Gap.sozla({ yozgich: y2 });
+          document.getElementById('gap-tugma').click(); document.getElementById('gap-mik').click();
+          return yoKut(function () { return Gap.holat().mik.bosqich === 'yozilmoqda'; }).then(function () {
+            Gap.yop(); teng(y2.bekor, 1, 'ekran yopildi: yozuv bekor, mikrofon qo\'yildi'); teng(y2.toxtatildi, 0); teng(s2.sorovlar.length, 0);
+            return yoKut(function () { return !history.state || !history.state.gap; });
+          });
+        });
+      });
+      test('Gap mikrofon xatolari: ruxsat rad etildi, mikrofon yo\'q, qurilma qo\'llamaydi, ovoz eshitilmadi (server va qisqa yozuv), tarmoq, limit, internet yo\'q — o\'zbekcha, qayta urinsa bo\'ladi', function () {
+        function sinov(yoz, javob, kut, ozg) {
+          var y = gapSoxtaYozgich(yoz), s = gapQuru(javob ? [javob] : []); Gap.sozla({ yozgich: y }); if (ozg) ozg(s);
+          document.getElementById('gap-tugma').click(); var m = document.getElementById('gap-mik'); m.click();
+          var oldin = Promise.resolve();
+          if (!yoz.rad && yoz.bor !== false && !(ozg && s.onlayn === false)) oldin = yoKut(function () { return m.getAttribute('aria-pressed') === 'true'; }).then(function () { m.click(); });
+          return oldin.then(function () { return yoKut(function () { return document.getElementById('gap-xato').textContent !== ''; }); }).then(function () {
+            teng(document.getElementById('gap-xato').textContent.indexOf(kut) === 0, true, kut + ' <- ' + document.getElementById('gap-xato').textContent); teng(Gap.holat().mik.bosqich, 'bosh', 'qayta urinsa bo\'ladi'); teng(document.getElementById('gap-matn').value, '', 'gap maydoni o\'zgarmaydi'); return gapTugadi();
+          });
+        }
+        return sinov({ rad: 'MIK_RUXSAT' }, null, 'Mikrofon ruxsati rad etildi')
+          .then(function () { return sinov({ rad: 'MIK_YOQ' }, null, 'Mikrofon topilmadi'); })
+          .then(function () { return sinov({ bor: false }, null, 'Bu qurilmada ovoz yozib bo\'lmaydi'); })
+          .then(function () { return sinov({ ovoz: null }, null, 'Ovoz eshitilmadi'); })
+          .then(function () { return sinov({}, gapXato('OVOZ_YOQ'), 'Ovoz eshitilmadi'); })
+          .then(function () { return sinov({}, gapXato('NETWORK'), 'Serverga ulanib bo\'lmadi'); })
+          .then(function () { return sinov({}, gapXato('AI_LIMIT'), 'Bugungi limit tugadi'); })
+          .then(function () { return sinov({}, gapXato('VAQT'), 'Javob juda kech keldi'); })
+          .then(function () { return sinov({ ovoz: gapXato('AI_HAJM') }, null, 'Ovoz juda uzun'); })
+          .then(function () { return sinov({}, null, 'Internet kerak', function (s) { s.onlayn = false; }); });
+      });
+      test('Gap mikrofon: kod maxfiylik — audio saqlanmaydi (localStorage, baza, log yo\'q), serverga faqat ovoz rejimi; yozuv rejimi so\'rovi o\'zgarmagan; Yordamchi.chaqir ovoz_yoq ni xatoga aylantiradi', function () {
+        return Promise.all(['js/gap.js', 'js/gap-sof.js', 'js/yordamchi.js'].map(matnOl)).then(function (t) {
+          var kod = (t[0] + t[1]).replace(/\/\/.*$/gm, '');
+          teng(/localStorage|sessionStorage|indexedDB|Data\.|setItem|console\.|document\.cookie|fetch\(|URL\.createObjectURL/.test(kod), false);
+          teng(/'audio\/webm/.test(t[1]) && /'audio\/mp4'/.test(t[1]), true, 'webm va mp4 (iPhone)');
+          teng(/ovoz_yoq/.test(t[2]), true);
+        }).then(function () {
+          yoServer([{ holat: 200, tana: { ok: false, sabab: 'ovoz_yoq' } }]);
+          return Yordamchi.chaqir({ rejim: 'ovoz', audio: 'QUJD', mime: 'audio/webm' }).then(function () { teng(true, false, 'xato kutilgan'); }, function (e) { teng(e.kod, 'OVOZ_YOQ'); });
+        });
+      });
       test('GapSof.saqlashNatijasi: yozuv — Calc.yozuvniTayyorlash bilan bir xil; qarz — Calc.qarzniTekshir; qaytarish — eng eski ochiq qarzga to\'lov; xatolar maydonlarga', function () {
         var m = gapM(), K = function (o) { return GapSof.kartaYasash(GAP_Y(o), m, GAP_BUGUN); };
         var r = GapSof.saqlashNatijasi(K({}), m, GAP_HOZIR);
@@ -5306,7 +5393,7 @@ function xfix(opts) {
         Gap.sozla({
           chaqir: function (tana, ms) { s.sorovlar.push({ tana: tana, ms: ms }); var j = s.javoblar.shift(); return typeof j === 'function' ? j() : (j instanceof Error ? Promise.reject(j) : Promise.resolve(j)); },
           korinishi: function () { return s.korinishi; }, yopiqmi: function () { return s.yopiq; }, onlayn: function () { return s.onlayn; },
-          bugun: function () { return GAP_BUGUN; }, hozir: function () { return GAP_HOZIR; }, tasdiq: function (m) { s.tasdiq.push(m); return s.tasdiqJavob; }, vaqt: 60000
+          bugun: function () { return GAP_BUGUN; }, hozir: function () { return GAP_HOZIR; }, tasdiq: function (m) { s.tasdiq.push(m); return s.tasdiqJavob; }, vaqt: 60000, yozgich: null, ovozMax: 30000
         });
         Gap.boshlash({ malumot: function () { return s.m; }, xabar: function (m) { s.xabarlar.push(m); }, saqla: function (r) { s.saqlangan.push(r); return s.saqlaJavob ? s.saqlaJavob() : Promise.resolve(); }, tugadi: function (n) { s.tugadi.push(n); } });
         return s;

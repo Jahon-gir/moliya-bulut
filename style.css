@@ -1202,3 +1202,103 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 .gp-manba-izoh[hidden] { display: none; }
 .gp-manba-izoh p { margin: 0; }
 .gp-manba-izoh p + p { margin-top: 4px; }
+
+/* ===== 0.39.0: AI yordamchi — ChatGPT uslubidagi chat: salom, suhbatlar tarixi, yon panel (TZ-sinxronlash.md 33-band). Ranglar mavjud --yo-* o'zgaruvchilaridan ===== */
+.yo-bosh { gap: 8px; }
+.yo-sarlavha { display: flex; align-items: center; justify-content: center; min-width: 0; font-size: 16px; font-weight: 700; text-align: center; }
+.yo-nom-bosh { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yo-nom {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; min-height: 44px; padding: 0 8px; margin: 0; box-sizing: border-box;
+  font: inherit; color: var(--yo-matn); background: none; border: 0; border-radius: 12px; cursor: pointer;
+}
+.yo-nom-matn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yo-qalam { flex: none; width: 16px; height: 16px; color: var(--yo-xira); }
+.yo-nom:focus-visible, .yo-doira:focus-visible, .yo-qator-nom:focus-visible, .yo-uch:focus-visible, .yo-panel-yangi:focus-visible, .yo-menu-band:focus-visible, .yo-tasdiq-tugma:focus-visible, .yo-saqlash:focus-visible { outline: 2px solid var(--yo-yubor); outline-offset: 2px; }
+
+/* Salom (bo'sh chat) */
+.yo-royxat.yo-bosh-royxat { justify-content: center; }
+.yo-bosh-holat { align-items: center; text-align: center; padding-top: 0; gap: 8px; }
+.yo-salom { margin: 0; font-size: 18px; font-weight: 700; color: var(--yo-matn); }
+.yo-bosh-holat .yo-izoh { margin: 0 0 8px; }
+.yo-bosh-holat .yo-tayyorlar { align-items: stretch; width: 100%; }
+.yo-bosh-holat .yo-tayyor { text-align: center; }
+
+/* Xabar vaqti */
+.yo-xabar { display: flex; flex-direction: column; gap: 4px; max-width: 85%; flex: none; }
+.yo-xabar-savol { align-self: flex-end; align-items: flex-end; }
+.yo-xabar-savol .yo-savol { max-width: 100%; }
+.yo-vaqt { flex: none; margin: -6px 4px 0; font-size: 11px; line-height: 1.2; color: var(--yo-xira); }
+.yo-xabar-savol .yo-vaqt { margin: 0 4px; }
+.yo-vaqt-savol { align-self: flex-end; }
+
+/* Yon panel */
+.yo-panel-fon { position: absolute; inset: 0; z-index: 3; background: rgba(0, 0, 0, .45); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }
+.yo-panel-fon.ochiq { opacity: 1; visibility: visible; }
+.yo-panel {
+  position: absolute; z-index: 4; top: 0; bottom: 0; left: 0; width: 78%; max-width: 360px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
+  background: var(--yo-fon); color: var(--yo-matn); border-right: 1px solid var(--yo-chegara);
+  transform: translateX(-102%); visibility: hidden; transition: transform .22s ease-out, visibility .22s;
+}
+.yo-panel.ochiq { transform: translateX(0); visibility: visible; }
+@media (prefers-reduced-motion: reduce) { .yo-panel, .yo-panel-fon { transition: none; } }
+.yo-panel-yangi {
+  flex: none; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+  color: var(--yo-matn); background: var(--yo-karta); border: 1px solid var(--yo-chegara); border-radius: 24px;
+}
+.yo-panel-yangi svg { width: 20px; height: 20px; flex: none; }
+.yo-qidiruv {
+  flex: none; width: 100%; box-sizing: border-box; height: 44px; padding: 0 16px; margin: 0; font: inherit; font-size: 16px;
+  color: var(--yo-matn); background: var(--yo-karta); border: 1px solid var(--yo-chegara); border-radius: 22px;
+}
+.yo-qidiruv::placeholder { color: var(--yo-xira); opacity: 1; }
+.yo-panel-royxat { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.yo-panel-bosh { margin: 24px 8px; text-align: center; font-size: 14px; color: var(--yo-xira); }
+.yo-guruh { margin-bottom: 8px; }
+.yo-guruh-nom { margin: 12px 8px 4px; font-size: 12px; font-weight: 700; color: var(--yo-xira); }
+.yo-qator { position: relative; display: flex; align-items: center; border-radius: 12px; }
+.yo-qator.joriy { background: var(--yo-karta); }
+.yo-qator-nom {
+  flex: 1 1 auto; min-width: 0; min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 4px 0 8px; font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+  color: var(--yo-matn); background: none; border: 0; border-radius: 12px;
+}
+.yo-qator-matn { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yo-qator-vaqt { flex: none; font-size: 11px; color: var(--yo-xira); }
+.yo-uch {
+  flex: none; width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  color: var(--yo-xira); background: none; border: 0; border-radius: 50%;
+}
+.yo-uch svg { width: 22px; height: 22px; }
+.yo-menu {
+  position: absolute; z-index: 2; right: 6px; top: calc(100% - 4px); min-width: 180px; padding: 4px; box-sizing: border-box;
+  background: var(--yo-karta); border: 1px solid var(--yo-chegara); border-radius: 14px; box-shadow: var(--yo-soya);
+}
+.yo-menu-band { display: block; width: 100%; min-height: 44px; padding: 0 14px; font: inherit; font-size: 14px; text-align: left; cursor: pointer; color: var(--yo-matn); background: none; border: 0; border-radius: 10px; }
+.yo-menu-ochirish { color: var(--xarajat, #c62828); }
+
+/* Nomni tahrirlash */
+.yo-tahrir { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; }
+.yo-tahrir-kiritish {
+  flex: 1 1 100px; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 12px; margin: 0; font: inherit; font-size: 16px;
+  color: var(--yo-matn); background: var(--yo-karta); border: 1px solid var(--yo-yubor); border-radius: 12px;
+}
+.yo-saqlash { flex: none; min-height: 44px; padding: 0 14px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; color: #ffffff; background: var(--yo-yubor); border: 0; border-radius: 22px; }
+.yo-tahrir-xato { flex: 1 0 100%; font-size: 12px; color: var(--xarajat, #c62828); }
+.yo-tahrir-bosh { justify-content: center; }
+
+/* O'chirishni tasdiqlash */
+.yo-tasdiq-fon { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, .5); }
+.yo-tasdiq { width: 100%; max-width: 320px; box-sizing: border-box; padding: 20px; background: var(--yo-karta); color: var(--yo-matn); border: 1px solid var(--yo-chegara); border-radius: 18px; }
+.yo-tasdiq-matn { margin: 0 0 4px; font-size: 16px; font-weight: 700; }
+.yo-tasdiq-nom { margin: 0 0 16px; font-size: 13px; color: var(--yo-xira); overflow-wrap: anywhere; }
+.yo-tasdiq-qator { display: flex; gap: 8px; }
+.yo-tasdiq-tugma { flex: 1 1 0; min-height: 44px; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--yo-matn); background: var(--yo-fon); border: 1px solid var(--yo-chegara); border-radius: 22px; }
+.yo-tasdiq-ha { color: #ffffff; background: #c62828; border-color: transparent; }
+
+.yo-panel-chiq {
+  flex: none; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; font: inherit; font-size: 14px; cursor: pointer;
+  color: var(--yo-xira); background: none; border: 1px solid var(--yo-chegara); border-radius: 24px;
+}
+.yo-panel-chiq svg { width: 20px; height: 20px; flex: none; }
+.yo-panel-chiq:focus-visible { outline: 2px solid var(--yo-yubor); outline-offset: 2px; }

@@ -34,7 +34,7 @@ var Kirish = (function () {
     var m = u.user_metadata || {};
     var email = u.email || m.email || '';
     var ism = m.full_name || m.name || m.preferred_username || '';
-    return { ism: ism || (email ? email.split('@')[0] : ''), email: email };
+    return { ism: ism || (email ? email.split('@')[0] : ''), email: email, googleIsm: { full_name: m.full_name || '', name: m.name || '' } };
   }
 
   // Foydalanuvchiga tushunarli xabar (inglizcha texnik xabar o'rniga)
@@ -61,7 +61,7 @@ var Kirish = (function () {
   function xatoQoy(x) { holat.xatoKodi = xatoKodi(x); return xatoMatni(x); }
 
   // ---------------- Holat ----------------
-  var holat = { mavjud: false, tayyor: false, kirgan: false, xatoKodi: '', id: '', ism: '', email: '', kirmoqda: false, xato: '', qaytdi: false };
+  var holat = { mavjud: false, tayyor: false, kirgan: false, xatoKodi: '', id: '', meta: null, ism: '', email: '', kirmoqda: false, xato: '', qaytdi: false };
   var mijoz = null, boshlandi = false, tayyorSavdo = null, kuzatuvchilar = [];
 
   function xabarla() { kuzatuvchilar.slice().forEach(function (f) { try { f(holat); } catch (e) { /* ahamiyatsiz */ } }); }
@@ -77,6 +77,7 @@ var Kirish = (function () {
     holat.id = m && u.id ? u.id : '';
     holat.ism = m ? m.ism : '';
     holat.email = m ? m.email : '';
+    holat.meta = m ? m.googleIsm : null;   // faqat ekrandagi salom uchun (ChatSof.ismAjrat); serverga yuborilmaydi
   }
 
   // Manzildagi kirish belgilarini (code, error...) tozalaydi (kutubxona xatoda ularni qoldiradi)

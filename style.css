@@ -1167,3 +1167,20 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 /* 0.36.1: gap kartasida Sana va Soat bir qatorda */
 .gp-qator { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .gp-qator input { min-width: 0; width: 100%; }
+
+/* 0.37.0: gap ekranida mikrofon (ovozdan matn) */
+.gp-matn-qator { display: flex; align-items: flex-start; gap: 10px; }
+.gp-matn-qator .gp-matn { flex: 1 1 auto; width: auto; min-width: 0; }
+.gp-bosh .gp-mik, .gp-mik { flex: none; width: 48px; height: 48px; color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); }
+.gp-mik:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.gp-mik.yozilmoqda { color: #ffffff; background: var(--xarajat); border-color: var(--xarajat); }
+.gp-mik.band { opacity: .6; cursor: default; }
+.gp-mik-holat { min-height: 0; margin-top: 6px; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--xira); }
+.gp-mik-holat:empty { display: none; }
+.gp-mik-holat.yozilmoqda { color: var(--xarajat); }
+.gp-nuqta { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--xarajat); animation: gp-puls 1s ease-in-out infinite; }
+.gp-mik-holat .gp-aylana { margin-right: 0; width: 16px; height: 16px; }
+@keyframes gp-puls { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .gp-nuqta { animation: none; } }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="yorug"]) .gp-mik.yozilmoqda { color: #2b0a08; } }
+:root[data-tema="qorongi"] .gp-mik.yozilmoqda { color: #2b0a08; }

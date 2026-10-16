@@ -774,3 +774,53 @@ Faqat shu qurilmada, `localStorage` kaliti `moliya-oxirgi-hisob` (qiymat: `{ tur
 
 ### 30.4. Sinov
 `tests.html`: 2 ta yangi (`GapSof` soat maydoni; oxirgi ishlatilgan hisob). Brauzer sinovi `tools/gap-brauzer-sinovi.js` yangi maydonlarga moslanmagan; haqiqiy telefonda sinalmagan.
+
+## 31. Gap ekranida mikrofon: ovozdan matn (0.37.0)
+
+Ma'lumot tuzilishi (IndexedDB, server jadvallari), sinxronlash va zaxira formati O'ZGARMAGAN. O'zgargan: `js/gap.js`, `js/gap-sof.js`, `js/yordamchi.js` (`ovoz_yoq` xatosi), `style.css`, `supabase/functions/yordamchi/index.ts` (yangi `ovoz` rejimi) va `supabase/README.md` (7-bo'lim). **Funksiyani Dashboard'ga qayta joylash va 2 ta yangi Secret kiritish kerak.**
+
+### 31.1. Oqim (ilova)
+- Gap yozish maydonining o'ng yonida yumaloq mikrofon tugmasi (48 px, `aria-label="Ovoz bilan yozish"`, mavjud `yo-doira` uslubi va ranglari; yorug'/qorong'i rejimga mos). **Maket:** topshiriqda eslatilgan maket repozitoriyda ham, suhbatda ham yo'q edi, shuning uchun mavjud dizayn tokenlari bilan eng sodda variant tanlandi (taxmin; foydalanuvchi maketini bersa moslanadi).
+- **Bosilsa** yozish boshlanadi: tugma qizil (`--xarajat`) va "to'xtatish" belgisiga o'zgaradi (`aria-pressed`, `aria-label="Yozishni to'xtatish"`), maydon ostida qizil nuqta va sekundomer "0:07 / 0:30". **Qayta bosilsa** to'xtaydi. **30 soniyadan** keyin o'zi to'xtaydi.
+- To'xtagach holat "Tinglanyapti…" (aylanuvchi belgi, `aria-busy`); audio serverga ketadi; javob matni gap maydonidagi mavjud matnga **qo'shiladi** (ustiga yozilmaydi, 300 belgigacha) va maydonga fokus beriladi. **Avtomatik yozuvga aylantirilmaydi:** foydalanuvchi matnni tahrirlaydi va o'zi "Yozuvga aylantirish" ni bosadi (29-band oqimi o'zgarmagan).
+- Yozish yoki tinglash paytida "Yozuvga aylantirish" bosilsa xabar: "Avval yozishni to'xtating." / "Ovoz matnga aylanmoqda, biroz kuting." Ekran yopilsa (Orqaga, Escape, telefon "orqaga"si) yoki karta bosqichiga o'tilsa yozuv BEKOR qilinadi va mikrofon qo'yib yuboriladi (brauzer mikrofon indikatori o'chadi); serverga hech narsa ketmaydi.
+- **Format** qurilmaga qarab (`GapSof.ovozFormatiTanla`, `MediaRecorder.isTypeSupported`): `audio/webm;codecs=opus` -> `audio/webm` -> `audio/mp4` (iPhone/Safari) -> `audio/ogg;codecs=opus`; hech biri bo'lmasa qurilma o'zi tanlaydi va haqiqiy `mimeType` yuboriladi.
+- Ruxsat so'rovi faqat tugma bosilganda (brauzer o'zi so'raydi). Mikrofon HTTPS yoki `localhost` da ishlaydi (ilova allaqachon shunday).
+
+### 31.2. Xatolar (qisqa, o'zbekcha; gap maydoni o'zgarmaydi, qayta urinsa bo'ladi)
+| Holat | Matn |
+|---|---|
+| Mikrofon ruxsati rad etildi | Mikrofon ruxsati rad etildi. Brauzer sozlamasidan ruxsat bering. |
+| Mikrofon yo'q | Mikrofon topilmadi. |
+| Qurilma/brauzer qo'llamaydi | Bu qurilmada ovoz yozib bo'lmaydi. Gapni yozib kiriting. |
+| Mikrofon band/ochilmadi | Mikrofonni boshqa ilova ishlatyapti yoki ochib bo'lmadi. Qayta urinib ko'ring. |
+| Ovoz eshitilmadi (qisqa yozuv < ~1 KB yoki server `ovoz_yoq`) | Ovoz eshitilmadi. Yana urinib ko'ring. |
+| Ovoz juda katta (ilovada > 1.9 MB yoki server `AI_HAJM`) | Ovoz juda uzun. Qisqaroq ayting. |
+| Internet yo'q | Internet kerak. Ulanib, qayta urinib ko'ring. (so'rov ketmaydi) |
+| Tarmoq, limit, vaqt, ruxsat | 29.5 dagi matnlar (`NETWORK`, `AI_LIMIT`, `VAQT`, `AUTH_EXPIRED`, `AI_RUXSAT`) |
+Mijoz kutish chegarasi 60 s (`VAQT`).
+
+### 31.3. Server: `rejim: "ovoz"`
+- **Kirish:** `{ rejim:"ovoz", audio: <base64>, mime: "audio/webm"|"audio/mp4"|"audio/ogg"|"audio/aac"|"audio/mpeg"|"audio/wav"|"audio/x-m4a" }` (`;codecs=...` qismi olib tashlanadi). **Hajm:** audio asl hajmi 2 MB (2 097 152 bayt) dan oshsa `AI_HAJM` (HTTP 413); so'rov tanasi ~2.8 MB dan oshsa ham (dekodlashdan oldin, `Content-Length` va haqiqiy uzunlik bo'yicha). Noto'g'ri mime/base64/bo'sh audio: `AI_KIRISH` (400).
+- **Himoya o'zgarmagan va OVOZDA ham bir xil:** JWT (Authorization), `AI_RUXSAT_EMAIL` ruxsat ro'yxati, kunlik limit (`ai_limit_oshir`, 200). **Ovoz so'rovi limitda 1 ta so'rov** (matn so'rovi bilan teng); hajm/ruxsat/kirish xatolarida limit sanalmaydi (limit tekshiruvidan oldin rad etiladi).
+- **Gemini:** `POST https://generativelanguage.googleapis.com/v1beta/models/<GEMINI_MODEL>:generateContent`; kalit `x-goog-api-key` sarlavhasida (URL ga, javobga, logga tushmaydi). Tana: `contents[0].parts = [{ text: PROMPT }, { inline_data: { mime_type, data } }]`, `temperature: 0`, `maxOutputTokens: 400`. `PROMPT`: "Bu o'zbekcha ovozli xabar. Aytilganini so'zma-so'z lotin yozuvida yoz. Faqat matnni qaytar, izoh qo'shma. Raqamlarni aytilganidek qoldir." Kutish chegarasi 25 s.
+- **Secrets:** `GEMINI_API_KEY` (shart), `GEMINI_MODEL` (ixtiyoriy, standart `gemini-2.5-flash`). Nom `[A-Za-z0-9._-]` bilan cheklangan (URL ga begona qism qo'shib bo'lmasin). Qadamlar: `supabase/README.md` 7-bo'lim.
+- **Chiqish:** `{ ok:true, matn }` (matn tozalanadi, bo'shliqlar birlashtiriladi, ≤ 600 belgi). Gap eshitilmasa (bo'sh javob, bloklangan, nomzod yo'q): `200 { ok:false, sabab:"ovoz_yoq" }`. Boshqa xatolar mavjud shaklda `{ xato:{ kod, sabab } }`: `AI_PROVAYDER` (kalit/model yo'q, Gemini HTTP xatosi; 502), `NETWORK` (503), `AI_HAJM` (413), `AI_LIMIT` (429), `AI_RUXSAT`, `AI_KIRISH`. Ilovada `Yordamchi.chaqir` `ok:false/ovoz_yoq` ni `OVOZ_YOQ` xatosiga aylantiradi.
+- **Ovoz matni sonlarga aylantirilmaydi:** server uni faqat qaytaradi; summani keyingi bosqichdagi `yozuv` rejimi (28-band, `sonOgir`) chiqaradi, shuning uchun 22.1 qoida ("AI raqam hisoblamaydi") o'zgarmagan.
+
+### 31.4. Maxfiylik
+- **Audio telefonda ham, serverda ham SAQLANMAYDI:** telefonda faqat xotirada (`MediaRecorder` bo'laklari -> base64), yuborilgach yoki bekor qilinsa tashlanadi (`localStorage`, `IndexedDB`, fayl, `URL.createObjectURL` ishlatilmaydi; sinov kod matnini shunga tekshiradi). Serverda faqat so'rov davomida o'zgaruvchida turadi; log, jadval va kesh yo'q (`index.ts` da `console.*` yo'q). Matn ham loglanmaydi.
+- **Audio Google Gemini'ga yuboriladi** (uchinchi tomon). Google shartlari va bepul/to'lovli daraja farqi (ma'lumotdan model yaxshilash uchun foydalanish) foydalanuvchi mas'uliyati: `supabase/README.md` 7.1. Bu 28.7 dagi "gap OpenAI zaxirasiga ketishi mumkin" xavfiga o'xshash ochiq xavf.
+- Kalit faqat Supabase Secrets'da; ilovaga, repoga, javobga va logga tushmaydi (server sinovi tekshiradi).
+
+### 31.5. Sinov
+- Server: `node --test supabase/functions/yordamchi/test.mjs` — 65 tekshiruv (7 ta yangi: Gemini chaqiruvi soxta javob bilan, model sozlamasi, hajm, kirish, ruxsat/limit, xatolar, maxfiylik).
+- `tests.html`: 5 ta yangi (format, sekundomer, xato matnlari, matn qo'shish; yozish-to'xtatish-matn tushishi; 30 s chegarasi va ekran yopilganda bekor; xatolar; kod maxfiyligi), jami 568 / 568. Soxta yozgich bilan.
+- `tools/gap-ovoz-brauzer-sinovi.js`: HAQIQIY `MediaRecorder` (Chromium soxta mikrofon qurilmasi) va haqiqiy ilova, soxta server javobi; 360 px yorug'/qorong'i (tugma ≥ 44 px, qizil holat, sekundomer, serverga ketgan tana, matn tushishi, xatolar, "Tinglanyapti…", ruxsat rad etilishi), ekran rasmlari bilan: 32 tekshiruv.
+
+### 31.6. Qabul qilingan taxminlar va ochiq masalalar
+- **Haqiqiy Gemini, haqiqiy telefon (ayniqsa iPhone Safari `audio/mp4`) va haqiqiy o'zbekcha nutq bilan SINALMAGAN.** Gemini rasmiy hujjatlari ushbu muhitdan ochilmadi: standart model `gemini-2.5-flash` ning hozirgi barqarorligi va `audio/webm` / `audio/mp4` qabul qilinishi tekshirilmagan; hujjatlarda ro'yxat WAV, MP3, AIFF, AAC, OGG, FLAC edi (webm/mp4 ro'yxatda aniq ko'rinmadi). Gemini mime'ni rad etsa foydalanuvchi "Yordamchi hozir javob bera olmayapti" ko'radi; shunda formatni (mijozda) yoki modelni (`GEMINI_MODEL`) almashtirish kerak.
+- Gemini o'zbekcha gapni xato yozishi mumkin: matn maydonga tushadi va yozuvga aylantirishdan oldin tahrirlanadi.
+- Ovoz so'rovi uchun alohida kunlik limit yo'q: umumiy 200 limitga 1 ta bo'lib sanaladi.
+- Mikrofon faqat gap ekranida (chat va qo'lda qo'shish o'zgarmagan). Gap ekrani yopilsa yozuv saqlanmaydi.
+- Yozish paytida ilova boshqa bo'limga o'tkazilmaydi (ekran to'liq ekran), telefon bloklansa/fonga o'tsa brauzer yozishni to'xtatishi mumkin: bunda mavjud bo'lagi yuboriladi yoki "Ovoz eshitilmadi" chiqadi.

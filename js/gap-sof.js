@@ -48,6 +48,45 @@ var GapSof = (function () {
   // Server `ok:true` qaytarib, yozuv bermagan bo'lsa: sababiga qarab xabar (kodsiz)
   function sababMatni(sabab) { return sabab === 'yozuv_yoq' ? YOZUV_YOQ_MATNI : TUSHUNARSIZ_MATNI; }
 
+  // ---- Mikrofon (31-band): ovozdan matn. Audio faqat xotirada turadi, hech qayerda saqlanmaydi ----
+  var OVOZ_MAX_MS = 30000;      // yozish shuncha vaqtdan keyin o'zi to'xtaydi
+  var OVOZ_MIN_BAYT = 1000;     // bundan kichik yozuv "ovoz eshitilmadi" deb olinadi (serverga yuborilmaydi)
+  var OVOZ_MAX_BAYT = 1900000;  // serverdagi chegara ~2 MB (asl hajm); undan oshsa yuborilmaydi
+  // Qurilmaga qarab format: Chrome/Android — webm, iPhone (Safari) — mp4. isTaqiq(mime) — MediaRecorder.isTypeSupported; hech biri bo'lmasa '' (qurilma o'zi tanlaydi)
+  var OVOZ_FORMATLAR = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+  function ovozFormatiTanla(qollaydimi) {
+    for (var i = 0; i < OVOZ_FORMATLAR.length; i++) { try { if (qollaydimi(OVOZ_FORMATLAR[i])) return OVOZ_FORMATLAR[i]; } catch (x) { /* keyingisi */ } }
+    return '';
+  }
+  // Sekundomer: 7 -> "0:07"
+  function sekundMatni(soniya) { var s = Math.max(0, Math.floor(soniya)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  var OVOZ_XATOLAR = {
+    MIK_RUXSAT: 'Mikrofon ruxsati rad etildi. Brauzer sozlamasidan ruxsat bering.',
+    MIK_YOQ: 'Mikrofon topilmadi.',
+    MIK_QOLLANMAYDI: 'Bu qurilmada ovoz yozib bo\'lmaydi. Gapni yozib kiriting.',
+    MIK_BAND: 'Mikrofonni boshqa ilova ishlatyapti yoki ochib bo\'lmadi. Qayta urinib ko\'ring.',
+    OVOZ_YOQ: 'Ovoz eshitilmadi. Yana urinib ko\'ring.',
+    AI_HAJM: 'Ovoz juda uzun. Qisqaroq ayting.'
+  };
+  // Mikrofon xatosi (getUserMedia: NotAllowedError va h.k.) -> ichki kod
+  function mikXatoKodi(err) {
+    var n = err && err.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') return 'MIK_RUXSAT';
+    if (n === 'NotFoundError' || n === 'DevicesNotFoundError' || n === 'OverconstrainedError') return 'MIK_YOQ';
+    return 'MIK_BAND';
+  }
+  function ovozXatoMatni(kod) {
+    var k = String(kod || '');
+    if (OVOZ_XATOLAR[k]) return OVOZ_XATOLAR[k];
+    return xatoMatni(k);
+  }
+  // Yangi matn gap maydonidagi matnga qo'shiladi (ustiga yozilmaydi), 300 belgigacha
+  function matnQosh(mavjud, yangi) {
+    var a = String(mavjud == null ? '' : mavjud).replace(/\s+$/, ''), b = birQator(yangi);
+    if (!b) return a;
+    return (a ? a + ' ' + b : b).slice(0, GAP_MAX);
+  }
+
   // ---- Yordamchilar ----
   function tozaMatn(s) { return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ''); }
   function birQator(s) { return tozaMatn(s).replace(/\s+/g, ' ').trim(); }
@@ -252,7 +291,9 @@ var GapSof = (function () {
   return {
     GAP_MAX: GAP_MAX, HISOBLAGICH_BOSHI: HISOBLAGICH_BOSHI, ESKI_MAX: ESKI_MAX, ESKI_IZOH_MAX: ESKI_IZOH_MAX, IZOH_MAX: IZOH_MAX, KARTA_MAX: KARTA_MAX, KUTISH_MS: KUTISH_MS,
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
-    soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
+    soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
+    mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
+    xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
     kategoriyaNomlari: kategoriyaNomlari, hisobRoyxati: hisobRoyxati, eskiTanla: eskiTanla, sorovTanasi: sorovTanasi,
     yozuvlarniOl: yozuvlarniOl, kartaYasash: kartaYasash, ogohlantirishlar: ogohlantirishlar,
     turAlmashtir: turAlmashtir, qarzAmalAlmashtir: qarzAmalAlmashtir, kategoriyaRoyxati: kategoriyaRoyxati, shaxslar: shaxslar,

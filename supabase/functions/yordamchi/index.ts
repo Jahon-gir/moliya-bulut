@@ -16,8 +16,11 @@
 //
 // Maxfiy o'zgaruvchilar (FAQAT Supabase -> Edge Functions -> Secrets; kodga, repoga, testga yozilmaydi):
 //   AI_PROVAYDER ("openai" yoki "claude"), AI_MODEL, OPENAI_API_KEY, ANTHROPIC_API_KEY, AI_RUXSAT_EMAIL (vergul bilan).
+//   Ovoz rejimi uchun: GEMINI_API_KEY, GEMINI_MODEL (sukut gemini-2.5-flash).
 //   Yozuv rejimi uchun: MODEL_URL, MODEL_KALIT, MODEL_NOMI (sukut chuntak-v5), MODEL_VAQT (sekund, sukut 25), YOZUV_PROVAYDER (oz_openai | oz | openai).
 //   SUPABASE_URL va SUPABASE_ANON_KEY ni Supabase o'zi beradi.
+//   5) rejim "ovoz": audio (base64 + mime) -> Google Gemini o'zbekchadan matnga o'giradi -> { ok:true, matn }. Audio hech qayerda SAQLANMAYDI
+//      (faqat so'rov davomida xotirada), matn loglanmaydi, GEMINI_API_KEY faqat sarlavhada (x-goog-api-key) ketadi: URL, javob va logga tushmaydi.
 // Savol, gap va natija logga YOZILMAYDI (bu faylda console.* yo'q). "reja"/"javob" da AI ga yozuvlar, izohlar, qarzdagi shaxs ismlari yuborilmaydi.
 // "yozuv" da gap (unda ism bo'lishi mumkin) o'z modelga, zaxirada OpenAI ga ketadi; `eski` (oldingi izohlar) FAQAT o'z modelga ketadi.
 // =====================================================================
@@ -33,7 +36,7 @@ export interface Muhit { get(nom: string): string | undefined }
 
 export const AMALLAR: Amal[] = ["yigindi", "kategoriyalar", "qidiruv", "taqqoslash", "qarzlar", "hisoblar", "oylik_hisobot",
   "jadval", "chegara", "eng_katta_yozuvlar", "byudjet", "taxmin", "jamgarma", "tushunarsiz"];
-export const XATO_KODLARI = ["AI_RUXSAT", "AI_KIRISH", "AI_UZUN", "AI_LIMIT", "AI_PROVAYDER", "AI_SXEMA", "AI_RAQAM", "NETWORK"] as const;
+export const XATO_KODLARI = ["AI_RUXSAT", "AI_KIRISH", "AI_UZUN", "AI_LIMIT", "AI_PROVAYDER", "AI_SXEMA", "AI_RAQAM", "NETWORK", "AI_HAJM"] as const;
 export type XatoKodi = typeof XATO_KODLARI[number];
 
 export const SAVOL_MAX = 300;          // belgi
@@ -65,6 +68,7 @@ const XATO_MATNI: Record<XatoKodi, string> = {
   AI_SXEMA: "AI javobi kutilgan ko'rinishda emas.",
   AI_RAQAM: "AI javobidagi raqamlar natijaga mos kelmadi, shuning uchun ko'rsatilmadi.",
   NETWORK: "Tarmoq xatosi. Internetni tekshirib, qayta urinib ko'ring.",
+  AI_HAJM: "Ovoz yozuvi juda katta.",
 };
 
 function xatoJavob(kod: XatoKodi, holat: number, cors: Record<string, string>, sabab?: string): Response {
@@ -185,6 +189,59 @@ export function tarixniQirq(t: TarixElementi[]): TarixElementi[] {
     chiq.unshift(it); jami += s;
   }
   return chiq;
+}
+
+// ---------------------------------------------------------------------
+// Ovoz rejimi (31-band): audio -> matn (Google Gemini). Audio saqlanmaydi, matn loglanmaydi.
+// ---------------------------------------------------------------------
+export const OVOZ_MAX_BAYT = 2 * 1024 * 1024;                       // audio ~2 MB gacha (base64 emas, asl hajm)
+export const OVOZ_TANA_MAX = Math.ceil(OVOZ_MAX_BAYT * 4 / 3) + 2048;  // so'rov tanasi (base64 ~ 4/3 barobar) uchun chegara
+export const OVOZ_MIME = ["audio/webm", "audio/mp4", "audio/ogg", "audio/aac", "audio/mpeg", "audio/wav", "audio/x-m4a"];
+export const GEMINI_MODEL_SUKUT = "gemini-2.5-flash";
+export const OVOZ_PROMPT = "Bu o'zbekcha ovozli xabar. Aytilganini so'zma-so'z lotin yozuvida yoz. Faqat matnni qaytar, izoh qo'shma. Raqamlarni aytilganidek qoldir.";
+const OVOZ_MATN_MAX = 600;
+const OVOZ_TOKEN = 400;
+const OVOZ_TAYM_AUT_MS = 25000;
+export interface OvozKirishi { audio: string; mime: string }
+
+// "audio/webm;codecs=opus" -> "audio/webm". Ruxsat etilmagan tur rad etiladi.
+export function ovozMime(x: unknown): string | null {
+  if (typeof x !== "string") return null;
+  const m = x.split(";")[0].trim().toLowerCase();
+  return OVOZ_MIME.indexOf(m) >= 0 ? m : null;
+}
+// Tana tekshiruvi: { rejim:"ovoz", audio: base64, mime }. Asl hajm base64 uzunligidan hisoblanadi (dekodlanmaydi).
+export function ovozKirishiniTekshir(tana: Record<string, unknown>): { ovoz: OvozKirishi } | { kod: XatoKodi } {
+  const mime = ovozMime(tana.mime);
+  if (typeof tana.audio !== "string" || !mime) return { kod: "AI_KIRISH" };
+  const a = tana.audio.replace(/\s+/g, "");
+  if (!a || a.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(a)) return { kod: "AI_KIRISH" };
+  const bayt = a.length / 4 * 3 - (a.endsWith("==") ? 2 : a.endsWith("=") ? 1 : 0);
+  if (bayt > OVOZ_MAX_BAYT) return { kod: "AI_HAJM" };
+  return { ovoz: { audio: a, mime } };
+}
+async function ovozniMatnga(ovoz: OvozKirishi, muhit: Muhit, fetchFn: FetchFn): Promise<string | null> {
+  const kalit = (muhit.get("GEMINI_API_KEY") || "").trim();
+  if (!kalit) throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati sozlanmagan (GEMINI_API_KEY yo'q).", true);
+  const model = (muhit.get("GEMINI_MODEL") || "").trim() || GEMINI_MODEL_SUKUT;
+  if (!/^[A-Za-z0-9._-]+$/.test(model)) throw new ProvayderXatosi("AI_PROVAYDER", "GEMINI_MODEL noto'g'ri.", true);
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+  const tana = {
+    contents: [{ role: "user", parts: [{ text: OVOZ_PROMPT }, { inline_data: { mime_type: ovoz.mime, data: ovoz.audio } }] }],
+    generationConfig: { temperature: 0, maxOutputTokens: OVOZ_TOKEN },
+  };
+  let javob: Response;
+  try {
+    javob = await fetchFn(url, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": kalit }, body: JSON.stringify(tana), signal: AbortSignal.timeout(OVOZ_TAYM_AUT_MS) });
+  } catch (_e) { throw new ProvayderXatosi("NETWORK", XATO_MATNI.NETWORK); }
+  if (!javob.ok) throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati xato qaytardi (HTTP " + javob.status + ").");
+  let d: unknown;
+  try { d = await javob.json(); } catch (_e) { throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati noto'g'ri javob berdi."); }
+  // deno-lint-ignore no-explicit-any
+  const qismlar = (d as any)?.candidates?.[0]?.content?.parts;
+  const xom = Array.isArray(qismlar) ? qismlar.map((q: { text?: unknown }) => typeof q?.text === "string" ? q.text : "").join(" ") : "";
+  const matn = toza(xom).replace(/\s+/g, " ").trim().slice(0, OVOZ_MATN_MAX).trim();
+  return matn || null;
 }
 
 export function kirishniTekshir(tana: unknown): { kirish: Kirish } | { kod: XatoKodi } {
@@ -1004,9 +1061,14 @@ export async function ishlov(req: Request, muhit: Muhit, fetchFn: FetchFn): Prom
   // 2) ruxsat ro'yxati (email faqat maxfiy o'zgaruvchida)
   if (!emailRuxsatMi(f.email, muhit.get("AI_RUXSAT_EMAIL"))) return xatoJavob("AI_RUXSAT", 403, cors);
 
-  // 3) so'rov tanasi
+  // 3) so'rov tanasi (ovoz so'rovi katta: umumiy hajm chegarasi OVOZ_TANA_MAX, ~2.7 MB, barcha rejimlarga qo'llanadi; oddiy so'rovlar bundan ancha kichik)
   let xom: unknown;
-  try { xom = JSON.parse(await req.text()); } catch (_e) { return xatoJavob("AI_KIRISH", 400, cors); }
+  const uzunlik = Number(req.headers.get("Content-Length") || 0);
+  if (uzunlik > OVOZ_TANA_MAX) return xatoJavob("AI_HAJM", 413, cors);
+  const matnTana = await req.text();
+  if (matnTana.length > OVOZ_TANA_MAX) return xatoJavob("AI_HAJM", 413, cors);
+  try { xom = JSON.parse(matnTana); } catch (_e) { return xatoJavob("AI_KIRISH", 400, cors); }
+  if (oddiyObyektmi(xom) && xom.rejim === "ovoz") return await ovozIshlov(xom, f.email, muhit, fetchFn, jwt, anon, cors);
   const t = kirishniTekshir(xom);
   if ("kod" in t) return xatoJavob(t.kod, t.kod === "AI_UZUN" ? 413 : 400, cors);
   const kirish = t.kirish;
@@ -1045,6 +1107,23 @@ export async function ishlov(req: Request, muhit: Muhit, fetchFn: FetchFn): Prom
     // taxmin javobida "taxmin" so'zi bo'lishi shart
     if (sorovlar.some((x) => x.amal === "taxmin") && !/taxmin/i.test(matn)) return xatoJavob("AI_SXEMA", 502, cors);
     return json({ ok: true, matn, davom }, 200, cors);
+  } catch (e) {
+    if (e instanceof ProvayderXatosi) return xatoJavob(e.kod, e.kod === "NETWORK" ? 503 : 502, cors, e.kod === "AI_PROVAYDER" ? e.message : undefined);
+    return xatoJavob("AI_PROVAYDER", 500, cors, "Kutilmagan xato.");
+  }
+}
+
+// Ovoz so'rovi: tekshiruv -> limit (ovoz ham 1 ta so'rov) -> Gemini. Audio faqat shu funksiya ichida xotirada turadi.
+async function ovozIshlov(xom: Record<string, unknown>, _email: string, muhit: Muhit, fetchFn: FetchFn, jwt: string, anon: string, cors: Record<string, string>): Promise<Response> {
+  const t = ovozKirishiniTekshir(xom);
+  if ("kod" in t) return xatoJavob(t.kod, t.kod === "AI_HAJM" ? 413 : 400, cors);
+  const soni = await limitOshir(muhit, fetchFn, jwt, anon);
+  if (soni === null) return xatoJavob("AI_LIMIT", 503, cors, "Limitni tekshirib bo'lmadi (007_ai_limit.sql ishga tushirilganmi?).");
+  if (soni > KUNLIK_LIMIT) return xatoJavob("AI_LIMIT", 429, cors);
+  try {
+    const matn = await ovozniMatnga(t.ovoz, muhit, fetchFn);
+    if (matn === null) return json({ ok: false, sabab: "ovoz_yoq" }, 200, cors);   // gap eshitilmadi
+    return json({ ok: true, matn }, 200, cors);
   } catch (e) {
     if (e instanceof ProvayderXatosi) return xatoJavob(e.kod, e.kod === "NETWORK" ? 503 : 502, cors, e.kod === "AI_PROVAYDER" ? e.message : undefined);
     return xatoJavob("AI_PROVAYDER", 500, cors, "Kutilmagan xato.");

@@ -108,6 +108,8 @@ Bu fayl **ixtiyoriy, lekin tavsiya etiladi**: ilova uni bo'lmasa ham ishlaydi. N
 Bu qism ilovaga hali ulanmagan (chat ekrani keyingi bosqichlarda). Bu yerda faqat server tayyorlanadi va bitta sinov so'rovi bilan tekshiriladi.
 **Kalitlar (OpenAI/Anthropic) faqat Supabase "Secrets" da turadi: ularni hech qachon repozitoriyga, chatga yoki ilova kodiga yozmang.**
 
+> **Funksiya yana o'zgardi (0.37.0, mikrofon):** `index.ts` ga yangi `ovoz` rejimi qo'shildi (audio -> matn, Google Gemini). **Dashboard'dagi funksiyaga qayta joylang** va 7-bo'limdagi ikkita yangi Secret'ni kiriting (`GEMINI_API_KEY`, `GEMINI_MODEL`). 007 qayta kiritilmaydi.
+
 > **Funksiya yana o'zgardi (0.36.0, "Gap bilan qo'shish"):** `index.ts` ga "narx jami" qoidasi qo'shildi (`yozuv` rejimi: "2 ta non va sut oldim 18 ming" endi 36 000 emas, 18 000 chiqadi; `TZ-sinxronlash.md` 28.4 va 29.8). **Dashboard'dagi funksiyaga qayta joylang** (pastdagi qadamlar bilan bir xil). Secrets va 007 qayta kiritilmaydi.
 
 > **Funksiya yana o'zgardi (0.34.0, erkin savollar):** `index.ts` yangi protokolga o'tdi (reja: sorovlar/suhbat/tashqari, javob: matn va davom savollari, tarix, kuniga 200 so'rov). **Dashboard'dagi funksiyaga qayta joylang** (Edge Functions → `yordamchi` → eski matnni o'chirib, yangi `index.ts` ni to'liq nusxalab qo'ying → Deploy). Eski funksiya yangi ilovaning so'rovini tushunmaydi, shuning uchun ilovani yangilashdan oldin yoki birga joylang. Secrets va 007 qayta kiritilmaydi.
@@ -309,3 +311,31 @@ Kutilgan: `{ ok: true, manba: 'model', yozuvlar: [ { tur: 'xarajat', summa: 1800
     node --test supabase/functions/yordamchi/test.mjs
 
 Ikkalasida ham Ollama, OpenAI va Supabase taqlid qilinadi; haqiqiy kalit va tarmoq kerak emas.
+
+## 7. Mikrofon (ovozdan matn): `ovoz` rejimi uchun qadamlar
+
+Gap ekranidagi mikrofon audioni funksiyaga yuboradi, funksiya uni Google Gemini orqali o'zbekchadan matnga o'giradi. Audio hech qayerda saqlanmaydi (faqat so'rov davomida xotirada turadi), lekin **Google Gemini'ga yuboriladi**.
+
+### 7.1. Gemini kalitini olish
+1. https://aistudio.google.com/apikey sahifasiga Google akkaunt bilan kiring va "Create API key" bosing.
+2. Kalitni hech qayerga (chat, repoga, skrinshotga) yozmang: faqat 7.2 dagi Secrets'ga kiriting.
+3. Bepul daraja cheklovli va Google u yerdagi so'rovlardan modelni yaxshilash uchun foydalanishi mumkin. Maxfiylik talabi muhim bo'lsa Google Cloud'da to'lovli rejim yoqilganini tekshiring (Google shartlari o'zgarishi mumkin, o'zingiz o'qib chiqing).
+
+### 7.2. Secrets'ni kiritish
+Supabase Dashboard -> Edge Functions -> Secrets -> Add new secret:
+
+| Nom | Qiymat |
+|---|---|
+| `GEMINI_API_KEY` | 7.1 dagi kalit |
+| `GEMINI_MODEL` | Model nomi. Bo'sh qoldirsangiz standart `gemini-2.5-flash` ishlatiladi. Audioni qabul qiladigan joriy barqaror tez "Flash" modelini https://ai.google.dev/gemini-api/docs/models sahifasidan tekshiring; nom o'zgarsa faqat shu Secret'ni yangilaysiz (kodga tegilmaydi) |
+
+Secret o'zgarsa funksiyani qayta joylash shart emas.
+
+### 7.3. Funksiyani QAYTA JOYLASH shart
+`index.ts` yangilandi (yangi `ovoz` rejimi). Edge Functions -> `yordamchi` -> muharrirdagi hamma matnni o'chirib, yangi `supabase/functions/yordamchi/index.ts` ni **to'liq** nusxalab qo'ying -> **Deploy**. "Verify JWT" yoqilgan qolsin. Qayta joylamasangiz mikrofon "Yordamchi hozir javob bera olmayapti" xatosini beradi.
+
+### 7.4. Tekshirish
+Ilovada "Gap bilan" -> mikrofon -> bir jumla ayting -> matn maydonga tushishi kerak. Ishlamasa: Secrets nomlari (`GEMINI_API_KEY`), model nomi, Functions -> Logs (matn va kalit loglanmaydi, faqat HTTP kodi). Har ovoz so'rovi kunlik limitga (200) 1 ta bo'lib sanaladi.
+
+### 7.5. Sinash (dasturchi uchun)
+`node --test supabase/functions/yordamchi/test.mjs` (Gemini soxta javob bilan, tarmoqsiz).

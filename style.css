@@ -1184,3 +1184,21 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .gp-nuqta { animation: none; } }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="yorug"]) .gp-mik.yozilmoqda { color: #2b0a08; } }
 :root[data-tema="qorongi"] .gp-mik.yozilmoqda { color: #2b0a08; }
+
+/* 0.38.0: gap kartasida manba belgisi (TZ-sinxronlash.md 32-band) */
+:root { --gp-man-fon: #e1f3e6; --gp-man-chegara: #9fd0ae; --gp-man-matn: #1b6b35; --gp-man-izoh-fon: #f4f7f5; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="yorug"]) { --gp-man-fon: #17301f; --gp-man-chegara: #2f6a42; --gp-man-matn: #7fdca0; --gp-man-izoh-fon: #1c2420; } }
+:root[data-tema="qorongi"] { --gp-man-fon: #17301f; --gp-man-chegara: #2f6a42; --gp-man-matn: #7fdca0; --gp-man-izoh-fon: #1c2420; }
+.gp-karta-bosh { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-bottom: 4px; }
+.gp-karta-sarlavha { margin: 0; font-size: 17px; }
+/* tugma 44 px (bosish maydoni), ko'rinadigan belgi 26 px */
+.gp-manba-tugma { flex: none; width: 44px; height: 44px; margin: 0 -9px 0 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: transparent; border: 0; border-radius: 50%; }
+.gp-manba-tugma:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 0; }
+.gp-manba-belgi { width: 26px; height: 26px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid; }
+.gp-manba-belgi svg { width: 14px; height: 14px; }
+.gp-manba-model { color: var(--gp-man-matn); background: var(--gp-man-fon); border-color: var(--gp-man-chegara); }
+.gp-manba-openai { color: var(--gp-ogoh-matn); background: var(--gp-ogoh-fon); border-color: var(--gp-ogoh-chegara); }
+.gp-manba-izoh { margin: 0 0 12px; padding: 8px 10px; font-size: 12px; line-height: 1.4; color: var(--matn); background: var(--gp-man-izoh-fon); border: 1px solid var(--chiziq); border-radius: 8px; overflow-wrap: anywhere; }
+.gp-manba-izoh[hidden] { display: none; }
+.gp-manba-izoh p { margin: 0; }
+.gp-manba-izoh p + p { margin-top: 4px; }

@@ -49,6 +49,24 @@ var GapSof = (function () {
   // Server `ok:true` qaytarib, yozuv bermagan bo'lsa: sababiga qarab xabar (kodsiz)
   function sababMatni(sabab) { return sabab === 'yozuv_yoq' ? YOZUV_YOQ_MATNI : TUSHUNARSIZ_MATNI; }
 
+  // ---- Manba belgisi (32-band): javob qaysi modeldan kelgani. Server `manba`: "model" (o'z model) | "openai" (zaxira) | null ----
+  var MANBA_MATNLARI = {
+    model: 'Gapni sizning modelingiz o\'qidi.',
+    openai: 'Sizning modelingiz javob bermadi, gapni OpenAI o\'qidi (zaxira).'
+  };
+  var OVOZ_IZOHI = 'Ovozdan matnni Gemini yozgan.';
+  var MANBA_SARLAVHA = 'Tekshiring va saqlang';
+  // Noma'lum yoki yaroqsiz qiymat -> '' (belgi ko'rinmaydi). Qiymat ham rang (model: yashil, openai: sariq) ham matnni tanlaydi.
+  function manbaNomi(m) { return m === 'model' || m === 'openai' ? m : ''; }
+  // Izoh qutisidagi qatorlar: manba qatori, ovozdan kelgan bo'lsa ikkinchi qator. Manba noma'lum bo'lsa belgi yo'q, shuning uchun qator ham yo'q.
+  function manbaIzohi(manba, ovozdan) {
+    var n = manbaNomi(manba);
+    if (!n) return [];
+    var q = [MANBA_MATNLARI[n]];
+    if (ovozdan) q.push(OVOZ_IZOHI);
+    return q;
+  }
+
   // ---- Mikrofon (31-band): ovozdan matn. Audio faqat xotirada turadi, hech qayerda saqlanmaydi ----
   var OVOZ_MAX_MS = 30000;      // yozish shuncha vaqtdan keyin o'zi to'xtaydi
   var OVOZ_WAV_HZ = 16000;      // WAV namuna chastotasi (nutq uchun yetarli; 30 s ~ 960 KB)
@@ -201,7 +219,7 @@ var GapSof = (function () {
   }
   function sanaYaroqli(s, bugun) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && s <= bugun; }
   // Serverning Yozuv'i -> tahrirlanadigan karta (ilova yozuvi shaklida: id lar, summa matn ko'rinishida)
-  // qosh (ixtiyoriy): { soat: 'HH:MM' (soat maydonining standart qiymati), oxirgi: oxirgi ishlatilgan hisoblar }
+  // qosh (ixtiyoriy): { soat: 'HH:MM' (soat maydonining standart qiymati), oxirgi: oxirgi ishlatilgan hisoblar, manba: server javobidagi manba, ovozdan: gap mikrofondan tushganmi }
   function kartaYasash(y, m, bugun, qosh) {
     qosh = qosh || {};
     var t = SERVER_TUR[y.tur] || SERVER_TUR.xarajat;
@@ -212,6 +230,7 @@ var GapSof = (function () {
     var ogoh = (Array.isArray(y.ogohlantirish) ? y.ogohlantirish : []).filter(function (x) { return typeof x === 'string' && birQator(x); })
       .map(function (x) { return birQator(x).slice(0, OGOH_MAX); }).slice(0, 5);
     var karta = {
+      manba: manbaNomi(qosh.manba), ovozdan: !!qosh.ovozdan, manbaOchiq: false,
       tur: t[0], qarzAmal: t[1], summa: summa, kategoriya: katTop ? katTop.id : '', hisob: h ? h.id : '', hisob2: h2 && (!h || h2.id !== h.id) ? h2.id : '',
       shaxs: typeof y.shaxs === 'string' ? birQator(y.shaxs).slice(0, NOM_MAX) : '', sana: sanaYaroqli(y.sana, bugun) ? y.sana : bugun,
       izoh: birQator(y.izoh).slice(0, IZOH_MAX), vaqt: soatYaroqli(qosh.soat) ? qosh.soat : '', ogohlantirish: ogoh, xatolar: {}, saqlanmoqda: false
@@ -309,7 +328,7 @@ var GapSof = (function () {
   return {
     GAP_MAX: GAP_MAX, HISOBLAGICH_BOSHI: HISOBLAGICH_BOSHI, ESKI_MAX: ESKI_MAX, ESKI_IZOH_MAX: ESKI_IZOH_MAX, IZOH_MAX: IZOH_MAX, KARTA_MAX: KARTA_MAX, KUTISH_MS: KUTISH_MS,
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
-    soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
+    MANBA_SARLAVHA: MANBA_SARLAVHA, MANBA_MATNLARI: MANBA_MATNLARI, OVOZ_IZOHI: OVOZ_IZOHI, manbaNomi: manbaNomi, manbaIzohi: manbaIzohi, soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
     wavYasa: wavYasa, monoQil: monoQil, OVOZ_WAV_HZ: OVOZ_WAV_HZ, mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
     xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
     kategoriyaNomlari: kategoriyaNomlari, hisobRoyxati: hisobRoyxati, eskiTanla: eskiTanla, sorovTanasi: sorovTanasi,

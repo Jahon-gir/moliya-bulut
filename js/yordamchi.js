@@ -1,10 +1,11 @@
 // AI yordamchi (TZ-sinxronlash.md 24-band): suzuvchi "Ko'zlar" tugmasi, chat ekrani va server bilan aloqa.
 // Oqim: savol -> funksiya "reja" -> tuzilgan so'rov -> ilova telefonda hisoblaydi (js/yordamchi-sof.js) -> funksiya "javob" -> matn.
-// Suhbat faqat xotirada (o'zgaruvchida) turadi: bazaga, serverga, zaxiraga va localStorage ga yozilmaydi; ilova yopilsa o'chadi.
+// Suhbatlar tarixi (TZ 33) faqat shu qurilmada (localStorage, akkaunt id bilan) saqlanadi: bazaga, serverga, zaxiraga va Excel eksportiga kirmaydi; chiqilsa tozalanadi.
 // Server funksiyasi (supabase/functions/yordamchi): reja -> { sorovlar | suhbat | tashqari }, javob -> { matn, davom } (TZ 26). Sinxron mantig'iga tegilmaydi.
 var Yordamchi = (function () {
   'use strict';
 
+  var SUHBAT_KALIT = 'moliya-chat-suhbatlar';   // "moliya-" bilan boshlanadi: "PINni unutdim" to'liq tozalashi uni ham o'chiradi
   var YOPIQ_KALIT = 'moliya-yordamchi-yopiq';   // "moliya-" bilan boshlanadi: "PINni unutdim" to'liq tozalashi uni ham o'chiradi
   var FUNKSIYA_YOLI = '/functions/v1/yordamchi';
   var YOPIQ_XABARI = 'Yordamchi hozircha siz uchun yopiq';
@@ -19,14 +20,17 @@ var Yordamchi = (function () {
     kirgan: function () { return !!Kirish.holat().kirgan; },
     foydalanuvchiId: function () { return Kirish.holat().id || ''; },
     onlayn: function () { return navigator.onLine !== false; },
-    xotira: function () { try { return localStorage; } catch (e) { return null; } }
+    xotira: function () { try { return localStorage; } catch (e) { return null; } },
+    hozir: function () { return Date.now(); },
+    ism: function () { return ChatSof.ismAjrat(Kirish.holat().meta); }   // Google hisobidagi ism: faqat ekranda ko'rinadi, serverga/logga yuborilmaydi
   };
   function sozla(o) { Object.keys(o || {}).forEach(function (k) { dep[k] = o[k]; }); }
 
   var ui = { malumot: null, korinadi: null, xabar: null, belgi: null, ochish: null };
-  var suhbat = [];      // [{ rol: 'savol' | 'javob' | 'kutish' | 'xato', matn, kartalar, davom, savol, kod, qayta }]  (faqat xotirada)
-  var xotira = [];      // AI uchun suhbat xotirasi: oxirgi 3 almashinuv [{ savol, reja, matn }] (faqat xotirada; tozalash va chat yopilishi o'chiradi)
-  var tugmaEl = null, ekranEl = null, royxatEl = null, kirishEl = null, yuborEl = null, tozalashEl = null;
+  // Ochiq suhbatning xabarlari: [{ rol: 'savol' | 'javob' | 'kutish' | 'xato', matn, kartalar, davom, savol, kod, qayta, t }] (joriy.xabarlar)
+  // AI xotirasi (oxirgi 3 almashinuv) ochiq suhbatdan olinadi (ChatSof.xotiraYasash): tanlangan suhbat davom ettirilsa xotira shu suhbatdan
+  var tugmaEl = null, ekranEl = null, royxatEl = null, kirishEl = null, yuborEl = null;
+  var menuTugma = null, sarlavhaEl = null, nomEl = null, panelEl = null, fonEl = null, panelRoyxatEl = null;
 
   // ---- "Yopiq" belgisi (server 403, AI_RUXSAT): shu qurilmada tugma yashiriladi; chiqib-kirilsa o'chadi. Email saqlanmaydi (faqat foydalanuvchi id si) ----
   function belgiOqi() { try { var x = dep.xotira(); return x ? x.getItem(YOPIQ_KALIT) : null; } catch (e) { return null; } }
@@ -82,7 +86,7 @@ var Yordamchi = (function () {
 
   // Oxirgi 3 almashinuv (savol, reja, javob matni): serverga "tarix" sifatida beriladi, shunda "taksigachi?" kabi davom savollari tushuniladi
   function tarixYasash() {
-    return xotira.slice(-YordamchiSof.XOTIRA_MAX).map(function (x) { return { savol: x.savol, reja: x.reja, matn: String(x.matn || '').slice(0, 600) }; });
+    return suhbatXotirasi().slice(-YordamchiSof.XOTIRA_MAX).map(function (x) { return { savol: x.savol, reja: x.reja, matn: String(x.matn || '').slice(0, 600) }; });
   }
 
   // Savolga javob: Promise -> { matn, kartalar, davom, reja, zaxira }  yoki rad (Error.kod)
@@ -120,26 +124,81 @@ var Yordamchi = (function () {
     });
   }
 
+  // ---- Suhbatlar tarixi (TZ 33): faqat shu qurilmada (localStorage), akkaunt id bilan bog'langan. Serverga yozilmaydi, zaxira va eksportga kirmaydi ----
+  var saqlangan = [];       // saqlangan suhbatlar [{ id, nom, yaratilgan, yangilangan, xabarlar }]
+  var yuklandi = false, hisobId = '', avlod = 0;   // avlod: akkaunt tozalanganda eski (kutilayotgan) javoblar tashlab yuboriladi
+  function yangiBosh() { return { id: null, nom: '', yaratilgan: 0, yangilangan: 0, xabarlar: [] }; }
+  var joriy = yangiBosh();  // ochiq suhbat; birinchi xabar yuborilgandagina saqlangan ro'yxatga qo'shiladi
+  function hozir() { return dep.hozir(); }
+  function xotiraOl() { try { return dep.xotira(); } catch (x) { return null; } }
+
+  function xotiradanOchir() { try { var x = xotiraOl(); if (x) x.removeItem(SUHBAT_KALIT); } catch (x) { /* ahamiyatsiz */ } }
+  // Xotiradan o'qish: boshqa akkaunt (yoki buzuq yozuv) bo'lsa xotira tozalanadi
+  function yuklash() {
+    var id = dep.foydalanuvchiId();
+    if (yuklandi && hisobId === id) return;
+    var matn = null;
+    try { var x = xotiraOl(); matn = x ? x.getItem(SUHBAT_KALIT) : null; } catch (x) { matn = null; }
+    var r = ChatSof.yozuvOqi(matn, id);
+    if (r.tozalash) xotiradanOchir();
+    var oldingi = joriy.id;
+    saqlangan = r.suhbatlar; yuklandi = true; hisobId = id;
+    if (oldingi && hisobId && !saqlangan.some(function (s) { return s.id === oldingi; })) joriy = yangiBosh();   // boshqa akkaunt: ochiq suhbat ham tashlanadi
+  }
+  // Xotiraga yozish. Joy yetmasa eng eski suhbatlar (ochiq suhbatdan tashqari) tashlanib qayta uriniladi; baribir bo'lmasa xotirada ishlayveradi
+  function saqla() {
+    if (!hisobId) return;
+    var royxat = saqlangan.slice();
+    for (var urinish = 0; urinish < 6; urinish++) {
+      try {
+        var x = xotiraOl();
+        if (!x) return;
+        x.setItem(SUHBAT_KALIT, JSON.stringify(ChatSof.yozuvYasash(hisobId, royxat)));
+        return;
+      } catch (e) {
+        var eski = royxat.filter(function (s) { return s !== joriy; }).sort(function (a, b) { return a.yangilangan - b.yangilangan; })[0];
+        if (!eski) return;
+        royxat.splice(royxat.indexOf(eski), 1);
+      }
+    }
+  }
+  function royxatniCheklash() {
+    var qolgan = ChatSof.suhbatlarniCheklash(saqlangan);
+    saqlangan = saqlangan.filter(function (s) { return qolgan.indexOf(s) >= 0; });
+  }
+  function belgila(kon) {   // suhbat o'zgardi: vaqti yangilanadi va saqlanadi
+    kon.yangilangan = hozir();
+    if (kon.id && saqlangan.indexOf(kon) < 0) return;   // o'chirilgan suhbat qayta tiklanmasin
+    kon.xabarlar = ChatSof.xabarlarniCheklash(kon.xabarlar);
+    saqla();
+  }
+  // Hamma saqlangan suhbatlarni tozalash (akkauntdan chiqilganda)
+  function hammasiniTozala() {
+    avlod++; saqlangan = []; yuklandi = false; hisobId = ''; joriy = yangiBosh(); xotiradanOchir();
+  }
+
   // ---- Suhbat ----
   function sanasi() { return Calc.bugun(); }
-  function band() { return suhbat.some(function (x) { return x.rol === 'kutish'; }); }
+  function band() { return joriy.xabarlar.some(function (x) { return x.rol === 'kutish'; }); }
+  function suhbatXotirasi() { return ChatSof.xotiraYasash(joriy.xabarlar); }
 
-  function natijaniQoy(kutish, p) {
+  function natijaniQoy(kon, kutish, p) {
+    var mening = avlod;
     p.then(function (r) { return { rol: 'javob', matn: r.matn, kartalar: r.kartalar || [], davom: r.davom || [], reja: r.reja || null, zaxira: !!r.zaxira }; }, function (e) {
       var kod = (e && e.kod) || ('JS_' + String((e && e.name) || 'XATO').replace(/[^A-Za-z0-9]/g, '').toUpperCase());
       return { rol: 'xato', matn: YordamchiSof.xatoMatni(kod), savol: kutish.savol, kod: kod, qayta: YordamchiSof.xatoQaytaMi(kod), yopiq: kod === 'AI_RUXSAT' && yopiqmi() };
     }).then(function (yangi) {
-      var i = suhbat.indexOf(kutish);
-      if (i < 0) return;   // suhbat tozalangan: eski javob ko'rsatilmaydi
-      if (yangi.yopiq) {   // 403: xabar chiqadi, suhbat yopiladi va tugma yashiriladi
-        suhbat = []; yop(); if (ui.xabar) ui.xabar(YOPIQ_XABARI); yangila(); return;
+      var i = kon.xabarlar.indexOf(kutish);
+      if (i < 0 || mening !== avlod) return;   // suhbat o'chirilgan yoki akkaunt almashgan: eski javob ko'rsatilmaydi
+      if (yangi.yopiq) {   // 403: xabar chiqadi, shu savol olib tashlanadi, chat yopiladi va tugma yashiriladi
+        kon.xabarlar.splice(i > 0 && kon.xabarlar[i - 1].rol === 'savol' ? i - 1 : i, i > 0 && kon.xabarlar[i - 1].rol === 'savol' ? 2 : 1);
+        if (!kon.xabarlar.length) suhbatniOchir(kon.id); else belgila(kon);
+        yop(); if (ui.xabar) ui.xabar(YOPIQ_XABARI); yangila(); return;
       }
-      suhbat[i] = yangi;
-      if (yangi.rol === 'javob' && yangi.reja) {   // suhbat xotirasi: oxirgi 3 almashinuv
-        xotira.push({ savol: kutish.savol, reja: yangi.reja, matn: yangi.matn || '' });
-        if (xotira.length > YordamchiSof.XOTIRA_MAX) xotira = xotira.slice(-YordamchiSof.XOTIRA_MAX);
-      }
-      chiz();
+      yangi.t = hozir();
+      kon.xabarlar[i] = yangi;
+      belgila(kon);
+      if (kon === joriy) chiz();
     });
   }
   function boshlaSavol(savol) {
@@ -152,21 +211,48 @@ var Yordamchi = (function () {
     var savol = String(matn || '').trim();
     if (!savol || band()) return;
     if (savol.length > YordamchiSof.SAVOL_MAX) savol = savol.slice(0, YordamchiSof.SAVOL_MAX);
-    suhbat.push({ rol: 'savol', matn: savol });
-    var b = boshlaSavol(savol);
-    suhbat.push(b.kutish);
+    yuklash();
+    var kon = joriy;
+    if (!kon.id) {   // suhbat birinchi xabar yuborilgandagina yaratiladi; nomi birinchi savoldan
+      kon.id = ChatSof.yangiId(hozir()); kon.nom = ChatSof.nomOl(savol) || 'Suhbat'; kon.yaratilgan = kon.yangilangan = hozir();
+      saqlangan.push(kon); royxatniCheklash();
+    }
+    kon.xabarlar.push({ rol: 'savol', matn: savol, t: hozir() });
+    var b = boshlaSavol(savol);   // AI xotirasi shu suhbatning oxirgi 3 savol-javobidan olinadi
+    kon.xabarlar.push(b.kutish);
+    belgila(kon);
     chiz();
-    natijaniQoy(b.kutish, b.p);
+    natijaniQoy(kon, b.kutish, b.p);
   }
   function qaytaUrin(xatoXabar) {
-    var i = suhbat.indexOf(xatoXabar);
+    var i = joriy.xabarlar.indexOf(xatoXabar);
     if (i < 0 || band()) return;
+    var kon = joriy;
     var b = boshlaSavol(xatoXabar.savol);
-    suhbat[i] = b.kutish;
+    kon.xabarlar[i] = b.kutish;
     chiz();
-    natijaniQoy(b.kutish, b.p);
+    natijaniQoy(kon, b.kutish, b.p);
   }
-  function tozala() { suhbat = []; xotira = []; chiz(); }
+  // Yangi (bo'sh) chat: eski suhbat tarixda qoladi
+  function yangiChat() { joriy = yangiBosh(); panelniYop(true); tahrirNomi = false; chiz(); }
+  function tozala() { yangiChat(); }
+  function suhbatniOch(id) {
+    var s = saqlangan.filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    joriy = s; tahrirNomi = false; panelniYop(true); chiz();
+  }
+  function suhbatniOchir(id) {
+    saqlangan = saqlangan.filter(function (x) { return x.id !== id; });
+    if (joriy.id === id) joriy = yangiBosh();
+    saqla();
+    chiz();
+  }
+  function nomniOzgartir(id, yangi) {
+    var n = ChatSof.nomTekshir(yangi), s = saqlangan.filter(function (x) { return x.id === id; })[0];
+    if (!n || !s) return false;
+    s.nom = n; saqla(); chiz();
+    return true;
+  }
 
   // ---- Ko'rinish ----
   function e(teg, matn, klass) { var x = document.createElement(teg); if (matn !== undefined) x.textContent = matn; if (klass) x.className = klass; return x; }
@@ -184,7 +270,10 @@ var Yordamchi = (function () {
     '<circle class="yo-qorachiq" cx="10" cy="15" r="3.6" fill="#1F2A3A"/><circle class="yo-qorachiq" cx="26" cy="15" r="3.6" fill="#1F2A3A"/></g>';
   var CHIZIQLI = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
   var ORQAGA_SVG = '<path ' + CHIZIQLI + ' d="M15 5l-7 7l7 7"/>';
-  var TOZALASH_SVG = '<path ' + CHIZIQLI + ' d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>';
+  var MENU_SVG = '<path ' + CHIZIQLI + ' d="M4 7h16M4 12h16M4 17h16"/>';
+  var YANGI_SVG = '<path ' + CHIZIQLI + ' d="M12 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5M17 4l3 3l-8 8l-4 1l1-4z"/>';
+  var QALAM_SVG = '<path ' + CHIZIQLI + ' d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM14 6l4 4"/>';
+  var UCH_SVG = '<circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/>';
   var YUBORISH_SVG = '<path ' + CHIZIQLI + ' d="M12 19V5M6 11l6-6l6 6"/>';
 
   // Suzuvchi tugma: faqat Asosiy sahifada, Google bilan kirgan va yopilmagan bo'lsa ko'rinadi
@@ -213,15 +302,18 @@ var Yordamchi = (function () {
     for (var i = 0; i < 3; i++) k.appendChild(e('span', undefined, 'yo-nuqta'));
     return k;
   }
+  // Bo'sh chat: salom (faqat ekranda; ism serverga ketmaydi), savol va tayyor savollar
   function bosHolat() {
     var q = e('div', undefined, 'yo-bosh-holat');
-    q.appendChild(e('p', 'Faqat sizning yozuvlaringizdan javob beradi', 'yo-izoh'));
+    var ism = ''; try { ism = dep.ism(); } catch (x) { ism = ''; }
+    q.appendChild(e('h2', ChatSof.salomMatni(ism), 'yo-salom'));
+    q.appendChild(e('p', 'Nima haqida bilmoqchisiz?', 'yo-izoh'));
     var r = e('div', undefined, 'yo-tayyorlar');
     YordamchiSof.tayyorSavollar(sanasi()).forEach(function (s) { r.appendChild(Object.assign(e('button', s, 'yo-tayyor'), { type: 'button', onclick: function () { savolBer(s); } })); });
     q.appendChild(r);
     return q;
   }
-  // Kartalardagi tugmalar: tegishli bo'limni ochadi va chat yopiladi (suhbat xotirada qoladi)
+  // Kartalardagi tugmalar: tegishli bo'limni ochadi va chat yopiladi (suhbat tarixda qoladi)
   function hamyon() {
     return {
       belgi: function (k, o) { return ui.belgi ? ui.belgi(k, o) : e('span'); },
@@ -229,22 +321,30 @@ var Yordamchi = (function () {
     };
   }
   function oynaKattaldi() { if (royxatEl) Sigdir.hammasi(royxatEl); }
+  function vaqtEl(ms, klass) { var v = e('div', ms ? ChatSof.soatMatni(ms) : '', 'yo-vaqt ' + klass); return v; }
 
   function chiz() {
     if (!royxatEl) return;
+    var xab = joriy.xabarlar;
     var ichki = royxatEl.scrollTop;
     royxatEl.textContent = '';
-    if (!suhbat.length) royxatEl.appendChild(bosHolat());
-    suhbat.forEach(function (x, i) {
-      if (x.rol === 'savol') royxatEl.appendChild(e('div', x.matn, 'yo-savol'));
-      else if (x.rol === 'kutish') royxatEl.appendChild(nuqtalar());
+    royxatEl.classList.toggle('yo-bosh-royxat', !xab.length);
+    if (!xab.length) royxatEl.appendChild(bosHolat());
+    xab.forEach(function (x, i) {
+      if (x.rol === 'savol') {
+        var o = e('div', undefined, 'yo-xabar yo-xabar-savol');
+        o.appendChild(e('div', x.matn, 'yo-savol'));
+        if (x.t) o.appendChild(vaqtEl(x.t, 'yo-vaqt-savol'));
+        royxatEl.appendChild(o);
+      } else if (x.rol === 'kutish') royxatEl.appendChild(nuqtalar());
       else if (x.rol === 'javob') {
-        if (x.kartalar && x.kartalar.length) {   // kartochkali javob: AI gapi (bo'lsa) eng tepada oddiy matn, kartalar ketma-ket
+        if (x.kartalar && x.kartalar.length) {   // kartochkali javob: AI gapi (bo'lsa) eng tepada oddiy matn, kartalar ketma-ket (saqlangan ma'lumotdan qayta chiziladi)
           if (x.matn) royxatEl.appendChild(e('p', x.matn, 'yo-matn'));
           x.kartalar.forEach(function (k) { var kk = YordamchiKarta.yasa(k, hamyon()); if (kk) royxatEl.appendChild(kk); });
         } else royxatEl.appendChild(e('div', x.matn, 'yo-javob'));
+        if (x.t) royxatEl.appendChild(vaqtEl(x.t, 'yo-vaqt-javob'));
         // davom savollari: faqat eng oxirgi javob ostida, bosiladigan tugmalar
-        if (x.davom && x.davom.length && i === suhbat.length - 1) {
+        if (x.davom && x.davom.length && i === xab.length - 1) {
           var dv = e('div', undefined, 'yo-davom');
           x.davom.forEach(function (d) { dv.appendChild(Object.assign(e('button', d, 'yo-tayyor yo-davom-tugma'), { type: 'button', onclick: function () { savolBer(d); } })); });
           royxatEl.appendChild(dv);
@@ -257,21 +357,167 @@ var Yordamchi = (function () {
       }
     });
     Sigdir.hammasi(royxatEl);   // raqamlar kartadan chiqib ketmasin
-    royxatEl.scrollTop = suhbat.length ? royxatEl.scrollHeight : ichki;
-    var kutmoqda = band();
-    if (yuborEl) yuborEl.disabled = kutmoqda;
-    if (tozalashEl) tozalashEl.disabled = !suhbat.length;
+    royxatEl.scrollTop = xab.length ? royxatEl.scrollHeight : ichki;
+    if (yuborEl) yuborEl.disabled = band();
+    sarlavhaniChiz();
+    if (panelEl && panelOchiq) royxatniChiz();
+  }
+
+  // ---- Sarlavha: chat nomi (bosilsa tahrirlanadi) ----
+  var tahrirNomi = false;
+  // Nomni tahrirlash maydoni: Enter yoki "Saqlash" saqlaydi, Escape bekor qiladi; 40 belgigacha, bo'sh nom qabul qilinmaydi
+  function tahrirMaydoni(boshlangich, saqlash, bekor, klass) {
+    var f = e('form', undefined, 'yo-tahrir ' + (klass || ''));
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'yo-tahrir-kiritish'; inp.maxLength = ChatSof.NOM_MAX; inp.value = boshlangich; inp.autocomplete = 'off';
+    inp.setAttribute('aria-label', 'Suhbat nomi');
+    var xb = e('span', 'Nom bo\'sh bo\'lmasligi kerak', 'yo-tahrir-xato'); xb.hidden = true; xb.setAttribute('role', 'alert');
+    var sb = e('button', 'Saqlash', 'yo-saqlash'); sb.type = 'submit'; sb.setAttribute('aria-label', 'Nomni saqlash');
+    f.appendChild(inp); f.appendChild(sb); f.appendChild(xb);
+    f.addEventListener('submit', function (h) {
+      h.preventDefault();
+      if (!ChatSof.nomTekshir(inp.value)) { xb.hidden = false; inp.focus(); return; }
+      saqlash(inp.value);
+    });
+    inp.addEventListener('input', function () { xb.hidden = true; });
+    inp.addEventListener('keydown', function (h) { if (h.key === 'Escape') { h.preventDefault(); h.stopPropagation(); bekor(); } });
+    setTimeout(function () { try { inp.focus(); inp.select(); } catch (x) { /* ahamiyatsiz */ } }, 0);
+    return f;
+  }
+  function sarlavhaniChiz() {
+    if (!sarlavhaEl) return;
+    sarlavhaEl.textContent = '';
+    if (joriy.id && tahrirNomi) {
+      var id = joriy.id;
+      sarlavhaEl.appendChild(tahrirMaydoni(joriy.nom, function (m) { nomniOzgartir(id, m); tahrirNomi = false; sarlavhaniChiz(); if (nomEl) nomEl.focus(); },
+        function () { tahrirNomi = false; sarlavhaniChiz(); if (nomEl) nomEl.focus(); }, 'yo-tahrir-bosh'));
+      return;
+    }
+    if (!joriy.id) { nomEl = null; sarlavhaEl.appendChild(e('span', 'Yangi chat', 'yo-nom yo-nom-bosh')); return; }
+    nomEl = tugmaYasa('yo-nom', 'Chat nomini o\'zgartirish: ' + joriy.nom, function () { tahrirNomi = true; sarlavhaniChiz(); });
+    nomEl.appendChild(e('span', joriy.nom, 'yo-nom-matn'));
+    nomEl.appendChild(svg('0 0 24 24', QALAM_SVG, 'yo-qalam'));
+    sarlavhaEl.appendChild(nomEl);
+  }
+
+  // ---- Yon panel: suhbatlar tarixi ----
+  var panelOchiq = false, qidiruvMatni = '', menuId = null, tahrirId = null, tasdiqId = null;
+  function panelniOch() {
+    if (!ekranEl) return;
+    yuklash();
+    panelOchiq = true; menuId = null; tahrirId = null; tasdiqId = null;
+    panelniChiz();
+    panelEl.classList.add('ochiq'); fonEl.classList.add('ochiq');
+    panelEl.setAttribute('aria-hidden', 'false');
+    menuTugma.setAttribute('aria-expanded', 'true');
+    setTimeout(function () { var b = panelEl.querySelector('.yo-panel-yangi'); if (b && panelOchiq) b.focus(); }, 0);
+  }
+  function panelniYop(fokussiz) {
+    if (!panelEl || !panelOchiq) return;
+    panelOchiq = false; menuId = null; tahrirId = null; tasdiqId = null;
+    panelEl.classList.remove('ochiq'); fonEl.classList.remove('ochiq');
+    panelEl.setAttribute('aria-hidden', 'true');
+    menuTugma.setAttribute('aria-expanded', 'false');
+    if (!fokussiz && menuTugma) menuTugma.focus();
+  }
+  function panelniChiz() {
+    if (!panelEl) return;
+    var ichki = panelRoyxatEl ? panelRoyxatEl.scrollTop : 0;
+    panelRoyxatEl = null;
+    panelEl.textContent = '';
+    var yangi = e('button', undefined, 'yo-panel-yangi'); yangi.type = 'button'; yangi.setAttribute('aria-label', 'Yangi chat');
+    yangi.appendChild(svg('0 0 24 24', YANGI_SVG)); yangi.appendChild(e('span', 'Yangi chat'));
+    yangi.addEventListener('click', yangiChat);
+    panelEl.appendChild(yangi);
+    var q = document.createElement('input');
+    q.type = 'search'; q.className = 'yo-qidiruv'; q.placeholder = 'Suhbatlardan qidirish'; q.value = qidiruvMatni; q.autocomplete = 'off'; q.maxLength = 60;
+    q.setAttribute('aria-label', 'Suhbatlardan qidirish');
+    q.addEventListener('input', function () { qidiruvMatni = q.value; royxatniChiz(); });
+    panelEl.appendChild(q);
+    panelRoyxatEl = e('div', undefined, 'yo-panel-royxat');
+    panelEl.appendChild(panelRoyxatEl);
+    royxatniChiz();
+    panelRoyxatEl.scrollTop = ichki;
+    // Maketda "Orqaga" tugmasi yo'q (tepa: menyu, nom, yangi chat), shuning uchun chatdan chiqish yo'li panelning pastida
+    var chiq = e('button', undefined, 'yo-panel-chiq'); chiq.type = 'button'; chiq.id = 'yordamchi-orqaga'; chiq.setAttribute('aria-label', 'Yordamchidan chiqish');
+    chiq.appendChild(svg('0 0 24 24', ORQAGA_SVG)); chiq.appendChild(e('span', 'Ilovaga qaytish'));
+    chiq.addEventListener('click', function () { yop(); });
+    panelEl.appendChild(chiq);
+  }
+  function royxatniChiz() {
+    if (!panelRoyxatEl) return;
+    panelRoyxatEl.textContent = '';
+    var t = hozir(), guruhlar = ChatSof.guruhla(saqlangan, t, qidiruvMatni);
+    if (!guruhlar.length) { panelRoyxatEl.appendChild(e('p', saqlangan.length ? 'Hech narsa topilmadi' : 'Hali suhbatlar yo\'q', 'yo-panel-bosh')); return; }
+    guruhlar.forEach(function (g) {
+      var sec = e('section', undefined, 'yo-guruh'); sec.setAttribute('aria-label', g.nom);
+      sec.appendChild(e('h3', g.nom, 'yo-guruh-nom'));
+      g.royxat.forEach(function (s) { sec.appendChild(qatorYasash(s, t)); });
+      panelRoyxatEl.appendChild(sec);
+    });
+  }
+  function qatorYasash(s, t) {
+    var q = e('div', undefined, 'yo-qator' + (s === joriy ? ' joriy' : ''));
+    if (tahrirId === s.id) {   // nomni shu qatorning o'zida tahrirlash
+      q.classList.add('tahrirda');
+      q.appendChild(tahrirMaydoni(s.nom, function (m) { nomniOzgartir(s.id, m); tahrirId = null; royxatniChiz(); }, function () { tahrirId = null; royxatniChiz(); }));
+      return q;
+    }
+    var b = e('button', undefined, 'yo-qator-nom'); b.type = 'button'; b.setAttribute('aria-label', 'Suhbatni ochish: ' + s.nom);
+    b.appendChild(e('span', s.nom, 'yo-qator-matn')); b.appendChild(e('span', ChatSof.qatorVaqti(s.yangilangan, t), 'yo-qator-vaqt'));
+    b.addEventListener('click', function () { suhbatniOch(s.id); });
+    q.appendChild(b);
+    var u = tugmaYasa('yo-uch', 'Suhbat amallari: ' + s.nom, function (h) { h.stopPropagation(); menuId = menuId === s.id ? null : s.id; royxatniChiz(); });
+    u.setAttribute('aria-haspopup', 'menu'); u.setAttribute('aria-expanded', menuId === s.id ? 'true' : 'false');
+    u.appendChild(svg('0 0 24 24', UCH_SVG));
+    q.appendChild(u);
+    if (menuId === s.id) {
+      var m = e('div', undefined, 'yo-menu'); m.setAttribute('role', 'menu');
+      var a = e('button', 'Nomini o\'zgartirish', 'yo-menu-band'); a.type = 'button'; a.setAttribute('role', 'menuitem');
+      a.addEventListener('click', function (h) { h.stopPropagation(); menuId = null; tahrirId = s.id; royxatniChiz(); });
+      var o = e('button', 'O\'chirish', 'yo-menu-band yo-menu-ochirish'); o.type = 'button'; o.setAttribute('role', 'menuitem');
+      o.addEventListener('click', function (h) { h.stopPropagation(); menuId = null; tasdiqId = s.id; tasdiqniChiz(); });
+      m.appendChild(a); m.appendChild(o); q.appendChild(m);
+      setTimeout(function () { try { a.focus(); } catch (x) { /* ahamiyatsiz */ } }, 0);
+    }
+    return q;
+  }
+  // O'chirishdan oldin tasdiq
+  function tasdiqniChiz() {
+    royxatniChiz();
+    if (!panelEl) return;
+    var eski = ekranEl.querySelector('.yo-tasdiq-fon'); if (eski) eski.parentNode.removeChild(eski);
+    var s = saqlangan.filter(function (x) { return x.id === tasdiqId; })[0];
+    if (!s) { tasdiqId = null; return; }
+    var fon = e('div', undefined, 'yo-tasdiq-fon');
+    var d = e('div', undefined, 'yo-tasdiq'); d.setAttribute('role', 'alertdialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-label', 'Suhbat o\'chirilsinmi?');
+    d.appendChild(e('p', 'Suhbat o\'chirilsinmi?', 'yo-tasdiq-matn'));
+    d.appendChild(e('p', s.nom, 'yo-tasdiq-nom'));
+    var qator = e('div', undefined, 'yo-tasdiq-qator');
+    var yoq = e('button', 'Bekor qilish', 'yo-tasdiq-tugma'); yoq.type = 'button';
+    var ha = e('button', 'O\'chirish', 'yo-tasdiq-tugma yo-tasdiq-ha'); ha.type = 'button';
+    function yop2() { tasdiqId = null; if (fon.parentNode) fon.parentNode.removeChild(fon); }
+    yoq.addEventListener('click', yop2);
+    ha.addEventListener('click', function () { var id = tasdiqId; yop2(); suhbatniOchir(id); royxatniChiz(); });
+    fon.addEventListener('click', function (h) { if (h.target === fon) yop2(); });
+    d.addEventListener('keydown', function (h) { if (h.key === 'Escape') { h.stopPropagation(); yop2(); } });
+    qator.appendChild(yoq); qator.appendChild(ha); d.appendChild(qator); fon.appendChild(d);
+    ekranEl.appendChild(fon);
+    yoq.focus();
   }
 
   function ekranYasash() {
     var ek = e('div', undefined, 'yo-ekran');
     ek.setAttribute('role', 'dialog'); ek.setAttribute('aria-modal', 'true'); ek.setAttribute('aria-label', 'Yordamchi');
     var bosh = e('div', undefined, 'yo-bosh');
-    var orqa = tugmaYasa('yo-doira', 'Orqaga', function () { yop(); }); orqa.appendChild(svg('0 0 24 24', ORQAGA_SVG)); orqa.id = 'yordamchi-orqaga';
-    bosh.appendChild(orqa);
-    bosh.appendChild(e('h1', 'Yordamchi'));
-    tozalashEl = tugmaYasa('yo-doira', 'Suhbatni tozalash', tozala); tozalashEl.appendChild(svg('0 0 24 24', TOZALASH_SVG)); tozalashEl.id = 'yordamchi-tozalash';
-    bosh.appendChild(tozalashEl);
+    menuTugma = tugmaYasa('yo-doira', 'Suhbatlar menyusi', function () { if (panelOchiq) panelniYop(); else panelniOch(); });
+    menuTugma.appendChild(svg('0 0 24 24', MENU_SVG)); menuTugma.id = 'yordamchi-menyu';
+    menuTugma.setAttribute('aria-haspopup', 'true'); menuTugma.setAttribute('aria-expanded', 'false');
+    bosh.appendChild(menuTugma);
+    var h1 = e('h1', undefined, 'yo-sarlavha'); sarlavhaEl = h1;
+    bosh.appendChild(h1);
+    var yangi = tugmaYasa('yo-doira', 'Yangi chat', yangiChat); yangi.appendChild(svg('0 0 24 24', YANGI_SVG)); yangi.id = 'yordamchi-yangi';
+    bosh.appendChild(yangi);
     ek.appendChild(bosh);
     royxatEl = e('div', undefined, 'yo-royxat'); royxatEl.id = 'yordamchi-royxat'; royxatEl.setAttribute('aria-live', 'polite');
     ek.appendChild(royxatEl);
@@ -291,6 +537,12 @@ var Yordamchi = (function () {
       savolBer(m);
     });
     ek.appendChild(forma);
+    // Yon panel: chapdan ochiladi (eni ~78%), o'ng tomoni xira fon (bosilsa yopiladi)
+    fonEl = e('div', undefined, 'yo-panel-fon'); fonEl.addEventListener('click', function () { panelniYop(); });
+    panelEl = e('aside', undefined, 'yo-panel'); panelEl.setAttribute('aria-label', 'Suhbatlar tarixi'); panelEl.setAttribute('aria-hidden', 'true');
+    panelEl.addEventListener('click', function () { if (menuId) { menuId = null; royxatniChiz(); } });
+    ek.appendChild(fonEl); ek.appendChild(panelEl);
+    panelniChiz();
     return ek;
   }
 
@@ -301,7 +553,14 @@ var Yordamchi = (function () {
     ekranEl.style.height = v.height + 'px';
     ekranEl.style.top = v.offsetTop + 'px';
   }
-  function tugmaBosildi(h) { if (h.key === 'Escape' && ekranEl) yop(); }
+  function tugmaBosildi(h) {
+    if (h.key !== 'Escape' || !ekranEl) return;
+    if (tasdiqId || menuId) { tasdiqId = null; menuId = null; var t = ekranEl.querySelector('.yo-tasdiq-fon'); if (t) t.parentNode.removeChild(t); royxatniChiz(); return; }
+    if (tahrirId) { tahrirId = null; royxatniChiz(); return; }
+    if (panelOchiq) { panelniYop(); return; }
+    if (tahrirNomi) { tahrirNomi = false; sarlavhaniChiz(); return; }
+    yop();
+  }
   // Telefonning "orqaga" tugmasi (Android) chatni yopadi, ilovadan chiqarib yubormaydi: chat ochilganda bitta tarix yozuvi qo'shiladi
   var tarixBor = false;
   function orqagaBosildi() { if (ekranEl) yop(true); }
@@ -315,6 +574,7 @@ var Yordamchi = (function () {
     document.addEventListener('keydown', tugmaBosildi);
     window.addEventListener('resize', oynaKattaldi);
     try { history.pushState({ yordamchi: true }, ''); tarixBor = true; window.addEventListener('popstate', orqagaBosildi); } catch (x) { tarixBor = false; }
+    yuklash();
     chiz();
     yangila();
   }
@@ -326,8 +586,9 @@ var Yordamchi = (function () {
     if (window.visualViewport) { window.visualViewport.removeEventListener('resize', oynaniMoslash); window.visualViewport.removeEventListener('scroll', oynaniMoslash); }
     document.removeEventListener('keydown', tugmaBosildi);
     if (ekranEl.parentNode) ekranEl.parentNode.removeChild(ekranEl);
-    ekranEl = royxatEl = kirishEl = yuborEl = tozalashEl = null;
-    suhbat = []; xotira = [];   // chat yopilsa suhbat va AI xotirasi o'chadi
+    ekranEl = royxatEl = kirishEl = yuborEl = menuTugma = sarlavhaEl = nomEl = panelEl = fonEl = panelRoyxatEl = null;
+    panelOchiq = false; tahrirNomi = false; menuId = tahrirId = tasdiqId = null; qidiruvMatni = '';
+    joriy = yangiBosh();   // chat qayta ochilsa bo'sh yangi chat ochiladi; suhbat tarixda qoladi
     document.body.style.overflow = '';
     yangila();
     if (tugmaEl && !tugmaEl.hidden) tugmaEl.focus();
@@ -340,9 +601,9 @@ var Yordamchi = (function () {
     if (typeof Kirish !== 'undefined' && Kirish.kuzat) {
       Kirish.kuzat(function (h) {
         // Chiqilsa (kirgan -> kirmagan) "yopiq" belgisi o'chadi; qayta kirilsa tugma yana ko'rinadi
-        if (oldingiKirgan && !h.kirgan) belginiOchir();
+        if (oldingiKirgan && !h.kirgan) { belginiOchir(); hammasiniTozala(); }   // chiqilsa saqlangan suhbatlar ham tozalanadi (umumiy qurilma xavfsizligi)
         oldingiKirgan = !!h.kirgan;
-        if (!h.kirgan && ekranEl) { suhbat = []; yop(); }
+        if (!h.kirgan && ekranEl) yop();
         yangila();
       });
     }
@@ -351,7 +612,8 @@ var Yordamchi = (function () {
 
   return {
     boshlash: boshlash, yangila: yangila, sozla: sozla, ochish: ochish, yop: yop, tozala: tozala, savolBer: savolBer,
-    javobOl: javobOl, chaqir: chaqir, korinishi: korinadimi, suhbat: function () { return suhbat; }, xotira: function () { return xotira; }, yopiqmi: yopiqmi, belginiOchir: belginiOchir,
+    javobOl: javobOl, chaqir: chaqir, korinishi: korinadimi, suhbat: function () { return joriy.xabarlar; }, xotira: suhbatXotirasi, joriy: function () { return joriy; }, saqlangan: function () { return saqlangan; },
+    yangiChat: yangiChat, suhbatniOch: suhbatniOch, suhbatniOchir: suhbatniOchir, nomniOzgartir: nomniOzgartir, hammasiniTozala: hammasiniTozala, panelniOch: panelniOch, panelniYop: panelniYop, SUHBAT_KALIT: SUHBAT_KALIT, yopiqmi: yopiqmi, belginiOchir: belginiOchir,
     YOPIQ_KALIT: YOPIQ_KALIT, YOPIQ_XABARI: YOPIQ_XABARI
   };
 })();

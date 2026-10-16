@@ -56,7 +56,7 @@ async function senariy(brauzer, tema) {
   await p.waitForFunction(() => document.getElementById('gap-matn').value.indexOf('taksiga') >= 0);
   teng(await p.inputValue('#gap-matn'), 'non oldim taksiga o\'n besh ming', 'matn qo\'shildi');
   const s = sorovlar[0];
-  teng([sorovlar.length, s.rejim, /^(audio\/webm|audio\/mp4|audio\/ogg)$/.test(s.mime), typeof s.audio === 'string' && s.audio.length > 500, Object.keys(s).sort().join()], [1, 'ovoz', true, true, 'audio,mime,rejim'], 'serverga ovoz rejimi: ' + (s && s.mime) + ', ' + (s && s.audio && s.audio.length) + ' belgi');
+  teng([sorovlar.length, s.rejim, s.mime, typeof s.audio === 'string' && s.audio.indexOf('UklGR') === 0 && s.audio.length > 500, Object.keys(s).sort().join()], [1, 'ovoz', 'audio/wav', true, 'audio,mime,rejim'], 'serverga ovoz rejimi (brauzer webm/mp4 ni WAV ga aylantirdi, RIFF): ' + (s && s.mime) + ', ' + (s && s.audio && s.audio.length) + ' belgi');
   teng(await p.locator('#gap-saqlash').count(), 0, 'yozuvga avtomatik aylantirilmadi (karta yo\'q)');
   teng(await p.evaluate(() => Object.entries(localStorage).map((x) => x.join('=')).join('|').indexOf('QUJD') < 0 && JSON.stringify(Object.keys(localStorage)).indexOf('audio') < 0), true, 'audio localStorage da yo\'q');
   await p.screenshot({ path: path.join(RASMLAR, tema + '-3-matn-tushdi.png') });

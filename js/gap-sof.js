@@ -40,16 +40,18 @@ var GapSof = (function () {
     AI_PROVAYDER: 'Yordamchi hozir javob bera olmayapti. Birozdan keyin qayta urinib ko\'ring.',
     AI_KIRISH: 'So\'rov noto\'g\'ri tuzilgan. Gapni boshqacha yozib ko\'ring.'
   };
-  function xatoMatni(kod) {
+  function xatoMatni(kod, debug) {
     var k = String(kod || '').length ? String(kod) : 'JS_UNKNOWN';
+    var sabab = typeof debug === 'string' && /^[a-z0-9_]{1,40}$/.test(debug) ? ', sabab: ' + debug : '';
     var matn = XATOLAR[k] || (/^HTTP_/.test(k) ? 'Yordamchi serveri kutilgan javob bermadi.' : 'Kutilmagan xato. Qayta urinib ko\'ring.');
-    return matn + '\n(kod: ' + k + ')';
+    return matn + '\n(kod: ' + k + sabab + ')';
   }
   // Server `ok:true` qaytarib, yozuv bermagan bo'lsa: sababiga qarab xabar (kodsiz)
   function sababMatni(sabab) { return sabab === 'yozuv_yoq' ? YOZUV_YOQ_MATNI : TUSHUNARSIZ_MATNI; }
 
   // ---- Mikrofon (31-band): ovozdan matn. Audio faqat xotirada turadi, hech qayerda saqlanmaydi ----
   var OVOZ_MAX_MS = 30000;      // yozish shuncha vaqtdan keyin o'zi to'xtaydi
+  var OVOZ_WAV_HZ = 16000;      // WAV namuna chastotasi (nutq uchun yetarli; 30 s ~ 960 KB)
   var OVOZ_MIN_BAYT = 1000;     // bundan kichik yozuv "ovoz eshitilmadi" deb olinadi (serverga yuborilmaydi)
   var OVOZ_MAX_BAYT = 1900000;  // serverdagi chegara ~2 MB (asl hajm); undan oshsa yuborilmaydi
   // Qurilmaga qarab format: Chrome/Android — webm, iPhone (Safari) — mp4. isTaqiq(mime) — MediaRecorder.isTypeSupported; hech biri bo'lmasa '' (qurilma o'zi tanlaydi)
@@ -75,10 +77,26 @@ var GapSof = (function () {
     if (n === 'NotFoundError' || n === 'DevicesNotFoundError' || n === 'OverconstrainedError') return 'MIK_YOQ';
     return 'MIK_BAND';
   }
-  function ovozXatoMatni(kod) {
+  function ovozXatoMatni(kod, debug) {
     var k = String(kod || '');
     if (OVOZ_XATOLAR[k]) return OVOZ_XATOLAR[k];
-    return xatoMatni(k);
+    return xatoMatni(k, debug);   // "(kod: AI_PROVAYDER, sabab: gemini_400_mime)"
+  }
+  // WAV (16 bit PCM, mono): Gemini webm/mp4 ni qabul qilmasligi mumkin, WAV hujjatlashtirilgan format. samples — Float32Array [-1..1].
+  function wavYasa(samples, tezlik) {
+    var n = samples.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    function yoz(o, t) { for (var i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); }
+    yoz(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); yoz(8, 'WAVE'); yoz(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, tezlik, true); v.setUint32(28, tezlik * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); yoz(36, 'data'); v.setUint32(40, n * 2, true);
+    for (var j = 0; j < n; j++) { var x = Math.max(-1, Math.min(1, samples[j])); v.setInt16(44 + j * 2, x < 0 ? Math.round(x * 32768) : Math.round(x * 32767), true); }
+    return buf;
+  }
+  // Ko'p kanalli decode natijasi (kanal massivlari) -> mono (o'rtacha)
+  function monoQil(kanallar) {
+    if (kanallar.length === 1) return kanallar[0];
+    var n = kanallar[0].length, m = new Float32Array(n);
+    for (var i = 0; i < n; i++) { var t = 0; for (var k = 0; k < kanallar.length; k++) t += kanallar[k][i]; m[i] = t / kanallar.length; }
+    return m;
   }
   // Yangi matn gap maydonidagi matnga qo'shiladi (ustiga yozilmaydi), 300 belgigacha
   function matnQosh(mavjud, yangi) {
@@ -292,7 +310,7 @@ var GapSof = (function () {
     GAP_MAX: GAP_MAX, HISOBLAGICH_BOSHI: HISOBLAGICH_BOSHI, ESKI_MAX: ESKI_MAX, ESKI_IZOH_MAX: ESKI_IZOH_MAX, IZOH_MAX: IZOH_MAX, KARTA_MAX: KARTA_MAX, KUTISH_MS: KUTISH_MS,
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
     soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
-    mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
+    wavYasa: wavYasa, monoQil: monoQil, OVOZ_WAV_HZ: OVOZ_WAV_HZ, mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
     xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
     kategoriyaNomlari: kategoriyaNomlari, hisobRoyxati: hisobRoyxati, eskiTanla: eskiTanla, sorovTanasi: sorovTanasi,
     yozuvlarniOl: yozuvlarniOl, kartaYasash: kartaYasash, ogohlantirishlar: ogohlantirishlar,

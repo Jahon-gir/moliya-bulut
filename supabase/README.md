@@ -108,6 +108,8 @@ Bu fayl **ixtiyoriy, lekin tavsiya etiladi**: ilova uni bo'lmasa ham ishlaydi. N
 Bu qism ilovaga hali ulanmagan (chat ekrani keyingi bosqichlarda). Bu yerda faqat server tayyorlanadi va bitta sinov so'rovi bilan tekshiriladi.
 **Kalitlar (OpenAI/Anthropic) faqat Supabase "Secrets" da turadi: ularni hech qachon repozitoriyga, chatga yoki ilova kodiga yozmang.**
 
+> **Funksiya yana o'zgardi (0.37.1, mikrofon xatosi sababi):** Gemini xatosi endi logga (Edge Functions -> `yordamchi` -> Logs, qator `ovoz: ...`) va javobdagi `debug` maydoniga yoziladi (kalit, audio va matn yozilmaydi). **Dashboard'dagi funksiyaga qayta joylang.** Secrets o'zgarmagan.
+
 > **Funksiya yana o'zgardi (0.37.0, mikrofon):** `index.ts` ga yangi `ovoz` rejimi qo'shildi (audio -> matn, Google Gemini). **Dashboard'dagi funksiyaga qayta joylang** va 7-bo'limdagi ikkita yangi Secret'ni kiriting (`GEMINI_API_KEY`, `GEMINI_MODEL`). 007 qayta kiritilmaydi.
 
 > **Funksiya yana o'zgardi (0.36.0, "Gap bilan qo'shish"):** `index.ts` ga "narx jami" qoidasi qo'shildi (`yozuv` rejimi: "2 ta non va sut oldim 18 ming" endi 36 000 emas, 18 000 chiqadi; `TZ-sinxronlash.md` 28.4 va 29.8). **Dashboard'dagi funksiyaga qayta joylang** (pastdagi qadamlar bilan bir xil). Secrets va 007 qayta kiritilmaydi.

@@ -44,7 +44,8 @@ function tarmoq(holat = {}) {
     }
     if (url.startsWith('https://generativelanguage.googleapis.com/')) {
       if (holat.geminiTarmoq) throw new Error("tarmoq yo'q");
-      if (holat.geminiHolat) return J({ error: { message: 'x' } }, holat.geminiHolat);
+      if (holat.geminiHolat) return J({ error: { message: holat.geminiXabar || 'x' } }, holat.geminiHolat);
+      if (holat.geminiMatnTana !== undefined) return new Response(holat.geminiMatnTana, { status: 200 });
       return J(holat.geminiJavob || { candidates: [{ content: { parts: [{ text: holat.geminiMatn }] } }] });
     }
     throw new Error('Kutilmagan manzil: ' + url);
@@ -379,7 +380,7 @@ test('index.ts: bitta fayl (mahalliy import yo\'q), logga yozmaydi, kalit yoki e
   assert.equal(/^\s*import\s/m.test(kodsiz), false, 'import bor');
   assert.equal(/\bimport\s*\(/.test(kodsiz), false);
   assert.equal(/\brequire\s*\(/.test(kodsiz), false);
-  assert.equal(/\bconsole\./.test(kodsiz), false, 'console.* bor: savol/natija logga tushishi mumkin');
+  assert.deepEqual(kodsiz.match(/\bconsole\.\w+/g), ['console.error'], 'faqat ovozLogla ichida bitta console.error (Gemini xatosi); savol/natija logga tushmasin');
   assert.equal(/\bDeno\.writeFile|Deno\.writeTextFile/.test(kodsiz), false);
   assert.equal(/sk-[A-Za-z0-9_-]{16,}|sk-ant-|eyJ[A-Za-z0-9_-]{20,}|sb_secret_|service_role/.test(kod.replace(/service_role[^\n]*/g, '')), false);
   assert.equal(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/.test(kod), false, 'email yozilgan');
@@ -672,7 +673,7 @@ test('repo: model-server/ va hujjatlarda haqiqiy manzil, kalit, email yo\'q (faq
     assert.equal(/(MODEL_KALIT)\s*[:=]\s*["']?[A-Za-z0-9]{8,}/.test(t), false, f + ': kalit qiymati');
     assert.equal(/\bMODEL_KALIT\s*=\s*"[^"<]/.test(t), false, f);
   }
-  assert.equal(/\bconsole\./.test(readFileSync(join(BU, 'index.ts'), 'utf8').replace(/\/\/[^\n]*/g, '')), false);
+  assert.deepEqual(readFileSync(join(BU, 'index.ts'), 'utf8').replace(/\/\/[^\n]*/g, '').match(/\bconsole\.\w+/g), ['console.error']);
 });
 
 // ---------------- ovoz rejimi (31-band) ----------------
@@ -731,4 +732,41 @@ test("ovoz: maxfiylik — kalit va audio javobda/xatoda yo'q, kodda kalit qiymat
   const kod = readFileSync(join(BU, 'index.ts'), 'utf8');
   assert.equal(/GEMINI_API_KEY\s*[:=]\s*["'][A-Za-z0-9]{8,}/.test(kod), false);
   const readme = readFileSync(join(BU, '..', '..', 'README.md'), 'utf8'); assert.match(readme, /GEMINI_API_KEY/); assert.match(readme, /GEMINI_MODEL/);
+});
+
+// ---------------- ovoz: Gemini xatosining sababi (31.7) ----------------
+async function logBilan(f) {
+  const eski = console.error, yozuvlar = [];
+  console.error = (...a) => { yozuvlar.push(a.join(' ')); };
+  try { return { natija: await f(), yozuvlar }; } finally { console.error = eski; }
+}
+test("ovoz xatosi: Gemini 400 (mime) -> logda HTTP kod, error.message (≤ 300) va mime; javobda debug 'gemini_400_mime'; kalit, audio va matn yo'q", async () => {
+  const KALIT = 'AIzaSyKalitSinov1234567890abcdef', xabar = 'Unsupported MIME type: audio/webm ' + KALIT + ' ' + 'x'.repeat(500);
+  const { natija: x, yozuvlar } = await logBilan(() => chaqir(AUDIO(), { holat: { geminiHolat: 400, geminiXabar: xabar }, env: { GEMINI_API_KEY: KALIT } }));
+  assert.equal(x.r.status, 502); assert.equal(x.j.xato.kod, 'AI_PROVAYDER'); assert.equal(x.j.xato.debug, 'gemini_400_mime');
+  assert.equal(yozuvlar.length, 1); const l = yozuvlar[0];
+  assert.match(l, /^ovoz: gemini_400_mime http=400 mime=audio\/webm xabar=Unsupported MIME type: audio\/webm /); assert.ok(l.length < 400, 'xabar 300 belgigacha qirqilgan: ' + l.length);
+  for (const yashirin of [KALIT, AUDIO().audio.slice(0, 40), 'AIza']) { assert.equal(l.includes(yashirin), false, 'logda: ' + yashirin); assert.equal(JSON.stringify(x.j).includes(yashirin), false, 'javobda: ' + yashirin); }
+  assert.match(l, /\*\*\*/, 'kalit yashirilgan');
+});
+test("ovoz xatosi: boshqa holatlar — HTTP 500 (gemini_500), JSON emas (gemini_json), tarmoq (gemini_tarmoq), kalit yo'q (gemini_kalit_yoq); debug faqat [a-z0-9_]", async () => {
+  const env = { GEMINI_API_KEY: 'k-sinov' };
+  let { natija: x, yozuvlar } = await logBilan(() => chaqir(AUDIO(), { holat: { geminiHolat: 500 }, env }));
+  assert.equal(x.j.xato.debug, 'gemini_500'); assert.match(yozuvlar[0], /^ovoz: gemini_500 http=500 mime=audio\/webm/);
+  ({ natija: x, yozuvlar } = await logBilan(() => chaqir(AUDIO(), { holat: { geminiMatnTana: 'bu JSON emas' }, env })));
+  assert.equal(x.j.xato.debug, 'gemini_json'); assert.match(yozuvlar[0], /gemini_json/);
+  ({ natija: x, yozuvlar } = await logBilan(() => chaqir(AUDIO(), { holat: { geminiTarmoq: true }, env })));
+  assert.equal(x.r.status, 503); assert.equal(x.j.xato.kod, 'NETWORK'); assert.equal(x.j.xato.debug, 'gemini_tarmoq'); assert.match(yozuvlar[0], /gemini_tarmoq http=-/);
+  ({ natija: x, yozuvlar } = await logBilan(() => chaqir(AUDIO(), { holat: { geminiMatn: 'a' } })));
+  assert.equal(x.j.xato.debug, 'gemini_kalit_yoq'); assert.equal(yozuvlar.length, 1);
+  for (const d of ['gemini_400_mime', 'gemini_500', 'gemini_json']) assert.match(d, /^[a-z0-9_]{1,40}$/);
+});
+test("ovoz: bo'sh javob loglanadi (finish/block kodlari), matn va audio yo'q; muvaffaqiyatda log yo'q; boshqa rejimlar javobiga debug qo'shilmaydi", async () => {
+  const env = { GEMINI_API_KEY: 'k-sinov' };
+  let { natija: x, yozuvlar } = await logBilan(() => chaqir(AUDIO(), { holat: { geminiJavob: { candidates: [{ finishReason: 'SAFETY', content: { parts: [{ text: ' ' }] } }], promptFeedback: { blockReason: 'OTHER' } } }, env }));
+  assert.deepEqual(x.j, { ok: false, sabab: 'ovoz_yoq' }); assert.match(yozuvlar[0], /^ovoz: gemini_bosh http=200 mime=audio\/webm xabar=finish=SAFETY block=OTHER$/);
+  ({ natija: x, yozuvlar } = await logBilan(() => chaqir(AUDIO(), { holat: { geminiMatn: 'maxfiy tanilgan matn' }, env })));
+  assert.equal(x.j.ok, true); assert.equal(yozuvlar.length, 0, 'muvaffaqiyatda log yo\'q');
+  ({ natija: x, yozuvlar } = await logBilan(() => chaqir(REJA(), { holat: { aiHolat: 500 } })));
+  assert.equal(x.j.xato.kod, 'AI_PROVAYDER'); assert.equal('debug' in x.j.xato, false); assert.equal(yozuvlar.length, 0);
 });

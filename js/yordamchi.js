@@ -71,7 +71,10 @@ var Yordamchi = (function () {
         if (r.ok && r.j && r.j.ok === false && r.j.sabab === 'ovoz_yoq') throw xato('OVOZ_YOQ', r.holat);   // ovoz rejimi: gap eshitilmadi
         var kod = r.j && r.j.xato && typeof r.j.xato.kod === 'string' ? r.j.xato.kod : '';
         if (r.holat === 403 && kod === 'AI_RUXSAT') { yopiqQil(); throw xato('AI_RUXSAT', 403); }
-        throw xato(kod || ('HTTP_' + r.holat), r.holat);
+        var e = xato(kod || ('HTTP_' + r.holat), r.holat);
+        var dbg = r.j && r.j.xato && r.j.xato.debug;
+        if (typeof dbg === 'string' && /^[a-z0-9_]{1,40}$/.test(dbg)) e.debug = dbg;   // serverning qisqa sababi (masalan gemini_400_mime)
+        throw e;
       });
     }
     return tokenBilan(false);

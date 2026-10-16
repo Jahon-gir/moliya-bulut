@@ -1651,11 +1651,12 @@
     var k = karta();
     [
       ['kp-hisobot', 'Hisobot', 'davr, taqqoslash, diagrammalar', hisobotEkrani],
+      ['kp-statistika', 'Statistika', 'grafik, o\'rtacha, taqqoslash', statistikaEkrani],
       ['kp-byudjet', 'Byudjet', 'oylik chegaralar', byudjetEkrani],
       ['kp-hisoblar', 'Hisoblar', faolHisoblar().length + ' ta', hisoblarEkrani],
       ['kp-kategoriyalar', 'Kategoriyalar', malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }).length + ' ta', kategoriyalarEkrani]
     ].forEach(function (m) {
-      var q = tugma(undefined, 'yozuv', function () { ochish(m[3], false); });
+      var q = tugma(undefined, 'yozuv', function () { if (m[0] === 'kp-statistika') Stat.boshlash(Calc.bugun()); ochish(m[3], false); });   // Statistika har ochilganda bugundan boshlanadi
       q.id = m[0];
       q.appendChild(el('div', m[1], 'yozuv-nom'));
       q.appendChild(el('div', m[2] + ' ›', 'yozuv-izoh'));
@@ -1663,6 +1664,19 @@
     });
     bloklar.push(k);
     return bloklar;
+  }
+
+  // ---- Statistika (TZ 34): to'liq ekran; hisob-kitob js/stat-sof.js da (Calc orqali), chizish js/stat.js da ----
+  function statistikaEkrani() {
+    return [orqagaTugmasi(), el('h1', 'Statistika')].concat(Stat.bloklar({
+      yozuvlar: hisobotYozuvlari,   // qarz amallari ham (Olingan qarz — kirim, Berilgan qarz — chiqim): Asosiy "Naqd pul oqimi" bilan bir xil
+      kategoriya: kategoriyaOl,
+      belgi: function (k, o) { return kategBadge(k, o); },
+      pul: pul,
+      yashirin: function () { return malumot.balansYashirin; },
+      bugun: Calc.bugun,
+      qayta: function () { chizish(statistikaEkrani(), true); }
+    }));
   }
 
   // ---- "Menyu" ekrani (Asosiy sahifadagi ☰ tugmasi): sozlamalar va boshqa ----

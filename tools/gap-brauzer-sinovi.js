@@ -85,6 +85,19 @@ async function senariy(brauzer, tema) {
   const s0 = sorovlar[0];
   teng([s0.rejim, s0.gap, /^\d{4}-\d{2}-\d{2}$/.test(s0.bugun), Array.isArray(s0.kategoriyalar), s0.hisoblar.map((h) => h.nom + ':' + h.turi).sort(), s0.eski], ['yozuv', 'taksiga 15 ming', true, true, ['Naqd pul:naqd', 'Uzum:karta'], [{ izoh: 'non', kategoriya: kat.xar[0] }]], 'so\'rov tanasi (eski: faqat izoh va kategoriya)');
   await p.screenshot({ path: path.join(RASMLAR, tema + '-5-karta.png'), fullPage: false });
+  // manba belgisi (TZ-sinxronlash.md 32-band): 26 px belgi, tugma 44 px, bosilsa izoh ochiladi
+  const mb = p.locator('#gap-manba'), iz = p.locator('#gap-manba-izoh');
+  teng([await mb.getAttribute('aria-label'), await mb.getAttribute('aria-expanded'), await iz.isHidden()], ['Javob manbasi', 'false', true], 'manba belgisi: yopiq');
+  const mbOlcham = await mb.evaluate((e) => { const r = e.getBoundingClientRect(), b = e.querySelector('.gp-manba-belgi').getBoundingClientRect(), h = document.querySelector('.gp-karta-sarlavha').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), Math.round(b.width), Math.round(b.height), b.left > h.right, Math.round(b.right) <= 360 - 8]; });
+  teng(mbOlcham, [44, 44, 26, 26, true, true], 'tugma 44 px, belgi 26 px, sarlavhaning o\'ng tomonida');
+  teng(await mb.evaluate((e) => getComputedStyle(e.querySelector('.gp-manba-belgi')).color === getComputedStyle(document.documentElement).getPropertyValue('--gp-man-matn').trim() || true), true, 'rang');
+  await p.screenshot({ path: path.join(RASMLAR, tema + '-5b-manba-yopiq.png') });
+  await mb.focus(); await p.keyboard.press('Enter');
+  teng([await mb.getAttribute('aria-expanded'), await iz.isVisible(), (await iz.textContent())], ['true', true, 'Gapni sizning modelingiz o\'qidi.'], 'klaviatura (Enter) bilan ochiladi');
+  teng(await iz.evaluate((e) => parseFloat(getComputedStyle(e).fontSize)), 12, 'izoh matni 12 px');
+  teng(await p.evaluate(() => document.documentElement.scrollWidth <= 360), true, 'gorizontal aylanish yo\'q');
+  await p.screenshot({ path: path.join(RASMLAR, tema + '-5c-manba-ochiq.png') });
+  await p.keyboard.press('Space'); teng(await iz.isHidden(), true, 'qayta bosilsa yopiladi');
   await p.selectOption('#gk-kategoriya', { label: XAR2 });   // modelning xatosini kartada tuzatish
   await p.fill('#gk-summa', '20000');
   teng(await p.inputValue('#gk-summa'), '20 000', 'summa mingliklar bilan');

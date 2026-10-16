@@ -831,3 +831,30 @@ Mijoz kutish chegarasi 60 s (`VAQT`).
 - **WAV:** Gemini hujjatlaridagi audio formatlar ro'yxatida WAV, MP3, AIFF, AAC, OGG, FLAC bor, `webm` va `mp4` yo'q (hujjat ushbu muhitdan ochilmadi; qidiruv natijasiga ko'ra, 31.6). Shuning uchun ilova yozilgan audioni brauzer ichida (`OfflineAudioContext.decodeAudioData`, tarmoqsiz) **16 kHz, mono, 16 bit WAV** ga aylantirib yuboradi (`GapSof.wavYasa`; 30 s ≈ 960 KB < 1.9 MB), `mime: "audio/wav"`. Aylantirib bo'lmasa (brauzer decode qilmasa) asl format (webm/mp4) yuboriladi. Server `audio/wav` ni avvaldan qabul qiladi.
 - **Sabab hali TASDIQLANMAGAN:** haqiqiy Gemini javobini ko'rmadim, shuning uchun WAV — hujjat ro'yxatiga asoslangan ehtimoliy tuzatish. Muammo davom etsa Supabase → Edge Functions → `yordamchi` → Logs dagi `ovoz: …` qatori va ilovadagi `sabab:` aniq javob beradi.
 - **Funksiyani qayta joylash shart** (log va `debug` serverda).
+
+## 32. Gap kartasida manba belgisi (0.38.0)
+
+Faqat ilova qismi (`js/gap-sof.js`, `js/gap.js`, `style.css`). **Server (`index.ts`) O'ZGARMAGAN: qayta Deploy kerak emas.** Ma'lumot tuzilishi, sinxronlash, yangi so'rov yoki saqlash yo'q. AI yordamchi chat ekrani va qo'lda qo'shish ekraniga tegilmagan.
+
+### 32.1. Qoida
+- Server `yozuv` javobidagi `manba` (28.2: `"model"` = foydalanuvchining o'z modeli, `"openai"` = zaxira, `null`) ilovada avval tashlab yuborilgan edi; endi `yuborish()` uni `GapSof.kartaYasash(…, { manba })` orqali **shu javobdan yasalgan hamma kartalarga** uzatadi. `GapSof.manbaNomi`: faqat `model` va `openai` qabul qilinadi, qolgani (`null`, maydon yo'q, noma'lum qiymat) = `''`.
+- **Manba noma'lum bo'lsa belgi umuman ko'rinmaydi** (izoh ham yo'q).
+- Tur almashganda manba kartada qoladi (javobning manbasi o'zgarmaydi).
+
+### 32.2. Ko'rinish (tasdiqlangan maket, B variant)
+- Karta tepasida sarlavha "Tekshiring va saqlang" (`h2`, bu sarlavha avval kartada yo'q edi, maketga ko'ra qo'shildi; manba bo'lmasa ham ko'rinadi) va uning o'ng yonida kichik yumaloq belgi: ko'rinadigan o'lcham 26 px, 1 px chegara, ichida kichik yulduzcha (SVG). Tugmaning bosish maydoni 44 px (qoida: tugma ≥ 44 px), belgi uning ichida.
+- **Rang:** `model` — yashil (`--gp-man-fon/-chegara/-matn`, yorug' va qorong'i rejimda alohida); `openai` — sariq (mavjud ogohlantirish tokenlari `--gp-ogoh-*`).
+- **Bosilganda** karta ichida (sarlavha ostida) izoh qutisi ochiladi (neutral och fon, 12 px matn, `role="note"`), qayta bosilsa yopiladi. Tugma: `aria-label="Javob manbasi"`, `aria-expanded`, `aria-controls`; oddiy `button`, shuning uchun Enter/Space bilan ishlaydi, fokus halqasi bor. Boshida yopiq.
+
+### 32.3. Matnlar
+| Manba | Izoh qutisi |
+|---|---|
+| `model` | Gapni sizning modelingiz o'qidi. |
+| `openai` | Sizning modelingiz javob bermadi, gapni OpenAI o'qidi (zaxira). |
+| gap shu ekranda mikrofondan tushgan bo'lsa | yuqoridagiga qo'shimcha qator: Ovozdan matnni Gemini yozgan. |
+
+### 32.4. Mikrofon bayrog'i
+`holat.ovozdan` (faqat xotirada, `gap.js`): mikrofon matni gap maydoniga tushganda `true` bo'ladi. Tozalanadi: gap maydoni bo'shatilsa, misol chip'i bosilsa (gap butunlay almashadi), ekran yopilsa (holat o'chadi) va yangi ekran ochilganda (`false` dan boshlanadi). Foydalanuvchi ovozdan tushgan matnni tahrirlasa bayroq QOLADI (matnning asosi baribir ovoz). "Yozuvga aylantirish" bosilganda bayroq kartalarga ko'chiriladi. Bayroq hech qayerda saqlanmaydi va serverga yuborilmaydi.
+
+### 32.5. Sinov
+`tests.html`: 2 ta yangi (manbaga qarab matn va rang sinfi, noma'lum manba, ovozdan qatori, kartaga uzatish; karta ekrani: belgi, ochish/yopish, `aria-expanded`, mikrofon bayrog'ini tozalash), jami 571 / 571. `tools/gap-brauzer-sinovi.js` 360 px yorug'/qorong'i: belgi 26 px, tugma 44 px, sarlavhaning o'ng tomonida, klaviatura (Enter/Space), izoh 12 px, gorizontal aylanish yo'q (92 tekshiruv).

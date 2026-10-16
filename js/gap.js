@@ -60,6 +60,7 @@ var Gap = (function () {
   // ---- Mikrofon (31-band): MediaRecorder; audio faqat xotirada, serverga base64 bo'lib ketadi va hech qayerda saqlanmaydi ----
   var MIK_YOL = ['M9 2m0 3a3 3 0 0 1 3 -3h0a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3h0a3 3 0 0 1 -3 -3z', 'M5 10a7 7 0 0 0 14 0', 'M12 17v4', 'M8 21h8'];
   var STOP_YOL = 'M7 7h10v10h-10z';
+  var MANBA_YOL = ['M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z'];   // kichik yulduzcha (AI belgisi)
   function mikSvg(yol) {
     var s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false');
     (Array.isArray(yol) ? yol : [yol]).forEach(function (d) {
@@ -199,6 +200,7 @@ var Gap = (function () {
       h.gap = GapSof.matnQosh(h.gap, j.matn);
       var ta = document.getElementById('gap-matn');
       if (ta) { ta.value = h.gap; ta.dispatchEvent(new Event('input')); ta.focus(); }   // matn tahrirlash uchun maydonga tushadi; yozuvga AYLANTIRILMAYDI
+      h.ovozdan = true;   // kartadagi manba izohida "Ovozdan matnni Gemini yozgan" (32-band)
     }).catch(function (err) {
       if (!holat || holat.sessiya !== sessiya) return;
       m.bosqich = 'bosh'; mikYangila();
@@ -225,7 +227,7 @@ var Gap = (function () {
       hisob.hidden = n <= GapSof.HISOBLAGICH_BOSHI;
       hisob.textContent = n + ' / ' + GapSof.GAP_MAX;
     }
-    ta.addEventListener('input', function () { holat.gap = ta.value; holat.xato = ''; xato.textContent = ''; ta.classList.remove('xatoli'); belgilar(); });
+    ta.addEventListener('input', function () { holat.gap = ta.value; if (!ta.value.trim()) holat.ovozdan = false; holat.xato = ''; xato.textContent = ''; ta.classList.remove('xatoli'); belgilar(); });
     if (holat.xato) ta.classList.add('xatoli');
     var qator = e('div', undefined, 'gp-matn-qator');
     var mik = tugma('yo-doira gp-mik', 'Ovoz bilan yozish', mikBosildi); mik.id = 'gap-mik';
@@ -240,7 +242,7 @@ var Gap = (function () {
     GapSof.MISOLLAR.forEach(function (m) {
       var c = tugma('chip', 'Misol: ' + m, function () {
         if (holat.band) return;
-        holat.gap = m; holat.xato = ''; ta.value = m; xato.textContent = ''; ta.classList.remove('xatoli'); belgilar(); ta.focus();
+        holat.gap = m; holat.ovozdan = false; holat.xato = ''; ta.value = m; xato.textContent = ''; ta.classList.remove('xatoli'); belgilar(); ta.focus();
       });
       c.textContent = m;
       misollar.appendChild(c);
@@ -290,7 +292,7 @@ var Gap = (function () {
       h.band = false;
       if (!royxat.length) { yuborTugmaYangila(); xatoKorsat(GapSof.sababMatni(j && j.sabab)); return; }
       var m = ui.malumot(), bugun = dep.bugun();
-      var qosh = { soat: dep.hozir().vaqt, oxirgi: oxirgiOl() };
+      var qosh = { soat: dep.hozir().vaqt, oxirgi: oxirgiOl(), manba: j && j.manba, ovozdan: !!h.ovozdan };
       h.kartalar = royxat.map(function (y) { return GapSof.kartaYasash(y, m, bugun, qosh); });
       h.indeks = 0; h.bosqich = 'karta'; mikBekor();
       chiz();
@@ -368,6 +370,23 @@ var Gap = (function () {
 
     var forma = e('form', undefined, 'karta gp-karta'); forma.noValidate = true;
     forma.addEventListener('submit', function (h) { h.preventDefault(); saqlash(); });
+
+    // Sarlavha va manba belgisi (32-band): belgi faqat manba ma'lum bo'lsa; bosilsa karta ichida izoh qutisi ochiladi/yopiladi
+    var bosh = e('div', undefined, 'gp-karta-bosh');
+    bosh.appendChild(e('h2', GapSof.MANBA_SARLAVHA, 'gp-karta-sarlavha'));
+    var izohQatorlari = GapSof.manbaIzohi(k.manba, k.ovozdan), izohQuti = null;
+    if (izohQatorlari.length) {
+      izohQuti = e('div', undefined, 'gp-manba-izoh'); izohQuti.id = 'gap-manba-izoh'; izohQuti.setAttribute('role', 'note'); izohQuti.hidden = !k.manbaOchiq;
+      izohQatorlari.forEach(function (t) { izohQuti.appendChild(e('p', t)); });
+      var mb = tugma('gp-manba-tugma', 'Javob manbasi', function () {
+        k.manbaOchiq = !k.manbaOchiq; izohQuti.hidden = !k.manbaOchiq; mb.setAttribute('aria-expanded', String(k.manbaOchiq));
+      });
+      mb.id = 'gap-manba'; mb.setAttribute('aria-expanded', String(!!k.manbaOchiq)); mb.setAttribute('aria-controls', 'gap-manba-izoh');
+      var belgi = e('span', undefined, 'gp-manba-belgi gp-manba-' + k.manba); belgi.setAttribute('aria-hidden', 'true'); belgi.appendChild(mikSvg(MANBA_YOL));
+      mb.appendChild(belgi); bosh.appendChild(mb);
+    }
+    forma.appendChild(bosh);
+    if (izohQuti) forma.appendChild(izohQuti);
 
     var turQuti = e('div', undefined, 'maydon'); turQuti.appendChild(e('span', 'Turi', 'belgi'));
     turQuti.appendChild(segment(GapSof.TURLAR, k.tur, 'Yozuv turi', function (t) { if (t === k.tur) return; holat.kartalar[holat.indeks] = GapSof.turAlmashtir(k, t, ui.malumot(), oxirgiOl()); chiz(); }));
@@ -491,7 +510,7 @@ var Gap = (function () {
 
   function ochish() {
     if (ekranEl || !ui.malumot) return;
-    holat = { bosqich: 'yozish', gap: '', xato: '', band: false, mik: { bosqich: 'bosh', soniya: 0 }, kartalar: [], indeks: 0, saqlangan: 0, sessiya: ++sessiyaSanagich };
+    holat = { bosqich: 'yozish', gap: '', ovozdan: false, xato: '', band: false, mik: { bosqich: 'bosh', soniya: 0 }, kartalar: [], indeks: 0, saqlangan: 0, sessiya: ++sessiyaSanagich };
     ekranEl = ekranYasash();
     document.body.appendChild(ekranEl);
     document.body.style.overflow = 'hidden';

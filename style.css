@@ -1474,3 +1474,6 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 /* natija kartasi tepasidagi belgi */
 .gp-chek-belgi { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 5px 12px 5px 8px; font-size: 13px; font-weight: 600; color: var(--gp-kok-matn); background: var(--gp-kok-fon); border: 1px solid var(--gp-kok-chegara); border-radius: 999px; }
 .gp-chek-belgi-ikon { display: inline-flex; }
+
+/* 0.43.1: fayl tanlash inputlari DOM'da, ko'rinmas (display:none emas) */
+.gp-fayl-yashirin { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; opacity: 0; clip: rect(0 0 0 0); pointer-events: none; }

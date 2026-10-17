@@ -419,7 +419,8 @@ function tarmoqY(holat = {}) {
     if (url.startsWith('https://generativelanguage.googleapis.com/')) {
       const g = holat.gemini || {};
       if (g.tarmoq) throw new TypeError('fetch failed');
-      if (g.holat) return J({ error: { message: 'x' } }, g.holat);
+      if (g.ketma) { const x = g.ketma.shift(); if (x !== 'ok') return J({ error: { message: 'band' } }, x); }
+      else if (g.holat) return J({ error: { message: 'x' } }, g.holat);
       return J({ candidates: [{ content: { parts: [{ text: g.matn }] } }] });
     }
     if (url === MODEL_MANZIL + '/api/chat') {
@@ -892,4 +893,41 @@ test("rasm: maxfiylik — kalit, rasm va chek matni javobda/logda yo'q (logda fa
   assert.equal(JSON.stringify(ok.j).includes('Chek № 000123'), false, "to'liq chek matni javobda yo'q"); assert.equal(JSON.stringify(ok.j).includes(RENV.GEMINI_API_KEY), false);
   const kod = readFileSync(join(BU, 'index.ts'), 'utf8').replace(/\/\/[^\n]*/g, '');
   assert.equal(kod.match(/\bconsole\.\w+/g).length, 1, 'faqat ovozLogla ichida bitta console.error');
+});
+
+// ---------------- rasm rejimi: telefondagi xatolar (37-band) ----------------
+M.GEMINI_QAYTA.kutishMs = 0;   // sinovda 1,8 s kutilmaydi
+const PNG_1 = (en, boy) => { const b = Buffer.alloc(40); Buffer.from('89504e470d0a1a0a', 'hex').copy(b); b.writeUInt32BE(13, 8); b.write('IHDR', 12); b.writeUInt32BE(en, 16); b.writeUInt32BE(boy, 20); return b; };
+test("rasm 503: Gemini bir marta band desa 1,8 s dan keyin BIR marta qayta uriniladi va o'qiydi; limit 1 ta sanaladi", async () => {
+  for (const kod of [503, 429, 500]) {
+    const h = { gemini: { ketma: [kod, 'ok'], matn: CHEK1 }, oz: rasmOz() }; const x = await yoz(RASM(), { holat: h, env: RENV });
+    assert.equal(x.r.status, 200, String(kod)); assert.equal(x.j.yozuvlar[0].summa, 25500); assert.equal(GEM(h).length, 2, "2 ta Gemini so'rovi"); assert.equal(h.hisob.n, 1, 'limit 1 ta');
+  }
+});
+test("rasm 503: ikkinchi urinish ham band bo'lsa AI_PROVAYDER + debug gemini_503 (ko'pi bilan 2 so'rov); 400 va ovoz rejimi qayta urinilmaydi", async () => {
+  const h = { gemini: { ketma: [503, 503, 'ok'], matn: CHEK1 } }; const x = await yoz(RASM(), { holat: h, env: RENV });
+  assert.equal(x.r.status, 502); assert.equal(x.j.xato.kod, 'AI_PROVAYDER'); assert.equal(x.j.xato.debug, 'gemini_503'); assert.equal(GEM(h).length, 2);
+  const h2 = { gemini: { ketma: [400, 'ok'], matn: CHEK1 } }; const y = await yoz(RASM(), { holat: h2, env: RENV }); assert.equal(y.j.xato.debug, 'gemini_400'); assert.equal(GEM(h2).length, 1, '400 qayta urinilmaydi');
+  const h3 = { gemini: { ketma: [503, 'ok'], matn: 'taksiga' } }; const z = await yoz({ rejim: 'ovoz', audio: Buffer.alloc(100, 7).toString('base64'), mime: 'audio/webm' }, { holat: h3, env: RENV });
+  assert.equal(z.j.xato.debug, 'gemini_503'); assert.equal(GEM(h3).length, 1, 'ovoz rejimi o\'zgarmagan: qayta urinish yo\'q');
+});
+test("rasm: logda faqat holat kodi, rasm hajmi (KB) va o'lchami (px); rasm, matn, kalit yo'q; vaqt chegarasi Edge Function chegarasidan kam", async () => {
+  const eski = console.error, log = [];
+  console.error = (...a) => { log.push(a.join(' ')); };
+  const rasm = Buffer.concat([PNG_1(4000, 3000), Buffer.alloc(300 * 1024, 5)]).toString('base64');
+  let x, h = { gemini: { ketma: [503, 503] } };
+  try { x = await yoz(RASM(0, { rasm, mime: 'image/png' }), { holat: h, env: { ...RENV, GEMINI_API_KEY: 'gk-yashirin-qayta-5' } }); } finally { console.error = eski; }
+  assert.equal(log.length, 2, 'har urinish bitta qator'); for (const q of log) assert.match(q, /^rasm: gemini_503 http=503 mime=image\/png rasm=300KB 4000x3000 xabar=band$/);
+  assert.equal((JSON.stringify(x.j) + log.join('')).includes('gk-yashirin'), false); assert.equal(log.join('').includes(rasm.slice(0, 30)), false);
+  const kod = readFileSync(join(BU, 'index.ts'), 'utf8');
+  assert.match(kod, /const CHEK_TAYM_AUT_MS = 20000;/); assert.ok(M.GEMINI_QAYTA);
+  const t = GEM(h)[0].init.signal; assert.ok(t, 'Gemini so\'rovida vaqt chegarasi (AbortSignal) bor');
+});
+test("rasmOlchami: PNG, JPEG (SOF), WebP (VP8X/VP8/VP8L) sarlavhasidan; buzuq bo'lsa '?'", () => {
+  assert.equal(M.rasmOlchami(PNG_1(1600, 1200).toString('base64')), '1600x1200');
+  const jpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16]), Buffer.alloc(14), Buffer.from([0xff, 0xc0, 0, 17, 8, 4, 176, 6, 64, 3])]);   // balandlik 1200, kenglik 1600
+  assert.equal(M.rasmOlchami(jpg.toString('base64')), '1600x1200');
+  const vp8x = Buffer.alloc(40); vp8x.write('RIFF'); vp8x.write('WEBP', 8); vp8x.write('VP8X', 12); vp8x.writeUIntLE(1599, 24, 3); vp8x.writeUIntLE(1199, 27, 3);
+  assert.equal(M.rasmOlchami(vp8x.toString('base64')), '1600x1200');
+  assert.equal(M.rasmOlchami(Buffer.from('salom').toString('base64')), '?'); assert.equal(M.rasmOlchami('!!!'), '?');
 });

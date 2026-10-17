@@ -15,33 +15,33 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.43.0"></script>
-  <script src="js/tema.js?v=0.43.0"></script>
-  <script src="js/ikonlar.js?v=0.43.0"></script>
-  <script src="js/belgilar.js?v=0.43.0"></script>
-  <script src="js/calc.js?v=0.43.0"></script>
-  <script src="js/xlsx.js?v=0.43.0"></script>
-  <script src="js/xlsx-oqi.js?v=0.43.0"></script>
-  <script src="js/import-sof.js?v=0.43.0"></script>
-  <script src="js/sinxron-sof.js?v=0.43.0"></script>
-  <script src="js/data.js?v=0.43.0"></script>
-  <script src="js/sigdir.js?v=0.43.0"></script>
-  <script src="js/diagramma.js?v=0.43.0"></script>
-  <script src="js/pin.js?v=0.43.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.43.0"></script>
-  <script src="js/kirish.js?v=0.43.0"></script>
-  <script src="js/yuklash.js?v=0.43.0"></script>
-  <script src="js/salom.js?v=0.43.0"></script>
-  <script src="js/sinxron.js?v=0.43.0"></script>
-  <script src="js/pwa.js?v=0.43.0"></script>
-  <script src="js/stat-sof.js?v=0.43.0"></script>
-  <script src="js/stat.js?v=0.43.0"></script>
-  <script src="js/chat-sof.js?v=0.43.0"></script>
-  <script src="js/yordamchi-sof.js?v=0.43.0"></script>
-  <script src="js/yordamchi-karta.js?v=0.43.0"></script>
-  <script src="js/yordamchi.js?v=0.43.0"></script>
-  <script src="js/gap-sof.js?v=0.43.0"></script>
-  <script src="js/gap.js?v=0.43.0"></script>
+  <script src="js/ilova.js?v=0.43.1"></script>
+  <script src="js/tema.js?v=0.43.1"></script>
+  <script src="js/ikonlar.js?v=0.43.1"></script>
+  <script src="js/belgilar.js?v=0.43.1"></script>
+  <script src="js/calc.js?v=0.43.1"></script>
+  <script src="js/xlsx.js?v=0.43.1"></script>
+  <script src="js/xlsx-oqi.js?v=0.43.1"></script>
+  <script src="js/import-sof.js?v=0.43.1"></script>
+  <script src="js/sinxron-sof.js?v=0.43.1"></script>
+  <script src="js/data.js?v=0.43.1"></script>
+  <script src="js/sigdir.js?v=0.43.1"></script>
+  <script src="js/diagramma.js?v=0.43.1"></script>
+  <script src="js/pin.js?v=0.43.1"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.43.1"></script>
+  <script src="js/kirish.js?v=0.43.1"></script>
+  <script src="js/yuklash.js?v=0.43.1"></script>
+  <script src="js/salom.js?v=0.43.1"></script>
+  <script src="js/sinxron.js?v=0.43.1"></script>
+  <script src="js/pwa.js?v=0.43.1"></script>
+  <script src="js/stat-sof.js?v=0.43.1"></script>
+  <script src="js/stat.js?v=0.43.1"></script>
+  <script src="js/chat-sof.js?v=0.43.1"></script>
+  <script src="js/yordamchi-sof.js?v=0.43.1"></script>
+  <script src="js/yordamchi-karta.js?v=0.43.1"></script>
+  <script src="js/yordamchi.js?v=0.43.1"></script>
+  <script src="js/gap-sof.js?v=0.43.1"></script>
+  <script src="js/gap.js?v=0.43.1"></script>
   <script>
     (function () {
       var testlar = [];
@@ -2200,7 +2200,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.43.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.43.1', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -4401,7 +4401,7 @@ function xfix(opts) {
           .then(function (n) { teng(n.ok, true, n.xato); teng(Sinxron.holat().tur, 'tayyor'); teng(Sinxron.holat().xato, ''); teng((Sinxron.holat().rad || []).length, 0); teng(Sinxron.holat().soni, 0); teng(Object.keys(S.jadval.yozuvlar).some(function (id) { return S.jadval.yozuvlar[id].summa === 777; }), true); return sxNavbat(); })
           .then(function (n) { teng(n, 0); S.rad = null; });
       });
-      // ---- 0.43.0: yangi dizayn ----
+      // ---- 0.43.1: yangi dizayn ----
       function sigElement(matn, kenglik, qiymat, plyus) {
         var quti = document.createElement('div'); quti.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + kenglik + 'px';
         var e = document.createElement('div'); e.className = 'sig'; e.style.cssText = 'display:block;white-space:nowrap;overflow:hidden;font:700 20px sans-serif'; e.textContent = matn;
@@ -4450,7 +4450,7 @@ function xfix(opts) {
           teng(/\.belgi-katak \{[^}]*border-radius: 32%/.test(c), true, 'ikon katagi'); teng(/\.sticky-bosh \.oy-yorliqlar::-webkit-scrollbar \{ display: none/.test(c) && /scrollbar-width: none/.test(c), true, 'oylar qatori siljitish chizig\'i yashirin'); teng(/\.qarz-tanlov-tugma\[aria-pressed="true"\]/.test(c), true);
         });
       });
-      // ---- 0.43.0: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
+      // ---- 0.43.1: kategoriya ikonlari, ranglari va Tarix ko'rinishi (TZ-sinxronlash.md 22-band) ----
       var ISTALGAN_IKONLAR = 'shopping-cart tools-kitchen-2 coffee bread apple pizza cup cake bus car gas-station taxi train plane bike car-crash home home-2 key bulb droplet flame wifi device-mobile device-laptop tool pill stethoscope heartbeat tooth scissors brush barbell bath school book book-2 certificate baby-carriage baby-bottle mood-kid paw shirt shoe shopping-bag movie device-gamepad-2 music beach gift confetti heart-handshake building-mosque heart package truck-delivery building-store wallet cash coin briefcase trending-up arrow-back-up award building-bank credit-card receipt report-money piggy-bank arrows-exchange repeat shield-check dots help-circle pencil tag percentage meat robot users users-group user chart-line signature file-text menu-2 history search filter'.split(' ');
       var ALMASHTIRILGAN = { 'taxi': 'car-suv', 'tooth': 'dental', 'piggy-bank': 'moneybag' };   // Tabler da yo'q nomlar: yaqin ma'noli ikon
       test('Ikonlar (Tabler): so\'ralgan hamma ikon lokal faylda bor (3 tasi yaqin ma\'noli bilan almashtirilgan), yo\'llar to\'g\'ri, guruhlar 10 ta, takror yo\'q', function () {
@@ -4512,7 +4512,7 @@ function xfix(opts) {
         teng(Belgilar.bormi('car-suv') && Belgilar.bormi('oziq') && !Belgilar.bormi('yoq-kalit'), true);
         Belgilar.standart.forEach(function (x) { teng(Ikonlar.bormi(x.belgi) && Ikonlar.RANGLAR.concat(['#6A4CE0', '#E0356B', '#3F6FE0', '#E08A00', '#5C6BC0', '#1C9AE0', '#12B76A']).indexOf(x.rang) >= 0, true, x.nom); });
       });
-      sxSinov('0.43.0: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
+      sxSinov('0.43.1: kategoriyaning ikoni va rangi saqlanadi va sinxronlanadi (soxta server): serverga yangi kalit va hex rang boradi, o\'zgartirilsa yangilanadi, ikkinchi qurilmada aynan shu ikon va rang', function (S) {
         var kid = Calc.uuidYarat(), kat = { id: kid, yaratilgan: new Date().toISOString(), nom: 'Taksi', tur: 'xarajat', rang: '#F5A300', belgi: 'car-suv', arxivlangan: false };
         return sxMalumot(2).then(function () { return Sinxron.birinchi('yuklash'); }).then(function (n) { teng(n.ok, true, n.xato); return Data.saqlash('kategoriyalar', kat); })
           .then(function () { return Sinxron.yurgiz('qolda'); }).then(function (n) { teng(n.ok, true, n.xato); var r = S.jadval.kategoriyalar[kid]; teng(r.belgi, 'car-suv'); teng(r.rang, '#F5A300'); teng(r.nom, 'Taksi');
@@ -5401,7 +5401,7 @@ function xfix(opts) {
         k.click(); teng(mn.hidden, false); teng(k.getAttribute('aria-expanded'), 'true');
         teng([].map.call(mn.querySelectorAll('button'), function (b) { return b.textContent; }).join('|'), 'Suratga olish|Galereyadan tanlash'); teng(mn.querySelectorAll('button')[0].querySelectorAll('svg').length + mn.querySelectorAll('button')[1].querySelectorAll('svg').length, 2);
         var a = document.getElementById('gap-rasm-kamera'), g = document.getElementById('gap-rasm-galereya');
-        tg([a.type, a.accept, a.getAttribute('capture')], ['file', 'image/*', 'environment']); tg([g.type, g.accept, g.hasAttribute('capture')], ['file', 'image/*', false]);
+        tg([a.type, a.accept, a.getAttribute('capture')], ['file', 'image/*', 'environment']); tg([g.type, g.accept, g.hasAttribute('capture')], ['file', GapSof.GALEREYA_ACCEPT, false], 'galereya: capture\'siz, aniq image turlari');
         document.getElementById('gap-matn').click(); document.body.click(); teng(mn.hidden, true, 'tashqariga bosilsa yopiladi'); teng(k.getAttribute('aria-expanded'), 'false');
         k.click(); teng(mn.hidden, false); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); teng(mn.hidden, true, 'Escape menyuni yopadi'); teng(!!document.querySelector('.gp-ekran'), true, 'ekran yopilmadi');
         k.click(); mn.querySelectorAll('button')[1].click(); teng(mn.hidden, false, 'fayl tanlanmaguncha menyu ochiq turishi mumkin'); document.body.click(); return gapTugadi();
@@ -5484,6 +5484,53 @@ function xfix(opts) {
             return new Promise(function (ok2, no2) { var im = new Image(); im.onload = function () { ok2(im); }; im.onerror = no2; im.src = 'data:image/jpeg;base64,' + t.rasm; });
           }).then(function (im) {
             tg([im.naturalWidth, im.naturalHeight], [1600, 1200], 'uzun tomon 1600 px, nisbat saqlangan'); teng(localStorage.length, oldin[0], 'rasm localStorage ga yozilmadi'); return gapTugadi();
+          });
+        });
+      });
+      test('Gap chek (37-band): ikki ALOHIDA input (kamera: image/* + capture; galereya: aniq image MIME ro\'yxati, capture\'siz), DOM\'da va display:none/hidden emas; menyu bosilishi ichida input.click() chaqiriladi', function () {
+        var s = chekQuru([]); Gap.yangila(); document.getElementById('gap-tugma').click();
+        var a = document.getElementById('gap-rasm-kamera'), g = document.getElementById('gap-rasm-galereya');
+        teng(!!a && !!g && a !== g, true, 'ikki alohida input'); teng(a.parentNode === g.parentNode && document.body.contains(a) && document.body.contains(g), true, 'DOM\'da');
+        tg([a.accept, a.getAttribute('capture')], ['image/*', 'environment']); tg([g.accept, g.hasAttribute('capture')], ['image/jpeg,image/png,image/webp,image/heic,image/heif', false]);
+        teng([a.hidden, g.hidden, a.style.display, g.style.display].join('|'), 'false|false||', 'hidden atributi va display:none yo\'q'); teng(a.className, 'gp-fayl-yashirin');
+        teng(/^image\/(jpeg|png|webp|heic|heif)(,image\/(jpeg|png|webp|heic|heif))*$/.test(GapSof.GALEREYA_ACCEPT), true, 'faqat image MIME turlari');
+        var bosildi = []; a.addEventListener('click', function (h) { bosildi.push('kamera'); h.preventDefault(); }); g.addEventListener('click', function (h) { bosildi.push('galereya'); h.preventDefault(); });
+        document.getElementById('gap-kamera').click(); var b = document.querySelectorAll('#gap-kamera-menyu button');
+        b[1].click(); b[0].click(); tg(bosildi, ['galereya', 'kamera'], 'menyu bandi o\'z inputini bosadi (foydalanuvchi bosishi ichida)');
+        return gapTugadi();
+      });
+      test('GapSof rasm siqish (37-band): canvas xato bersa o\'lcham kichrayib qayta uriniladi; hech narsa sig\'masa RASM_KATTA (yuborilmaydi); juda katta rasm bosqichma-bosqich yarmiga; xato matnlari (503 band)', function () {
+        var chaqiruv = [];
+        return GapSof.rasmSiq(8000, 6000, function (en, boy, q) { chaqiruv.push(en); return en > 1000 ? Promise.reject(new Error('xotira')) : Promise.resolve({ hajm: 500000, qiymat: 'x' }); }).then(function (r) {
+          tg([r.en <= 1000, r.hajm], [true, 500000], 'xotira xatosida kichrayib o\'tdi'); teng(chaqiruv[0], 1600, 'avval 1600 px');
+          return GapSof.rasmSiq(8000, 6000, function () { return Promise.reject(new Error('xotira')); }).then(function () { teng('o\'tdi', 'RASM_KATTA'); }, function (e) { teng(e.kod, 'RASM_KATTA'); });
+        }).then(function () {
+          tg(GapSof.rasmBosqichlari(8000, 6000), [[4000, 3000], [2000, 1500]], '48 MP: yarmiga, yana yarmiga (uzun tomon 2000)'); tg(GapSof.rasmBosqichlari(3000, 2000), [], '3200 px gacha: bosqich yo\'q'); tg(GapSof.rasmBosqichlari(3000, 8000).slice(-1), [[750, 2000]], 'tik rasm');
+          teng(GapSof.CHEK_KUTISH_MS <= 120000 && GapSof.CHEK_KUTISH_MS > 90000, true, 'kutish chegarasi Edge Function chegarasidan kam');
+          teng(GapSof.chekXatoMatni('AI_PROVAYDER', 'gemini_503'), 'Rasm o\'qish xizmati band. Bir daqiqadan keyin qayta urinib ko\'ring.\n(kod: AI_PROVAYDER, sabab: gemini_503)');
+          teng(/^Rasm o'qish xizmati band/.test(GapSof.chekXatoMatni('AI_PROVAYDER', 'gemini_429')), true); teng(/^Yordamchi hozir javob bera olmayapti/.test(GapSof.chekXatoMatni('AI_PROVAYDER', 'gemini_400')), true, 'boshqa sabablar o\'zgarmagan');
+          teng(/^Yordamchi hozir javob bera olmayapti/.test(GapSof.chekXatoMatni('AI_PROVAYDER')), true);
+        });
+      });
+      test('Gap chek: haqiqiy canvas — 27 MP "kamera" rasmi (6000x4500) ham 1600 px gacha va ≤ 1,5 MB ga siqiladi; HEIC/buzuq fayl "Bu rasm turi qabul qilinmaydi"', function () {
+        var cv = document.createElement('canvas'); cv.width = 6000; cv.height = 4500; var cx = cv.getContext('2d');
+        for (var i = 0; i < 80; i++) { cx.fillStyle = 'hsl(' + (i * 4) + ',70%,50%)'; cx.fillRect((i * 71) % 5600, (i * 53) % 4200, 500, 400); }
+        return new Promise(function (ok) { cv.toBlob(ok, 'image/jpeg', 0.95); }).then(function (jpg) {
+          cv.width = cv.height = 0;
+          var s = chekQuru([gapJavob([CHEK_Y()])], null); Gap.sozla({ rasmTayyorla: null }); Gap.yangila(); document.getElementById('gap-tugma').click();
+          var dt = new DataTransfer(); dt.items.add(new File([jpg], 'kamera.jpg', { type: 'image/jpeg' })); var inp = document.getElementById('gap-rasm-kamera'); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+          return yoKut(function () { return s.chekSorov.length === 1 || (document.getElementById('gap-xato') && document.getElementById('gap-xato').textContent !== ''); }).then(function () {
+            teng(s.chekSorov.length, 1, 'yuborildi: ' + (document.getElementById('gap-xato') ? document.getElementById('gap-xato').textContent : '')); var t = s.chekSorov[0].tana;
+            teng(t.rasm.length * 0.75 <= GapSof.RASM_BAYT_MAX, true, 'hajm ' + Math.round(t.rasm.length * 0.75 / 1024) + ' KB');
+            return new Promise(function (ok2, no2) { var im = new Image(); im.onload = function () { ok2(im); }; im.onerror = no2; im.src = 'data:image/jpeg;base64,' + t.rasm; });
+          }).then(function (im) {
+            tg([im.naturalWidth, im.naturalHeight], [1600, 1200]); return gapTugadi();
+          });
+        }).then(function () {
+          var s = chekQuru([]); Gap.sozla({ rasmTayyorla: null }); Gap.yangila(); document.getElementById('gap-tugma').click();
+          var dt = new DataTransfer(); dt.items.add(new File([new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99])], 'a.heic', { type: 'image/heic' })); var inp = document.getElementById('gap-rasm-galereya'); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+          return yoKut(function () { return document.getElementById('gap-xato') && document.getElementById('gap-xato').textContent !== ''; }).then(function () {
+            teng(document.getElementById('gap-xato').textContent.indexOf('Bu rasm turi qabul qilinmaydi') === 0 && document.getElementById('gap-xato').textContent.indexOf('(kod: RASM_FORMAT)') > 0, true, document.getElementById('gap-xato').textContent); teng(s.chekSorov.length, 0, 'yuborilmadi'); return gapTugadi();
           });
         });
       });

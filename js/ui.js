@@ -1669,6 +1669,7 @@
   // ---- Statistika (TZ 34): to'liq ekran; hisob-kitob js/stat-sof.js da (Calc orqali), chizish js/stat.js da ----
   function statistikaEkrani() {
     return [orqagaTugmasi(), el('h1', 'Statistika')].concat(Stat.bloklar({
+      qarzlar: function () { return malumot.qarzlar; },   // Qarz hisoboti kartasi (mavjud Calc qarz funksiyalari)
       yozuvlar: hisobotYozuvlari,   // qarz amallari ham (Olingan qarz — kirim, Berilgan qarz — chiqim): Asosiy "Naqd pul oqimi" bilan bir xil
       kategoriya: kategoriyaOl,
       belgi: function (k, o) { return kategBadge(k, o); },

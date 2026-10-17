@@ -21,6 +21,7 @@ var Yuklash = (function () {
   function qatorlar(m) {
     var r = {};
     ['hisoblar', 'kategoriyalar', 'yozuvlar', 'byudjetlar'].forEach(function (j) { r[j] = (m[j] || []).map(function (x) { return SinxronSof.serverQatori(j, x); }); });
+    r.yozuvlar = SinxronSof.otaOldin(r.yozuvlar);   // o'tkazma komissiyadan oldin (TZ 40-band)
     r.qarzlar = (m.qarzlar || []).map(function (x) { return SinxronSof.serverQatori('qarzlar', x); });
     r.qarz_tolovlari = [];
     (m.qarzlar || []).forEach(function (q) { (q.tolovlar || []).forEach(function (t) { r.qarz_tolovlari.push(SinxronSof.tolovQatori(q.id, t)); }); });
@@ -71,6 +72,8 @@ var Yuklash = (function () {
           else if (!sana(x.sana) || !vaqt(x.vaqt)) xato(j, i, x, 'sana yoki vaqt noto\'g\'ri');
           else if (!vaqtYaratilgan(x.yaratilgan)) xato(j, i, x, 'yaratilgan vaqti noto\'g\'ri');
           else if (!bor('hisoblar', x.hisob_id)) xato(j, i, x, 'hisobga havola uzilgan');
+          else if (x.bog_id !== undefined && x.bog_id !== null && (!UUID.test(String(x.bog_id)) || x.bog_id === x.id)) xato(j, i, x, 'bog\'langan yozuv belgisi noto\'g\'ri');
+          else if (x.bog_id && !bor('yozuvlar', x.bog_id)) xato(j, i, x, 'bog\'langan o\'tkazmaga havola uzilgan');
           else if (x.tur === 'otkazma') {
             if (!x.qabul_hisob_id || x.kategoriya_id !== null || x.qabul_hisob_id === x.hisob_id) xato(j, i, x, 'o\'tkazma tuzilmasi noto\'g\'ri');
             else if (!bor('hisoblar', x.qabul_hisob_id)) xato(j, i, x, 'qabul qiluvchi hisobga havola uzilgan');

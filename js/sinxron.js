@@ -156,11 +156,12 @@ var Sinxron = (function () {
       (q.tolovlar || []).forEach(function (t) { r.qarz_tolovlari.push({ kalit: q.id, qiymat: qiymatlar.qarzlar[q.id], qator: SinxronSof.tolovQatori(q.id, t) }); });
     });
     (oqilgan.sozlamalar || []).forEach(function (x) { if (x.kalit === 'asosiy') r.sozlamalar.push({ kalit: 'asosiy', qiymat: qiymatlar.sozlamalar.asosiy, qator: SinxronSof.serverQatori('sozlamalar', x) }); });
+    r.yozuvlar = SinxronSof.otaOldin(r.yozuvlar, function (x) { return x.qator; });   // o'tkazma komissiyadan oldin (TZ 40-band)
     return r;
   }
 
   // Bog'liqlik (FK) xatosi: qator qaysi ota qatorga tayanadi
-  var FK_OTA = { yozuvlar: [['hisob_id', 'hisoblar'], ['qabul_hisob_id', 'hisoblar'], ['kategoriya_id', 'kategoriyalar']], byudjetlar: [['kategoriya_id', 'kategoriyalar']], qarzlar: [['hisob_id', 'hisoblar']], qarz_tolovlari: [['qarz_id', 'qarzlar'], ['hisob_id', 'hisoblar']] };
+  var FK_OTA = { yozuvlar: [['hisob_id', 'hisoblar'], ['qabul_hisob_id', 'hisoblar'], ['kategoriya_id', 'kategoriyalar'], ['bog_id', 'yozuvlar']], byudjetlar: [['kategoriya_id', 'kategoriyalar']], qarzlar: [['hisob_id', 'hisoblar']], qarz_tolovlari: [['qarz_id', 'qarzlar'], ['hisob_id', 'hisoblar']] };
   var FK_URINISH_CHEGARA = 5;   // avtomatik qayta yuborish urinishlari (qo'lda "Qayta urinish" cheklanmagan)
 
   // Oldingi tsiklda bog'liqlik xatosi bilan o'tmagan qatorlar qayta navbatga qo'yiladi (ota qator keyin yuborilgan bo'lishi mumkin)
@@ -259,7 +260,7 @@ var Sinxron = (function () {
         fkRad.forEach(function (it) { FK_OTA[it.j].forEach(function (f) { var id = it.x.qator[f[0]]; if (id) (kerak[f[1]] = kerak[f[1]] || {})[id] = true; }); });
         var so = {}; Object.keys(kerak).forEach(function (t) { so[t] = Object.keys(kerak[t]); });
         return Data.qatorlarniOqish(so).then(function (mah) {
-          var bor = {}, otaTartib = ['hisoblar', 'kategoriyalar', 'qarzlar'];
+          var bor = {}, otaTartib = ['hisoblar', 'kategoriyalar', 'qarzlar', 'yozuvlar'];
           otaTartib.forEach(function (t) { (mah[t] || []).forEach(function (x) { bor[t + '|' + x.id] = x; }); });
           return otaTartib.reduce(function (p, t) {
             return p.then(function () {

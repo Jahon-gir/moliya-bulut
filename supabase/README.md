@@ -17,10 +17,12 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 | `008_ai_limit_testi.sql` | 007 ni tekshiradi (11 tekshiruv). Supabase'da ishga tushiriladi |
 | `009_yozuv_bogi.sql` | Yozuvga ixtiyoriy `bog_id` ustuni (o'tkazma komissiyasi o'tkazmaga bog'lanadi, ilova 0.44.0), tashqi kalit, indeks va yangilangan `tombstone_tozalash()`. Supabase'da ishga tushiriladi |
 | `010_yozuv_bogi_testi.sql` | 009 ni tekshiradi (24 tekshiruv). Supabase'da ishga tushiriladi |
+| `011_qarz_bogi.sql` | Yozuvga ixtiyoriy `qarz_bog_id` ustuni (qarz komissiyasi qarzga bog'lanadi, ilova 0.45.0), tashqi kalit, indeks va yangilangan `tombstone_tozalash()`. Supabase'da ishga tushiriladi (009 dan keyin) |
+| `012_qarz_bogi_testi.sql` | 011 ni tekshiradi (19 tekshiruv). Supabase'da ishga tushiriladi |
 | `functions/yordamchi/index.ts` | AI yordamchi Edge Function (bitta fayl). Supabase Dashboard'ga nusxalab joylanadi (5-bo'lim) |
 | `functions/yordamchi/test.mjs` | Funksiya sinovi (kompyuterda, `node --test`). AI taqlid qilinadi, haqiqiy kalit kerak emas |
 | `../model-server/kopri.py`, `test_kopri.py` | "Ko'prik": uyingizdagi Ollama oldidagi kalit tekshiruvchi darvoza va uning sinovi (yozuv rejimi uchun, 6-bo'lim) |
-| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–010) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
+| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–012) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
 
@@ -81,6 +83,15 @@ Bu fayl **ixtiyoriy, lekin tavsiya etiladi**: ilova uni bo'lmasa ham ishlaydi. N
 2. Yana **New query**. `supabase/010_yozuv_bogi_testi.sql` ni nusxalab **Run** ni bosing. Eng pastki qator: `JAMI: 24 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov hech narsa saqlamaydi.
 
 **Nima o'zgaradi:** `yozuvlar.bog_id` (uuid, bo'sh bo'lishi mumkin); tashqi kalit (o'z egasi qatoriga, kechiktirilgan); o'ziga ishora taqiqlangan; yangi indeks; `tombstone_tozalash()` bog'langan qatorlarni tartib bilan tozalaydi (ota qator, unga ishora qiluvchi qator bor ekan, qoladi). RLS, ruxsatlar va triggerlar o'zgarmaydi. Sababi va cheklovlar: TZ-sinxronlash.md 40-band.
+
+## 1-e. Qarz komissiyasi uchun: 011 va 012 (0.45.0)
+
+**Ilovani yangilashdan OLDIN ishga tushiring.** 001, 005 va 009 ishga tushirilgan bo'lishi shart. 011 mavjud ma'lumotga tegmaydi (bo'sh ustun qo'shadi), qayta ishga tushirish xavfsiz. 011 bo'lmasa, komissiyali qarz saqlansa komissiya qatori rad etiladi (`PG_PGRST204`), qolgan yozuvlar sinxronlanaveradi.
+
+1. Supabase → **SQL Editor** → **New query**. `supabase/011_qarz_bogi.sql` ning **hamma matnini** nusxalab qo'ying → **Run**. Natija: **"Success. No rows returned"**.
+2. Yana **New query**. `supabase/012_qarz_bogi_testi.sql` ni nusxalab **Run**. Eng pastki qator: `JAMI: 19 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov hech narsa saqlamaydi.
+
+**Nima o'zgaradi:** `yozuvlar.qarz_bog_id` (uuid, bo'sh bo'lishi mumkin) va uning tashqi kaliti (o'z egasining qarziga, kechiktirilgan); indeks; `tombstone_tozalash()` yangilandi. RLS, ruxsatlar va triggerlar o'zgarmaydi. Tafsilot: TZ-sinxronlash.md 42-band.
 
 ## 2. Qanday tekshirish (qo'shimcha)
 

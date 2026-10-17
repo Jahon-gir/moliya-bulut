@@ -12,7 +12,7 @@ var SinxronSof = (function () {
 
   // `bog_id` (komissiya -> o'tkazma) faqat qiymati bor qatorda yuboriladi: u yo'q qatorlar serverda 009 ishga tushmagan bo'lsa ham o'tadi,
   // eski ilova versiyasi esa bu ustunni umuman yubormaydi va serverdagi qiymatni o'chira olmaydi (TZ 40-band).
-  function yozuvQatori(q, x) { if (x.bog_id) q.bog_id = x.bog_id; return q; }
+  function yozuvQatori(q, x) { if (x.bog_id) q.bog_id = x.bog_id; if (x.qarz_bog_id) q.qarz_bog_id = x.qarz_bog_id; return q; }
 
   // ---- Mahalliy qator -> serverga yuboriladigan qator (user_id, created_at, updated_at, eski_id, balans YUBORILMAYDI) ----
   function serverQatori(jadval, x) {
@@ -34,7 +34,8 @@ var SinxronSof = (function () {
     if (jadval === 'yozuvlar') {
       var y = { id: r.id, deleted: r.deleted === true, yaratilgan: iso(r.yaratilgan), tur: r.tur, summa: Number(r.summa), sana: r.sana, vaqt: hhmm(r.vaqt) || '00:00', hisob_id: r.hisob_id, izoh: r.izoh || '', updated_at: u };
       if (r.tur === 'otkazma') { y.qabul_hisob_id = r.qabul_hisob_id; y.kategoriya_id = null; } else y.kategoriya_id = r.kategoriya_id;
-      if (r.bog_id) y.bog_id = r.bog_id;   // sxema 8: komissiya -> o'tkazma (eski serverda/qatorda yo'q bo'lishi mumkin)
+      if (r.bog_id) y.bog_id = r.bog_id;
+      if (r.qarz_bog_id) y.qarz_bog_id = r.qarz_bog_id;   // sxema 9: qarz komissiyasi -> qarz   // sxema 8: komissiya -> o'tkazma (eski serverda/qatorda yo'q bo'lishi mumkin)
       return y;
     }
     if (jadval === 'byudjetlar') return { id: r.id, deleted: r.deleted === true, kategoriya_id: r.kategoriya_id === null || r.kategoriya_id === undefined ? 'umumiy' : r.kategoriya_id, oylik_limit: Number(r.oylik_limit), updated_at: u };

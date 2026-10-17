@@ -161,7 +161,7 @@ var Sinxron = (function () {
   }
 
   // Bog'liqlik (FK) xatosi: qator qaysi ota qatorga tayanadi
-  var FK_OTA = { yozuvlar: [['hisob_id', 'hisoblar'], ['qabul_hisob_id', 'hisoblar'], ['kategoriya_id', 'kategoriyalar'], ['bog_id', 'yozuvlar']], byudjetlar: [['kategoriya_id', 'kategoriyalar']], qarzlar: [['hisob_id', 'hisoblar']], qarz_tolovlari: [['qarz_id', 'qarzlar'], ['hisob_id', 'hisoblar']] };
+  var FK_OTA = { yozuvlar: [['hisob_id', 'hisoblar'], ['qabul_hisob_id', 'hisoblar'], ['kategoriya_id', 'kategoriyalar'], ['bog_id', 'yozuvlar'], ['qarz_bog_id', 'qarzlar']], byudjetlar: [['kategoriya_id', 'kategoriyalar']], qarzlar: [['hisob_id', 'hisoblar']], qarz_tolovlari: [['qarz_id', 'qarzlar'], ['hisob_id', 'hisoblar']] };
   var FK_URINISH_CHEGARA = 5;   // avtomatik qayta yuborish urinishlari (qo'lda "Qayta urinish" cheklanmagan)
 
   // Oldingi tsiklda bog'liqlik xatosi bilan o'tmagan qatorlar qayta navbatga qo'yiladi (ota qator keyin yuborilgan bo'lishi mumkin)
@@ -206,6 +206,9 @@ var Sinxron = (function () {
       ruyxat.qarzlar = ruyxat.qarzlar.filter(function (x) { return !qarzRad[x.kalit]; });
     }).then(function () {
       var jamiSoni = J.reduce(function (a, j) { return a + ruyxat[j].length; }, 0), bajarildi = 0;
+      // Qarz komissiyasi (yozuv) qarzdan KEYIN yuboriladi (yozuvlar jadvali qarzlardan oldin turadi): ota qator serverda bo'lsin (TZ 42-band)
+      var qarzliYozuvlar = ruyxat.yozuvlar.filter(function (x) { return x.qator.qarz_bog_id; });
+      ruyxat.yozuvlar = ruyxat.yozuvlar.filter(function (x) { return !x.qator.qarz_bog_id; });
       if (progress && jamiSoni) progress(0, jamiSoni);
       // Bo'lak serverning MA'LUMOT qoidalariga to'g'ri kelmagani uchun rad etilsa (PG 22xxx/23xxx, HTTP 400/409/413/422), u teng ikkiga bo'linib qayta yuboriladi
       // va xatoli qator(lar) ajratiladi: qolganlari yuboriladi. Tarmoq, kirish (401/403) va server (5xx) xatolari avvalgidek tsiklni to'xtatadi (navbat saqlanadi).
@@ -328,7 +331,9 @@ var Sinxron = (function () {
         return p.then(function () {
           return bolaklash(ruyxat[j], YUBOR_BOLAK).reduce(function (q, bolak) { return q.then(function () { return bolakniYubor(j, bolak); }); }, Promise.resolve());
         });
-      }, Promise.resolve()).then(function () { return fkniTuzat(); });
+      }, Promise.resolve()).then(function () {
+        return bolaklash(qarzliYozuvlar, YUBOR_BOLAK).reduce(function (q, bolak) { return q.then(function () { return bolakniYubor('yozuvlar', bolak); }); }, Promise.resolve());
+      }).then(function () { return fkniTuzat(); });
     }).then(function () {
       // qarzlar va to'lovlari ikkalasi ham yuborilgach, qarz navbatdan olinadi
       var kalitlar = Object.keys(qarzUchun);

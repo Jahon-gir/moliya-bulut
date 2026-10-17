@@ -369,14 +369,16 @@
   }
   // Bir kun yozuvlari qatorlarini kartaga qo'shadi: komissiya o'tkazma ostida ichki qator; o'tkazmasi shu kunda topilmagan komissiya oddiy xarajat qatori.
   // elementlar: yozuvlar yoki { turi: 'yozuv', yozuv } elementlari (Tarix: qarz qatorlari ham bor, ularni qatorOl(el) o'zi chizadi)
-  function kunQatorlari(kun, elementlar, yozuvOl, qatorChiz) {
-    var ro = Calc.komissiyaniOtkazmagaBogla(elementlar.map(yozuvOl).filter(Boolean)), ichkiIdlar = {};
+  function kunQatorlari(kun, elementlar, yozuvOl, qatorChiz, qarzOl) {
+    var qarzIdlar = qarzOl ? elementlar.map(qarzOl).filter(Boolean) : [];
+    var ro = Calc.komissiyaniOtkazmagaBogla(elementlar.map(yozuvOl).filter(Boolean), qarzIdlar), ichkiIdlar = {};
     Object.keys(ro.ichki).forEach(function (k) { ro.ichki[k].forEach(function (y) { ichkiIdlar[y.id] = true; }); });
     elementlar.forEach(function (e) {
       var y = yozuvOl(e);
       if (y && ichkiIdlar[y.id]) return;
       kun.appendChild(qatorChiz(e));
-      if (y && ro.ichki[y.id]) ro.ichki[y.id].forEach(function (k) { kun.appendChild(komissiyaQatori(k)); });
+      var ichki = y ? ro.ichki[y.id] : (qarzOl && qarzOl(e) ? ro.ichki['q:' + qarzOl(e)] : null);
+      if (ichki) ichki.forEach(function (k) { kun.appendChild(komissiyaQatori(k)); });
     });
   }
 
@@ -440,6 +442,10 @@
     if (tahrir.bog_id && tahrir.tur === 'xarajat') {
       var ota = malumot.yozuvlar.filter(function (x) { return x.id === tahrir.bog_id && x.tur === 'otkazma'; })[0];
       if (ota) tahrir = ota;
+    }
+    if (tahrir.qarz_bog_id && tahrir.tur === 'xarajat') {   // qarz komissiyasini ochish = qarzning tahrir shaklini ochish (qarz topilmasa — oddiy xarajat)
+      var bogliQarz = qarzniOl(tahrir.qarz_bog_id);
+      if (bogliQarz) return qarzShakli(bogliQarz);
     }
     var holat = { tur: tahrir.tur, kategoriya: tahrir.kategoriya_id };
     var komHolat = Calc.komissiyaHolatiYozuvdan(tahrir.tur === 'otkazma' ? Calc.otkazmaKomissiyalari(malumot.yozuvlar, tahrir.id)[0] : null, tahrir.summa);
@@ -635,6 +641,7 @@
       };
       if (otkazma) yozuv.qabul_hisob_id = qabul.value;
       if (tahrir.bog_id) yozuv.bog_id = tahrir.bog_id;   // bog'langan (o'tkazmasi topilmagan) komissiya bog'i yo'qolmasin
+      if (tahrir.qarz_bog_id) yozuv.qarz_bog_id = tahrir.qarz_bog_id;   // xuddi shunday qarz komissiyasi (qarzi topilmagan)
       saqla.disabled = true;
       // O'tkazma (yoki o'tkazma bo'lgan yozuv) komissiyasi bilan BITTA tranzaksiyada saqlanadi: summa, hisob, sana o'zgarsa komissiya yangilanadi,
       // "Yo'q" tanlansa yoki tur o'zgarsa komissiya mantiqiy o'chadi
@@ -1683,7 +1690,7 @@
       var kun = karta();
       kun.classList.add('kun');
       quti.appendChild(kunSarlavhasi(g, g.elementlar.length));
-      kunQatorlari(kun, g.elementlar, function (e) { return e.turi === 'yozuv' ? e.yozuv : null; }, function (e) { return e.turi === 'yozuv' ? yozuvQatori(e.yozuv, hozirgi) : qarzSatri(e.satr); });
+      kunQatorlari(kun, g.elementlar, function (e) { return e.turi === 'yozuv' ? e.yozuv : null; }, function (e) { return e.turi === 'yozuv' ? yozuvQatori(e.yozuv, hozirgi) : qarzSatri(e.satr); }, function (e) { return e.turi === 'qarz' ? e.satr.qarz_id : null; });
       quti.appendChild(kun);
     });
     return quti;
@@ -3429,7 +3436,12 @@
       k.appendChild(r);
     }
     qator('Yo\'nalish', YONALISH_NOMI[q.yonalish] + ' (' + YONALISH_IZOHI[q.yonalish].toLowerCase() + ')');
-    qator('Qarz summasi', Calc.sumFormat(q.summa));
+    var qarzKom = Calc.qarzKomissiyalari(malumot.yozuvlar, q.id)[0];
+    if (qarzKom) {   // komissiyali qarz (42-band): qarz summasi = qaytariladigan jami
+      qator('Hisobga tushgan', Calc.sumFormat(q.summa - qarzKom.summa));
+      qator('Komissiya (' + (Calc.komissiyaFoiziIzohdan(qarzKom.izoh) || Calc.foizKorsat(qarzKom.summa, q.summa - qarzKom.summa)) + '%)', Calc.sumFormat(qarzKom.summa), 'minus');
+      qator('Qaytariladigan jami', Calc.sumFormat(q.summa));
+    } else qator('Qarz summasi', Calc.sumFormat(q.summa));
     qator('Qaytarilgan', Calc.sumFormat(tolangan));
     qator('Qolgan', Calc.sumFormat(qolgan), q.yonalish === 'berdim' ? 'plus' : 'minus');
     k.appendChild(qarzChizigi(tolangan, q.summa, q.shaxs));
@@ -3488,6 +3500,7 @@
         yonalish = y;
         Object.keys(yTugmalar).forEach(function (x) { yTugmalar[x].setAttribute('aria-pressed', String(x === y)); });
         shaxsBelgi.textContent = y === 'berdim' ? 'Kimga' : 'Kimdan';
+        komKorinish();
       });
       yTugmalar[y].setAttribute('aria-pressed', String(y === yonalish));
       yTugmalar[y].setAttribute('data-yonalish', y);
@@ -3510,8 +3523,77 @@
     shMaydon.appendChild(shaxsXato);
     forma.appendChild(shMaydon);
 
-    var summa = summaMaydoni('q-summa', 'Summa (so\'m)', q ? Calc.raqamFormat(String(q.summa)) : '');
-    forma.appendChild(summa.quti);
+    // Qarz komissiyasi (42-band, faqat "Men oldim"): "Hisobga tushdi" (shu summa maydoni) va "Qaytarasiz" yonma-yon; qarz summasi = qaytarasiz.
+    var mavjudKom = q ? Calc.qarzKomissiyalari(malumot.yozuvlar, q.id)[0] : null;
+    var komHolat = Calc.qarzKomissiyaHolatiYozuvdan(q, mavjudKom);
+    var summa = summaMaydoni('q-summa', 'Summa (so\'m)', mavjudKom ? komHolat.tushdi : (q ? Calc.raqamFormat(String(q.summa)) : ''));
+    var qayt = summaMaydoni('q-qaytarasiz', 'Qaytarasiz', mavjudKom ? komHolat.qaytarasiz : '');
+    var juft = el('div', undefined, 'kom-juft');
+    juft.appendChild(summa.quti); juft.appendChild(qayt.quti);
+    forma.appendChild(juft);
+    summa.input.classList.add('kom-juft-kiritish'); qayt.input.classList.add('kom-juft-kiritish');
+    var komQism = el('div', undefined, 'maydon kom-qism');
+    komQism.setAttribute('role', 'group'); komQism.setAttribute('aria-label', 'Komissiya');
+    var komBosh = el('div', undefined, 'kom-bosh');
+    komBosh.appendChild(belgiKatak(Calc.KOMISSIYA.belgi, Calc.KOMISSIYA.rang, 28)); komBosh.appendChild(el('span', 'Komissiya', 'kom-nom'));
+    komQism.appendChild(komBosh);
+    var komChiplar = el('div', undefined, 'chiplar kom-chiplar'), komTugma = {};
+    [['yoq', 'Yo\'q'], ['foiz', 'Foiz…'], ['summa', 'Summa…']].forEach(function (c) {
+      var b = tugma(c[1], 'chip', function () {
+        komHolat.chip = c[0];
+        if (c[0] !== 'yoq') komHolat.baza = c[0];
+        komXato.textContent = '';
+        komKorinish(c[0]);
+      });
+      b.setAttribute('data-kom', c[0]);
+      b.setAttribute('aria-label', c[0] === 'yoq' ? 'Komissiya yo\'q' : c[0] === 'foiz' ? 'Komissiya foizini kiritish' : 'Komissiya summasini kiritish');
+      komTugma[c[0]] = b; komChiplar.appendChild(b);
+    });
+    komQism.appendChild(komChiplar);
+    var komFoizQuti = el('div', undefined, 'maydon');
+    var komFoizBelgi = el('label', 'Foiz (%)'); komFoizBelgi.setAttribute('for', 'q-kom-foiz');
+    var komFoiz = document.createElement('input');
+    komFoiz.id = 'q-kom-foiz'; komFoiz.type = 'text'; komFoiz.inputMode = 'decimal'; komFoiz.autocomplete = 'off'; komFoiz.placeholder = '2,9'; komFoiz.value = komHolat.foizMatn || '';
+    komFoizQuti.appendChild(komFoizBelgi); komFoizQuti.appendChild(komFoiz);
+    var komSumma = summaMaydoni('q-kom-summa', 'Komissiya (so\'m)', komHolat.summaMatn || '');
+    komSumma.input.classList.add('kom-juft-kiritish');
+    var komJuft2 = el('div', undefined, 'kom-juft');
+    komJuft2.appendChild(komFoizQuti); komJuft2.appendChild(komSumma.quti);
+    komQism.appendChild(komJuft2);
+    var komXato = el('div', undefined, 'xato-matn kom-xato');
+    komQism.appendChild(komXato);
+    var komNatija = el('div', undefined, 'kom-natija');
+    komNatija.setAttribute('aria-live', 'polite');
+    komQism.appendChild(komNatija);
+    forma.appendChild(komQism);
+
+    // Uch qiymat o'zaro bog'liq: oxirgi kiritilgani (baza) asos, qolganlari butun so'mga yaxlitlab hisoblanadi
+    function komHisobla() {
+      komHolat.tushdi = summa.input.value; komHolat.qaytarasiz = qayt.input.value; komHolat.foizMatn = komFoiz.value; komHolat.summaMatn = komSumma.input.value;
+      var r = Calc.qarzKomissiyasiHisobla(komHolat);
+      komNatija.textContent = '';
+      if (r.kom) {
+        if (komHolat.baza !== 'qaytarasiz') qayt.input.value = Calc.raqamFormat(String(r.qaytarasiz));
+        if (komHolat.baza !== 'foiz') komFoiz.value = r.foiz;
+        if (komHolat.baza !== 'summa') komSumma.input.value = Calc.raqamFormat(String(r.kom));
+        komNatija.appendChild(el('div', 'Hisobga tushadi: ' + raqam(r.tushdi) + ' · Komissiya: ' + raqam(r.kom) + ' (' + r.foiz + '%)', 'kom-satr'));
+        komNatija.appendChild(el('strong', 'Qaytariladigan jami: ' + raqam(r.qaytarasiz), 'kom-jami minus'));
+      }
+      return r;
+    }
+    function komKorinish(chip) {
+      var oldim = yonalish === 'oldim', faol = oldim && komHolat.chip !== 'yoq';
+      komQism.hidden = !oldim;
+      qayt.quti.hidden = !faol; komJuft2.hidden = !faol; komNatija.hidden = !faol;
+      summa.quti.querySelector('label').textContent = faol ? 'Hisobga tushdi' : 'Summa (so\'m)';
+      juft.classList.toggle('juft-ikki', faol);
+      Object.keys(komTugma).forEach(function (k) { komTugma[k].setAttribute('aria-pressed', String(komHolat.chip === k)); });
+      if (faol) { komHisobla(); if (chip === 'foiz') komFoiz.focus(); else if (chip === 'summa') komSumma.input.focus(); }
+    }
+    summa.input.addEventListener('input', function () { if (komHolat.chip !== 'yoq' && yonalish === 'oldim') komHisobla(); });
+    qayt.input.addEventListener('input', function () { komHolat.baza = 'qaytarasiz'; qayt.xato.textContent = ''; komXato.textContent = ''; komHisobla(); });
+    komFoiz.addEventListener('input', function () { komHolat.baza = 'foiz'; komXato.textContent = ''; komFoiz.classList.remove('xatoli'); komHisobla(); });
+    komSumma.input.addEventListener('input', function () { komHolat.baza = 'summa'; komXato.textContent = ''; komHisobla(); });
 
     var hMaydon = el('div', undefined, 'maydon');
     var hBelgi = el('label', 'Hisob');
@@ -3563,7 +3645,14 @@
     forma.addEventListener('submit', function (e) {
       e.preventDefault();
       // saqlash paytida hozirgi vaqt qayta olinadi (g'ildirakdan keyingi ikkinchi himoya)
-      var r = Calc.qarzniTekshir({ yonalish: yonalish, shaxs: shaxs.value, summa: summa.input.value, hisob: hisob.value,
+      var kr = { yoq: true };
+      if (yonalish === 'oldim' && komHolat.chip !== 'yoq') {
+        kr = komHisobla();
+        if (kr.xato) { komXato.textContent = kr.xato; (kr.maydon === 'foiz' ? komFoiz : kr.maydon === 'summa' ? komSumma.input : kr.maydon === 'qaytarasiz' ? qayt.input : summa.input).focus(); return; }
+        if (kr.kutish && sonBor(summa.input.value)) { komXato.textContent = 'Komissiyani kiriting yoki "Yo\'q" ni tanlang'; (komHolat.chip === 'foiz' ? komFoiz : komSumma.input).focus(); return; }
+        if (kr.kutish) kr = { yoq: true };
+      }
+      var r = Calc.qarzniTekshir({ yonalish: yonalish, shaxs: shaxs.value, summa: kr.yoq ? summa.input.value : String(kr.qaytarasiz), hisob: hisob.value,
         sana: vaqt.holat.sana, vaqt: vaqt.holat.vaqt, muddat: muddat.value, izoh: izoh.value }, Calc.hozir(), q || undefined);
       if (r.xato) {
         var maydon = { shaxs: [shaxsXato, shaxs], summa: [summa.xato, summa.input], hisob: [hisobXato, hisob], vaqt: [vaqt.xato, vaqt.tugma], muddat: [muddatXato, muddat] }[r.maydon];
@@ -3571,9 +3660,13 @@
         else qisqaXabar(r.xato);
         return;
       }
-      var yangi = q ? Object.assign({}, q, r.qarz) : yangiQarzObyekti(r.qarz);
+      var yangi = Calc.qarzniYangilash(q ? Object.assign({}, q, r.qarz) : yangiQarzObyekti(r.qarz));
       saqla.disabled = true;
-      qarzniSaqlash(yangi).then(function () {
+      var kom = kr.yoq ? null : { summa: kr.kom, izoh: kr.izoh };
+      // Komissiyali (yoki komissiyasi bor edi) qarz: qarz + komissiya yozuvi + kategoriya BITTA tranzaksiyada. Oddiy qarz avvalgidek.
+      (kom || (q && Calc.qarzKomissiyalari(malumot.yozuvlar, q.id).length)
+        ? Data.qarzniKomissiyaBilanSaqlash(yangi, kom).then(function (n) { qarzNatijasi(n); })
+        : qarzniSaqlash(yangi)).then(function () {
         qisqaXabar(q ? 'Qarz yangilandi' : 'Qarz qo\'shildi');
         if (rejim) rejim.saqlandi(); else orqaga();
       }).catch(function (xato) {
@@ -3581,8 +3674,18 @@
         summa.xato.textContent = 'Saqlab bo\'lmadi: ' + xato;
       });
     });
+    komKorinish();
     bloklar.push(forma);
     return bloklar;
+  }
+  function sonBor(m) { return /\d/.test(String(m || '')); }
+  // Saqlangan qarz va komissiya natijasini xotiradagi ro'yxatlarga qo'llaydi
+  function qarzNatijasi(n) {
+    var id = n.qarz.id, yangi = Calc.jonliQarz(n.qarz);
+    malumot.qarzlar = malumot.qarzlar.some(function (x) { return x.id === id; }) ? malumot.qarzlar.map(function (x) { return x.id === id ? yangi : x; }) : malumot.qarzlar.concat([yangi]);
+    malumot.yozuvlar = malumot.yozuvlar.filter(function (x) { return !(x.qarz_bog_id === id && x.tur === 'xarajat'); });
+    if (n.komissiya) malumot.yozuvlar.push(n.komissiya);
+    if (n.kategoriya) malumot.kategoriyalar.push(n.kategoriya);
   }
 
   // To'lov qo'shish yoki tahrirlash (tolovId bo'lsa); tahrirda "To'lovni o'chirish" ham bor
@@ -3651,12 +3754,20 @@
   }
 
   // O'chiradi va 10 soniya davomida "Bekor qilish" imkonini beradi
+  // Qarz o'chirilsa, unga bog'langan komissiya ham o'chadi (bitta tranzaksiya); "Bekor qilish" ikkalasini birga qaytaradi
   function qarzniOchirish(q) {
-    Data.ochirish('qarzlar', q.id).then(function () {
+    Data.qarzniKomissiyasiBilanOchirish(q.id).then(function (o) {
+      var idlar = {};
+      o.komissiyalar.forEach(function (y) { idlar[y.id] = true; });
       malumot.qarzlar = malumot.qarzlar.filter(function (x) { return x.id !== q.id; });
+      malumot.yozuvlar = malumot.yozuvlar.filter(function (y) { return !idlar[y.id]; });
       orqaga();   // qarz ekranidan ro'yxatga qaytamiz
       qisqaXabar('Qarz o\'chirildi', { nom: 'Bekor qilish', fn: function () {
-        qarzniSaqlash(q).then(function () { qisqaXabar('Qarz qaytarildi'); yangilash(); });
+        Data.qarzniKomissiyasiBilanQaytarish(q, o.komissiyalar).then(function () {
+          malumot.qarzlar = malumot.qarzlar.filter(function (x) { return x.id !== q.id; }).concat([q]);
+          o.komissiyalar.forEach(function (y) { malumot.yozuvlar.push(Object.assign({}, y, { deleted: false })); });
+          qisqaXabar('Qarz qaytarildi'); yangilash();
+        });
       } }, 10000);
     }).catch(function (xato) { qisqaXabar('O\'chirib bo\'lmadi: ' + xato); });
   }

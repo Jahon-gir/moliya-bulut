@@ -219,8 +219,7 @@ var Gap = (function () {
   // Rasmni ochadi. Juda katta rasm (12–50 MP) bosqichma-bosqich kichraytiriladi (createImageBitmap(resize)), shunda canvas xotirasi to'lmaydi.
   // Xotira yetmasa (to'liq ochib bo'lmasa) kichraytirib ochishga urinadi; baribir bo'lmasa RASM_FORMAT.
   function rasmniOch(fayl) {   // -> Promise<{ manba, en, boy, yop() }>; EXIF yo'nalishi hisobga olinadi (en/boy aylantirilgan holda)
-    var tur = String(fayl && fayl.type || '');
-    if (tur && tur.indexOf('image/') !== 0) return Promise.reject(kodXato('RASM_FORMAT'));
+    if (!fayl || !GapSof.rasmFaylimi(fayl.name, fayl.type)) return Promise.reject(kodXato('RASM_FORMAT'));   // rasm emas: serverga hech narsa ketmaydi
     function bitmapdan(b) {
       return { manba: b, en: b.width, boy: b.height, yop: function () { try { b.close(); } catch (x) { /* ahamiyatsiz */ } } };
     }
@@ -371,13 +370,13 @@ var Gap = (function () {
     document.addEventListener('click', menyuTashqari);
     var birinchi = mn.querySelector('button'); if (birinchi) birinchi.focus();
   }
-  // Ikki ALOHIDA input (37-band): kamera — capture bilan, galereya — capture'siz va aniq image MIME ro'yxati bilan. Ikkalasi DOM'da, display:none emas
+  // Ikki ALOHIDA input (37-band): kamera — capture bilan, galereya — capture'siz va accept'siz. Ikkalasi DOM'da, display:none emas
   // (ko'rinmas, lekin joyida: MIUI/Chrome da yashirin inputda tanlagich bo'sh chiqishi mumkin). click() faqat foydalanuvchi bosishi ichida chaqiriladi.
   function faylInput(id, kamera) {
     var i = document.createElement('input');
     i.type = 'file'; i.id = id; i.className = 'gp-fayl-yashirin'; i.tabIndex = -1; i.setAttribute('aria-hidden', 'true');
     if (kamera) { i.accept = 'image/*'; i.setAttribute('capture', 'environment'); }
-    else i.accept = GapSof.GALEREYA_ACCEPT;
+    // galereya: accept YO'Q va capture YO'Q -> Android tizim tanlagichi (Galereya/Fayllar); fayl turi rasmniOch da tekshiriladi (38-band)
     i.addEventListener('change', function () {
       var f = i.files && i.files[0];
       menyuYop();

@@ -134,7 +134,14 @@ var GapSof = (function () {
   var RASM_KICHRAYTIRISH = 0.8;             // sig'masa o'lcham shuncha marta kichraytiriladi
   var RASM_KICHRAYTIRISH_MAX = 4;
   var CHEK_KUTISH_MS = 100000;              // ikki bosqich (rasm o'qish + yozuv, Gemini 1 marta qayta urinishi bilan): 60 s yetmaydi; Edge Function chegarasidan (150 s) kam
-  var GALEREYA_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif';   // 37-band: faqat image/* MIME turlari (Android Photo Picker), HEIC ham
+  // 38-band: galereya inputida accept atributi YO'Q (Chrome faqat rasm MIME turlari bo'lsa o'z tanlagichini ochadi); fayl turi kodda tekshiriladi
+  var RASM_KENGAYTMALAR = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
+  function rasmFaylimi(nom, tur) {   // tur bor: image/* bo'lsa; tur bo'sh (ba'zi Android fayl tanlagichlari): kengaytma bo'yicha. Ochilishi keyin tekshiriladi.
+    tur = String(tur || '').toLowerCase();
+    if (tur) return tur.indexOf('image/') === 0;
+    var m = /\.([A-Za-z0-9]+)$/.exec(String(nom || ''));
+    return !!m && RASM_KENGAYTMALAR.indexOf(m[1].toLowerCase()) >= 0;
+  }
   var CHEK_BELGI = 'Chekdan o\'qildi · tekshiring';
   var CHEK_XATOLAR = {
     RASM_KATTA: 'Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling.',
@@ -398,7 +405,7 @@ var GapSof = (function () {
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
     MANBA_SARLAVHA: MANBA_SARLAVHA, MANBA_MATNLARI: MANBA_MATNLARI, OVOZ_IZOHI: OVOZ_IZOHI, manbaNomi: manbaNomi, manbaIzohi: manbaIzohi, soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
     CHEK_BELGI: CHEK_BELGI, CHEK_IZOHI: CHEK_IZOHI, CHEK_KUTISH_MS: CHEK_KUTISH_MS, RASM_UZUN_MAX: RASM_UZUN_MAX, RASM_SIFAT: RASM_SIFAT, RASM_BAYT_MAX: RASM_BAYT_MAX, CHEK_XATOLAR: CHEK_XATOLAR,
-    rasmOlchami: rasmOlchami, rasmSiq: rasmSiq, rasmBosqichlari: rasmBosqichlari, GALEREYA_ACCEPT: GALEREYA_ACCEPT, BAND_MATNI: BAND_MATNI, rasmTanasi: rasmTanasi, chekXatoMatni: chekXatoMatni,
+    rasmOlchami: rasmOlchami, rasmSiq: rasmSiq, rasmBosqichlari: rasmBosqichlari, rasmFaylimi: rasmFaylimi, BAND_MATNI: BAND_MATNI, rasmTanasi: rasmTanasi, chekXatoMatni: chekXatoMatni,
     wavYasa: wavYasa, monoQil: monoQil, OVOZ_WAV_HZ: OVOZ_WAV_HZ, mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
     xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
     kategoriyaNomlari: kategoriyaNomlari, hisobRoyxati: hisobRoyxati, eskiTanla: eskiTanla, sorovTanasi: sorovTanasi,

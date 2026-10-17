@@ -64,8 +64,11 @@ async function senariy(brauzer, tema) {
   teng(await p.locator('.gp-ekran').isVisible(), true, 'gap ekrani ochildi');
   const gx = await p.evaluate(() => { const e = document.querySelector('.gp-ekran'); return [e.scrollWidth <= e.clientWidth, document.documentElement.scrollWidth <= 360]; });
   teng(gx, [true, true], 'gorizontal aylanish yo\'q (360 px)');
-  const kichik = await p.evaluate(() => [...document.querySelectorAll('.gp-ekran button, .gp-ekran textarea')].filter((b) => b.getBoundingClientRect().height < 44).map((b) => b.id || b.textContent));
+  const kichik = await p.evaluate(() => [...document.querySelectorAll('.gp-ekran button, .gp-ekran textarea')].filter((b) => b.getClientRects().length && b.getBoundingClientRect().height < 44).map((b) => b.id || b.textContent));   // ko'rinadiganlar (yopiq chek menyusi hisobga olinmaydi)
   teng(kichik, [], 'barcha tugmalar kamida 44 px');
+  await p.click('#gap-kamera');   // chek menyusi ochiq: "Suratga olish" va "Galereyadan tanlash" qatorlari ham kamida 44 px
+  teng(await p.evaluate(() => [...document.querySelectorAll('.gp-menyu-band')].map((b) => [b.textContent.trim(), Math.round(b.getBoundingClientRect().height) >= 44])), [['Suratga olish', true], ['Galereyadan tanlash', true]], 'chek menyusi qatorlari kamida 44 px');
+  await p.keyboard.press('Escape');
   await p.screenshot({ path: path.join(RASMLAR, tema + '-2-yozish.png') });
   await p.click('#gap-aylantirish');
   teng(await p.textContent('#gap-xato'), 'Gap yozing', 'bo\'sh gap xatosi');

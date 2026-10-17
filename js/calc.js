@@ -1259,11 +1259,35 @@
     if (tekshirilgan && tekshirilgan.foiz) return parseFloat(tekshirilgan.foiz.replace(',', '.'));
     return null;
   }
-  // "Komissiya" xarajat kategoriyasini nom bo'yicha topadi (kichik harf, apostrof turlariga e'tiborsiz). Arxivlangan bo'lsa ham o'shani qaytaradi
-  // (arxivdan chiqarilmaydi). Mantiqiy o'chirilganlar (deleted) hisobga olinmaydi. Topilmasa undefined.
-  function komissiyaKategoriyasiniTop(kategoriyalar) {
-    var kalit = nomKaliti(KOMISSIYA.nom), r = (kategoriyalar || []).filter(function (k) { return k && k.tur === 'xarajat' && k.deleted !== true && nomKaliti(k.nom) === kalit; });
-    return r.filter(function (k) { return !k.arxivlangan; })[0] || r[0];
+  // Kategoriya nomini moslash uchun normallashtirish (41-band): kichik harf, apostrof turlari bitta ('), kirill harflari lotinga o'tkaziladi.
+  var KIRILL = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'j', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'x', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sh', 'ъ': '\'', 'ы': 'i', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya', 'ў': 'o\'', 'қ': 'q', 'ғ': 'g\'', 'ҳ': 'h' };
+  function nomLotinga(nom) {
+    return String(nom == null ? '' : nom).toLowerCase().replace(/[ʻʼ‘’`´]/g, '\'')
+      .replace(/[Ѐ-ӿ]/g, function (h) { return KIRILL[h] !== undefined ? KIRILL[h] : h; });
+  }
+  // Komissiya so'zi: ildiz + ruxsat etilgan qo'shimcha. Nomning BIRINCHI so'zi shulardan biriga aynan teng bo'lsa mos ("Komissiyalar", "Komissiya to'lovlari",
+  // "Kommissiya", "Комиссия"); "Komissiyasiz", "Komissiyachi" kabi boshqa qo'shimchalar yoki so'z o'rtasidagi "komissiya" ("Bank komissiyasi") mos EMAS.
+  var KOMISSIYA_ILDIZLARI = ['komissiya', 'kommissiya', 'komisiya', 'komissii'], KOMISSIYA_QOSHIMCHALARI = ['', 'lar', 'lari', 'si', 'ni', 'ning', 'ga', 'dan', 'da'];
+  function komissiyaNomimi(nom) {
+    var s = nomLotinga(nom).trim(), m = /^[a-z']+/.exec(s);
+    if (!m) return false;
+    return KOMISSIYA_ILDIZLARI.some(function (r) { return KOMISSIYA_QOSHIMCHALARI.some(function (q) { return m[0] === r + q; }); });
+  }
+  // Foydalanuvchining mavjud komissiya kategoriyasini topadi (faqat xarajat turida, mantiqiy o'chirilganlari hisobga olinmaydi). Bir nechta mos bo'lsa:
+  // arxivlanmaganlar, keyin eng ko'p (o'chirilmagan) yozuvlisi, keyin eng eskisi. Arxivlangani arxivdan CHIQARILMAYDI. Topilmasa undefined
+  // (u holda "Komissiya" yaratiladi). yozuvlar — ixtiyoriy (yozuvlar soni uchun).
+  function komissiyaKategoriyasiniTop(kategoriyalar, yozuvlar) {
+    var soni = {};
+    (yozuvlar || []).forEach(function (y) { if (y && y.deleted !== true && y.kategoriya_id) soni[y.kategoriya_id] = (soni[y.kategoriya_id] || 0) + 1; });
+    var r = (kategoriyalar || []).filter(function (k) { return k && k.tur === 'xarajat' && k.deleted !== true && komissiyaNomimi(k.nom); });
+    r.sort(function (a, b) {
+      if (!!a.arxivlangan !== !!b.arxivlangan) return a.arxivlangan ? 1 : -1;
+      var d = (soni[b.id] || 0) - (soni[a.id] || 0);
+      if (d) return d;
+      var ya = a.yaratilgan || '', yb = b.yaratilgan || '';
+      return ya < yb ? -1 : ya > yb ? 1 : 0;
+    });
+    return r[0];
   }
   // Yozuvning komissiyalari: bog_id shu o'tkazmaga ishora qiladigan, o'chirilmagan xarajat yozuvlari
   function otkazmaKomissiyalari(yozuvlar, otkazmaId) {
@@ -1617,6 +1641,6 @@
     KOMISSIYA: KOMISSIYA, komissiyaFoiziniTekshir: komissiyaFoiziniTekshir, komissiyaHisobla: komissiyaHisobla, komissiyaTekshir: komissiyaTekshir,
     komissiyaFoiziIzohdan: komissiyaFoiziIzohdan, komissiyaYorligi: komissiyaYorligi, komissiyaHolatiYozuvdan: komissiyaHolatiYozuvdan,
     komissiyaHolatiEslabqolingandan: komissiyaHolatiEslabqolingandan, komissiyaEslabQolish: komissiyaEslabQolish,
-    komissiyaKategoriyasiniTop: komissiyaKategoriyasiniTop, otkazmaKomissiyalari: otkazmaKomissiyalari, komissiyaniOtkazmagaBogla: komissiyaniOtkazmagaBogla
+    komissiyaKategoriyasiniTop: komissiyaKategoriyasiniTop, komissiyaNomimi: komissiyaNomimi, nomLotinga: nomLotinga, otkazmaKomissiyalari: otkazmaKomissiyalari, komissiyaniOtkazmagaBogla: komissiyaniOtkazmagaBogla
   };
 })(typeof window !== 'undefined' ? window : this);

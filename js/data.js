@@ -134,7 +134,7 @@
     q.deleted = q.deleted === true;
     q.updated_at = hozir;
     tx.objectStore(toplam).put(q);
-    navbatgaYoz(tx, toplam, q.id, hozir);
+    navbatgaYoz(tx, toplam, q[TOPLAMLAR[toplam]], hozir);   // navbat kaliti: byudjetda kategoriya_id, qolganlarda id
     return q;
   }
   // otkazma — to'liq yozuv obyekti (tur "otkazma", bo'lmasa id beriladi). kom — null (komissiya yo'q: mavjud komissiya mantiqiy o'chiriladi)
@@ -162,7 +162,7 @@
           var bola = tirik[0] || ochirilgan[0];   // mavjud komissiya yozuvi qayta ishlatiladi (qator ko'payib ketmasin)
           ortiqchaniOchir(bola);
           tx.objectStore('kategoriyalar').getAll().onsuccess = function (e3) {
-            var kat = Calc.komissiyaKategoriyasiniTop(e3.target.result);
+            var kat = Calc.komissiyaKategoriyasiniTop(e3.target.result, e2.target.result);
             if (!kat) {
               kat = qatorniYoz(tx, 'kategoriyalar', { id: yangiId(), yaratilgan: hozir, nom: Calc.KOMISSIYA.nom, tur: 'xarajat', rang: Calc.KOMISSIYA.rang, belgi: Calc.KOMISSIYA.belgi, arxivlangan: false }, null, hozir);
               natija.kategoriya = kat;
@@ -209,17 +209,71 @@
     });
   }
 
+  // ---- Kategoriyalarni birlashtirish (TZ-sinxronlash.md 41-band) ----
+  // eskiId kategoriyasidagi HAMMA yozuv (o'chirilganlari ham) nishonId ga ko'chadi; byudjet: ikkalasida bo'lsa nishonniki qoladi, eskisi mantiqiy o'chadi,
+  // faqat eskisida bo'lsa nishonga ko'chadi; nishon nomi yangiNom ga o'zgaradi (farq qilsa); eski kategoriya mantiqiy o'chadi. Hammasi BITTA tranzaksiyada
+  // va sinxron navbatiga tushadi (kategoriya, yozuv, byudjet). Qaytarib bo'lmaydi. Tur mos kelmasa yoki kategoriya topilmasa tranzaksiya bekor (hech narsa o'zgarmaydi).
+  // Natija: { kochdi: ko'chgan yozuvlar soni, byudjet: 'yoq' | 'qoldi' | 'kochdi' }
+  function kategoriyalarniBirlashtirish(eskiId, nishonId, yangiNom) {
+    return new Promise(function (resolve, reject) {
+      var natija = { kochdi: 0, byudjet: 'yoq' }, xato = null;
+      var tx = db.transaction(['yozuvlar', 'kategoriyalar', 'byudjetlar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(xato || tx.error || new Error('Bekor qilindi')); };
+      function bekor(matn) { xato = new Error(matn); tx.abort(); }
+      var kz = tx.objectStore('kategoriyalar'), hozir = new Date().toISOString();
+      if (eskiId === nishonId) { bekor('Bir xil kategoriya'); return; }
+      kz.get(eskiId).onsuccess = function (e1) {
+        var eski = e1.target.result;
+        kz.get(nishonId).onsuccess = function (e2) {
+          var nishon = e2.target.result;
+          if (!eski || !nishon || eski.deleted === true || nishon.deleted === true) { bekor('Kategoriya topilmadi'); return; }
+          if (eski.tur !== nishon.tur) { bekor('Kategoriya turlari mos emas'); return; }
+          var nom = String(yangiNom == null ? '' : yangiNom).trim() || nishon.nom;
+          if (nom !== nishon.nom) qatorniYoz(tx, 'kategoriyalar', Object.assign({}, nishon, { nom: nom }), nishon, hozir);
+          qatorniYoz(tx, 'kategoriyalar', Object.assign({}, eski, { deleted: true }), eski, hozir);
+          tx.objectStore('yozuvlar').getAll().onsuccess = function (e3) {
+            e3.target.result.filter(function (y) { return y.kategoriya_id === eskiId; }).forEach(function (y) {
+              qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { kategoriya_id: nishonId }), y, hozir);   // deleted belgisi o'zgarmaydi
+              natija.kochdi++;
+            });
+            var bz = tx.objectStore('byudjetlar');
+            bz.get(eskiId).onsuccess = function (e4) {
+              var be = e4.target.result;
+              if (!be || be.deleted === true) return;
+              bz.get(nishonId).onsuccess = function (e5) {
+                var bn = e5.target.result;
+                qatorniYoz(tx, 'byudjetlar', Object.assign({}, be, { deleted: true }), be, hozir);
+                if (bn && bn.deleted !== true) { natija.byudjet = 'qoldi'; return; }
+                qatorniYoz(tx, 'byudjetlar', { id: bn && bn.id ? bn.id : yangiId(), kategoriya_id: nishonId, oylik_limit: be.oylik_limit }, bn, hozir);
+                natija.byudjet = 'kochdi';
+              };
+            };
+          };
+        };
+      };
+    });
+  }
+
   // Serverga yuborish navbati (S5). Faqat sinxron yoqilgan bo'lsa (sinxron yozuvida navbat = true) yoziladi. Navbat — o'zgargan qatorlarning
   // KALITLARI (qator mazmuni emas): yuborish paytida bazadan oxirgi holati o'qiladi, shuning uchun bir qator ko'p marta o'zgarsa ham bir marta yuboriladi.
   // Qiymat — qatorning updated_at i: yuborilgandan keyin navbatdan shu qiymat bo'yicha olinadi (yuborish paytida yana o'zgargan qator navbatda qoladi).
   function navbatgaYoz(tx, toplam, kalit, vaqt) {
+    // Bir tranzaksiyada ko'p qator yozilsa (birlashtirish, o'tkazma+komissiya), navbat yozuvi bitta o'qish-yozish tsiklida yig'iladi:
+    // aks holda bir vaqtda boshlangan tsikllar bir-birining yozganini yo'qotardi.
+    var kutish = tx.__navbatKutish;
+    if (kutish) { (kutish[toplam] = kutish[toplam] || {})[kalit] = vaqt; return; }
+    kutish = tx.__navbatKutish = {};
+    (kutish[toplam] = {})[kalit] = vaqt;
     var s = tx.objectStore('sozlamalar');
     s.get(SINXRON_KALITI).onsuccess = function (e) {
-      if (!e.target.result || e.target.result.navbat !== true) return;
+      if (!e.target.result || e.target.result.navbat !== true) { tx.__navbatKutish = null; return; }
       s.get(NAVBAT_KALITI).onsuccess = function (e2) {
         var n = e2.target.result || { kalit: NAVBAT_KALITI, qatorlar: {}, ochirish: {} };
         n.qatorlar = n.qatorlar || {};
-        (n.qatorlar[toplam] = n.qatorlar[toplam] || {})[kalit] = vaqt;
+        var yig = tx.__navbatKutish; tx.__navbatKutish = null;
+        Object.keys(yig).forEach(function (t) { Object.keys(yig[t]).forEach(function (k) { (n.qatorlar[t] = n.qatorlar[t] || {})[k] = yig[t][k]; }); });
         s.put(n);
       };
     };
@@ -747,7 +801,7 @@
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
-    otkazmaniSaqlash: otkazmaniSaqlash, yozuvniKomissiyasiBilanOchirish: yozuvniKomissiyasiBilanOchirish, yozuvlarniQaytarish: yozuvlarniQaytarish,
+    otkazmaniSaqlash: otkazmaniSaqlash, kategoriyalarniBirlashtirish: kategoriyalarniBirlashtirish, yozuvniKomissiyasiBilanOchirish: yozuvniKomissiyasiBilanOchirish, yozuvlarniQaytarish: yozuvlarniQaytarish,
     ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, navbatgaQoshish: navbatgaQoshish, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
     tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
     hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI,

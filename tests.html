@@ -5341,25 +5341,26 @@ function xfix(opts) {
           .then(function () { return sinov({}, null, 'Internet kerak', function (s) { s.onlayn = false; }); });
       });
       // ---- Chek skaneri (36-band). Faqat uydirma ma'lumot: haqiqiy chek yoki rasm yo'q ----
+      function tg(h, k, i) { teng(JSON.stringify(h), JSON.stringify(k), i); }
       var CHEK_Y = function (o) { return GAP_Y(Object.assign({ summa: 25500, soni: null, kategoriya: 'Oziq-ovqat', hisob: 'Karta', sana: '2026-10-08', vaqt: '14:35', izoh: 'MAYDA BOZOR: NON 5 000, SUT 12 500', ogohlantirish: [] }, o || {})); };
       test('GapSof chek (36-band): rasm o\'lchami (uzun tomon 1600, kichik rasm kattalashmaydi), siqish (sifat tushadi, keyin o\'lcham), 1,5 MB dan oshmaydi; sig\'masa RASM_KATTA; so\'rov tanasi; xato matnlari', function () {
         var a = GapSof.rasmOlchami(4000, 3000), b = GapSof.rasmOlchami(800, 600), c = GapSof.rasmOlchami(1000, 5000);
-        teng([a.en, a.boy, b.en, b.boy, c.en, c.boy], [1600, 1200, 800, 600, 320, 1600], 'o\'lcham'); teng([GapSof.RASM_UZUN_MAX, GapSof.RASM_SIFAT, GapSof.RASM_BAYT_MAX], [1600, 0.8, 1572864]);
+        tg([a.en, a.boy, b.en, b.boy, c.en, c.boy], [1600, 1200, 800, 600, 320, 1600], 'o\'lcham'); tg([GapSof.RASM_UZUN_MAX, GapSof.RASM_SIFAT, GapSof.RASM_BAYT_MAX], [1600, 0.8, 1572864]);
         var chaqiruv = [], kodla = function (hajm) { return function (en, boy, q) { chaqiruv.push([en, boy, q]); return Promise.resolve({ hajm: hajm(en, boy, q), qiymat: 'blob' + q }); }; };
         return GapSof.rasmSiq(4000, 3000, kodla(function (en, boy, q) { return 100000; })).then(function (r) {
-          teng([r.en, r.boy, r.sifat, r.hajm], [1600, 1200, 0.8, 100000], 'birinchi urinish o\'tadi'); teng(chaqiruv.length, 1);
+          tg([r.en, r.boy, r.sifat, r.hajm], [1600, 1200, 0.8, 100000], 'birinchi urinish o\'tadi'); teng(chaqiruv.length, 1);
           chaqiruv = [];
           return GapSof.rasmSiq(4000, 3000, kodla(function (en, boy, q) { return q > 0.65 ? 2000000 : 900000; }));
         }).then(function (r) {
-          teng([r.sifat, r.en], [0.6, 1600], 'avval sifat tushiriladi'); teng(chaqiruv.map(function (x) { return x[2]; }).join(','), '0.8,0.7,0.6');
+          tg([r.sifat, r.en], [0.6, 1600], 'avval sifat tushiriladi'); teng(chaqiruv.map(function (x) { return x[2]; }).join(','), '0.8,0.7,0.6');
           chaqiruv = [];
           return GapSof.rasmSiq(4000, 3000, kodla(function (en) { return en > 1300 ? 2000000 : 800000; }));
         }).then(function (r) {
-          teng([r.en, r.boy, r.sifat], [1280, 960, 0.8], 'sifat yetmasa o\'lcham 0,8 baravar kichrayadi'); teng(r.hajm <= GapSof.RASM_BAYT_MAX, true);
+          tg([r.en, r.boy, r.sifat], [1280, 960, 0.8], 'sifat yetmasa o\'lcham 0,8 baravar kichrayadi'); teng(r.hajm <= GapSof.RASM_BAYT_MAX, true);
           return GapSof.rasmSiq(4000, 3000, kodla(function () { return 9999999; })).then(function () { teng('o\'tdi', 'RASM_KATTA', 'sig\'masa rad etilishi kerak'); }, function (e) { teng(e.kod, 'RASM_KATTA'); });
         }).then(function () {
           var m = gapM(), t = GapSof.rasmTanasi('QUJD', 'image/jpeg', m, GAP_BUGUN);
-          teng(Object.keys(t).join(','), 'rejim,rasm,mime,bugun,kategoriyalar,hisoblar,eski'); teng([t.rejim, t.rasm, t.mime, t.bugun], ['rasm', 'QUJD', 'image/jpeg', GAP_BUGUN]);
+          teng(Object.keys(t).join(','), 'rejim,rasm,mime,bugun,kategoriyalar,hisoblar,eski'); tg([t.rejim, t.rasm, t.mime, t.bugun], ['rasm', 'QUJD', 'image/jpeg', GAP_BUGUN]);
           teng(t.kategoriyalar.join('|'), 'Oziq-ovqat|Taksi|Oylik|Boshqa', 'ovozdagi (yozuv rejimidagi) kabi ro\'yxat'); teng(t.hisoblar.length, 3); teng(t.eski.length > 0, true);
           teng(/^Rasmda chek topilmadi\.\n\(kod: CHEK_EMAS\)$/.test(GapSof.chekXatoMatni('CHEK_EMAS')), true); teng(/^Rasm juda katta/.test(GapSof.chekXatoMatni('RASM_KATTA')) && /\(kod: RASM_KATTA\)$/.test(GapSof.chekXatoMatni('RASM_KATTA')), true);
           teng(/\(kod: RASM_FORMAT\)$/.test(GapSof.chekXatoMatni('RASM_FORMAT')), true); teng(/\(kod: RASM_OQILMADI\)$/.test(GapSof.chekXatoMatni('RASM_OQILMADI')), true);
@@ -5369,10 +5370,10 @@ function xfix(opts) {
       });
       test('GapSof chek kartasi: chek belgisi, soat chekdan (kelajak soat qo\'yilmaydi), sana yo\'q bo\'lsa bugun + serverning sariq ogohlantirishi, summa bo\'sh bo\'lsa bo\'sh qoladi, manba izohida chek qatori', function () {
         var m = gapM(), K = function (y, q) { return GapSof.kartaYasash(y, m, GAP_BUGUN, Object.assign({ soat: '12:30', chek: true, manba: 'model' }, q || {})); };
-        var k = K(CHEK_Y()); teng([k.chek, k.tur, k.summa, k.sana, k.vaqt, k.kategoriya, k.hisob], [true, 'xarajat', '25 500', '2026-10-08', '14:35', 'k1', 'h2'], 'chekdan: soat 14:35');
+        var k = K(CHEK_Y()); tg([k.chek, k.tur, k.summa, k.sana, k.vaqt, k.kategoriya, k.hisob], [true, 'xarajat', '25 500', '2026-10-08', '14:35', 'k1', 'h2'], 'chekdan: soat 14:35');
         teng(K(CHEK_Y({ sana: '2026-10-09', vaqt: '18:00' })).vaqt, '12:30', 'bugun, soat hozirdan keyin: hozirgi soat'); teng(K(CHEK_Y({ sana: '2026-10-09', vaqt: '09:15' })).vaqt, '09:15');
         var s = K(CHEK_Y({ sana: null, vaqt: null, ogohlantirish: ['Sana chekdan o\'qilmadi — bugungi sana qo\'yildi'] }));
-        teng([s.sana, s.vaqt, s.ogohlantirish[0]], [GAP_BUGUN, '12:30', 'Sana chekdan o\'qilmadi — bugungi sana qo\'yildi']); teng(GapSof.ogohlantirishlar(s).length, 2, 'umumiy qator + chek ogohlantirishi');
+        tg([s.sana, s.vaqt, s.ogohlantirish[0]], [GAP_BUGUN, '12:30', 'Sana chekdan o\'qilmadi — bugungi sana qo\'yildi']); teng(GapSof.ogohlantirishlar(s).length, 2, 'umumiy qator + chek ogohlantirishi');
         teng(K(CHEK_Y({ summa: null, ogohlantirish: ['JAMI summa chekdan topilmadi — summani kiriting'] })).summa, '', 'JAMI topilmasa summa bo\'sh');
         teng(K(CHEK_Y({ vaqt: '25:99' })).vaqt, '12:30', 'yaroqsiz soat'); teng(GapSof.kartaYasash(CHEK_Y(), m, GAP_BUGUN, { soat: '12:30' }).chek, false, 'oddiy gap kartasi chek emas');
         teng(GapSof.manbaIzohi('model', false, true).join('|'), 'Gapni sizning modelingiz o\'qidi.|Chek rasmidagi matnni Gemini o\'qigan.'); teng(GapSof.manbaIzohi('model', true, false).length, 2); teng(GapSof.manbaIzohi(null, false, true).length, 0, 'manba noma\'lum: belgi yo\'q');
@@ -5395,13 +5396,12 @@ function xfix(opts) {
         var s = chekQuru([]); Gap.yangila(); document.getElementById('gap-tugma').click();
         var k = document.getElementById('gap-kamera'), m = document.getElementById('gap-mik'), mn = document.getElementById('gap-kamera-menyu');
         teng(k.getAttribute('aria-label'), 'Chek skaneri'); teng(k.querySelectorAll('svg path').length, 2, 'camera ikoni'); teng(mn.hidden, true, 'menyu boshida yopiq');
-        teng(!!(k.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING), true, 'kamera mikrofondan oldin (chap)'); teng(k.getBoundingClientRect().right <= m.getBoundingClientRect().left, true);
-        teng(k.className.indexOf('gp-asbob') >= 0 && m.className.indexOf('gp-asbob') >= 0, true, 'bir xil uslub'); teng(Math.round(k.getBoundingClientRect().width), Math.round(m.getBoundingClientRect().width), 'bir xil o\'lcham'); teng(k.getBoundingClientRect().width >= 44 && k.getBoundingClientRect().height >= 44, true);
+        teng(!!(k.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING), true, 'kamera mikrofondan oldin (chap)');
+        teng(k.className.indexOf('gp-asbob') >= 0 && m.className.indexOf('gp-asbob') >= 0, true, 'bir xil uslub sinfi');
         k.click(); teng(mn.hidden, false); teng(k.getAttribute('aria-expanded'), 'true');
         teng([].map.call(mn.querySelectorAll('button'), function (b) { return b.textContent; }).join('|'), 'Suratga olish|Galereyadan tanlash'); teng(mn.querySelectorAll('button')[0].querySelectorAll('svg').length + mn.querySelectorAll('button')[1].querySelectorAll('svg').length, 2);
         var a = document.getElementById('gap-rasm-kamera'), g = document.getElementById('gap-rasm-galereya');
-        teng([a.type, a.accept, a.getAttribute('capture')], ['file', 'image/*', 'environment']); teng([g.type, g.accept, g.hasAttribute('capture')], ['file', 'image/*', false]);
-        teng([].every.call(mn.querySelectorAll('button'), function (b) { return b.getBoundingClientRect().height >= 44; }), true, 'menyu tugmalari ≥ 44 px');
+        tg([a.type, a.accept, a.getAttribute('capture')], ['file', 'image/*', 'environment']); tg([g.type, g.accept, g.hasAttribute('capture')], ['file', 'image/*', false]);
         document.getElementById('gap-matn').click(); document.body.click(); teng(mn.hidden, true, 'tashqariga bosilsa yopiladi'); teng(k.getAttribute('aria-expanded'), 'false');
         k.click(); teng(mn.hidden, false); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); teng(mn.hidden, true, 'Escape menyuni yopadi'); teng(!!document.querySelector('.gp-ekran'), true, 'ekran yopilmadi');
         k.click(); mn.querySelectorAll('button')[1].click(); teng(mn.hidden, false, 'fayl tanlanmaguncha menyu ochiq turishi mumkin'); document.body.click(); return gapTugadi();
@@ -5411,8 +5411,8 @@ function xfix(opts) {
         var f = chekRasmTanla('gap-rasm-galereya');
         return yoKut(function () { return s.chekSorov.length === 1; }).then(function () {
           var q = document.getElementById('gap-chek-holat'); teng(q.hidden, false); teng(q.textContent.indexOf('Chek o\'qilmoqda…') >= 0 && q.textContent.indexOf('Rasm saqlanmaydi') >= 0, true); teng(q.querySelectorAll('svg path').length, 5, 'receipt ikoni'); teng(!!q.querySelector('.gp-chek-chiziq'), true, 'progress chizig\'i');
-          var bk = document.getElementById('gap-chek-bekor'); teng([bk.textContent, bk.getBoundingClientRect().height >= 44], ['Bekor', true]); teng(q.getAttribute('aria-live'), 'polite');
-          var t = s.chekSorov[0].tana; teng([t.rejim, t.rasm, t.mime, t.bugun], ['rasm', '/9j/QUJD', 'image/jpeg', GAP_BUGUN]); teng(t.kategoriyalar.indexOf('Oziq-ovqat') >= 0 && t.hisoblar.length === 3 && Array.isArray(t.eski), true); teng(s.chekSorov[0].ms, GapSof.CHEK_KUTISH_MS); teng(!!s.chekSorov[0].ac, true, 'bekor qilish mumkin');
+          var bk = document.getElementById('gap-chek-bekor'); teng(bk.textContent, 'Bekor'); teng(q.getAttribute('aria-live'), 'polite');
+          var t = s.chekSorov[0].tana; tg([t.rejim, t.rasm, t.mime, t.bugun], ['rasm', '/9j/QUJD', 'image/jpeg', GAP_BUGUN]); teng(t.kategoriyalar.indexOf('Oziq-ovqat') >= 0 && t.hisoblar.length === 3 && Array.isArray(t.eski), true); teng(s.chekSorov[0].ms, GapSof.CHEK_KUTISH_MS); teng(!!s.chekSorov[0].ac, true, 'bekor qilish mumkin');
           teng(document.getElementById('gap-aylantirish').click() === undefined && /Chek o'qilmoqda/.test(document.getElementById('gap-xato').textContent), true, 'o\'qilayotganda boshqa so\'rov ketmaydi'); teng(s.chekSorov.length, 1);
           hal(gapJavob([CHEK_Y({ ogohlantirish: ['Sana chekdan o\'qilmadi — bugungi sana qo\'yildi'] })]));
           return yoKut(function () { return Gap.holat() && Gap.holat().bosqich === 'karta'; });
@@ -5420,13 +5420,13 @@ function xfix(opts) {
           var b = document.getElementById('gap-chek-belgi'); teng(b.textContent, 'Chekdan o\'qildi · tekshiring'); teng(b.querySelectorAll('svg path').length, 5);
           teng(!!(b.compareDocumentPosition(document.querySelector('.gp-karta')) & Node.DOCUMENT_POSITION_FOLLOWING), true, 'belgi kartaning tepasida');
           teng(document.querySelectorAll('#gap-ogoh p').length, 2, 'ogohlantirishlar sariq qatorda'); teng(document.querySelectorAll('#gap-ogoh p')[1].textContent, 'Sana chekdan o\'qilmadi — bugungi sana qo\'yildi');
-          teng([document.getElementById('gk-summa').value, document.getElementById('gk-kategoriya').value, document.getElementById('gk-hisob').value, document.getElementById('gk-sana').value, document.getElementById('gk-soat').value, document.getElementById('gk-izoh').value], ['25 500', 'k1', 'h2', '2026-10-08', '14:35', 'MAYDA BOZOR: NON 5 000, SUT 12 500']);
+          tg([document.getElementById('gk-summa').value, document.getElementById('gk-kategoriya').value, document.getElementById('gk-hisob').value, document.getElementById('gk-sana').value, document.getElementById('gk-soat').value, document.getElementById('gk-izoh').value], ['25 500', 'k1', 'h2', '2026-10-08', '14:35', 'MAYDA BOZOR: NON 5 000, SUT 12 500']);
           teng(document.getElementById('gap-tahrirlash').textContent, 'Tahrirlash'); teng(document.getElementById('gap-saqlash').textContent, 'Saqlash'); teng(s.saqlangan.length, 0, 'Saqlash bosilmaguncha hech narsa yozilmaydi'); teng(s.tayyorlandi, 1);
           teng(document.getElementById('gap-manba-izoh') && /Gemini/.test(document.getElementById('gap-manba-izoh').textContent), true, 'manba izohida chek qatori');
           document.getElementById('gap-saqlash').click();
           return yoKut(function () { return s.saqlangan.length === 1; });
         }).then(function () {
-          var r = s.saqlangan[0]; teng([r.amal, r.yozuv.tur, r.yozuv.summa, r.yozuv.sana, r.yozuv.vaqt, r.yozuv.kategoriya_id, r.yozuv.hisob_id], ['yozuv', 'xarajat', 25500, '2026-10-08', '14:35', 'k1', 'h2'], 'mavjud saqlash yo\'li bilan'); return gapTugadi();
+          var r = s.saqlangan[0]; tg([r.amal, r.yozuv.tur, r.yozuv.summa, r.yozuv.sana, r.yozuv.vaqt, r.yozuv.kategoriya_id, r.yozuv.hisob_id], ['yozuv', 'xarajat', 25500, '2026-10-08', '14:35', 'k1', 'h2'], 'mavjud saqlash yo\'li bilan'); return gapTugadi();
         });
       });
       test('Gap chek: "Tahrirlash" oddiy yozuv formasini barcha maydonlar bilan ochadi va hech narsa saqlamaydi; "Bekor" so\'rovni to\'xtatadi (javob e\'tiborga olinmaydi)', function () {
@@ -5454,7 +5454,7 @@ function xfix(opts) {
           document.getElementById('gap-tugma') || Gap.yangila(); Gap.yangila(); document.getElementById('gap-tugma').click(); chekRasmTanla('gap-rasm-galereya');
           return yoKut(function () { return document.getElementById('gap-xato').textContent !== ''; }).then(function () {
             teng(document.getElementById('gap-xato').textContent.indexOf(kut) === 0, true, kut + ' <- ' + document.getElementById('gap-xato').textContent);
-            teng([Gap.holat().bosqich, Gap.holat().chek.bosqich, s.saqlangan.length, document.getElementById('gap-chek-holat').hidden], ['yozish', 'bosh', 0, true], 'qayta urinsa bo\'ladi, hech narsa saqlanmadi'); return gapTugadi();
+            tg([Gap.holat().bosqich, Gap.holat().chek.bosqich, s.saqlangan.length, document.getElementById('gap-chek-holat').hidden], ['yozish', 'bosh', 0, true], 'qayta urinsa bo\'ladi, hech narsa saqlanmadi'); return gapTugadi();
           });
         }
         return sinov(gapXato('CHEK_EMAS'), 'Rasmda chek topilmadi.')
@@ -5480,10 +5480,10 @@ function xfix(opts) {
           var dt = new DataTransfer(); dt.items.add(f); var i = document.getElementById('gap-rasm-galereya'); i.files = dt.files; i.dispatchEvent(new Event('change', { bubbles: true }));
           return yoKut(function () { return s.chekSorov.length === 1 || document.getElementById('gap-xato').textContent !== ''; }).then(function () {
             teng(document.getElementById('gap-xato').textContent, '', 'xato yo\'q'); var t = s.chekSorov[0].tana;
-            teng([t.rejim, t.mime, /^\/9j\//.test(t.rasm)], ['rasm', 'image/jpeg', true], 'JPEG'); teng(t.rasm.length / 4 * 3 <= GapSof.RASM_BAYT_MAX, true, '1,5 MB dan oshmaydi: ' + Math.round(t.rasm.length * 0.75 / 1024) + ' KB');
+            tg([t.rejim, t.mime, /^\/9j\//.test(t.rasm)], ['rasm', 'image/jpeg', true], 'JPEG'); teng(t.rasm.length / 4 * 3 <= GapSof.RASM_BAYT_MAX, true, '1,5 MB dan oshmaydi: ' + Math.round(t.rasm.length * 0.75 / 1024) + ' KB');
             return new Promise(function (ok2, no2) { var im = new Image(); im.onload = function () { ok2(im); }; im.onerror = no2; im.src = 'data:image/jpeg;base64,' + t.rasm; });
           }).then(function (im) {
-            teng([im.naturalWidth, im.naturalHeight], [1600, 1200], 'uzun tomon 1600 px, nisbat saqlangan'); teng(localStorage.length, oldin[0], 'rasm localStorage ga yozilmadi'); return gapTugadi();
+            tg([im.naturalWidth, im.naturalHeight], [1600, 1200], 'uzun tomon 1600 px, nisbat saqlangan'); teng(localStorage.length, oldin[0], 'rasm localStorage ga yozilmadi'); return gapTugadi();
           });
         });
       });

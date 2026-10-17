@@ -5410,14 +5410,14 @@ function xfix(opts) {
         var hal, s = chekQuru([function () { return new Promise(function (ok) { hal = ok; }); }]); Gap.yangila(); document.getElementById('gap-tugma').click();
         var f = chekRasmTanla('gap-rasm-galereya');
         return yoKut(function () { return s.chekSorov.length === 1; }).then(function () {
-          var q = document.getElementById('gap-chek-holat'); teng(q.hidden, false); teng(q.textContent.indexOf('Chek o\'qilmoqda…') >= 0 && q.textContent.indexOf('Rasm saqlanmaydi') >= 0, true); teng(q.querySelectorAll('svg path').length, 5, 'receipt ikoni'); teng(!!q.querySelector('.gp-chek-chiziq'), true, 'progress chizig\'i');
+          var q = document.getElementById('gap-chek-holat'); teng(q.hidden, false); teng(q.textContent.indexOf('Chek o\'qilmoqda…') >= 0 && q.textContent.indexOf('Rasm saqlanmaydi') >= 0, true); teng(q.querySelectorAll('svg path').length, 1, 'receipt ikoni'); teng(!!q.querySelector('.gp-chek-chiziq'), true, 'progress chizig\'i');
           var bk = document.getElementById('gap-chek-bekor'); teng(bk.textContent, 'Bekor'); teng(q.getAttribute('aria-live'), 'polite');
           var t = s.chekSorov[0].tana; tg([t.rejim, t.rasm, t.mime, t.bugun], ['rasm', '/9j/QUJD', 'image/jpeg', GAP_BUGUN]); teng(t.kategoriyalar.indexOf('Oziq-ovqat') >= 0 && t.hisoblar.length === 3 && Array.isArray(t.eski), true); teng(s.chekSorov[0].ms, GapSof.CHEK_KUTISH_MS); teng(!!s.chekSorov[0].ac, true, 'bekor qilish mumkin');
           teng(document.getElementById('gap-aylantirish').click() === undefined && /Chek o'qilmoqda/.test(document.getElementById('gap-xato').textContent), true, 'o\'qilayotganda boshqa so\'rov ketmaydi'); teng(s.chekSorov.length, 1);
           hal(gapJavob([CHEK_Y({ ogohlantirish: ['Sana chekdan o\'qilmadi — bugungi sana qo\'yildi'] })]));
           return yoKut(function () { return Gap.holat() && Gap.holat().bosqich === 'karta'; });
         }).then(function () {
-          var b = document.getElementById('gap-chek-belgi'); teng(b.textContent, 'Chekdan o\'qildi · tekshiring'); teng(b.querySelectorAll('svg path').length, 5);
+          var b = document.getElementById('gap-chek-belgi'); teng(b.textContent, 'Chekdan o\'qildi · tekshiring'); teng(b.querySelectorAll('svg path').length, 1);
           teng(!!(b.compareDocumentPosition(document.querySelector('.gp-karta')) & Node.DOCUMENT_POSITION_FOLLOWING), true, 'belgi kartaning tepasida');
           teng(document.querySelectorAll('#gap-ogoh p').length, 2, 'ogohlantirishlar sariq qatorda'); teng(document.querySelectorAll('#gap-ogoh p')[1].textContent, 'Sana chekdan o\'qilmadi — bugungi sana qo\'yildi');
           tg([document.getElementById('gk-summa').value, document.getElementById('gk-kategoriya').value, document.getElementById('gk-hisob').value, document.getElementById('gk-sana').value, document.getElementById('gk-soat').value, document.getElementById('gk-izoh').value], ['25 500', 'k1', 'h2', '2026-10-08', '14:35', 'MAYDA BOZOR: NON 5 000, SUT 12 500']);

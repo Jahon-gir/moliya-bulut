@@ -341,3 +341,16 @@ Ilovada "Gap bilan" -> mikrofon -> bir jumla ayting -> matn maydonga tushishi ke
 
 ### 7.5. Sinash (dasturchi uchun)
 `node --test supabase/functions/yordamchi/test.mjs` (Gemini soxta javob bilan, tarmoqsiz).
+
+## 8. Chek skaneri: `rasm` rejimi uchun qadamlar
+
+Gap ekranidagi kamera tugmasi chek rasmini funksiyaga yuboradi. Funksiya avval Google Gemini bilan rasmdagi matnni o'qiydi, so'ng o'sha matnni mavjud yozuv tizimiga (o'z modelingiz, zaxirada OpenAI; `YOZUV_PROVAYDER` sozlamasi bilan bir xil) kategoriya va hisob tanlash uchun beradi. Summa, sana va izoh serverda chek matnidan olinadi (summa = chekdagi JAMI). Rasm hech qayerda saqlanmaydi, lekin **Google Gemini'ga yuboriladi**; chekdagi matn esa o'z modelingizga (yoki zaxirada OpenAI'ga) ketadi.
+
+### 8.1. Yangi Secret kerak emas
+`GEMINI_API_KEY` va `GEMINI_MODEL` (7.2) shu rejim uchun ham ishlatiladi. Model **rasmni** qabul qilishi kerak (standart `gemini-2.5-flash` qabul qiladi, lekin Google hujjatidan tekshirib qo'ying).
+
+### 8.2. Funksiyani QAYTA JOYLASH shart
+`index.ts` yangilandi (yangi `rasm` rejimi). 7.3 dagi qadamlar bilan bir xil: Dashboard'da `yordamchi` funksiyasi matnini yangi `supabase/functions/yordamchi/index.ts` bilan to'liq almashtirib **Deploy**. Yoki Supabase CLI bilan (kompyuteringizda, repoga kirgan papkada): `supabase functions deploy yordamchi --project-ref <loyiha-id>`.
+
+### 8.3. Tekshirish
+Ilovada "Gap bilan" -> kamera tugmasi -> "Galereyadan tanlash" -> o'zingizning chek rasmingiz -> "Chekdan o'qildi · tekshiring" kartasi chiqishi kerak. Xato kodlari: `RASM_KATTA` (2 MB dan katta), `RASM_FORMAT` (JPEG/PNG/WebP emas), `CHEK_EMAS` (rasmda chek yo'q), `RASM_OQILMADI` (Gemini matn o'qiy olmadi), `AI_PROVAYDER` + sabab (`gemini_...`: kalit, model yoki Google xatosi; Functions -> Logs da `rasm: gemini_... http=...` qatori). Har rasm so'rovi kunlik limitga (200) 1 ta bo'lib sanaladi.

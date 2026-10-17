@@ -21,7 +21,9 @@
 //   SUPABASE_URL va SUPABASE_ANON_KEY ni Supabase o'zi beradi.
 //   5) rejim "ovoz": audio (base64 + mime) -> Google Gemini o'zbekchadan matnga o'giradi -> { ok:true, matn }. Audio hech qayerda SAQLANMAYDI
 //      (faqat so'rov davomida xotirada), matn loglanmaydi, GEMINI_API_KEY faqat sarlavhada (x-goog-api-key) ketadi: URL, javob va logga tushmaydi.
-// Savol, gap va natija logga YOZILMAYDI. Yagona istisno: ovoz rejimida Gemini xatosi (HTTP kod, error.message ≤ 300 belgi, mime) console.error bilan; kalit, audio va tanilgan matn HECH QACHON. "reja"/"javob" da AI ga yozuvlar, izohlar, qarzdagi shaxs ismlari yuborilmaydi.
+//   6) rejim "rasm" (36-band, chek skaneri): rasm (base64 + image/jpeg|png|webp, ≤ 2 MB) -> Gemini chek matnini o'qiydi -> mavjud yozuv tizimi kategoriya/hisob tanlaydi;
+//      summa = chekdagi JAMI, sana/vaqt/izoh chekdan (serverda, deterministik) -> { ok:true, manba, yozuvlar:[bitta xarajat], chek:true }. Rasm va to'liq chek matni saqlanmaydi/loglanmaydi.
+// Savol, gap va natija logga YOZILMAYDI. Yagona istisno: ovoz va rasm rejimlarida Gemini xatosi (HTTP kod, error.message ≤ 300 belgi, mime) console.error bilan; kalit, audio va tanilgan matn HECH QACHON. "reja"/"javob" da AI ga yozuvlar, izohlar, qarzdagi shaxs ismlari yuborilmaydi.
 // "yozuv" da gap (unda ism bo'lishi mumkin) o'z modelga, zaxirada OpenAI ga ketadi; `eski` (oldingi izohlar) FAQAT o'z modelga ketadi.
 // =====================================================================
 
@@ -36,7 +38,7 @@ export interface Muhit { get(nom: string): string | undefined }
 
 export const AMALLAR: Amal[] = ["yigindi", "kategoriyalar", "qidiruv", "taqqoslash", "qarzlar", "hisoblar", "oylik_hisobot",
   "jadval", "chegara", "eng_katta_yozuvlar", "byudjet", "taxmin", "jamgarma", "tushunarsiz"];
-export const XATO_KODLARI = ["AI_RUXSAT", "AI_KIRISH", "AI_UZUN", "AI_LIMIT", "AI_PROVAYDER", "AI_SXEMA", "AI_RAQAM", "NETWORK", "AI_HAJM"] as const;
+export const XATO_KODLARI = ["AI_RUXSAT", "AI_KIRISH", "AI_UZUN", "AI_LIMIT", "AI_PROVAYDER", "AI_SXEMA", "AI_RAQAM", "NETWORK", "AI_HAJM", "RASM_KATTA", "RASM_FORMAT", "CHEK_EMAS", "RASM_OQILMADI"] as const;
 export type XatoKodi = typeof XATO_KODLARI[number];
 
 export const SAVOL_MAX = 300;          // belgi
@@ -69,6 +71,10 @@ const XATO_MATNI: Record<XatoKodi, string> = {
   AI_RAQAM: "AI javobidagi raqamlar natijaga mos kelmadi, shuning uchun ko'rsatilmadi.",
   NETWORK: "Tarmoq xatosi. Internetni tekshirib, qayta urinib ko'ring.",
   AI_HAJM: "Ovoz yozuvi juda katta.",
+  RASM_KATTA: "Rasm juda katta (2 MB gacha).",
+  RASM_FORMAT: "Rasm turi qabul qilinmaydi (faqat JPEG, PNG yoki WebP).",
+  CHEK_EMAS: "Rasmda chek topilmadi.",
+  RASM_OQILMADI: "Rasmdagi matnni o'qib bo'lmadi.",
 };
 
 function xatoJavob(kod: XatoKodi, holat: number, cors: Record<string, string>, sabab?: string, debug?: string): Response {
@@ -222,27 +228,30 @@ export function ovozKirishiniTekshir(tana: Record<string, unknown>): { ovoz: Ovo
   if (bayt > OVOZ_MAX_BAYT) return { kod: "AI_HAJM" };
   return { ovoz: { audio: a, mime } };
 }
-// Gemini xatosi logga: HTTP kod, Gemini error.message (≤ 300 belgi, kalit bo'lsa yashiriladi) va ilova yuborgan mime. Audio, kalit va tanilgan matn HECH QACHON loglanmaydi.
-function ovozLogla(debug: string, holat: number | null, xabar: string, mime: string, kalit: string): void {
+// Gemini xatosi logga: HTTP kod, Gemini error.message (≤ 300 belgi, kalit bo'lsa yashiriladi) va ilova yuborgan mime. Audio, rasm, kalit va tanilgan matn HECH QACHON loglanmaydi.
+// nom: "ovoz" yoki "rasm" (qaysi rejim).
+function ovozLogla(debug: string, holat: number | null, xabar: string, mime: string, kalit: string, nom = "ovoz"): void {
   let x = xabar.replace(/\s+/g, " ").trim();
   if (kalit) x = x.split(kalit).join("***");
   x = x.replace(/AIza[0-9A-Za-z_-]{20,}/g, "***").slice(0, 300);
-  console.error("ovoz: " + debug + " http=" + (holat === null ? "-" : holat) + " mime=" + mime + (x ? " xabar=" + x : ""));
+  console.error(nom + ": " + debug + " http=" + (holat === null ? "-" : holat) + " mime=" + mime + (x ? " xabar=" + x : ""));
 }
-async function ovozniMatnga(ovoz: OvozKirishi, muhit: Muhit, fetchFn: FetchFn): Promise<string | null> {
+// Gemini ga bitta so'rov (ovoz va rasm uchun umumiy): matn (toza, qator tuzilishi saqlangan) yoki null (bo'sh/bloklangan javob).
+interface GeminiSorov { nom: "ovoz" | "rasm"; xizmat: string; prompt: string; mime: string; data: string; token: number; vaqtMs: number }
+async function geminiXom(q: GeminiSorov, muhit: Muhit, fetchFn: FetchFn): Promise<string | null> {
   const kalit = (muhit.get("GEMINI_API_KEY") || "").trim();
-  if (!kalit) { ovozLogla("gemini_kalit_yoq", null, "GEMINI_API_KEY sozlanmagan", ovoz.mime, ""); throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati sozlanmagan (GEMINI_API_KEY yo'q).", true, "gemini_kalit_yoq"); }
+  if (!kalit) { ovozLogla("gemini_kalit_yoq", null, "GEMINI_API_KEY sozlanmagan", q.mime, "", q.nom); throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati sozlanmagan (GEMINI_API_KEY yo'q).", true, "gemini_kalit_yoq"); }
   const model = (muhit.get("GEMINI_MODEL") || "").trim() || GEMINI_MODEL_SUKUT;
-  if (!/^[A-Za-z0-9._-]+$/.test(model)) { ovozLogla("gemini_model_nom", null, "GEMINI_MODEL noto'g'ri", ovoz.mime, kalit); throw new ProvayderXatosi("AI_PROVAYDER", "GEMINI_MODEL noto'g'ri.", true, "gemini_model_nom"); }
+  if (!/^[A-Za-z0-9._-]+$/.test(model)) { ovozLogla("gemini_model_nom", null, "GEMINI_MODEL noto'g'ri", q.mime, kalit, q.nom); throw new ProvayderXatosi("AI_PROVAYDER", "GEMINI_MODEL noto'g'ri.", true, "gemini_model_nom"); }
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
   const tana = {
-    contents: [{ role: "user", parts: [{ text: OVOZ_PROMPT }, { inline_data: { mime_type: ovoz.mime, data: ovoz.audio } }] }],
-    generationConfig: { temperature: 0, maxOutputTokens: OVOZ_TOKEN },
+    contents: [{ role: "user", parts: [{ text: q.prompt }, { inline_data: { mime_type: q.mime, data: q.data } }] }],
+    generationConfig: { temperature: 0, maxOutputTokens: q.token },
   };
   let javob: Response;
   try {
-    javob = await fetchFn(url, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": kalit }, body: JSON.stringify(tana), signal: AbortSignal.timeout(OVOZ_TAYM_AUT_MS) });
-  } catch (_e) { ovozLogla("gemini_tarmoq", null, "so'rov yuborilmadi (tarmoq yoki vaqt)", ovoz.mime, kalit); throw new ProvayderXatosi("NETWORK", XATO_MATNI.NETWORK, false, "gemini_tarmoq"); }
+    javob = await fetchFn(url, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": kalit }, body: JSON.stringify(tana), signal: AbortSignal.timeout(q.vaqtMs) });
+  } catch (_e) { ovozLogla("gemini_tarmoq", null, "so'rov yuborilmadi (tarmoq yoki vaqt)", q.mime, kalit, q.nom); throw new ProvayderXatosi("NETWORK", XATO_MATNI.NETWORK, false, "gemini_tarmoq"); }
   if (!javob.ok) {
     let xabar = "";
     try {
@@ -251,22 +260,28 @@ async function ovozniMatnga(ovoz: OvozKirishi, muhit: Muhit, fetchFn: FetchFn): 
     } catch (_e) { xabar = ""; }
     const mimeMi = /mime|audio format|unsupported|not supported|invalid.*argument.*audio/i.test(xabar);
     const debug = "gemini_" + javob.status + (mimeMi ? "_mime" : "");
-    ovozLogla(debug, javob.status, xabar, ovoz.mime, kalit);
-    throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati xato qaytardi (HTTP " + javob.status + ").", false, debug);
+    ovozLogla(debug, javob.status, xabar, q.mime, kalit, q.nom);
+    throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati xato qaytardi (HTTP " + javob.status + ").", false, debug);
   }
   let d: unknown;
-  try { d = await javob.json(); } catch (_e) { ovozLogla("gemini_json", javob.status, "javob JSON emas", ovoz.mime, kalit); throw new ProvayderXatosi("AI_PROVAYDER", "Ovoz xizmati noto'g'ri javob berdi.", false, "gemini_json"); }
+  try { d = await javob.json(); } catch (_e) { ovozLogla("gemini_json", javob.status, "javob JSON emas", q.mime, kalit, q.nom); throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati noto'g'ri javob berdi.", false, "gemini_json"); }
   // deno-lint-ignore no-explicit-any
   const qismlar = (d as any)?.candidates?.[0]?.content?.parts;
-  const xom = Array.isArray(qismlar) ? qismlar.map((q: { text?: unknown }) => typeof q?.text === "string" ? q.text : "").join(" ") : "";
-  const matn = toza(xom).replace(/\s+/g, " ").trim().slice(0, OVOZ_MATN_MAX).trim();
+  const xom = Array.isArray(qismlar) ? qismlar.map((x: { text?: unknown }) => typeof x?.text === "string" ? x.text : "").join("\n") : "";
+  const matn = toza(xom).trim();
   if (!matn) {   // bo'sh javob: sababi faqat Gemini kodlari (matn emas)
     const kod = (v: unknown) => typeof v === "string" && /^[A-Z_]{1,40}$/.test(v) ? v : "-";
     // deno-lint-ignore no-explicit-any
-    ovozLogla("gemini_bosh", javob.status, "finish=" + kod((d as any)?.candidates?.[0]?.finishReason) + " block=" + kod((d as any)?.promptFeedback?.blockReason), ovoz.mime, kalit);
+    ovozLogla("gemini_bosh", javob.status, "finish=" + kod((d as any)?.candidates?.[0]?.finishReason) + " block=" + kod((d as any)?.promptFeedback?.blockReason), q.mime, kalit, q.nom);
     return null;
   }
   return matn;
+}
+async function ovozniMatnga(ovoz: OvozKirishi, muhit: Muhit, fetchFn: FetchFn): Promise<string | null> {
+  const xom = await geminiXom({ nom: "ovoz", xizmat: "Ovoz", prompt: OVOZ_PROMPT, mime: ovoz.mime, data: ovoz.audio, token: OVOZ_TOKEN, vaqtMs: OVOZ_TAYM_AUT_MS }, muhit, fetchFn);
+  if (xom === null) return null;
+  const matn = xom.replace(/\s+/g, " ").trim().slice(0, OVOZ_MATN_MAX).trim();
+  return matn || null;
 }
 
 export function kirishniTekshir(tana: unknown): { kirish: Kirish } | { kod: XatoKodi } {
@@ -1028,6 +1043,186 @@ async function yozuvIshlov(kirish: Kirish, muhit: Muhit, fetchFn: FetchFn, cors:
 }
 
 // ---------------------------------------------------------------------
+// Rasm rejimi (36-band): chek rasmi -> matn (Gemini) -> yozuv (mavjud yozuv tizimi). Rasm saqlanmaydi, chek matni loglanmaydi.
+// ---------------------------------------------------------------------
+export const RASM_MAX_BAYT = 2 * 1024 * 1024;                          // rasm asl hajmi (base64 emas); so'rov tanasi chegarasi OVOZ_TANA_MAX bilan bir xil
+export const RASM_MIME = ["image/jpeg", "image/png", "image/webp"];
+export const CHEK_PROMPT = "Bu chek (kvitansiya) rasmi. Chekdagi matnni qatorma-qator AYNAN qaytar. Hech narsa qo'shma, izoh yozma, raqam to'qima, o'qilmagan joyni o'tkazib yubor. Rasmda chek bo'lmasa faqat CHEK_EMAS deb qaytar.";
+const CHEK_TOKEN = 2000;
+const CHEK_TAYM_AUT_MS = 30000;
+const CHEK_MATN_MAX = 4000;                                            // Gemini matnidan shuncha belgi ishlatiladi
+const CHEK_MODELGA_MAX = 900;                                          // yozuv tizimiga beriladigan chek matni (model kontekst oynasi kichik)
+const CHEK_ELEMENT_MAX = 12;                                           // izohga ko'pi bilan nechta mahsulot
+export const CHEK_SANA_OGOH = "Sana chekdan o'qilmadi — bugungi sana qo'yildi";
+export const CHEK_JAMI_OGOH = "JAMI summa chekdan topilmadi — summani kiriting";
+// rasm boshidagi baytlar (base64 ko'rinishida): fayl turi mimega mos kelishi shart
+const RASM_BOSHI: Record<string, RegExp> = { "image/jpeg": /^\/9j\//, "image/png": /^iVBORw0KGgo/, "image/webp": /^UklGR/ };
+
+export interface RasmKirishi { rasm: string; mime: string; yozuv: Kirish }
+export function rasmKirishiniTekshir(tana: Record<string, unknown>): { kirish: RasmKirishi } | { kod: XatoKodi } {
+  const mime = typeof tana.mime === "string" ? tana.mime.trim().toLowerCase() : "";
+  if (RASM_MIME.indexOf(mime) < 0) return { kod: "RASM_FORMAT" };
+  if (typeof tana.rasm !== "string") return { kod: "AI_KIRISH" };
+  const a = tana.rasm.replace(/\s+/g, "");
+  if (!a || a.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(a)) return { kod: "AI_KIRISH" };
+  const bayt = a.length / 4 * 3 - (a.endsWith("==") ? 2 : a.endsWith("=") ? 1 : 0);
+  if (bayt > RASM_MAX_BAYT) return { kod: "RASM_KATTA" };
+  if (!RASM_BOSHI[mime].test(a)) return { kod: "RASM_FORMAT" };
+  // kategoriyalar, hisoblar, bugun, eski: `yozuv` rejimi bilan bir xil tekshiruv (gap o'rniga o'rin egasi)
+  const t = yozuvKirishiniTekshir({ ...tana, gap: "chek" });
+  if ("kod" in t) return { kod: t.kod === "AI_UZUN" ? "AI_KIRISH" : t.kod };
+  return { kirish: { rasm: a, mime, yozuv: t.kirish } };
+}
+
+// ---- chek matnidan deterministik o'qish: summa, sana, vaqt, do'kon, mahsulotlar. AI raqam hisoblamaydi/to'qimaydi (22.1). ----
+const SON_TOKEN = /\d{1,3}(?:[  .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
+// "45 000", "45.000", "45,000.50", "45000" -> butun so'm (tiyin yaxlitlanadi). Ming ajratgich: 3 raqamli guruh; oxirgi 1-2 raqamli guruh — tiyin.
+export function chekSummasi(token: string): number | null {
+  const t = token.trim();
+  const m = t.match(/^(.*?)(?:[.,](\d{1,2}))?$/);
+  if (!m) return null;
+  const butun = (m[1] || "").replace(/[  .,]/g, "");
+  if (!/^\d+$/.test(butun)) return null;
+  const n = Number(butun) + (m[2] ? Math.round(Number("0." + m[2])) : 0);
+  return Number.isSafeInteger(n) && n > 0 && n <= SUMMA_MAX ? n : null;
+}
+function qatordagiSonlar(q: string): string[] { return q.match(SON_TOKEN) || []; }
+const JAMI_USTUN = /(к\s*оплате|to['’ʻ`]?lash\s+uchun|to['’ʻ`]?lov\s+uchun|jami\s+to['’ʻ`]?lov|jami\s+to['’ʻ`]?lanadi|to['’ʻ`]?lanadigan)/i;
+const JAMI_ODDIY = /(^|[^\p{L}])(jami|итого|itogo|всего|total)(?![\p{L}])/iu;
+const JAMI_CHETLASH = /(qqs|ндс|nds|vat|soliq|налог|chegirma|скидк|discount|bonus|бонус|soni|miqdor|кол-?во|количеств|dona|шт\b)/i;
+// CHEKDAGI jami summa (mahsulotlarni qo'shib chiqarilmaydi). Topilmasa null.
+export function chekJami(qatorlar: string[]): number | null {
+  const sondan = (i: number): number | null => {
+    const q = qatorlar[i];
+    const s = qatordagiSonlar(q);
+    if (s.length) return chekSummasi(s[s.length - 1]);
+    const keyingi = qatorlar[i + 1];                                   // "JAMI" alohida qatorda, summa keyingi qatorda
+    if (keyingi && /^[\d\s.,]+(?:so['’ʻ`]?m|сум|uzs)?$/i.test(keyingi.trim())) { const k = qatordagiSonlar(keyingi); return k.length ? chekSummasi(k[k.length - 1]) : null; }
+    return null;
+  };
+  for (const qoida of [JAMI_USTUN, JAMI_ODDIY]) {
+    for (let i = qatorlar.length - 1; i >= 0; i--) {                   // oxirgisidan boshlab: jami chek oxirida
+      const q = qatorlar[i];
+      if (!qoida.test(q) || JAMI_CHETLASH.test(q)) continue;
+      const n = sondan(i);
+      if (n !== null) return n;
+    }
+  }
+  return null;
+}
+function haqiqiySana(y: number, m: number, d: number): string | null {
+  if (m < 1 || m > 12 || d < 1 || d > 31 || y < 2000 || y > 2100) return null;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  if (t.getUTCFullYear() !== y || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== d) return null;
+  return isoOl(t);
+}
+// Chekdagi birinchi to'g'ri sana ("dd.mm.yyyy", "dd/mm/yy", "yyyy-mm-dd") va undan keyingi (bo'lmasa birinchi) vaqt
+export function chekSanaVaqt(matn: string): { sana: string | null; vaqt: string | null; indeks: number } {
+  const nomzod: { i: number; s: string }[] = [];
+  for (const m of matn.matchAll(/(?<![\d])(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})(?![\d])/g)) {
+    const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+    const s = haqiqiySana(y, Number(m[2]), Number(m[1]));
+    if (s) nomzod.push({ i: m.index || 0, s });
+  }
+  for (const m of matn.matchAll(/(?<![\d])(\d{4})[./-](\d{1,2})[./-](\d{1,2})(?![\d])/g)) {
+    const s = haqiqiySana(Number(m[1]), Number(m[2]), Number(m[3]));
+    if (s) nomzod.push({ i: m.index || 0, s });
+  }
+  nomzod.sort((a, b) => a.i - b.i);
+  const sana = nomzod.length ? nomzod[0] : null;
+  const vaqtlar: { i: number; v: string }[] = [];
+  for (const m of matn.matchAll(/(?<![\d:])([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?(?![\d:])/g)) vaqtlar.push({ i: m.index || 0, v: ("0" + m[1]).slice(-2) + ":" + m[2] });
+  const v = sana ? (vaqtlar.filter((x) => x.i > sana.i)[0] || vaqtlar[0]) : vaqtlar[0];
+  return { sana: sana ? sana.s : null, vaqt: v ? v.v : null, indeks: sana ? sana.i : -1 };
+}
+const DOKON_CHETLASH = /(chek|чек|kassa|касс|\binn\b|инн|stir|тел|tel\b|manzil|адрес|sana|дата|vaqt|время|ккм|kkm|fiskal|фискал|\d{5,})/i;
+const MAHSULOT_CHETLASH = /(jami|итого|itogo|всего|total|qqs|ндс|nds|vat|naqd|наличн|karta|карта|plastik|to['’ʻ`]?lov|оплат|qaytim|сдач|chegirma|скидк|soliq|налог|\binn\b|инн|stir|kassir|кассир|chek|чек|tel\b|тел|sana|дата|vaqt|время|rahmat|спасибо|получено|to['’ʻ`]?landi)/i;
+const OXIRGI_SON = /(\d{1,3}(?:[  .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:so['’ʻ`]?m|сум|uzs|som)?\s*$/i;
+function harfSoni(s: string): number { return (s.match(/\p{L}/gu) || []).length; }
+export function chekDokoni(qatorlar: string[]): string | null {
+  for (const q of qatorlar.slice(0, 6)) {
+    const t = q.replace(/["«»“”*#_=]+/g, "").replace(/\s+/g, " ").trim();
+    if (t.length < 2 || t.length > 40 || harfSoni(t) < 3 || DOKON_CHETLASH.test(t) || MAHSULOT_CHETLASH.test(t) || (t.match(/\d/g) || []).length > harfSoni(t)) continue;
+    return t;
+  }
+  return null;
+}
+export function chekMahsulotlari(qatorlar: string[]): string[] {
+  const chiq: string[] = [];
+  for (const q of qatorlar) {
+    if (MAHSULOT_CHETLASH.test(q)) continue;
+    const m = q.match(OXIRGI_SON);
+    if (!m || m.index === undefined) continue;
+    const nom = q.slice(0, m.index).replace(/[\s:=*xх×-]+$/giu, "").replace(/\s+/g, " ").trim();
+    if (harfSoni(nom) < 2 || nom.length > 40) continue;
+    if (chekSummasi(m[1]) === null) continue;
+    chiq.push(nom + " " + m[1].trim());
+  }
+  return chiq;
+}
+// "Do'kon: mahsulot narx, mahsulot narx…" — izoh chegarasidan (IZOH_MAX) oshmaydi, mahsulot o'rtasida kesilmaydi
+export function chekIzohi(dokon: string | null, mahsulotlar: string[]): string {
+  const bosh = dokon ? dokon + ": " : "";
+  if (!mahsulotlar.length) return (dokon || "Chek").slice(0, IZOH_MAX);
+  let s = bosh, n = 0;
+  for (const m of mahsulotlar.slice(0, CHEK_ELEMENT_MAX)) {
+    const yangi = s + (n ? ", " : "") + m;
+    if (yangi.length > IZOH_MAX - 1) break;
+    s = yangi; n++;
+  }
+  if (!n) return (bosh + mahsulotlar[0]).slice(0, IZOH_MAX - 1).trim() + "…";
+  return n < mahsulotlar.length ? s + "…" : s;
+}
+
+// Chek matni + yozuv tizimining javobi -> bitta xarajat yozuvi. `model` — yozuvniTozala natijasi (yoki null).
+export function chekYozuvi(matn: string, model: Yozuv | null, bugun: string): Yozuv & { vaqt: string | null } {
+  const qatorlar = matn.split(/\r?\n/).map((q) => q.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const jami = chekJami(qatorlar);
+  const sv = chekSanaVaqt(matn);
+  const sanaYaroqli = !!sv.sana && sv.sana <= bugun;
+  const ogoh: string[] = (model ? model.ogohlantirish : []).filter((x) => /kategoriya|hisob/.test(x));   // summa/sana haqidagi model gaplari tashlanadi
+  if (jami === null) ogoh.push(CHEK_JAMI_OGOH);
+  if (!sanaYaroqli) ogoh.push(CHEK_SANA_OGOH);
+  return {
+    tur: "xarajat", summa: jami, soni: null, narx: null, kategoriya: model ? model.kategoriya : null,
+    hisob: model ? model.hisob : null, hisob_turi: model ? model.hisob_turi : null, hisob2: null, shaxs: null,
+    sana: sanaYaroqli ? sv.sana : null, vaqt: sanaYaroqli ? sv.vaqt : null,
+    izoh: chekIzohi(chekDokoni(qatorlar), chekMahsulotlari(qatorlar)), ogohlantirish: ogoh,
+  };
+}
+
+// Rasm so'rovi: tekshiruv -> limit (rasm ham 1 ta so'rov) -> 1) Gemini matnni o'qiydi -> 2) yozuv tizimi kategoriya/hisob tanlaydi. Rasm faqat shu funksiya ichida xotirada.
+async function rasmIshlov(xom: Record<string, unknown>, muhit: Muhit, fetchFn: FetchFn, jwt: string, anon: string, cors: Record<string, string>): Promise<Response> {
+  const t = rasmKirishiniTekshir(xom);
+  if ("kod" in t) return xatoJavob(t.kod, t.kod === "RASM_KATTA" ? 413 : 400, cors);
+  const soni = await limitOshir(muhit, fetchFn, jwt, anon);
+  if (soni === null) return xatoJavob("AI_LIMIT", 503, cors, "Limitni tekshirib bo'lmadi (007_ai_limit.sql ishga tushirilganmi?).");
+  if (soni > KUNLIK_LIMIT) return xatoJavob("AI_LIMIT", 429, cors);
+  try {
+    const xomMatn = await geminiXom({ nom: "rasm", xizmat: "Rasm", prompt: CHEK_PROMPT, mime: t.kirish.mime, data: t.kirish.rasm, token: CHEK_TOKEN, vaqtMs: CHEK_TAYM_AUT_MS }, muhit, fetchFn);
+    if (xomMatn === null) return xatoJavob("RASM_OQILMADI", 422, cors);
+    const matn = xomMatn.slice(0, CHEK_MATN_MAX);
+    if ((/CHEK_EMAS/i.test(matn) && matn.length < 60) || !/\d/.test(matn)) return xatoJavob("CHEK_EMAS", 422, cors);
+    const k = t.kirish.yozuv;
+    const modelMatni = matn.replace(/\s+/g, " ").slice(0, CHEK_MODELGA_MAX);
+    const kirish: Kirish = { ...k, savol: "bu chek matni: " + modelMatni };
+    const n = await yozuvOl(kirish, muhit, fetchFn);
+    let model: Yozuv | null = null;
+    if (n) {
+      const ctx = { gap: kirish.savol, bugun: k.bugun as string, kategoriyalar: k.kategoriyalar as string[], hisobTurlari: k.hisobTurlari as HisobTuri[] };
+      const royxat: Yozuv[] = [];
+      for (const el of n.royxat.slice(0, 20)) { const y = yozuvniTozala(el, ctx); if (y) royxat.push(y); }
+      model = royxat.filter((y) => y.tur === "xarajat")[0] || royxat[0] || null;
+    }
+    const y = chekYozuvi(matn, model, k.bugun as string);
+    return json({ ok: true, manba: n ? n.manba : null, yozuvlar: [y], chek: true }, 200, cors);
+  } catch (e) {
+    if (e instanceof ProvayderXatosi) return xatoJavob(e.kod, e.kod === "NETWORK" ? 503 : 502, cors, e.kod === "AI_PROVAYDER" ? e.message : undefined, e.debug);
+    return xatoJavob("AI_PROVAYDER", 500, cors, "Kutilmagan xato.", "rasm_kutilmagan");
+  }
+}
+
+// ---------------------------------------------------------------------
 // Ruxsat, limit
 // ---------------------------------------------------------------------
 async function foydalanuvchi(muhit: Muhit, fetchFn: FetchFn, jwt: string, anon: string): Promise<{ email: string } | "kirmagan" | "xato"> {
@@ -1095,6 +1290,7 @@ export async function ishlov(req: Request, muhit: Muhit, fetchFn: FetchFn): Prom
   if (matnTana.length > OVOZ_TANA_MAX) return xatoJavob("AI_HAJM", 413, cors);
   try { xom = JSON.parse(matnTana); } catch (_e) { return xatoJavob("AI_KIRISH", 400, cors); }
   if (oddiyObyektmi(xom) && xom.rejim === "ovoz") return await ovozIshlov(xom, f.email, muhit, fetchFn, jwt, anon, cors);
+  if (oddiyObyektmi(xom) && xom.rejim === "rasm") return await rasmIshlov(xom, muhit, fetchFn, jwt, anon, cors);
   const t = kirishniTekshir(xom);
   if ("kod" in t) return xatoJavob(t.kod, t.kod === "AI_UZUN" ? 413 : 400, cors);
   const kirish = t.kirish;

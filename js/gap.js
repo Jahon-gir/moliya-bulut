@@ -17,11 +17,12 @@ var Gap = (function () {
     tasdiq: function (m) { return window.confirm(m); },
     vaqt: GapSof.KUTISH_MS,
     yozgich: null,                       // mikrofon (31-band); null bo'lsa haqiqiy MediaRecorder (pastda), tests.html da almashtiriladi
+    rasmTayyorla: null,                  // chek rasmi (36-band): fayl -> Promise<{ rasm: base64, mime }>; null bo'lsa haqiqiy canvas (pastda), tests.html da almashtiriladi
     ovozMax: GapSof.OVOZ_MAX_MS          // yozish chegarasi (ms)
   };
   function sozla(o) { Object.keys(o || {}).forEach(function (k) { dep[k] = o[k]; }); }
 
-  var ui = { malumot: null, xabar: null, saqla: null, tugadi: null, oxirgiOl: null, oxirgiYoz: null };
+  var ui = { malumot: null, xabar: null, saqla: null, tugadi: null, oxirgiOl: null, oxirgiYoz: null, tahrirla: null };
   var tugmaEl = null, ekranEl = null, tanaEl = null;
   // holat: { bosqich: 'yozish' | 'karta', gap, xato, band, kartalar, indeks, saqlangan, sessiya } (faqat xotirada)
   var holat = null;
@@ -162,6 +163,8 @@ var Gap = (function () {
     if (!m || holat.band) return;
     if (m.bosqich === 'yozilmoqda') { mikToxtat(); return; }
     if (m.bosqich !== 'bosh') return;      // ulanmoqda yoki tinglanmoqda: ikki marta bosishdan himoya
+    if (chekBandmi()) { xatoKorsat('Chek o\'qilmoqda, biroz kuting.'); return; }
+    menyuYop();
     if (!dep.onlayn()) { mikXato('NETWORK_OFFLINE'); return; }
     if (!yozgich().bor()) { mikXato('MIK_QOLLANMAYDI'); return; }
     var sessiya = holat.sessiya, h = holat;
@@ -210,6 +213,167 @@ var Gap = (function () {
     });
   }
 
+
+  // ---- Chek skaneri (36-band): kamera/galereya -> rasm xotirada kichraytiriladi -> serverning `rasm` rejimi -> ovozdagi kabi karta ----
+  // Rasm hech qayerga SAQLANMAYDI (IndexedDB, localStorage, kesh, fayl, URL.createObjectURL yo'q): faqat so'rovda ketadi va xotiradan tashlanadi.
+  function rasmniOch(fayl) {   // -> Promise<{ manba, en, boy, yop() }>; EXIF yo'nalishi hisobga olinadi (en/boy aylantirilgan holda)
+    var tur = String(fayl && fayl.type || '');
+    if (tur && tur.indexOf('image/') !== 0) return Promise.reject(kodXato('RASM_FORMAT'));
+    function imgYol() {
+      return new Promise(function (ok, no) {
+        var r = new FileReader();
+        r.onerror = function () { no(kodXato('RASM_FORMAT')); };
+        r.onload = function () {
+          var im = new Image();
+          im.onload = function () { ok({ manba: im, en: im.naturalWidth, boy: im.naturalHeight, yop: function () { im.src = ''; } }); };   // zamonaviy brauzer EXIF yo'nalishini o'zi qo'llaydi
+          im.onerror = function () { no(kodXato('RASM_FORMAT')); };
+          im.src = String(r.result);
+        };
+        r.readAsDataURL(fayl);
+      });
+    }
+    if (typeof window.createImageBitmap !== 'function') return imgYol();
+    return window.createImageBitmap(fayl, { imageOrientation: 'from-image' }).then(function (b) {
+      return { manba: b, en: b.width, boy: b.height, yop: function () { try { b.close(); } catch (x) { /* ahamiyatsiz */ } } };
+    }, imgYol);
+  }
+  function rasmKodla(manba) {
+    return function (en, boy, sifat) {
+      return new Promise(function (ok, no) {
+        var cv = document.createElement('canvas'); cv.width = en; cv.height = boy;
+        var cx = cv.getContext('2d');
+        if (!cx) { no(kodXato('RASM_FORMAT')); return; }
+        cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, en, boy);   // shaffof PNG JPEG da qora bo'lib qolmasin
+        cx.drawImage(manba, 0, 0, en, boy);
+        cv.toBlob(function (blob) {
+          cv.width = cv.height = 0;   // canvas xotirasi bo'shatiladi
+          blob ? ok({ hajm: blob.size, qiymat: blob }) : no(kodXato('RASM_FORMAT'));
+        }, 'image/jpeg', sifat);
+      });
+    };
+  }
+  var haqiqiyRasm = function (fayl) {
+    var o = null;
+    return rasmniOch(fayl).then(function (r) {
+      o = r;
+      return GapSof.rasmSiq(r.en, r.boy, rasmKodla(r.manba));
+    }).then(function (s) {
+      return blobBase64(s.qiymat).then(function (a) { return { rasm: a, mime: 'image/jpeg' }; });
+    }).then(function (x) { if (o) o.yop(); return x; }, function (err) { if (o) o.yop(); throw err; });
+  };
+  function rasmTayyorla(fayl) { return (dep.rasmTayyorla || haqiqiyRasm)(fayl); }
+
+  function chekHolat() { return holat && holat.chek ? holat.chek : null; }
+  function chekBandmi() { var c = chekHolat(); return !!c && c.bosqich !== 'bosh'; }
+  // So'rovni to'xtatadi, rasm tashlanadi. Eskirgan javob e'tiborga olinmaydi (n o'zgargan).
+  function chekBekor() {
+    var c = chekHolat();
+    if (!c) return;
+    c.n++;
+    var ac = c.ac; c.ac = null; c.bosqich = 'bosh';
+    if (ac) { try { ac.abort(); } catch (x) { /* ahamiyatsiz */ } }
+  }
+  function chekYangila() {
+    var c = chekHolat(), q = document.getElementById('gap-chek-holat'), kamera = document.getElementById('gap-kamera');
+    if (!c || !q) return;
+    q.textContent = '';
+    var band = c.bosqich !== 'bosh';
+    if (kamera) { kamera.classList.toggle('band', band); kamera.setAttribute('aria-disabled', String(band)); }
+    if (!band) { q.hidden = true; return; }
+    q.hidden = false;
+    var ik = e('span', undefined, 'gp-chek-ikon'); ik.setAttribute('aria-hidden', 'true'); ik.appendChild(Ikonlar.chiz('receipt', 22));
+    var matn = e('div', undefined, 'gp-chek-matn'); matn.appendChild(e('strong', 'Chek o\'qilmoqda…')); matn.appendChild(e('span', 'Rasm saqlanmaydi'));
+    var bekor = tugma('gp-chek-bekor', 'Chek o\'qishni bekor qilish', function () { chekBekor(); chekYangila(); });
+    bekor.id = 'gap-chek-bekor'; bekor.textContent = 'Bekor';
+    var chiziq = e('div', undefined, 'gp-chek-chiziq'); chiziq.setAttribute('aria-hidden', 'true'); chiziq.appendChild(e('span'));
+    q.appendChild(ik); q.appendChild(matn); q.appendChild(bekor); q.appendChild(chiziq);
+  }
+  function chekXato(kod, debug) { xatoKorsat(GapSof.chekXatoMatni(kod, debug)); }
+
+  function chekBoshla(fayl) {
+    var c = chekHolat();
+    if (!c || c.bosqich !== 'bosh' || holat.band || !fayl) return;
+    if (holat.mik && holat.mik.bosqich !== 'bosh') { xatoKorsat(holat.mik.bosqich === 'yozilmoqda' ? 'Avval yozishni to\'xtating.' : 'Ovoz matnga aylanmoqda, biroz kuting.'); return; }
+    if (!dep.onlayn()) { chekXato('NETWORK_OFFLINE'); return; }
+    var sessiya = holat.sessiya, h = holat, n = ++c.n, ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    h.xato = ''; var x = document.getElementById('gap-xato'), mt = document.getElementById('gap-matn'); if (x) x.textContent = ''; if (mt) mt.classList.remove('xatoli');
+    c.bosqich = 'tayyorlanmoqda'; c.ac = ac; chekYangila();
+    var eskirgan = function () { return !holat || holat.sessiya !== sessiya || c.n !== n; };
+    Promise.resolve().then(function () { return rasmTayyorla(fayl); }).then(function (r) {
+      fayl = null;   // fayl havolasi qo'yib yuboriladi
+      if (eskirgan()) return null;
+      c.bosqich = 'oqilmoqda';
+      var tana = GapSof.rasmTanasi(r.rasm, r.mime, ui.malumot(), dep.bugun()); r = null;
+      return dep.chaqir(tana, GapSof.CHEK_KUTISH_MS, ac);   // rasm shu yerda ketadi va yo'qoladi
+    }).then(function (j) {
+      if (!j || eskirgan()) return;
+      c.bosqich = 'bosh'; c.ac = null; chekYangila();
+      var royxat = GapSof.yozuvlarniOl(j).slice(0, 1);
+      if (!royxat.length) { chekXato('RASM_OQILMADI'); return; }
+      var m = ui.malumot(), bugun = dep.bugun();
+      var qosh = { soat: dep.hozir().vaqt, oxirgi: oxirgiOl(), manba: j && j.manba, chek: true };
+      h.kartalar = royxat.map(function (y) { return GapSof.kartaYasash(y, m, bugun, qosh); });
+      h.indeks = 0; h.bosqich = 'karta'; mikBekor();
+      chiz();
+    }).catch(function (err) {
+      fayl = null;
+      if (eskirgan()) return;
+      c.bosqich = 'bosh'; c.ac = null; chekYangila();
+      var kod = (err && err.kod) || ('JS_' + String((err && err.name) || 'XATO').replace(/[^A-Za-z0-9]/g, '').toUpperCase());
+      if (kod === 'AI_RUXSAT' && dep.yopiqmi()) { yop(); if (ui.xabar) ui.xabar(dep.yopiqXabari()); Yordamchi.yangila(); return; }
+      chekXato(kod, err && err.debug);
+    });
+  }
+
+  // Kamera tugmasi va kichik menyu ("Suratga olish" / "Galereyadan tanlash"). Tashqariga bosilsa yoki Escape bosilsa yopiladi.
+  var menyuTashqari = null;
+  function menyuYop() {
+    var mn = document.getElementById('gap-kamera-menyu'), kb = document.getElementById('gap-kamera');
+    if (mn) mn.hidden = true;
+    if (kb) kb.setAttribute('aria-expanded', 'false');
+    if (menyuTashqari) { document.removeEventListener('click', menyuTashqari); menyuTashqari = null; }
+  }
+  function menyuOchiqmi() { var mn = document.getElementById('gap-kamera-menyu'); return !!mn && !mn.hidden; }
+  function kameraBosildi() {
+    if (!holat || holat.band) return;
+    if (menyuOchiqmi()) { menyuYop(); return; }
+    if (chekBandmi()) return;
+    if (holat.mik && holat.mik.bosqich !== 'bosh') { xatoKorsat(holat.mik.bosqich === 'yozilmoqda' ? 'Avval yozishni to\'xtating.' : 'Ovoz matnga aylanmoqda, biroz kuting.'); return; }
+    if (!dep.onlayn()) { chekXato('NETWORK_OFFLINE'); return; }
+    var mn = document.getElementById('gap-kamera-menyu'), kb = document.getElementById('gap-kamera'), quti = document.getElementById('gap-kamera-quti');
+    mn.hidden = false; kb.setAttribute('aria-expanded', 'true');
+    menyuTashqari = function (h) { if (quti && !quti.contains(h.target)) menyuYop(); };
+    document.addEventListener('click', menyuTashqari);
+    var birinchi = mn.querySelector('button'); if (birinchi) birinchi.focus();
+  }
+  function faylInput(id, kamera) {
+    var i = document.createElement('input');
+    i.type = 'file'; i.accept = 'image/*'; i.id = id; i.hidden = true; i.tabIndex = -1; i.setAttribute('aria-hidden', 'true');
+    if (kamera) i.setAttribute('capture', 'environment');
+    i.addEventListener('change', function () {
+      var f = i.files && i.files[0];
+      try { i.value = ''; } catch (x) { /* ahamiyatsiz */ }   // fayl havolasi qo'yib yuboriladi; shu rasmni qayta tanlash ham ishlaydi
+      menyuYop();
+      if (f) chekBoshla(f);
+    });
+    return i;
+  }
+  function kameraYasash() {
+    var quti = e('div', undefined, 'gp-kamera-quti'); quti.id = 'gap-kamera-quti';
+    var kb = tugma('yo-doira gp-asbob gp-kamera', 'Chek skaneri', kameraBosildi); kb.id = 'gap-kamera';
+    kb.setAttribute('aria-haspopup', 'menu'); kb.setAttribute('aria-expanded', 'false'); kb.setAttribute('aria-controls', 'gap-kamera-menyu');
+    kb.appendChild(Ikonlar.chiz('camera', 22));
+    var mn = e('div', undefined, 'gp-menyu'); mn.id = 'gap-kamera-menyu'; mn.setAttribute('role', 'menu'); mn.setAttribute('aria-label', 'Chek rasmi'); mn.hidden = true;
+    var kamIn = faylInput('gap-rasm-kamera', true), galIn = faylInput('gap-rasm-galereya', false);
+    [['camera', 'Suratga olish', kamIn], ['photo', 'Galereyadan tanlash', galIn]].forEach(function (v) {
+      var b = tugma('gp-menyu-band', undefined, function () { v[2].click(); });
+      b.setAttribute('role', 'menuitem'); b.appendChild(Ikonlar.chiz(v[0], 20)); b.appendChild(e('span', v[1]));
+      mn.appendChild(b);
+    });
+    quti.appendChild(kb); quti.appendChild(mn); quti.appendChild(kamIn); quti.appendChild(galIn);
+    return quti;
+  }
+
   // ---- Gap yozish bosqichi ----
   function yozishChiz() {
     var b = tanaEl;
@@ -230,13 +394,15 @@ var Gap = (function () {
     ta.addEventListener('input', function () { holat.gap = ta.value; if (!ta.value.trim()) holat.ovozdan = false; holat.xato = ''; xato.textContent = ''; ta.classList.remove('xatoli'); belgilar(); });
     if (holat.xato) ta.classList.add('xatoli');
     var qator = e('div', undefined, 'gp-matn-qator');
-    var mik = tugma('yo-doira gp-mik', 'Ovoz bilan yozish', mikBosildi); mik.id = 'gap-mik';
-    qator.appendChild(ta); qator.appendChild(mik);
+    var mik = tugma('yo-doira gp-asbob gp-mik', 'Ovoz bilan yozish', mikBosildi); mik.id = 'gap-mik';
+    qator.appendChild(ta); qator.appendChild(kameraYasash()); qator.appendChild(mik);   // kamera mikrofonning CHAP tomonida
     var mikHolatEl = e('div', undefined, 'gp-mik-holat'); mikHolatEl.id = 'gap-mik-holat'; mikHolatEl.setAttribute('role', 'status'); mikHolatEl.setAttribute('aria-live', 'polite');
-    quti.appendChild(belgi); quti.appendChild(qator); quti.appendChild(mikHolatEl); quti.appendChild(hisob); quti.appendChild(xato);
+    var chekHolatEl = e('div', undefined, 'gp-chek-karta'); chekHolatEl.id = 'gap-chek-holat'; chekHolatEl.setAttribute('role', 'status'); chekHolatEl.setAttribute('aria-live', 'polite'); chekHolatEl.hidden = true;
+    quti.appendChild(belgi); quti.appendChild(qator); quti.appendChild(mikHolatEl); quti.appendChild(chekHolatEl); quti.appendChild(hisob); quti.appendChild(xato);
     b.appendChild(quti);
     belgilar();
     mikYangila();
+    chekYangila();
 
     var misollar = e('div', undefined, 'chiplar gp-misollar');
     GapSof.MISOLLAR.forEach(function (m) {
@@ -275,6 +441,7 @@ var Gap = (function () {
   function yuborish() {
     if (!holat || holat.band) return;   // ikki marta yuborishdan himoya
     if (holat.mik && holat.mik.bosqich !== 'bosh') { xatoKorsat(holat.mik.bosqich === 'yozilmoqda' ? 'Avval yozishni to\'xtating.' : 'Ovoz matnga aylanmoqda, biroz kuting.'); return; }
+    if (chekBandmi()) { xatoKorsat('Chek o\'qilmoqda, biroz kuting.'); return; }
     var gap = String(holat.gap || '').replace(/\s+/g, ' ').trim();
     if (!gap) { xatoKorsat('Gap yozing'); return; }
     if (!dep.onlayn()) { xatoKorsat(GapSof.xatoMatni('NETWORK_OFFLINE')); return; }
@@ -359,6 +526,12 @@ var Gap = (function () {
     var maydonlar = {};   // maydon nomi -> { input, xato } (xatolarni ko'rsatish uchun)
     function ozgardi(nom) { return function (v) { k[nom] = v; if (k.xatolar[nom]) { delete k.xatolar[nom]; if (maydonlar[nom]) { maydonlar[nom].xato.textContent = ''; maydonlar[nom].input.classList.remove('xatoli'); } } }; }
 
+    if (k.chek) {   // chekdan o'qilgan karta (36-band): tepada kichik ko'k belgi
+      var cb = e('div', undefined, 'gp-chek-belgi'); cb.id = 'gap-chek-belgi';
+      var cik = e('span', undefined, 'gp-chek-belgi-ikon'); cik.setAttribute('aria-hidden', 'true'); cik.appendChild(Ikonlar.chiz('receipt', 16));
+      cb.appendChild(cik); cb.appendChild(e('span', GapSof.CHEK_BELGI));
+      b.appendChild(cb);
+    }
     if (holat.kartalar.length > 1) {
       var son = e('div', (holat.indeks + 1) + ' / ' + holat.kartalar.length, 'gp-sanoq'); son.id = 'gap-sanoq';
       son.setAttribute('aria-label', (holat.indeks + 1) + '-yozuv, jami ' + holat.kartalar.length);
@@ -374,7 +547,7 @@ var Gap = (function () {
     // Sarlavha va manba belgisi (32-band): belgi faqat manba ma'lum bo'lsa; bosilsa karta ichida izoh qutisi ochiladi/yopiladi
     var bosh = e('div', undefined, 'gp-karta-bosh');
     bosh.appendChild(e('h2', GapSof.MANBA_SARLAVHA, 'gp-karta-sarlavha'));
-    var izohQatorlari = GapSof.manbaIzohi(k.manba, k.ovozdan), izohQuti = null;
+    var izohQatorlari = GapSof.manbaIzohi(k.manba, k.ovozdan, k.chek), izohQuti = null;
     if (izohQatorlari.length) {
       izohQuti = e('div', undefined, 'gp-manba-izoh'); izohQuti.id = 'gap-manba-izoh'; izohQuti.setAttribute('role', 'note'); izohQuti.hidden = !k.manbaOchiq;
       izohQatorlari.forEach(function (t) { izohQuti.appendChild(e('p', t)); });
@@ -428,6 +601,11 @@ var Gap = (function () {
     var saqla = e('button', 'Saqlash', 'asosiy-tugma'); saqla.type = 'submit'; saqla.id = 'gap-saqlash';
     saqla.setAttribute('aria-disabled', k.saqlanmoqda ? 'true' : 'false');
     forma.appendChild(saqla);
+    if (k.chek && k.tur !== 'qarz' && ui.tahrirla) {   // oddiy yozuv formasi shu qiymatlar bilan ochiladi; "Saqlash" bosilmaguncha hech narsa yozilmaydi
+      var tahrir = tugma('ikkinchi-tugma', 'Tahrirlash: oddiy yozuv formasida ochish', function () { tahrirlash(k); });
+      tahrir.textContent = 'Tahrirlash'; tahrir.id = 'gap-tahrirlash';
+      forma.appendChild(tahrir);
+    }
     var bekor = tugma('ikkinchi-tugma', 'Bekor qilish: bu yozuv saqlanmaydi', function () { if (k.saqlanmoqda) return; keyingi(); });
     bekor.textContent = 'Bekor qilish'; bekor.id = 'gap-bekor';
     forma.appendChild(bekor);
@@ -462,6 +640,13 @@ var Gap = (function () {
       k.saqlanmoqda = false; k.xatolar = { umumiy: 'Saqlab bo\'lmadi: ' + (err && err.message ? err.message : err) };
       chiz();
     });
+  }
+  // Chek kartasi -> oddiy yozuv formasi (ui.js wizard): maydonlar to'ldirilgan holda ochiladi, gap ekrani yopiladi. Bazaga hech narsa yozilmaydi.
+  function tahrirlash(k) {
+    if (!holat || k.saqlanmoqda || !ui.tahrirla) return;
+    var d = { tur: k.tur, summa: k.summa, kategoriya: k.kategoriya, hisob: k.hisob, hisob2: k.hisob2, sana: k.sana, vaqt: k.vaqt, izoh: k.izoh }, f = ui.tahrirla;
+    yop();
+    f(d);
   }
   function keyingi() {
     holat.indeks++;
@@ -498,7 +683,11 @@ var Gap = (function () {
     ekranEl.style.top = v.offsetTop + 'px';
   }
   function chiqish() { if (ekranEl && chiqsaBoladimi()) yop(); }
-  function tugmaBosildi(h) { if (h.key === 'Escape' && ekranEl) chiqish(); }
+  function tugmaBosildi(h) {
+    if (h.key !== 'Escape' || !ekranEl) return;
+    if (menyuOchiqmi()) { menyuYop(); var kb = document.getElementById('gap-kamera'); if (kb) kb.focus(); return; }   // avval kamera menyusi yopiladi
+    chiqish();
+  }
   // Telefonning "orqaga" tugmasi ekranni yopadi (ilovadan chiqarmaydi); saqlanmagan karta bo'lsa so'raydi, "yo'q" desa tarix yozuvi qaytariladi
   var tarixBor = false;
   function orqagaBosildi() {
@@ -510,7 +699,7 @@ var Gap = (function () {
 
   function ochish() {
     if (ekranEl || !ui.malumot) return;
-    holat = { bosqich: 'yozish', gap: '', ovozdan: false, xato: '', band: false, mik: { bosqich: 'bosh', soniya: 0 }, kartalar: [], indeks: 0, saqlangan: 0, sessiya: ++sessiyaSanagich };
+    holat = { bosqich: 'yozish', gap: '', ovozdan: false, xato: '', band: false, mik: { bosqich: 'bosh', soniya: 0 }, chek: { bosqich: 'bosh', ac: null, n: 0 }, kartalar: [], indeks: 0, saqlangan: 0, sessiya: ++sessiyaSanagich };
     ekranEl = ekranYasash();
     document.body.appendChild(ekranEl);
     document.body.style.overflow = 'hidden';
@@ -526,6 +715,7 @@ var Gap = (function () {
     if (!ekranEl) return;
     var n = holat ? holat.saqlangan : 0;
     mikBekor();   // yozilayotgan ovoz bekor qilinadi, mikrofon qo'yib yuboriladi
+    chekBekor(); menyuYop();   // ketayotgan chek so'rovi to'xtatiladi, rasm tashlanadi
     window.removeEventListener('popstate', orqagaBosildi);
     if (tarixBor) { tarixBor = false; if (!tarixdan && history.state && history.state.gap) { try { history.back(); } catch (x) { /* ahamiyatsiz */ } } }
     if (window.visualViewport) { window.visualViewport.removeEventListener('resize', oynaniMoslash); window.visualViewport.removeEventListener('scroll', oynaniMoslash); }
@@ -541,7 +731,7 @@ var Gap = (function () {
   // ui.js chaqiradi: malumot() — ilovaning joriy ma'lumoti, xabar(matn) — qisqa xabar, saqla(natija) — Promise (mavjud saqlash funksiyalari),
   // tugadi(n) — n ta yozuv saqlangan holda yopilganda (Asosiy yangilanadi va xabar chiqadi)
   function boshlash(o) {
-    ui.malumot = o.malumot; ui.xabar = o.xabar; ui.saqla = o.saqla; ui.tugadi = o.tugadi; ui.oxirgiOl = o.oxirgiOl; ui.oxirgiYoz = o.oxirgiYoz;
+    ui.malumot = o.malumot; ui.xabar = o.xabar; ui.saqla = o.saqla; ui.tugadi = o.tugadi; ui.oxirgiOl = o.oxirgiOl; ui.oxirgiYoz = o.oxirgiYoz; ui.tahrirla = o.tahrirla;
     yangila();
   }
 

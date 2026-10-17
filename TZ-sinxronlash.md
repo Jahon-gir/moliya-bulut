@@ -984,3 +984,74 @@ Faqat ilova qismi (`js/stat-sof.js`, `js/stat.js`, `style.css`; `ui.js` ga faqat
 ### 35.5. Sinov
 - `tests.html`: 595 / 595 (yangi: tejash formulasi — kirim 0, manfiy, ball, yaxlitlash, qarz kirimi; eng katta 5 — qarz berish kirmasligi, oy chegarasi; eng kam 5 kun — 0 kunlar kirmasligi, xarajatsiz kunlar soni; qarz jami, sof, oy harakati, eng katta 3 qoldiq, o'chirilgan to'lov; qisqa summa; ekran (DOM): ranglar, strelkalar, yashirin summalar, bo'sh holatlar, oy chipiga bog'liqlik). Uydirma raqamlar va ismlar.
 - `tools/stat-brauzer-sinovi.js`: 178 tekshiruv, 360 px yorug'/qorong'i (tejash foizi Asosiy kirim/chiqimidan hisoblangan qiymatga teng, ro'yxatlar tartibi, 4 katak bir qatorda, gorizontal aylanish yo'q, tugmalar ≥ 44 px). Rasmlar ko'zdan kechirilgan. Tekshirilmagan: haqiqiy telefon.
+
+## 36. Chek skaneri — rasmdan yozuv (0.43.0)
+
+Ma'lumot tuzilishi (IndexedDB, server jadvallari), sinxronlash va zaxira formati O'ZGARMAGAN. O'zgargan: `js/gap.js`, `js/gap-sof.js`, `js/yordamchi.js` (`chaqir` ga ixtiyoriy `AbortController`), `js/ui.js` (faqat `Gap.boshlash` ga `tahrirla`), `js/ikonlar.js` (`camera`, `photo`), `style.css`, `supabase/functions/yordamchi/index.ts` (yangi `rasm` rejimi), `supabase/README.md` (8-bo'lim). Yangi fayl yo'q. **Funksiyani Dashboard'ga qayta joylash shart; yangi Secret kerak emas** (7-bo'limdagi `GEMINI_API_KEY`/`GEMINI_MODEL` ishlatiladi).
+
+### 36.1. Nima qilindi
+Gap ekranida mikrofon tugmasining CHAP tomonida kamera tugmasi. Chek rasmi olinadi (yoki galereyadan tanlanadi), telefonda kichraytiriladi, serverga ketadi; server chekdagi matnni o'qiydi va BITTA xarajat yozuvi qaytaradi; ilova uni ovoz/gap bilan bir xil tasdiqlash kartasida ko'rsatadi. Yangi forma, yangi natija kartasi yoki yangi saqlash yo'li YO'Q: karta `GapSof.kartaYasash`/`kartaChiz`, saqlash `ui.saqla` (mavjud `yozuvniSaqlash`). **"Saqlash" bosilmaguncha bazaga hech narsa yozilmaydi.**
+
+### 36.2. Oqim (ilova)
+- **Tugma:** `#gap-kamera`, 44 px, yumaloq-kvadrat, och ko'k fon va ko'k ikon (`--gp-kok-*`, yorug'/qorong'i alohida), ikon Tabler `camera`, `aria-label="Chek skaneri"`. Mikrofon tugmasi ham shu uslub va 44 px ga keltirildi (avval 48 px, neytral fon edi: ikkala tugma bir xil bo'lsin deb; yozish holatidagi qizil o'zgarmadi). Tugma Gap ekranida, ya'ni mikrofon bilan bir xil qoida bo'yicha ko'rinadi (kirgan, AI ruxsati bor, yopiq emas); 403 `AI_RUXSAT` bo'lsa ekran yopiladi va "Yordamchi hozircha siz uchun yopiq" chiqadi (ovoz bilan bir xil).
+- **Menyu:** tugma bosilsa ostida kichik ro'yxat: "Suratga olish" (ikon `camera`; `<input type=file accept="image/*" capture="environment">`) va "Galereyadan tanlash" (ikon `photo`; `capture`siz). Tashqariga bosilsa yoki Escape bosilsa yopiladi (Escape avval menyuni yopadi, ekranni emas). Menyu tugmalari ≥ 44 px, `role="menu"`, `aria-expanded`.
+- **Internet yo'q:** tugma bosilganda "Internet kerak. Ulanib, qayta urinib ko'ring." (so'rov ketmaydi). Mikrofon yozayotgan paytda: "Avval yozishni to'xtating."
+- **"Chek o'qilmoqda…" kartasi** (tanlangandan javob kelguncha): chek ikoni (`receipt`), "Chek o'qilmoqda…", ostida "Rasm saqlanmaydi", pastda ingichka progress chizig'i (`prefers-reduced-motion` da to'xtaydi), o'ngda "Bekor" (≥ 44 px): `AbortController.abort()` so'rovni to'xtatadi, eskirgan javob e'tiborga olinmaydi. O'qilayotganda mikrofon, kamera va "Yozuvga aylantirish" ishlamaydi ("Chek o'qilmoqda, biroz kuting.").
+- **Natija kartasi:** ovozdagi/gap kartasining o'zi. Tepasida kichik ko'k belgi `Chekdan o'qildi · tekshiring` (ikon `receipt`). Ogohlantirishlar o'sha sariq qatorda (`#gap-ogoh`; birinchi qator doim "AI adashishi mumkin: summani tekshiring."). Tugmalar: **Saqlash**, **Tahrirlash**, Bekor qilish. Manba belgisi izohiga qo'shimcha qator: "Chek rasmidagi matnni Gemini o'qigan."
+- **Tahrirlash:** Gap ekrani yopiladi va oddiy yozuv formasi (ui.js ning 5 qadamli "Yozuv qo'shish" shakli) karta qiymatlari (tur, summa, kategoriya, hisob, sana, vaqt, izoh — kartada tahrirlangani ham) bilan to'ldirilgan holda ochiladi; undagi "Saqlash" saqlaydi. Bazaga hech narsa yozilmaydi. Qarz turiga o'tkazilgan kartada tugma ko'rinmaydi (oddiy shakl qarzni bilmaydi).
+- Karta soati: chekdan; bugungi sanada hozirdan keyingi soat bo'lsa hozirgi soat; sana o'qilmagan bo'lsa bugun va hozirgi soat.
+
+### 36.3. Rasmni tayyorlash (telefonda, `js/gap.js` "Chek skaneri" bo'limi + `GapSof.rasmOlchami/rasmSiq`)
+- `createImageBitmap(fayl, { imageOrientation: 'from-image' })` — EXIF yo'nalishi qo'llanadi (kenglik/balandlik aylantirilgan holda olinadi); qo'llamasa `Image` (FileReader orqali; zamonaviy brauzer EXIF ni o'zi qo'llaydi).
+- Canvas: uzun tomon ≤ 1600 px (kichik rasm kattalashtirilmaydi), oq fon (shaffof PNG qorayib qolmasin), JPEG 0.8. Natija 1,5 MB (1 572 864 bayt) dan oshsa avval sifat 0.7 → 0.6 → 0.5, keyin o'lcham 0.8 baravar (4 martagacha); baribir sig'masa `RASM_KATTA`.
+- **Rasm saqlanmaydi:** `localStorage`, `IndexedDB`, kesh, fayl, `URL.createObjectURL` ishlatilmaydi (sinov kod matnini shunga tekshiradi); `<input>` qiymati tanlanishi bilan tozalanadi; `ImageBitmap.close()`, `canvas` 0×0 qilinadi; base64 faqat so'rov tanasida. Service worker so'rovlarni keshlamaydi (mavjud qoida).
+
+### 36.4. Server: `rasm` rejimi (`supabase/functions/yordamchi/index.ts`)
+- **Kirish:** `{ rejim:"rasm", rasm:<base64>, mime:"image/jpeg"|"image/png"|"image/webp", bugun, kategoriyalar, hisoblar, eski? }` (oxirgi to'rttasi `yozuv` rejimi bilan bir xil tekshiriladi). **Hajm:** asl hajm 2 MB (2 097 152 bayt) dan oshsa `RASM_KATTA` (413); so'rov tanasi umumiy chegaradan (~2.8 MB, `ovoz` bilan bir xil) oshsa `AI_HAJM` (ilova uni ham "rasm katta" deb ko'rsatadi). Mime ro'yxatda yo'q yoki fayl boshi mimega mos kelmasa `RASM_FORMAT` (400). Base64 buzuq: `AI_KIRISH`.
+- **Himoya `ovoz` bilan AYNAN bir xil:** JWT, `AI_RUXSAT_EMAIL` ro'yxati, kunlik limit (`ai_limit_oshir`, 200); rasm so'rovi limitda **1 ta** so'rov (ikki AI chaqiruviga qaramay); hajm/format/ruxsat xatolarida limit sanalmaydi.
+- **1-qadam (Gemini):** `GEMINI_API_KEY`, `GEMINI_MODEL` (standart `gemini-2.5-flash`), kalit `x-goog-api-key` sarlavhasida. Ko'rsatma (`CHEK_PROMPT`): chekdagi matnni qatorma-qator AYNAN qaytar, hech narsa qo'shma, raqam to'qima; chek bo'lmasa `CHEK_EMAS`. `temperature: 0`, 2000 token, kutish 30 s. (Gemini chaqiruvi `ovoz` bilan bitta umumiy funksiyada, `geminiXom`.)
+- **2-qadam (yozuv tizimi):** o'qilgan matn (≤ 900 belgi) `yozuv` rejimidagi YOZ ko'rsatmasi bilan (o'z model → OpenAI zaxira, `YOZUV_PROVAYDER` bir xil) "Gap: bu chek matni: …" izohi bilan beriladi. Undan FAQAT kategoriya va hisob olinadi. `YOZ` matni o'zgarmagan.
+- **Chek qoidalari (serverda, deterministik; AI raqam hisoblamaydi/to'qimaydi — 22.1):**
+  - **Bitta xarajat yozuvi** (ko'p mahsulot ham bitta). `tur` har doim `xarajat`.
+  - **Summa = chekdagi JAMI**: "to'lash uchun / к оплате / jami to'lov" qatori ustun, bo'lmasa oxirgi "JAMI / ИТОГО / ITOGO / ВСЕГО / TOTAL" qatori; QQS/НДС, chegirma, bonus, soni/miqdor qatorlari hisobga olinmaydi; summa shu qatorning oxirgi soni yoki keyingi qatordagi yolg'iz son. Mahsulotlar QO'SHIB CHIQARILMAYDI. Format: "45 000", "45.000", "45,000.50" (tiyin yaxlitlanadi). **JAMI topilmasa summa `null` + ogohlantirish "JAMI summa chekdan topilmadi — summani kiriting".**
+  - **Sana/vaqt chekdan:** `dd.mm.yyyy`, `dd/mm/yy`, `yyyy-mm-dd` (haqiqiy sana bo'lishi shart) va `HH:MM`. Javobda `vaqt` maydoni qo'shildi (faqat `rasm` javobida). Sana o'qilmasa **yoki kelajakda bo'lsa**: `sana: null, vaqt: null` + ogohlantirish "Sana chekdan o'qilmadi — bugungi sana qo'yildi" (ilova bugun va hozirgi soatni qo'yadi).
+  - **Izoh:** "Do'kon: mahsulot narx, mahsulot narx…" — do'kon nomi birinchi 6 qatordan (raqam/kalit so'zli qatorlar tashlanadi), mahsulot = oxiri narx bilan tugaydigan qator (JAMI, QQS, naqd, qaytim va h.k. kirmaydi), ko'pi bilan 12 ta, jami ≤ 200 belgi (`IZOH_MAX`), mahsulot o'rtasida kesilmaydi, kesilsa "…". Mahsulot topilmasa do'kon nomi, u ham bo'lmasa "Chek".
+  - Kategoriya va hisob mavjud ro'yxatdan (nom bo'yicha), topilmasa bo'sh + "kategoriya/hisob topilmadi". Yozuv tizimi hech javob bermasa ham chek yozuvi qaytadi (`manba: null`, kategoriya/hisob bo'sh).
+- **Chiqish:** `{ ok:true, manba:"model"|"openai"|null, yozuvlar:[Yozuv + vaqt], chek:true }`.
+- **Maxfiylik:** kalit faqat Supabase Secrets'da; kodda, javobda va logda kalit, rasm va chek matni yo'q. Logda faqat `rasm: gemini_<HTTP> http=<kod> mime=<mime>` (mavjud `ovozLogla`, matn faqat Gemini `error.message` ≤ 300 belgi; kalit `***`). `index.ts` da `console.*` hamon bitta.
+
+### 36.5. Xato kodlari (ilovada oddiy o'zbekcha + "(kod: …)"; xatoda hech narsa saqlanmaydi, qayta urinsa bo'ladi)
+| Kod | Qachon | Matn |
+|---|---|---|
+| `RASM_KATTA` (413; server `AI_HAJM` ham) | siqilgach 1,5 MB ga sig'madi (ilova) yoki server 2 MB dan katta | Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling. |
+| `RASM_FORMAT` (400) | JPEG/PNG/WebP emas, rasm ochilmadi | Bu rasm turi qabul qilinmaydi. JPEG, PNG yoki WebP rasm tanlang. |
+| `CHEK_EMAS` (422) | Gemini "CHEK_EMAS" dedi yoki matnda raqam yo'q | Rasmda chek topilmadi. |
+| `RASM_OQILMADI` (422) | Gemini bo'sh/bloklangan javob; yoki yozuv chiqmadi | Rasmdagi matnni o'qib bo'lmadi. Chekni aniqroq suratga oling. |
+| `NETWORK`, `NETWORK_OFFLINE`, `VAQT`, `AI_LIMIT`, `AI_RUXSAT`, `AUTH_EXPIRED` | mavjud | 29.5/31.2 dagi matnlar |
+| `AI_PROVAYDER` (+ `sabab: gemini_…`), `HTTP_*` | Gemini/OpenAI xatosi, kalit/model yo'q | mavjud matnlar |
+Mijoz kutish chegarasi 90 s (ikki bosqich), `VAQT`.
+
+### 36.6. Cheklovlar
+- Faqat bitta chek = bitta yozuv. Bir rasmda bir nechta chek yoki qo'lyozma/xira chek ishonchli o'qilmasligi mumkin.
+- Chek tuzilishi turlicha: JAMI/mahsulot/do'kon qoidalari evristika (kalit so'zlar o'zbekcha lotin, kirill va ruscha). Noto'g'ri bo'lsa foydalanuvchi kartada tuzatadi (shuning uchun "tekshiring" belgisi). Mahsulot narxi va soni (`2 x 5 000`) alohida qatorda bo'lsa, izohga to'liq tushmasligi mumkin.
+- Chek matni (mahsulotlar, do'kon nomi) o'z modelingizga (yoki zaxirada OpenAI'ga), rasm Google Gemini'ga ketadi (31.4 dagi xavfga o'xshash ochiq xavf).
+- Bepul Gemini darajasi limitli; limit tugasa `AI_PROVAYDER` + `gemini_429`.
+- Ruxsat: tugma mikrofon kabi Gap ekranida. Alohida "AI ruxsati" tekshiruvi faqat serverda (`AI_RUXSAT_EMAIL`).
+
+### 36.7. Foydalanuvchi qiladigan ishlar
+1. Funksiyani QAYTA JOYLASH (`supabase/README.md` 8.2): Dashboard -> Edge Functions -> `yordamchi` -> kodni yangi `index.ts` bilan to'liq almashtirib Deploy (yoki `supabase functions deploy yordamchi --project-ref <loyiha-id>`).
+2. Yangi Secret kerak emas (`GEMINI_API_KEY` allaqachon bor). `GEMINI_MODEL` rasmni qabul qiladigan model bo'lsin.
+3. Telefonda: ilovani yangilang (versiya 0.43.0), haqiqiy chek bilan sinang (8.3 va hisobotdagi ro'yxat).
+
+### 36.8. Sinov
+- Server: `node --test supabase/functions/yordamchi/test.mjs` — 79 tekshiruv (12 ta yangi: JAMI tanlash, sana/vaqt, izoh, to'liq oqim, zaxira va yozuv tizimisiz holat, JAMI/sana ogohlantirishlari, `CHEK_EMAS`/`RASM_OQILMADI`, hajm, format, ruxsat/limit/xizmat xatolari, maxfiylik). Faqat O'ZIM UYDIRGAN soxta chek matnlari; haqiqiy chek, ism yoki rasm repoda yo'q.
+- `tests.html`: yangi sinovlar (o'lcham/siqish, karta, tugma va menyu, o'qilmoqda/bekor/natija/Saqlash/Tahrirlash, xatolar, haqiqiy canvas, rasm saqlanmasligi), natija hisobotda.
+- `tools/gap-chek-brauzer-sinovi.js`: haqiqiy ilova 360 px yorug'/qorong'i rejimda (soxta server javobi).
+
+### 36.9. Qabul qilingan taxminlar va ochiq masalalar
+- **Haqiqiy Gemini, haqiqiy telefon kamerasi/galereyasi va haqiqiy o'zbekcha/ruscha chek bilan SINALMAGAN.** Tekshirilgani: soxta Gemini javobi, headless Chromium (haqiqiy canvas bilan).
+- Topshiriqdagi "Mikrofon... 44 px, och ko'k" tavsifi kodidagi mikrofondan (48 px, neytral) farq qilgani uchun ikkala tugma bir xil (44 px, och ko'k) qilindi.
+- "Tahrirlash" oddiy yozuv formasining 5 qadamli ko'rinishini ochadi (tahrirlash ekrani faqat saqlangan yozuv uchun); barcha maydonlar to'ldirilgan, 1-qadamdan boshlanadi.
+- `sw.js` ga tegilmadi (CLAUDE.md: kesh versiyasi `index.html` dagi `?v=` dan olinadi, u 0.43.0 ga oshirildi).
+- HEIC: iPhone galereyasida `accept="image/*"` rasmni odatda JPEG ga o'giradi; o'girmasa va brauzer ocholmasa `RASM_FORMAT`.
+- Mikrofon va kamera bir vaqtda ishlamaydi (biri band bo'lsa ikkinchisi xabar beradi).

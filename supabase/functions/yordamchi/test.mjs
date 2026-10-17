@@ -370,7 +370,7 @@ test('xato javoblari: faqat belgilangan kodlar, o\'zbekcha sabab bilan', async (
     chaqir(REJA(), { holat: { aiHolat: 500 } }), chaqir(JAVOB(), { holat: { aiMatn: JSON.stringify({ x: 1 }) } }), chaqir(JAVOB(), { holat: { aiMatn: AIJ('999') } })];
   for (const { j } of await Promise.all(hs)) { assert.ok(M.XATO_KODLARI.includes(j.xato.kod)); assert.ok(j.xato.sabab.length > 5); kodlar.add(j.xato.kod); }
   assert.deepEqual([...kodlar].sort(), ['AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN']);
-  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_HAJM', 'AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'NETWORK']);
+  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_HAJM', 'AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'CHEK_EMAS', 'NETWORK', 'RASM_FORMAT', 'RASM_KATTA', 'RASM_OQILMADI']);
 });
 
 // ---------------- fayl xususiyatlari (repo ochiq) ----------------
@@ -416,6 +416,12 @@ function tarmoqY(holat = {}) {
     const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
     if (url.endsWith('/auth/v1/user')) return J({ id: 'u-1', email: holat.email || 'ega@example.invalid' });
     if (url.endsWith('/rest/v1/rpc/ai_limit_oshir')) { holat.hisob.n = holat.limitBoshi !== undefined && holat.hisob.n === 0 ? holat.limitBoshi : holat.hisob.n + 1; return J(holat.hisob.n); }
+    if (url.startsWith('https://generativelanguage.googleapis.com/')) {
+      const g = holat.gemini || {};
+      if (g.tarmoq) throw new TypeError('fetch failed');
+      if (g.holat) return J({ error: { message: 'x' } }, g.holat);
+      return J({ candidates: [{ content: { parts: [{ text: g.matn }] } }] });
+    }
     if (url === MODEL_MANZIL + '/api/chat') {
       const oz = holat.oz || {};
       if (oz.xato === 'tarmoq') throw new TypeError('fetch failed');
@@ -653,7 +659,7 @@ test('yozuv rejimida ham: kirish, ruxsat, kunlik limit (1 ta so\'rov), CORS', as
   const x = await yoz(YOZUV(), { jwt: null, origin: 'https://jahon-gir.github.io', holat: { oz } }); assert.equal(x.r.headers.get('Access-Control-Allow-Origin'), 'https://jahon-gir.github.io');
 });
 test('yozuv: eski reja/javob rejimlari o\'zgarmagan (kodlar to\'plami, savol maydoni shart)', async () => {
-  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_HAJM', 'AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'NETWORK']);
+  assert.deepEqual([...M.XATO_KODLARI].sort(), ['AI_HAJM', 'AI_KIRISH', 'AI_LIMIT', 'AI_PROVAYDER', 'AI_RAQAM', 'AI_RUXSAT', 'AI_SXEMA', 'AI_UZUN', 'CHEK_EMAS', 'NETWORK', 'RASM_FORMAT', 'RASM_KATTA', 'RASM_OQILMADI']);
   const { r, j } = await chaqir({ rejim: 'reja', gap: 'salom', bugun: '2026-10-13', kategoriyalar: [], hisoblar: [] }, { holat: { aiMatn: PLAN(SOROV) } });
   assert.equal(r.status, 400); assert.equal(j.xato.kod, 'AI_KIRISH', 'reja rejimi hanuz "savol" talab qiladi');
 });
@@ -769,4 +775,121 @@ test("ovoz: bo'sh javob loglanadi (finish/block kodlari), matn va audio yo'q; mu
   assert.equal(x.j.ok, true); assert.equal(yozuvlar.length, 0, 'muvaffaqiyatda log yo\'q');
   ({ natija: x, yozuvlar } = await logBilan(() => chaqir(REJA(), { holat: { aiHolat: 500 } })));
   assert.equal(x.j.xato.kod, 'AI_PROVAYDER'); assert.equal('debug' in x.j.xato, false); assert.equal(yozuvlar.length, 0);
+});
+
+// ---------------- rasm rejimi (36-band): chek rasmi ----------------
+// Hamma chek matnlari UYDIRMA (haqiqiy chek, do'kon, ism yo'q).
+const CHEK1 = ['MAYDA BOZOR', 'Chek № 000123', 'Sana: 12.10.2026  14:35', 'NON 5 000', 'SUT 1L 12 500', 'SABZI 1KG 8 000', 'Jami QQS 2 000', 'JAMI: 25 500', 'Naqd 30 000', 'Qaytim 4 500'].join('\n');
+const RASM = (bayt = 1000, o = {}) => ({ ...YOZUV(), gap: undefined, rejim: 'rasm', rasm: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(bayt, 7)]).toString('base64'), mime: 'image/jpeg', ...o });
+const GEM = (h) => h.chaqiruvlar.filter((c) => c.url.startsWith('https://generativelanguage.googleapis.com/'));
+const RENV = { ...YENV, GEMINI_API_KEY: 'gk-sinov-chek-1' };
+const rasmOz = () => ({ matn: JSON.stringify([MY({ kategoriya: 'Ovqatlanish', hisob: 'Uzum', summa_matn: '999 ming', izoh: 'model izohi' })]) });
+
+test("chek: JAMI tanlash — JAMI/ИТОГО/To'lash uchun; QQS, chegirma, soni qatorlari hisobga olinmaydi; mahsulotlar qo'shilmaydi", () => {
+  const J = (m) => M.chekJami(m.split('\n'));
+  assert.equal(J(CHEK1), 25500);
+  assert.equal(J('NON 5 000\nSUT 12 500\nИТОГО 17 500\nНДС 12%  1 875'), 17500);
+  assert.equal(J('NON 5 000\nJami: 5 000\nChegirma 500\nTo\'lash uchun: 4 500'), 4500, "to'lash uchun ustun");
+  assert.equal(J('ITOGO\n45 000\nNaqd 50 000'), 45000, "summa keyingi qatorda");
+  assert.equal(J('NON 5 000\nJAMI 12 345,50'), 12346, "tiyin yaxlitlanadi");
+  assert.equal(J('Jami tovar soni: 3\nJAMI 9 000'), 9000);
+  assert.equal(J('NON 5 000\nSUT 12 500'), null, 'JAMI yo\'q -> null (qo\'shib chiqarilmaydi)');
+  assert.equal(J('Jami QQS 2 000'), null);
+  assert.equal(J('JAMI: 0'), null);
+  assert.equal(M.chekSummasi('45.000'), 45000); assert.equal(M.chekSummasi('45,000.50'), 45001); assert.equal(M.chekSummasi('45 000'), 45000); assert.equal(M.chekSummasi('12.50'), 13); assert.equal(M.chekSummasi('abc'), null);
+});
+test("chek: sana va vaqt — turli yozuv, noto'g'ri sana tashlanadi, kelajakdagi sana chekdan o'qilmagan hisoblanadi", () => {
+  assert.deepEqual(M.chekSanaVaqt('Sana: 12.10.2026  14:35'), { sana: '2026-10-12', vaqt: '14:35', indeks: 6 });
+  assert.equal(M.chekSanaVaqt('05/03/26 9:07:55').sana, '2026-03-05'); assert.equal(M.chekSanaVaqt('05/03/26 9:07:55').vaqt, '09:07');
+  assert.equal(M.chekSanaVaqt('2026-10-01 23:59').sana, '2026-10-01');
+  assert.equal(M.chekSanaVaqt('31.02.2026 10:00').sana, null, "bunday sana yo'q"); assert.equal(M.chekSanaVaqt('NON 5 000').sana, null);
+  const y = (m, bugun = '2026-10-13') => M.chekYozuvi(m, null, bugun);
+  assert.equal(y(CHEK1).sana, '2026-10-12'); assert.equal(y(CHEK1).vaqt, '14:35'); assert.deepEqual(y(CHEK1).ogohlantirish, []);
+  const kel = y('JAMI 5 000\n20.10.2026 10:00'); assert.equal(kel.sana, null); assert.equal(kel.vaqt, null); assert.ok(kel.ogohlantirish.includes(M.CHEK_SANA_OGOH));
+  const yoq = y('JAMI 5 000'); assert.equal(yoq.sana, null); assert.ok(yoq.ogohlantirish.includes("Sana chekdan o'qilmadi — bugungi sana qo'yildi"));
+  assert.equal(y('JAMI 5 000\n13.10.2026 08:00').sana, '2026-10-13', 'bugungi sana kelajak emas');
+});
+test("chek: izoh \"Do'kon: mahsulot narx, ...\" ≤ 200 belgi, mahsulot o'rtasida kesilmaydi; JAMI/QQS/naqd qatorlari kirmaydi", () => {
+  const q = CHEK1.split('\n');
+  assert.equal(M.chekDokoni(q), 'MAYDA BOZOR');
+  assert.deepEqual(M.chekMahsulotlari(q), ['NON 5 000', 'SUT 1L 12 500', 'SABZI 1KG 8 000']);
+  assert.equal(M.chekIzohi('MAYDA BOZOR', M.chekMahsulotlari(q)), 'MAYDA BOZOR: NON 5 000, SUT 1L 12 500, SABZI 1KG 8 000');
+  const kop = Array.from({ length: 40 }, (_, i) => 'MAHSULOT' + i + ' ' + (1000 + i));
+  const iz = M.chekIzohi('DOKON', kop); assert.ok(iz.length <= 200, String(iz.length)); assert.ok(iz.endsWith('…')); assert.ok(iz.startsWith('DOKON: MAHSULOT0 1000, MAHSULOT1 1001'));
+  assert.equal(M.chekIzohi(null, []), 'Chek'); assert.equal(M.chekIzohi('DOKON', []), 'DOKON');
+  assert.equal(M.chekYozuvi('JAMI 5 000', null, '2026-10-13').izoh, 'Chek');
+});
+test("rasm: oqim — Gemini matnni o'qiydi, yozuv tizimi kategoriya/hisob tanlaydi; summa FAQAT chekdagi JAMI (model 999 ming desa ham), BITTA xarajat yozuvi", async () => {
+  const holat = { gemini: { matn: CHEK1 }, oz: rasmOz() };
+  const { r, j } = await yoz(RASM(), { holat, env: RENV });
+  assert.equal(r.status, 200); assert.equal(j.ok, true); assert.equal(j.chek, true); assert.equal(j.manba, 'model'); assert.equal(j.yozuvlar.length, 1);
+  assert.deepEqual(j.yozuvlar[0], { tur: 'xarajat', summa: 25500, soni: null, narx: null, kategoriya: 'Ovqatlanish', hisob: 'Uzum', hisob_turi: 'karta', hisob2: null, shaxs: null, sana: '2026-10-12', vaqt: '14:35',
+    izoh: 'MAYDA BOZOR: NON 5 000, SUT 1L 12 500, SABZI 1KG 8 000', ogohlantirish: [] });
+  const g = GEM(holat); assert.equal(g.length, 1);
+  assert.equal(g[0].url, 'https://generativelanguage.googleapis.com/v1beta/models/' + M.GEMINI_MODEL_SUKUT + ':generateContent');
+  assert.equal(g[0].init.headers['x-goog-api-key'], 'gk-sinov-chek-1'); assert.equal(g[0].url.includes('gk-sinov'), false);
+  const q = JSON.parse(g[0].init.body).contents[0].parts; assert.equal(q[0].text, M.CHEK_PROMPT); assert.match(q[0].text, /AYNAN/); assert.match(q[0].text, /CHEK_EMAS/); assert.equal(q[1].inline_data.mime_type, 'image/jpeg');
+  assert.equal(holat.hisob.n, 1, "rasm so'rovi limitga 1 ta");
+  // yozuv tizimiga "bu chek matni" izohi bilan beriladi
+  const c = ozSoz(holat); assert.equal(c.length, 1); const u = c[0].tana.messages[0].content; assert.ok(u.startsWith(M.YOZ)); assert.match(u, /Gap: bu chek matni: MAYDA BOZOR/);
+  assert.match(u, /Kategoriyalar: Taksi, Ovqatlanish/);
+});
+test("rasm: OpenAI zaxirasi (o'z model yo'q) manba 'openai'; yozuv tizimi umuman ishlamasa ham chek yozuvi qaytadi (kategoriya/hisob bo'sh)", async () => {
+  const a = await yoz(RASM(), { holat: { gemini: { matn: CHEK1 }, openai: { matn: JSON.stringify([MY({ kategoriya: 'Taksi' })]) } }, env: { ...RENV, MODEL_URL: undefined, OPENAI_API_KEY: 'sk-sinov-yoq' } });
+  assert.equal(a.r.status, 200); assert.equal(a.j.manba, 'openai'); assert.equal(a.j.yozuvlar[0].kategoriya, 'Taksi'); assert.equal(a.j.yozuvlar[0].summa, 25500);
+  const b = await yoz(RASM(), { holat: { gemini: { matn: CHEK1 }, oz: { matn: 'JSON emas' } }, env: { ...RENV, YOZUV_PROVAYDER: 'oz' } });
+  assert.equal(b.j.manba, null); assert.equal(b.j.yozuvlar[0].kategoriya, null); assert.equal(b.j.yozuvlar[0].summa, 25500);
+});
+test("rasm: JAMI topilmasa summa bo'sh + ogohlantirish; sana kelajakda bo'lsa bugungi sana ogohlantirishi", async () => {
+  const m = 'MAYDA BOZOR\nNON 5 000\nSUT 12 500\n20.12.2026 10:00';
+  const { j } = await yoz(RASM(), { holat: { gemini: { matn: m }, oz: rasmOz() }, env: RENV });
+  const y = j.yozuvlar[0]; assert.equal(y.summa, null); assert.equal(y.sana, null); assert.equal(y.vaqt, null);
+  assert.deepEqual(y.ogohlantirish, [M.CHEK_JAMI_OGOH, "Sana chekdan o'qilmadi — bugungi sana qo'yildi"]);
+});
+test("rasm: CHEK_EMAS (Gemini shunday desa yoki raqamsiz matn) 422; bo'sh javob RASM_OQILMADI 422; yozuv tizimi chaqirilmaydi", async () => {
+  for (const mt of ['CHEK_EMAS', '  chek_emas \n', 'Bu manzara rasmi']) {
+    const h = { gemini: { matn: mt }, oz: rasmOz() }; const x = await yoz(RASM(), { holat: h, env: RENV });
+    assert.equal(x.r.status, 422, mt); assert.equal(x.j.xato.kod, 'CHEK_EMAS'); assert.equal(ozSoz(h).length, 0);
+  }
+  const h = { gemini: { matn: '   ' }, oz: rasmOz() }; const x = await yoz(RASM(), { holat: h, env: RENV });
+  assert.equal(x.r.status, 422); assert.equal(x.j.xato.kod, 'RASM_OQILMADI'); assert.equal(ozSoz(h).length, 0);
+});
+test("rasm: hajm — 2 MB gacha o'tadi; undan oshsa RASM_KATTA (413), limit sanalmaydi, Gemini chaqirilmaydi", async () => {
+  const bosh = 4, env = RENV;
+  let x = await yoz(RASM(M.RASM_MAX_BAYT - bosh), { holat: { gemini: { matn: CHEK1 }, oz: rasmOz() }, env }); assert.equal(x.j.ok, true);
+  x = await yoz(RASM(M.RASM_MAX_BAYT - bosh + 1), { holat: { gemini: { matn: CHEK1 }, oz: rasmOz() }, env }); assert.equal(x.r.status, 413); assert.equal(x.j.xato.kod, 'RASM_KATTA');
+  assert.equal(GEM(x.holat).length, 0); assert.equal(x.holat.hisob.n, 0, 'limit sanalmadi');
+  x = await yoz(RASM(M.RASM_MAX_BAYT * 2), { holat: { gemini: { matn: CHEK1 } }, env }); assert.equal(x.j.xato.kod, 'AI_HAJM', 'juda katta tana umumiy chegarada ushlanadi');
+});
+test("rasm: format — faqat image/jpeg|png|webp (mime va fayl boshi mos); boshqasi RASM_FORMAT (400); buzuq base64 AI_KIRISH", async () => {
+  const env = RENV, sinov = async (t) => yoz(t, { holat: { gemini: { matn: CHEK1 }, oz: rasmOz() }, env });
+  for (const mime of ['image/gif', 'application/pdf', 'text/plain', '', undefined, 'audio/webm']) { const x = await sinov(RASM(100, { mime })); assert.equal(x.r.status, 400, String(mime)); assert.equal(x.j.xato.kod, 'RASM_FORMAT', String(mime)); assert.equal(GEM(x.holat).length, 0); }
+  const png = Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), Buffer.alloc(50)]).toString('base64');
+  const webp = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBP'), Buffer.alloc(50)]).toString('base64');
+  assert.equal((await sinov(RASM(0, { rasm: png, mime: 'image/png' }))).j.ok, true);
+  assert.equal((await sinov(RASM(0, { rasm: webp, mime: 'IMAGE/WEBP' }))).j.ok, true);
+  assert.equal((await sinov(RASM(0, { rasm: png, mime: 'image/jpeg' }))).j.xato.kod, 'RASM_FORMAT', 'mime fayl turiga mos emas');
+  for (const rasm of ['', 'abc', '!!!!', 5]) { const x = await sinov(RASM(0, { rasm })); assert.equal(x.r.status, 400); assert.equal(x.j.xato.kod, 'AI_KIRISH'); }
+  const k = await sinov(RASM(100, { kategoriyalar: 'x' })); assert.equal(k.j.xato.kod, 'AI_KIRISH');
+});
+test("rasm: ruxsat va limit `ovoz` bilan bir xil (JWT yo'q 401, ruxsatsiz email 403, limit 429); xizmat xatolari AI_PROVAYDER/NETWORK", async () => {
+  const env = RENV;
+  let x = await yoz(RASM(), { holat: { gemini: { matn: CHEK1 } }, env, jwt: null }); assert.equal(x.r.status, 401); assert.equal(GEM(x.holat).length, 0);
+  x = await yoz(RASM(), { holat: { gemini: { matn: CHEK1 }, email: 'begona@example.invalid' }, env }); assert.equal(x.r.status, 403); assert.equal(x.j.xato.kod, 'AI_RUXSAT'); assert.equal(GEM(x.holat).length, 0); assert.equal(x.holat.hisob.n, 0);
+  x = await yoz(RASM(), { holat: { gemini: { matn: CHEK1 }, limitBoshi: M.KUNLIK_LIMIT + 1 }, env }); assert.equal(x.r.status, 429); assert.equal(x.j.xato.kod, 'AI_LIMIT'); assert.equal(GEM(x.holat).length, 0);
+  x = await yoz(RASM(), { holat: { gemini: { holat: 500 } }, env }); assert.equal(x.r.status, 502); assert.equal(x.j.xato.kod, 'AI_PROVAYDER'); assert.equal(x.j.xato.debug, 'gemini_500');
+  x = await yoz(RASM(), { holat: { gemini: { tarmoq: true } }, env }); assert.equal(x.r.status, 503); assert.equal(x.j.xato.kod, 'NETWORK');
+  x = await yoz(RASM(), { holat: { gemini: { matn: CHEK1 } }, env: YENV }); assert.equal(x.j.xato.kod, 'AI_PROVAYDER', "GEMINI_API_KEY yo'q"); assert.equal(GEM(x.holat).length, 0);
+});
+test("rasm: maxfiylik — kalit, rasm va chek matni javobda/logda yo'q (logda faqat holat kodi)", async () => {
+  const eski = console.error, log = [];
+  console.error = (...a) => { log.push(a.join(' ')); };
+  let x;
+  try { x = await yoz(RASM(), { holat: { gemini: { holat: 500 } }, env: { ...RENV, GEMINI_API_KEY: 'gk-yashirin-chek-9' } }); } finally { console.error = eski; }
+  const matn = JSON.stringify(x.j) + log.join('\n');
+  assert.equal(matn.includes('gk-yashirin'), false); assert.equal(matn.includes(RASM().rasm.slice(0, 40)), false); assert.match(log[0], /^rasm: gemini_500 http=500 mime=image\/jpeg/);
+  const ok = await yoz(RASM(), { holat: { gemini: { matn: CHEK1 }, oz: rasmOz() }, env: RENV });
+  assert.equal(JSON.stringify(ok.j).includes('Chek № 000123'), false, "to'liq chek matni javobda yo'q"); assert.equal(JSON.stringify(ok.j).includes(RENV.GEMINI_API_KEY), false);
+  const kod = readFileSync(join(BU, 'index.ts'), 'utf8').replace(/\/\/[^\n]*/g, '');
+  assert.equal(kod.match(/\bconsole\.\w+/g).length, 1, 'faqat ovozLogla ichida bitta console.error');
 });

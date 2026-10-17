@@ -238,7 +238,7 @@ function ovozLogla(debug: string, holat: number | null, xabar: string, mime: str
 }
 // Gemini ga bitta so'rov (ovoz va rasm uchun umumiy): matn (toza, qator tuzilishi saqlangan) yoki null (bo'sh/bloklangan javob).
 // qayta: 429/500/502/503/504 da bir marta GEMINI_QAYTA.kutishMs dan keyin qayta uriniladi (faqat rasm); info: logga (faqat rasm hajmi va o'lchami)
-interface GeminiSorov { nom: "ovoz" | "rasm"; xizmat: string; prompt: string; mime: string; data: string; token: number; vaqtMs: number; qayta?: boolean; info?: string }
+interface GeminiSorov { nom: "ovoz" | "rasm"; xizmat: string; prompt: string; mime: string; data: string; token: number; vaqtMs: number; qayta?: boolean; info?: string; json?: Record<string, unknown> }
 export const GEMINI_QAYTA = { kutishMs: 1800 };
 const GEMINI_QAYTA_HOLAT = [429, 500, 502, 503, 504];
 async function geminiXom(q: GeminiSorov, muhit: Muhit, fetchFn: FetchFn): Promise<string | null> {
@@ -249,7 +249,7 @@ async function geminiXom(q: GeminiSorov, muhit: Muhit, fetchFn: FetchFn): Promis
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
   const tana = {
     contents: [{ role: "user", parts: [{ text: q.prompt }, { inline_data: { mime_type: q.mime, data: q.data } }] }],
-    generationConfig: { temperature: 0, maxOutputTokens: q.token },
+    generationConfig: { temperature: 0, maxOutputTokens: q.token, ...(q.json ? { responseMimeType: "application/json", responseSchema: q.json } : {}) },
   };
   let javob: Response | null = null;
   for (let urinish = 0; urinish < (q.qayta ? 2 : 1); urinish++) {
@@ -1053,14 +1053,27 @@ async function yozuvIshlov(kirish: Kirish, muhit: Muhit, fetchFn: FetchFn, cors:
 // ---------------------------------------------------------------------
 export const RASM_MAX_BAYT = 2 * 1024 * 1024;                          // rasm asl hajmi (base64 emas); so'rov tanasi chegarasi OVOZ_TANA_MAX bilan bir xil
 export const RASM_MIME = ["image/jpeg", "image/png", "image/webp"];
-export const CHEK_PROMPT = "Bu chek (kvitansiya) rasmi. Chekdagi matnni qatorma-qator AYNAN qaytar. Hech narsa qo'shma, izoh yozma, raqam to'qima, o'qilmagan joyni o'tkazib yubor. Rasmda chek bo'lmasa faqat CHEK_EMAS deb qaytar.";
-const CHEK_TOKEN = 2000;
+// 39-band: Gemini rasmdan TUZILGAN JSON qaytaradi (responseSchema). Tekshiruv va yig'ish serverda (chekTekshir), AI raqam hisoblamaydi.
+export const CHEK_PROMPT = "Bu do'kon cheki (kvitansiya) rasmi. Chekdan ma'lumotni JSON qilib qaytar: dokon (do'kon nomi, masalan Korzinka), sana (YYYY-MM-DD), vaqt (HH:MM), jami (butun so'm), mahsulotlar (har biri: nom va summa, butun so'm), chek_emas (rasmda chek bo'lmasa true). "
+  + "Faqat chekda yozilgan raqamlarni ol, raqam to'qima, topilmagan maydonni null qoldir. Reklama va aksiya matni, kassir ismi, STIR/INN, karta raqami, terminal va bank ma'lumotlari, manzil, telefon OLINMASIN. "
+  + "Mahsulot nomi qisqa va o'zbekcha qatordan olinsin (ruscha tarjima qatori emas). Mahsulot summasi shu mahsulot uchun to'langan summa. "
+  + "jami = to'lanadigan YAKUNIY summa (\"TO'LOV UCHUN\", \"JAMI\", \"ИТОГО\", \"К ОПЛАТЕ\", \"Оплата\", \"To'landi\" kabi qatorlar), QQS/НДС summasi emas. Sana chekda DD/MM/YYYY yoki DD.MM.YYYY bo'lsa ham YYYY-MM-DD qilib yoz.";
+export const CHEK_SXEMA = {
+  type: "OBJECT",
+  properties: {
+    dokon: { type: "STRING", nullable: true }, sana: { type: "STRING", nullable: true }, vaqt: { type: "STRING", nullable: true }, jami: { type: "INTEGER", nullable: true },
+    mahsulotlar: { type: "ARRAY", items: { type: "OBJECT", properties: { nom: { type: "STRING" }, summa: { type: "INTEGER" } }, required: ["nom", "summa"] } },
+    chek_emas: { type: "BOOLEAN" },
+  },
+  required: ["chek_emas", "mahsulotlar"],
+};
+const CHEK_TOKEN = 3000;
 const CHEK_TAYM_AUT_MS = 20000;                                        // Gemini bitta urinishi; 2 urinish + 1,8 s ≈ 42 s, keyin yozuv tizimi (≤ ~45 s): jami Edge Function chegarasidan (150 s) kam
-const CHEK_MATN_MAX = 4000;                                            // Gemini matnidan shuncha belgi ishlatiladi
-const CHEK_MODELGA_MAX = 900;                                          // yozuv tizimiga beriladigan chek matni (model kontekst oynasi kichik)
-const CHEK_ELEMENT_MAX = 12;                                           // izohga ko'pi bilan nechta mahsulot
+const CHEK_MODELGA_MAX = 200;                                          // yozuv tizimiga beriladigan qisqa matn (model kontekst oynasi kichik)
+const CHEK_MAHSULOT_MAX = 100;                                         // JSON dagi mahsulotlardan ko'pi bilan shuncha ishlatiladi
 export const CHEK_SANA_OGOH = "Sana chekdan o'qilmadi — bugungi sana qo'yildi";
 export const CHEK_JAMI_OGOH = "JAMI summa chekdan topilmadi — summani kiriting";
+export const CHEK_YIGINDI_OGOH = "Mahsulotlar yig'indisi jami bilan mos emas, summani tekshiring";
 // rasm boshidagi baytlar (base64 ko'rinishida): fayl turi mimega mos kelishi shart
 const RASM_BOSHI: Record<string, RegExp> = { "image/jpeg": /^\/9j\//, "image/png": /^iVBORw0KGgo/, "image/webp": /^UklGR/ };
 
@@ -1104,7 +1117,6 @@ export function rasmKirishiniTekshir(tana: Record<string, unknown>): { kirish: R
 }
 
 // ---- chek matnidan deterministik o'qish: summa, sana, vaqt, do'kon, mahsulotlar. AI raqam hisoblamaydi/to'qimaydi (22.1). ----
-const SON_TOKEN = /\d{1,3}(?:[  .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
 // "45 000", "45.000", "45,000.50", "45000" -> butun so'm (tiyin yaxlitlanadi). Ming ajratgich: 3 raqamli guruh; oxirgi 1-2 raqamli guruh — tiyin.
 export function chekSummasi(token: string): number | null {
   const t = token.trim();
@@ -1114,30 +1126,6 @@ export function chekSummasi(token: string): number | null {
   if (!/^\d+$/.test(butun)) return null;
   const n = Number(butun) + (m[2] ? Math.round(Number("0." + m[2])) : 0);
   return Number.isSafeInteger(n) && n > 0 && n <= SUMMA_MAX ? n : null;
-}
-function qatordagiSonlar(q: string): string[] { return q.match(SON_TOKEN) || []; }
-const JAMI_USTUN = /(к\s*оплате|to['’ʻ`]?lash\s+uchun|to['’ʻ`]?lov\s+uchun|jami\s+to['’ʻ`]?lov|jami\s+to['’ʻ`]?lanadi|to['’ʻ`]?lanadigan)/i;
-const JAMI_ODDIY = /(^|[^\p{L}])(jami|итого|itogo|всего|total)(?![\p{L}])/iu;
-const JAMI_CHETLASH = /(qqs|ндс|nds|vat|soliq|налог|chegirma|скидк|discount|bonus|бонус|soni|miqdor|кол-?во|количеств|dona|шт\b)/i;
-// CHEKDAGI jami summa (mahsulotlarni qo'shib chiqarilmaydi). Topilmasa null.
-export function chekJami(qatorlar: string[]): number | null {
-  const sondan = (i: number): number | null => {
-    const q = qatorlar[i];
-    const s = qatordagiSonlar(q);
-    if (s.length) return chekSummasi(s[s.length - 1]);
-    const keyingi = qatorlar[i + 1];                                   // "JAMI" alohida qatorda, summa keyingi qatorda
-    if (keyingi && /^[\d\s.,]+(?:so['’ʻ`]?m|сум|uzs)?$/i.test(keyingi.trim())) { const k = qatordagiSonlar(keyingi); return k.length ? chekSummasi(k[k.length - 1]) : null; }
-    return null;
-  };
-  for (const qoida of [JAMI_USTUN, JAMI_ODDIY]) {
-    for (let i = qatorlar.length - 1; i >= 0; i--) {                   // oxirgisidan boshlab: jami chek oxirida
-      const q = qatorlar[i];
-      if (!qoida.test(q) || JAMI_CHETLASH.test(q)) continue;
-      const n = sondan(i);
-      if (n !== null) return n;
-    }
-  }
-  return null;
 }
 function haqiqiySana(y: number, m: number, d: number): string | null {
   if (m < 1 || m > 12 || d < 1 || d > 31 || y < 2000 || y > 2100) return null;
@@ -1164,63 +1152,68 @@ export function chekSanaVaqt(matn: string): { sana: string | null; vaqt: string 
   const v = sana ? (vaqtlar.filter((x) => x.i > sana.i)[0] || vaqtlar[0]) : vaqtlar[0];
   return { sana: sana ? sana.s : null, vaqt: v ? v.v : null, indeks: sana ? sana.i : -1 };
 }
-const DOKON_CHETLASH = /(chek|чек|kassa|касс|\binn\b|инн|stir|тел|tel\b|manzil|адрес|sana|дата|vaqt|время|ккм|kkm|fiskal|фискал|\d{5,})/i;
-const MAHSULOT_CHETLASH = /(jami|итого|itogo|всего|total|qqs|ндс|nds|vat|naqd|наличн|karta|карта|plastik|to['’ʻ`]?lov|оплат|qaytim|сдач|chegirma|скидк|soliq|налог|\binn\b|инн|stir|kassir|кассир|chek|чек|tel\b|тел|sana|дата|vaqt|время|rahmat|спасибо|получено|to['’ʻ`]?landi)/i;
-const OXIRGI_SON = /(\d{1,3}(?:[  .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:so['’ʻ`]?m|сум|uzs|som)?\s*$/i;
-function harfSoni(s: string): number { return (s.match(/\p{L}/gu) || []).length; }
-export function chekDokoni(qatorlar: string[]): string | null {
-  for (const q of qatorlar.slice(0, 6)) {
-    const t = q.replace(/["«»“”*#_=]+/g, "").replace(/\s+/g, " ").trim();
-    if (t.length < 2 || t.length > 40 || harfSoni(t) < 3 || DOKON_CHETLASH.test(t) || MAHSULOT_CHETLASH.test(t) || (t.match(/\d/g) || []).length > harfSoni(t)) continue;
-    return t;
-  }
-  return null;
+function chekButun(x: unknown): number | null {
+  const n = typeof x === "number" ? (Number.isFinite(x) ? Math.round(x) : null) : typeof x === "string" ? chekSummasi(x) : null;
+  return n !== null && n > 0 && n <= SUMMA_MAX ? n : null;
 }
-export function chekMahsulotlari(qatorlar: string[]): string[] {
-  const chiq: string[] = [];
-  for (const q of qatorlar) {
-    if (MAHSULOT_CHETLASH.test(q)) continue;
-    const m = q.match(OXIRGI_SON);
-    if (!m || m.index === undefined) continue;
-    const nom = q.slice(0, m.index).replace(/[\s:=*xх×-]+$/giu, "").replace(/\s+/g, " ").trim();
-    if (harfSoni(nom) < 2 || nom.length > 40) continue;
-    if (chekSummasi(m[1]) === null) continue;
-    chiq.push(nom + " " + m[1].trim());
+export interface ChekMalumot { dokon: string | null; sana: string | null; vaqt: string | null; jami: number | null; mahsulotlar: { nom: string; summa: number }[]; ogoh: string[] }
+// Gemini JSON'ini tekshiradi va tozalaydi (sof funksiya). null = JSON yaroqsiz (RASM_OQILMADI), "chek_emas" = rasmda chek yo'q (CHEK_EMAS).
+// Summa: jami yo'q/≤ 0 bo'lsa null + ogohlantirish; mahsulotlar yig'indisi jami bilan ±1 so'mdan ko'p farq qilsa ogohlantirish (jami o'zgarmaydi).
+// Sana: DD/MM/YYYY, DD.MM.YYYY, YYYY-MM-DD; o'qilmasa yoki kelajakda bo'lsa null + ogohlantirish (ilova bugun va hozirgi vaqtni qo'yadi).
+export function chekTekshir(xom: unknown, bugun: string): ChekMalumot | "chek_emas" | null {
+  if (!oddiyObyektmi(xom)) return null;
+  if (xom.chek_emas === true) return "chek_emas";
+  const dt = qisqaMatn(xom.dokon);
+  const dokon = dt ? dt.slice(0, 40).trim() || null : null;
+  const mahsulotlar: { nom: string; summa: number }[] = [];
+  if (Array.isArray(xom.mahsulotlar)) {
+    for (const m of xom.mahsulotlar.slice(0, CHEK_MAHSULOT_MAX)) {
+      if (!oddiyObyektmi(m)) continue;
+      const nom = (qisqaMatn(m.nom) || "").slice(0, 40).trim(), summa = chekButun(m.summa);
+      if (nom && summa !== null) mahsulotlar.push({ nom, summa });
+    }
   }
-  return chiq;
+  const jami = chekButun(xom.jami);
+  if (jami === null && !mahsulotlar.length && !dokon) return "chek_emas";
+  const sv = typeof xom.sana === "string" ? chekSanaVaqt(xom.sana) : { sana: null as string | null };
+  const sanaYaroqli = !!sv.sana && sv.sana <= bugun;
+  let vaqt: string | null = null;
+  const vm = typeof xom.vaqt === "string" ? xom.vaqt.match(/(?<![\d:])([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?(?![\d:])/) : null;
+  if (sanaYaroqli && vm) vaqt = ("0" + vm[1]).slice(-2) + ":" + vm[2];
+  const ogoh: string[] = [];
+  if (jami === null) ogoh.push(CHEK_JAMI_OGOH);
+  else if (mahsulotlar.length && Math.abs(mahsulotlar.reduce((a, m) => a + m.summa, 0) - jami) > 1) ogoh.push(CHEK_YIGINDI_OGOH);
+  if (!sanaYaroqli) ogoh.push(CHEK_SANA_OGOH);
+  return { dokon, sana: sanaYaroqli ? sv.sana : null, vaqt, jami, mahsulotlar, ogoh };
 }
-// "Do'kon: mahsulot narx, mahsulot narx…" — izoh chegarasidan (IZOH_MAX) oshmaydi, mahsulot o'rtasida kesilmaydi
-export function chekIzohi(dokon: string | null, mahsulotlar: string[]): string {
+function minglik(n: number): string { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+// "Korzinka: Yopgan non 7 800, Tovuq tuxumi 30 490, …" — eng qimmat mahsulotlardan boshlab, izoh chegarasigacha (IZOH_MAX); sig'masa oxirida ", va yana N ta"
+export function chekIzohi(dokon: string | null, mahsulotlar: { nom: string; summa: number }[]): string {
   const bosh = dokon ? dokon + ": " : "";
   if (!mahsulotlar.length) return (dokon || "Chek").slice(0, IZOH_MAX);
-  let s = bosh, n = 0;
-  for (const m of mahsulotlar.slice(0, CHEK_ELEMENT_MAX)) {
-    const yangi = s + (n ? ", " : "") + m;
-    if (yangi.length > IZOH_MAX - 1) break;
-    s = yangi; n++;
+  const t = mahsulotlar.slice().sort((a, b) => b.summa - a.summa).map((m) => m.nom + " " + minglik(m.summa));
+  for (let k = t.length; k >= 1; k--) {
+    const s = bosh + t.slice(0, k).join(", ") + (k < t.length ? ", va yana " + (t.length - k) + " ta" : "");
+    if (s.length <= IZOH_MAX) return s;
   }
-  if (!n) return (bosh + mahsulotlar[0]).slice(0, IZOH_MAX - 1).trim() + "…";
-  return n < mahsulotlar.length ? s + "…" : s;
+  return (bosh + t[0]).slice(0, IZOH_MAX - 20).trim() + "… va yana " + (t.length - 1) + " ta";
 }
-
-// Chek matni + yozuv tizimining javobi -> bitta xarajat yozuvi. `model` — yozuvniTozala natijasi (yoki null).
-export function chekYozuvi(matn: string, model: Yozuv | null, bugun: string): Yozuv & { vaqt: string | null } {
-  const qatorlar = matn.split(/\r?\n/).map((q) => q.replace(/\s+/g, " ").trim()).filter(Boolean);
-  const jami = chekJami(qatorlar);
-  const sv = chekSanaVaqt(matn);
-  const sanaYaroqli = !!sv.sana && sv.sana <= bugun;
-  const ogoh: string[] = (model ? model.ogohlantirish : []).filter((x) => /kategoriya|hisob/.test(x));   // summa/sana haqidagi model gaplari tashlanadi
-  if (jami === null) ogoh.push(CHEK_JAMI_OGOH);
-  if (!sanaYaroqli) ogoh.push(CHEK_SANA_OGOH);
+// Yozuv tizimiga beriladigan QISQA matn (faqat kategoriya/hisob tanlash uchun): "Korzinka do'konidan xarid: Yopgan non, Sut, …"
+export function chekModelMatni(c: ChekMalumot): string {
+  const nomlar = c.mahsulotlar.slice().sort((a, b) => b.summa - a.summa).slice(0, 6).map((m) => m.nom).join(", ");
+  return ("bu chek matni: " + (c.dokon ? c.dokon + " do'konidan xarid" : "do'kondan xarid") + (nomlar ? ": " + nomlar : "")).slice(0, CHEK_MODELGA_MAX);
+}
+// Tekshirilgan chek + yozuv tizimi javobi -> bitta xarajat yozuvi. Summa, sana, vaqt, izoh FAQAT chekdan (AI'dan emas); model faqat kategoriya va hisob beradi.
+export function chekYozuvi(c: ChekMalumot, model: Yozuv | null): Yozuv & { vaqt: string | null } {
+  const ogoh: string[] = (model ? model.ogohlantirish : []).filter((x) => /kategoriya|hisob/.test(x)).concat(c.ogoh);
   return {
-    tur: "xarajat", summa: jami, soni: null, narx: null, kategoriya: model ? model.kategoriya : null,
+    tur: "xarajat", summa: c.jami, soni: null, narx: null, kategoriya: model ? model.kategoriya : null,
     hisob: model ? model.hisob : null, hisob_turi: model ? model.hisob_turi : null, hisob2: null, shaxs: null,
-    sana: sanaYaroqli ? sv.sana : null, vaqt: sanaYaroqli ? sv.vaqt : null,
-    izoh: chekIzohi(chekDokoni(qatorlar), chekMahsulotlari(qatorlar)), ogohlantirish: ogoh,
+    sana: c.sana, vaqt: c.vaqt, izoh: chekIzohi(c.dokon, c.mahsulotlar), ogohlantirish: ogoh,
   };
 }
 
-// Rasm so'rovi: tekshiruv -> limit (rasm ham 1 ta so'rov) -> 1) Gemini matnni o'qiydi -> 2) yozuv tizimi kategoriya/hisob tanlaydi. Rasm faqat shu funksiya ichida xotirada.
+// Rasm so'rovi: tekshiruv -> limit (rasm ham 1 ta so'rov) -> 1) Gemini tuzilgan JSON qaytaradi, server tekshiradi -> 2) yozuv tizimi (qisqa matn bilan) kategoriya/hisob tanlaydi. Rasm faqat shu funksiya ichida xotirada.
 async function rasmIshlov(xom: Record<string, unknown>, muhit: Muhit, fetchFn: FetchFn, jwt: string, anon: string, cors: Record<string, string>): Promise<Response> {
   const t = rasmKirishiniTekshir(xom);
   if ("kod" in t) return xatoJavob(t.kod, t.kod === "RASM_KATTA" ? 413 : 400, cors);
@@ -1228,13 +1221,13 @@ async function rasmIshlov(xom: Record<string, unknown>, muhit: Muhit, fetchFn: F
   if (soni === null) return xatoJavob("AI_LIMIT", 503, cors, "Limitni tekshirib bo'lmadi (007_ai_limit.sql ishga tushirilganmi?).");
   if (soni > KUNLIK_LIMIT) return xatoJavob("AI_LIMIT", 429, cors);
   try {
-    const xomMatn = await geminiXom({ nom: "rasm", xizmat: "Rasm", prompt: CHEK_PROMPT, mime: t.kirish.mime, data: t.kirish.rasm, token: CHEK_TOKEN, vaqtMs: CHEK_TAYM_AUT_MS, qayta: true, info: "rasm=" + Math.round(t.kirish.rasm.length * 3 / 4 / 1024) + "KB " + rasmOlchami(t.kirish.rasm) }, muhit, fetchFn);
+    const xomMatn = await geminiXom({ nom: "rasm", xizmat: "Rasm", prompt: CHEK_PROMPT, mime: t.kirish.mime, data: t.kirish.rasm, token: CHEK_TOKEN, vaqtMs: CHEK_TAYM_AUT_MS, qayta: true, json: CHEK_SXEMA, info: "rasm=" + Math.round(t.kirish.rasm.length * 3 / 4 / 1024) + "KB " + rasmOlchami(t.kirish.rasm) }, muhit, fetchFn);
     if (xomMatn === null) return xatoJavob("RASM_OQILMADI", 422, cors);
-    const matn = xomMatn.slice(0, CHEK_MATN_MAX);
-    if ((/CHEK_EMAS/i.test(matn) && matn.length < 60) || !/\d/.test(matn)) return xatoJavob("CHEK_EMAS", 422, cors);
     const k = t.kirish.yozuv;
-    const modelMatni = matn.replace(/\s+/g, " ").slice(0, CHEK_MODELGA_MAX);
-    const kirish: Kirish = { ...k, savol: "bu chek matni: " + modelMatni };
+    const chek = chekTekshir(jsonAjrat(xomMatn), k.bugun as string);
+    if (chek === null) return xatoJavob("RASM_OQILMADI", 422, cors);
+    if (chek === "chek_emas") return xatoJavob("CHEK_EMAS", 422, cors);
+    const kirish: Kirish = { ...k, savol: chekModelMatni(chek) };
     const n = await yozuvOl(kirish, muhit, fetchFn);
     let model: Yozuv | null = null;
     if (n) {
@@ -1243,7 +1236,7 @@ async function rasmIshlov(xom: Record<string, unknown>, muhit: Muhit, fetchFn: F
       for (const el of n.royxat.slice(0, 20)) { const y = yozuvniTozala(el, ctx); if (y) royxat.push(y); }
       model = royxat.filter((y) => y.tur === "xarajat")[0] || royxat[0] || null;
     }
-    const y = chekYozuvi(matn, model, k.bugun as string);
+    const y = chekYozuvi(chek, model);
     return json({ ok: true, manba: n ? n.manba : null, yozuvlar: [y], chek: true }, 200, cors);
   } catch (e) {
     if (e instanceof ProvayderXatosi) return xatoJavob(e.kod, e.kod === "NETWORK" ? 503 : 502, cors, e.kod === "AI_PROVAYDER" ? e.message : undefined, e.debug);

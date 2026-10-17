@@ -3955,6 +3955,8 @@
 
   // ---- Asosiy sahifa (faqat ko'rinish; hisob-kitoblar Calc dan) ----
   var asosiyOy = Calc.bugun().slice(0, 7);   // "Naqd pul oqimi" va "Kategoriyalar" uchun tanlangan oy (YYYY-MM)
+  var kategoriyaRoyxatOchiq = false;         // "Kategoriyalar" ro'yxati: yopiq (5 ta) yoki to'liq; ilova ichida eslab qolinadi, tur almashsa yopiladi
+  var KATEGORIYA_QISQA = 5;
   var asosiyTur = asosiyTurniOl();           // "Kategoriyalar": xarajat yoki daromad (qurilmada eslab qolinadi)
 
   // Summalar yashirilgan bo'lsa ••••
@@ -4150,10 +4152,22 @@
     son.setAttribute('aria-label', taqsimot.length + ' ta kategoriya');
     nomQism.appendChild(son);
     bosh.appendChild(nomQism);
-    var hammasi = tugma('Hammasi', 'matn-tugma', function () { hisobotniOchish(asosiyOy); });
-    hammasi.id = 'kategoriyalar-hammasi';
-    hammasi.setAttribute('aria-label', 'Kategoriyalar: Hammasi (Hisobot)');
-    bosh.appendChild(hammasi);
+    // Hisobotni ochish havolasi (ilgari "Hammasi" deb atalgan, mantig'i o'sha; joy tejash uchun faqat ikon) va ro'yxatni ochib-yopuvchi "Hammasi" (5 tadan ko'p bo'lsa)
+    var hisobotH = tugma(undefined, 'matn-tugma ro-tugma', function () { hisobotniOchish(asosiyOy); });
+    hisobotH.appendChild(Ikonlar.chiz('chart-pie', 20));
+    hisobotH.id = 'kategoriyalar-hisobot';
+    hisobotH.setAttribute('aria-label', 'Kategoriyalar: Hisobotni ochish');
+    bosh.appendChild(hisobotH);
+    if (taqsimot.length > KATEGORIYA_QISQA) {
+      var och = kategoriyaRoyxatOchiq;
+      var hammasi = tugma(undefined, 'matn-tugma ro-tugma', function () { kategoriyaRoyxatOchiq = !och; asosiyniQayta(); });
+      hammasi.id = 'kategoriyalar-hammasi';
+      hammasi.setAttribute('aria-expanded', String(och));
+      hammasi.setAttribute('aria-label', och ? 'Kategoriyalar ro\'yxatini yig\'ish' : 'Barcha kategoriyalarni ko\'rsatish');
+      hammasi.appendChild(el('span', och ? 'Yig\'ish' : 'Hammasi'));
+      hammasi.appendChild(Ikonlar.chiz(och ? 'chevron-up' : 'chevron-down', 16));
+      bosh.appendChild(hammasi);
+    }
     k.appendChild(bosh);
 
     // Xarajat / Daromadlar: tugmaga o'xshash (tanlangani asosiy rangda to'ldirilgan); tanlov qurilmada eslab qolinadi
@@ -4161,7 +4175,7 @@
     turlar.setAttribute('role', 'group');
     turlar.setAttribute('aria-label', 'Kategoriya turi');
     [['xarajat', 'Xarajat'], ['daromad', 'Daromadlar']].forEach(function (t) {
-      var b = tugma(t[1], undefined, function () { asosiyTur = t[0]; asosiyTurniSaqla(t[0]); asosiyniQayta(); });
+      var b = tugma(t[1], undefined, function () { asosiyTur = t[0]; kategoriyaRoyxatOchiq = false; asosiyTurniSaqla(t[0]); asosiyniQayta(); });
       b.setAttribute('aria-pressed', String(asosiyTur === t[0]));
       b.setAttribute('data-turi', t[0]);
       turlar.appendChild(b);
@@ -4177,7 +4191,7 @@
     k.appendChild(Diagramma.dona({
       taqsimot: taqsimot, jami: xarajat ? h.xarajat : h.daromad, kategoriya: kategoriyaOl, turNomi: xarajat ? 'Xarajatlar' : 'Daromadlar', markazNom: davr.nom, yashirin: malumot.balansYashirin,
       markazMatn: OY_NOMLARI_UI[parseInt(asosiyOy.slice(5, 7), 10) - 1] + ' oyi uchun ' + (xarajat ? 'xarajatlar' : 'daromadlar'),
-      yonTugmalari: yon,
+      yonTugmalari: yon, royxatSoni: kategoriyaRoyxatOchiq ? 0 : KATEGORIYA_QISQA,
       bosilganda: function (id) { yozuvlarniOchish({ tur: asosiyTur, kategoriya: id, dan: davr.dan, gacha: davr.gacha, hisob: '' }); }
     }));
     return k;

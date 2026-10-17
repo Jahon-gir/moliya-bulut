@@ -31,7 +31,10 @@ async function senariy(brauzer, tema) {
   await p.reload(); await p.waitForFunction(() => document.querySelector('.kategoriyalar-karta .dona-svg'));
   const karta = p.locator('.kategoriyalar-karta');
   teng(await karta.locator('circle.dona-tilim').count(), 18, 'bo\'laklar soni 18');
-  teng(await karta.locator('.dona-qator').count(), 18, 'ro\'yxat qatorlari 18');
+  teng(await karta.locator('.dona-qator').count(), 5, 'yopiq ro\'yxatda 5 ta qator');
+  teng(await karta.locator('#kategoriyalar-hammasi').innerText(), 'Hammasi', '"Hammasi" tugmasi'); teng(await karta.locator('#kategoriyalar-hammasi svg').count(), 1, 'chevron');
+  teng(await karta.locator('#kategoriyalar-hammasi').evaluate((e) => e.getBoundingClientRect().height >= 44), true, 'tugma kamida 44 px');
+  teng(/Hammasini ko'rish/.test(await karta.textContent()), false, '"Hammasini ko\'rish" yo\'q');
   teng(await karta.locator('#kategoriya-soni').textContent(), '18', 'sarlavhadagi son belgisi');
   teng(/Boshqalar|bosib oching/.test(await karta.textContent()), false, '"Boshqalar" yo\'q');
   teng(await p.evaluate(() => document.documentElement.scrollWidth <= 360), true, 'gorizontal aylanish yo\'q');
@@ -49,7 +52,7 @@ async function senariy(brauzer, tema) {
   const tegish = g.x.slice(-6).map((e, i, a) => (i ? +(e.o - (a[i - 1].o + a[i - 1].d)).toFixed(3) : null)).slice(1);
   teng(tegish.every((v) => Math.abs(v - cap) < 0.01), true, 'kichik bo\'laklar tegib turadi (yumaloq uchlar bir-biriga o\'tadi): ' + tegish.join());
   const kattaOra = +(g.x[1].o - (g.x[0].o + g.x[0].d)).toFixed(3);
-  teng(kattaOra > cap + 0.5, true, 'katta bo\'laklar orasida ochiq joy bor: ' + kattaOra);
+  teng(kattaOra > cap + 0.3 && kattaOra <= cap + 0.6 + 0.01, true, 'katta bo\'laklar orasida ochiq joy bor: ' + kattaOra);
   teng(/^\d+(,\d+)? mln so'm$/.test(g.m2), true, 'markaz jami: ' + g.m2);
   teng(/^\d+,\d%$/.test(g.foiz), true, 'foiz bir o\'nli kasr: ' + g.foiz); teng(/so'm$/.test(g.qiymat), true, 'summa "so\'m" bilan: ' + g.qiymat);
   teng(g.yon[0].w >= 44 && g.yon[0].h >= 44 && g.yon[0].svg && g.yon[0].vis === 'visible', true, 'oldingi oy tugmasi (chevron, 44 px)');
@@ -58,9 +61,18 @@ async function senariy(brauzer, tema) {
   const sigadi = await p.evaluate(() => [...document.querySelectorAll('.dona-markaz-1,.dona-markaz-2')].every((t) => { const b = t.getBBox(); return b.width <= 232; }));
   teng(sigadi, true, 'markaz matni halqa ichiga sig\'adi');
   // ro'yxat tartibi: kattadan kichikka
+  await karta.locator('#kategoriyalar-hammasi').click();
+  teng(await karta.locator('.dona-qator').count(), 18, '"Hammasi" bosilsa 18 ta'); teng(await karta.locator('circle.dona-tilim').count(), 18, 'diagramma o\'zgarmaydi');
+  teng(await karta.locator('#kategoriyalar-hammasi').innerText(), 'Yig\'ish', '"Yig\'ish"');
+  await karta.locator('[data-turi="daromad"]').click(); await karta.locator('[data-turi="xarajat"]').click();
+  teng(await karta.locator('.dona-qator').count(), 5, 'tur almashsa yopiladi');
+  await karta.locator('#kategoriyalar-hammasi').click(); await karta.locator('.yon-chap').click(); await karta.locator('.yon-ong').click();
+  teng(await karta.locator('.dona-qator').count(), 18, 'oy almashsa holat saqlanadi');
   const summalar = await p.$$eval('.kategoriyalar-karta .dona-qator', (q) => q.map((b) => +b.getAttribute('data-summa')));
   teng(summalar.every((v, i) => !i || summalar[i - 1] >= v), true, 'ro\'yxat kattadan kichikka');
-  await p.mouse.move(0, 0); await karta.locator('.bolim-bosh').evaluate((e) => e.scrollIntoView()); await p.screenshot({ path: path.join(RASMLAR, tema + '-1-asosiy.png') });
+  await p.mouse.move(0, 0); await karta.evaluate((e) => e.scrollIntoView()); await p.evaluate(() => window.scrollBy(0, -70)); await p.screenshot({ path: path.join(RASMLAR, tema + '-1-asosiy.png') });
+  await karta.locator('#kategoriyalar-hammasi').click();
+  teng(await karta.locator('.dona-qator').count(), 5, '"Yig\'ish" bosilsa 5 ta');
   // oldingi oy tugmasi: oy almashadi (ma'lumot yo'q — bo'sh halqa)
   await p.click('.kategoriyalar-karta .yon-chap');
   teng(await karta.locator('circle.dona-bosh-halqa').count(), 1, 'oldingi oyda bo\'sh halqa'); teng(await karta.locator('.dona-markaz-2').textContent(), 'Ma\'lumot yo\'q', 'Ma\'lumot yo\'q');

@@ -438,6 +438,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 }
 .sheet-bosh { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .sheet-bosh h2 { margin: 0; flex: 1; font-size: 20px; }
+.ro-tugma { display: inline-flex; align-items: center; gap: 4px; }
 .matn-tugma { min-height: 44px; padding: 0 8px; font: inherit; font-weight: 600; color: var(--asosiy); background: none; border: 0; cursor: pointer; }
 .filtr-tarmoq { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .filtr-katak {

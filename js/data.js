@@ -4,7 +4,7 @@
 
   var DB_NOMI = 'moliya';
   var DB_VERSIYASI = 1;      // IndexedDB tuzilishi (to'plamlar ro'yxati)
-  var SXEMA_VERSIYASI = 8;   // ma'lumot tuzilishi: 8 — yozuvga ixtiyoriy `bog_id` (o'tkazma komissiyasi o'tkazmaga bog'lanadi); 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`; 7 — mahalliy ID lar UUID, har qatorda `updated_at` va `deleted` (mantiqiy o'chirish); 6 — sozlamalarda `tema`; 5 — kategoriyada `belgi`, hisobda `tur`, `belgi`, `rang`, `oxirgi4`
+  var SXEMA_VERSIYASI = 9;   // ma'lumot tuzilishi: 9 — yozuvga ixtiyoriy `qarz_bog_id` (qarz komissiyasi qarzga bog'lanadi); 8 — yozuvga ixtiyoriy `bog_id` (o'tkazma komissiyasi o'tkazmaga bog'lanadi); 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`; 7 — mahalliy ID lar UUID, har qatorda `updated_at` va `deleted` (mantiqiy o'chirish); 6 — sozlamalarda `tema`; 5 — kategoriyada `belgi`, hisobda `tur`, `belgi`, `rang`, `oxirgi4`
   // To'plamlar (TZ 7-band). Byudjetning kaliti kategoriya_id, qolganlariniki id.
   var TOPLAMLAR = {
     hisoblar: 'id',
@@ -206,6 +206,91 @@
       tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
       var hozir = new Date().toISOString();
       royxat.forEach(function (y) { qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: false }), y, hozir); });
+    });
+  }
+
+  // ---- Qarz + komissiya (TZ-sinxronlash.md 42-band) ----
+  // Qarz summasi = qaytariladigan summa; komissiya — qarzga `qarz_bog_id` bilan bog'langan oddiy xarajat yozuvi ("Komissiya" kategoriyasi, nom bo'yicha
+  // topiladi, bo'lmasa yaratiladi). Qarz, komissiya va (kerak bo'lsa) kategoriya BITTA tranzaksiyada; navbatga avval qarz, keyin komissiya.
+  function qarzniYoz(tx, qiymat, mavjud, hozir) {
+    var q = Object.assign({}, qiymat);
+    if (mavjud && mavjud.eski_id !== undefined && q.eski_id === undefined) q.eski_id = mavjud.eski_id;
+    q.deleted = q.deleted === true;
+    q.updated_at = hozir;
+    q.tolovlar = Calc.tolovlarniBirlashtir(mavjud && mavjud.tolovlar, q.tolovlar, hozir, yangiId);
+    tx.objectStore('qarzlar').put(q);
+    navbatgaYoz(tx, 'qarzlar', q.id, hozir);
+    return q;
+  }
+  // qarz — to'liq qarz obyekti (bo'lmasa id beriladi); kom — null (komissiya yo'q: mavjud komissiya mantiqiy o'chadi) yoki { summa, izoh }.
+  // Komissiya qarzning sana, vaqt va hisobi bilan yoziladi. Natija: { qarz, komissiya|null, kategoriya|null (yangi yaratilgan) }
+  function qarzniKomissiyaBilanSaqlash(qarz, kom) {
+    return new Promise(function (resolve, reject) {
+      var natija = { qarz: null, komissiya: null, kategoriya: null };
+      var tx = db.transaction(['qarzlar', 'yozuvlar', 'kategoriyalar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      var yz = tx.objectStore('yozuvlar'), hozir = new Date().toISOString();
+      var q = Object.assign({}, qarz);
+      if (!q.id) q.id = yangiId();
+      tx.objectStore('qarzlar').get(q.id).onsuccess = function (e) {
+        natija.qarz = qarzniYoz(tx, q, e.target.result, hozir);
+        yz.getAll().onsuccess = function (e2) {
+          var bolalar = e2.target.result.filter(function (y) { return y.qarz_bog_id === q.id && y.tur === 'xarajat'; });
+          var tirik = bolalar.filter(function (y) { return y.deleted !== true; }), ochirilgan = bolalar.filter(function (y) { return y.deleted === true; });
+          var bola = kom ? (tirik[0] || ochirilgan[0]) : null;   // mavjud komissiya yozuvi qayta ishlatiladi
+          tirik.forEach(function (y) { if (y !== bola) qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: true }), y, hozir); });
+          if (!kom) return;
+          tx.objectStore('kategoriyalar').getAll().onsuccess = function (e3) {
+            var kat = Calc.komissiyaKategoriyasiniTop(e3.target.result, e2.target.result);
+            if (!kat) {
+              kat = qatorniYoz(tx, 'kategoriyalar', { id: yangiId(), yaratilgan: hozir, nom: Calc.KOMISSIYA.nom, tur: 'xarajat', rang: Calc.KOMISSIYA.rang, belgi: Calc.KOMISSIYA.belgi, arxivlangan: false }, null, hozir);
+              natija.kategoriya = kat;
+            }
+            natija.komissiya = qatorniYoz(tx, 'yozuvlar', {
+              id: bola ? bola.id : yangiId(), yaratilgan: bola && bola.yaratilgan ? bola.yaratilgan : hozir,
+              tur: 'xarajat', summa: kom.summa, sana: q.sana, vaqt: q.vaqt || '00:00', hisob_id: q.hisob_id, kategoriya_id: kat.id, izoh: kom.izoh || '', qarz_bog_id: q.id
+            }, bola, hozir);
+          };
+        };
+      };
+    });
+  }
+  // Qarzni va unga bog'langan komissiyani mantiqiy o'chiradi (bitta tranzaksiya). Natija: { qarz (avvalgi holati) | null, komissiyalar: [avvalgi holati] } — "Bekor qilish" uchun
+  function qarzniKomissiyasiBilanOchirish(id) {
+    return new Promise(function (resolve, reject) {
+      var natija = { qarz: null, komissiyalar: [] };
+      var tx = db.transaction(['qarzlar', 'yozuvlar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      var hozir = new Date().toISOString();
+      tx.objectStore('qarzlar').get(id).onsuccess = function (e) {
+        var x = e.target.result;
+        if (!x) return;
+        if (x.deleted !== true) { natija.qarz = x; tx.objectStore('qarzlar').put(Object.assign({}, x, { deleted: true, updated_at: hozir })); navbatgaYoz(tx, 'qarzlar', id, hozir); }
+        tx.objectStore('yozuvlar').getAll().onsuccess = function (e2) {
+          e2.target.result.filter(function (y) { return y.qarz_bog_id === id && y.tur === 'xarajat' && y.deleted !== true; }).forEach(function (y) {
+            natija.komissiyalar.push(y);
+            qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: true }), y, hozir);
+          });
+        };
+      };
+    });
+  }
+  // "Bekor qilish": o'chirilgan qarz va komissiyasini birga qaytaradi (bitta tranzaksiya, qarz birinchi)
+  function qarzniKomissiyasiBilanQaytarish(qarz, komissiyalar) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['qarzlar', 'yozuvlar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      var hozir = new Date().toISOString();
+      tx.objectStore('qarzlar').get(qarz.id).onsuccess = function (e) {
+        qarzniYoz(tx, Object.assign({}, qarz, { deleted: false }), e.target.result, hozir);
+        (komissiyalar || []).forEach(function (y) { qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: false }), y, hozir); });
+      };
     });
   }
 
@@ -801,7 +886,7 @@
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
-    otkazmaniSaqlash: otkazmaniSaqlash, kategoriyalarniBirlashtirish: kategoriyalarniBirlashtirish, yozuvniKomissiyasiBilanOchirish: yozuvniKomissiyasiBilanOchirish, yozuvlarniQaytarish: yozuvlarniQaytarish,
+    otkazmaniSaqlash: otkazmaniSaqlash, qarzniKomissiyaBilanSaqlash: qarzniKomissiyaBilanSaqlash, qarzniKomissiyasiBilanOchirish: qarzniKomissiyasiBilanOchirish, qarzniKomissiyasiBilanQaytarish: qarzniKomissiyasiBilanQaytarish, kategoriyalarniBirlashtirish: kategoriyalarniBirlashtirish, yozuvniKomissiyasiBilanOchirish: yozuvniKomissiyasiBilanOchirish, yozuvlarniQaytarish: yozuvlarniQaytarish,
     ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, navbatgaQoshish: navbatgaQoshish, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
     tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
     hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI,

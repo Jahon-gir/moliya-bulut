@@ -74,6 +74,8 @@ var Yuklash = (function () {
           else if (!bor('hisoblar', x.hisob_id)) xato(j, i, x, 'hisobga havola uzilgan');
           else if (x.bog_id !== undefined && x.bog_id !== null && (!UUID.test(String(x.bog_id)) || x.bog_id === x.id)) xato(j, i, x, 'bog\'langan yozuv belgisi noto\'g\'ri');
           else if (x.bog_id && !bor('yozuvlar', x.bog_id)) xato(j, i, x, 'bog\'langan o\'tkazmaga havola uzilgan');
+          else if (x.qarz_bog_id !== undefined && x.qarz_bog_id !== null && !UUID.test(String(x.qarz_bog_id))) xato(j, i, x, 'bog\'langan qarz belgisi noto\'g\'ri');
+          else if (x.qarz_bog_id && !bor('qarzlar', x.qarz_bog_id)) xato(j, i, x, 'bog\'langan qarzga havola uzilgan');
           else if (x.tur === 'otkazma') {
             if (!x.qabul_hisob_id || x.kategoriya_id !== null || x.qabul_hisob_id === x.hisob_id) xato(j, i, x, 'o\'tkazma tuzilmasi noto\'g\'ri');
             else if (!bor('hisoblar', x.qabul_hisob_id)) xato(j, i, x, 'qabul qiluvchi hisobga havola uzilgan');
@@ -224,7 +226,7 @@ var Yuklash = (function () {
           if (opts.progress) opts.progress(0, jamiSoni, JADVALLAR[0]);
           return JADVALLAR.reduce(function (p, j) {
             return p.then(function () {
-              return bolaklash(r[j], BOLAK).reduce(function (q, bolak) {
+              return bolaklash(j === 'yozuvlar' ? r[j].filter(function (x) { return !x.qarz_bog_id; }) : r[j], BOLAK).reduce(function (q, bolak) {
                 return q.then(function () {
                   return c.from(j).upsert(bolak, { onConflict: 'id' }).then(function (res) {
                     if (res.error && j === 'sozlamalar' && xatoKodi(res.error, res.status) === 'PG_42501') sozlamaRuxsatsiz = true;   // Sozlamalar qatori: jim e'tiborsiz (TZ-sinxronlash.md 20.2)
@@ -235,7 +237,18 @@ var Yuklash = (function () {
                 });
               }, Promise.resolve());
             });
-          }, Promise.resolve()).then(function () { return serverSoni(c); }).then(function (server) {
+          }, Promise.resolve()).then(function () {
+            // qarz komissiyasi yozuvlari qarzlardan KEYIN yuboriladi (42-band)
+            return bolaklash(r.yozuvlar.filter(function (x) { return x.qarz_bog_id; }), BOLAK).reduce(function (q, bolak) {
+              return q.then(function () {
+                return c.from('yozuvlar').upsert(bolak, { onConflict: 'id' }).then(function (res) {
+                  if (res.error) tashla(res.error, 'yozuvlar', res.status);
+                  bajarildi += bolak.length;
+                  if (opts.progress) opts.progress(bajarildi, jamiSoni, 'yozuvlar');
+                }, function (e) { tashla(e, 'yozuvlar'); });
+              });
+            }, Promise.resolve());
+          }).then(function () { return serverSoni(c); }).then(function (server) {
             var jadvallar = JADVALLAR.map(function (j) { return { jadval: j, nom: NOMLAR[j], mahalliy: mahalliy[j], server: server[j], mos: mahalliy[j] === server[j] || (j === 'sozlamalar' && sozlamaRuxsatsiz) }; });
             var farq = jadvallar.filter(function (x) { return !x.mos; });
             if (farq.length) return tugat({ ok: false, tur: 'mos-emas', jadvallar: jadvallar, xato: 'Yuklash tugadi, lekin qatorlar soni mos kelmadi: ' + farq.map(function (x) { return x.nom + ' ' + x.server + '/' + x.mahalliy; }).join(', ') + '. Qayta bosib ko\'ring.' });

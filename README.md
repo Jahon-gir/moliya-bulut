@@ -28,12 +28,13 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 | `js/yordamchi*.js`, `js/chat-sof.js`, `js/stat-sof.js`, `js/stat.js`, `js/gap-sof.js`, `js/gap.js` | AI yordamchi (chat, kartalar) va "Gap bilan qo'shish" (sof mantiq va ekran; `TZ-sinxronlash.md` 24–29, 33 va 34-bandlar) |
 | `js/vendor/` | Ichki kutubxonalar (`@supabase/auth-js`, `@supabase/postgrest-js`, MIT); CDN yo'q |
 | `js/ikonlar.js` | Kategoriya ikonlari: [Tabler Icons](https://tabler.io/icons) (MIT litsenziya, © Paweł Kuna) dan faqat kerakli outline SVG yo'llari; internet kerak emas |
-| `supabase/` | Serverdagi baza: SQL fayllar (001–010), testlar, `README.md` (qadamma-qadam) |
+| `supabase/` | Serverdagi baza: SQL fayllar (001–012), testlar, `README.md` (qadamma-qadam) |
 | `maxfiylik.html` | Maxfiylik va foydalanish shartlari (alohida ochiq sahifa) |
 | `tests.html` | Avtomatik birlik testlari (brauzerda). Faqat tegishlilari: `tests.html?faqat=komissiya` (nomida shu so'z bor testlar) |
 | `tools/gap-brauzer-sinovi.js` | "Gap bilan qo'shish" brauzer sinovi: haqiqiy ilova, soxta server javobi, 360 px yorug'/qorong'i (`python3 -m http.server 8000`, so'ng `node tools/gap-brauzer-sinovi.js`; Playwright kerak) |
 | `tools/komissiya-brauzer-sinovi.js` | O'tkazma komissiyasi brauzer sinovi: haqiqiy ilova va IndexedDB, uydirma ma'lumot, 360 px yorug'/qorong'i (`python3 -m http.server 8000`, so'ng `node tools/komissiya-brauzer-sinovi.js`) |
 | `tools/kategoriya-birlashtirish-brauzer-sinovi.js` | Kategoriyalarni birlashtirish brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/kategoriya-birlashtirish-brauzer-sinovi.js`) |
+| `tools/qarz-komissiya-brauzer-sinovi.js` | Qarz komissiyasi brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/qarz-komissiya-brauzer-sinovi.js`) |
 
 ## Ma'lum cheklovlar
 

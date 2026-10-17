@@ -1503,3 +1503,9 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 .birl-matn { margin: 8px 0 4px; }
 .birl-ogoh { margin: 0 0 12px; font-weight: 700; color: var(--xarajat); }
 .birl-ok { width: 100%; min-height: 48px; margin: 4px 0 8px; }
+
+/* 0.45.0: qarz komissiyasi (TZ-sinxronlash.md 42-band) */
+.kom-juft { display: flex; gap: 10px; }
+.kom-juft > .maydon { flex: 1 1 0; min-width: 0; }
+.juft-ikki .kom-juft-kiritish, .kom-juft .kom-juft-kiritish { font-size: 18px; }
+.kom-juft input { min-width: 0; }

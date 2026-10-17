@@ -342,27 +342,45 @@
     return Math.max(minimal === undefined ? 2 : minimal, Math.min(balandlik, qiymat / eng * balandlik));
   }
 
-  // ---- Doira: eng katta kategoriyalar alohida, qolganlari "Boshqalar" ----
-  var DONA_ENG_KATTA = 5, DONA_KICHIK_FOIZ = 3;
-  // taqsimot — kattasidan kichigiga [{ kategoriya_id, summa, foiz }]. Eng katta `soni` (5) ta kategoriya alohida tilim; qolganlari va jami
-  // summaning 3% idan kichik kategoriyalar bitta "Boshqalar" tilimiga birlashadi: summa — yig'indi, foiz — kategoriyalar foizlari yig'indisi
-  // (shunda ro'yxat va diagramma foizlari mos, jami 100 qoladi). Birlashadigan kategoriya bittagina bo'lsa, birlashtirish ma'nosiz,
-  // u o'z tilimida qoladi. Faqat ko'rinish guruhlanadi: summalar va foizlar o'zgarmaydi.
-  // Natija: { tilimlar, boshqalar | null, dum: [birlashganlar] }
-  function donaGuruhlash(taqsimot, soni) {
-    soni = soni || DONA_ENG_KATTA;
-    var jami = taqsimot.reduce(function (a, x) { return a + x.summa; }, 0), asosiy = [], dum = [];
-    taqsimot.forEach(function (x, i) {
-      if (i < soni && x.summa * 100 >= DONA_KICHIK_FOIZ * jami) asosiy.push(x); else dum.push(x);
-    });
-    if (dum.length < 2) return { tilimlar: taqsimot.slice(), boshqalar: null, dum: [] };
-    var guruh = {
-      kategoriya_id: 'boshqalar', soni: dum.length,
-      summa: dum.reduce(function (a, x) { return a + x.summa; }, 0), foiz: dum.reduce(function (a, x) { return a + x.foiz; }, 0),
-      idlar: dum.map(function (x) { return x.kategoriya_id; })
+  // ---- Doira (TZ-sinxronlash.md 43-band): HAMMA kategoriya o'z bo'lagida, "Boshqalar" yo'q ----
+  // Bo'lak o'lchami haqiqiy foizga to'liq mutanosib EMAS: kichik kategoriyalar ham ko'rinishi uchun har bo'lakka kamida m (3,6%) joy beriladi.
+  // k ni bisection bilan shunday topamiz: yig'indi max(m, p_i * k) = 100. Haqiqiy foiz va summa ro'yxatda.
+  var DONA_MIN = 3.6, DONA_OCHIQ_ENG = 3, DONA_OCHIQ_KOEF = 0.35, DONA_R = 128, DONA_QALINLIK = 20;
+  var DONA_CAP = DONA_QALINLIK / (2 * Math.PI * DONA_R) * 100;   // yumaloq uchining halqa foizidagi uzunligi (≈2,49)
+  // taqsimot — [{ kategoriya_id, summa, foiz }] kattasidan kichigiga. Summasi 0 yoki manfiylar chiqarilmaydi.
+  // Natija: { m, k, bolaklar: [{ kategoriya_id, summa, p (haqiqiy foiz), x (halqadagi ulush), g (ochiq joy), d (chiziq uzunligi), bosh }] }
+  // d va bosh — pathLength=100 aylanasida stroke-dasharray / stroke-dashoffset uchun.
+  function donaBolaklari(taqsimot) {
+    var royxat = taqsimot.filter(function (x) { return x.summa > 0; });
+    var jami = royxat.reduce(function (a, x) { return a + x.summa; }, 0), n = royxat.length;
+    if (!n || !jami) return { m: DONA_MIN, k: 0, bolaklar: [] };
+    if (n === 1) return { m: DONA_MIN, k: 1, bolaklar: [{ kategoriya_id: royxat[0].kategoriya_id, summa: royxat[0].summa, p: 100, x: 100, g: 0, d: 100, bosh: 0 }] };
+    var m = DONA_MIN, p = royxat.map(function (x) { return x.summa / jami * 100; }), k = 1, hamma = false;
+    if (n * m > 100) { m = 100 / n; hamma = true; }   // N > 27: hamma bo'lak teng, ochiq joysiz
+    if (!hamma) {
+      var lo = 0, hi = 1, i, f;
+      for (i = 0; i < 60; i++) {
+        k = (lo + hi) / 2;
+        f = p.reduce(function (a, q) { return a + Math.max(m, q * k); }, 0);
+        if (f > 100) hi = k; else lo = k;
+      }
+      k = (lo + hi) / 2;
+    }
+    var pos = 0;
+    return {
+      m: m, k: k,
+      bolaklar: royxat.map(function (x, j) {
+        var u = hamma ? m : Math.max(m, p[j] * k);
+        var g = hamma ? 0 : Math.min(DONA_OCHIQ_ENG, Math.max(0, (u - m) * DONA_OCHIQ_KOEF));
+        var r = { kategoriya_id: x.kategoriya_id, summa: x.summa, p: p[j], x: u, g: g, d: Math.max(0.01, u - g - DONA_CAP), bosh: pos + g / 2 + DONA_CAP / 2 };
+        pos += u;
+        return r;
+      })
     };
-    return { tilimlar: asosiy.concat([guruh]), boshqalar: guruh, dum: dum };
   }
+
+  // Haqiqiy foiz, bir o'nli kasr, vergul bilan: 12,5
+  function foizMatn(p) { return (Math.round(p * 10) / 10).toFixed(1).replace('.', ','); }
 
   // ---- Byudjet (TZ F7): joriy kalendar oyi xarajatlari bo'yicha oylik chegaralar ----
   var BYUDJET_OGOHLANTIRISH = 80;   // foiz: shundan oshsa sariq, 100 dan oshsa qizil
@@ -1689,7 +1707,7 @@
     HISOB_TURLARI: HISOB_TURLARI, HISOB_TURI_NOMI: HISOB_TURI_NOMI, HISOB_RANGLARI: HISOB_RANGLARI, HISOB_BELGISI: HISOB_BELGISI, belgiTaxmin: belgiTaxmin, hisobTuriTaxmin: hisobTuriTaxmin,
     hisobniYangilash: hisobniYangilash, kategoriyaniYangilash: kategoriyaniYangilash, hisobBelgisiOl: hisobBelgisiOl, hisobRangiOl: hisobRangiOl, oxirgi4Tekshir: oxirgi4Tekshir,
     hisobMaskasi: hisobMaskasi, hisoblarniSuz: hisoblarniSuz, standartHolati: standartHolati, oyKochir: oyKochir,
-    qisqaBelgi: qisqaBelgi, haftaKuni: haftaKuni, kunBelgisi: kunBelgisi, donaGuruhlash: donaGuruhlash, DONA_ENG_KATTA: DONA_ENG_KATTA, DONA_KICHIK_FOIZ: DONA_KICHIK_FOIZ, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
+    qisqaBelgi: qisqaBelgi, haftaKuni: haftaKuni, kunBelgisi: kunBelgisi, donaBolaklari: donaBolaklari, foizMatn: foizMatn, DONA_MIN: DONA_MIN, DONA_CAP: DONA_CAP, byudjetHolati: byudjetHolati, byudjetHisobi: byudjetHisobi,
     BYUDJET_OGOHLANTIRISH: BYUDJET_OGOHLANTIRISH, OY_QISQA: OY_QISQA, HAFTA_KUNI_QISQA: HAFTA_KUNI_QISQA, qisqaSum: qisqaSum, chiroyliTiklar: chiroyliTiklar,
     diagrammaVaqt: diagrammaVaqt, tilimBurchaklari: tilimBurchaklari, yoyYoli: yoyYoli, ustunBalandligi: ustunBalandligi,
     hozir: hozir, kelajakmi: kelajakmi, vaqtTekshir: vaqtTekshir, yozuvVaqti: yozuvVaqti,

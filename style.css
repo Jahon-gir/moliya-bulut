@@ -335,10 +335,6 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .dona-quti.faol .dona-tilim:not(.vurgulangan) { opacity: .5; }
 .dona-tilim.vurgulangan { filter: brightness(1.06); }
 .dona-markaz-1, .dona-markaz-2 { pointer-events: none; }
-.dona-markaz-1 { fill: var(--xira); font-size: 12px; }
-.dona-markaz-2 { fill: var(--matn); font-size: 17px; font-weight: 800; }
-.dona-markaz-1.kichik { font-size: 10.5px; }
-.dona-markaz-2.kichik { font-size: 13px; }
 .dona-royxat { list-style: none; margin: 0; padding: 0; }
 .dona-qator {
   display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; width: 100%; min-height: 48px; padding: 6px 2px;
@@ -391,12 +387,6 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .g-m-kalit { flex: none; width: 12px; height: 3px; border-radius: 2px; }
 .g-m-nom { color: var(--xira); }
 
-/* "Boshqalar" tilimi va guruhlangan ro'yxat */
-.dona-boshqalar { fill: none; }
-.dona-boshqalar-kalit { background: var(--g-boshqa); }
-.dona-guruh .dona-qator { font-weight: 700; }
-.dona-ichki .dona-qator { padding-left: 22px; }
-.dona-ichki .dona-nom { font-size: 14px; font-weight: 500; }
 .guruh-izohi { margin: 4px 0 0; }
 
 /* 7-bosqich: byudjet */
@@ -569,7 +559,6 @@ html[data-tema="qorongi"] .tanlov-qator.birinchi { background: rgba(43, 181, 143
 .katak-qosh { background: var(--karta); color: var(--matn); border: 2px dashed var(--asosiy); }
 .katak-qosh .katak-nom { font-weight: 700; }
 .dona-kalit.dona-belgi { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; }
-.dona-boshqalar-kalit { color: #fff; }
 .dona-qatori { display: flex; align-items: center; gap: 4px; }
 .dona-qatori .dona-rasm { flex: 1; min-width: 0; margin: 0 auto 8px; }
 .yon-tugma {
@@ -814,19 +803,15 @@ select.oy-pill { min-height: 44px; padding: 6px 30px 6px 14px; }
 .dona-rasm { max-width: 240px; }
 .dona-tilim { transition: opacity .15s; }
 .dona-tilim.vurgulangan { filter: none; }
-.dona-markaz-1 { fill: var(--xira); font-size: 13px; }
-.dona-markaz-2 { fill: var(--matn); font-size: 18px; font-weight: 800; }
-.dona-markaz-1.kichik { font-size: 11px; }
-.dona-markaz-2.kichik { font-size: 14px; }
+.dona-bosh-halqa { stroke: var(--chiziq); }
+.dona-markaz-1 { fill: var(--xira); font-size: 15px; }
+.dona-markaz-2 { fill: var(--matn); font-size: 28px; font-weight: 800; }
 .dona-qator { flex-wrap: nowrap; gap: 12px; min-height: 60px; padding: 8px 4px; }
 .dona-qator.vurgulangan { border-radius: 12px; }
 .dona-matn { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .dona-nom { flex: none; min-width: 0; font-size: 16px; overflow-wrap: anywhere; }
-.dona-qiymat { margin-left: 0; white-space: normal; overflow-wrap: anywhere; font-size: 13px; font-weight: 500; color: var(--xira); }
-.dona-foiz { flex: none; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.dona-guruh .dona-qator::after { content: "›"; flex: none; margin-left: 2px; color: var(--xira); font-size: 22px; line-height: 1; transition: transform .15s; }
-.dona-guruh .dona-qator[aria-expanded="true"]::after { transform: rotate(90deg); }
-.dona-ichki .dona-qator { padding-left: 18px; background: var(--g-yoritish); border-top: 0; border-radius: 12px; margin: 2px 0; }
+.dona-qiymat { flex: none; margin-left: auto; white-space: nowrap; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--matn); }
+.dona-foiz { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--xira); }
 
 /* Yozuvlar (Tarix, ro'yxatlar): faqat kategoriya belgisi (40 px), sana sarlavhasi kartadan tashqarida */
 .yozuv-kv { gap: 12px; padding: 10px 0; }

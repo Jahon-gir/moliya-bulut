@@ -2812,9 +2812,7 @@
     k.appendChild(Diagramma.dona({
       taqsimot: taqsimot, jami: xarajat ? joriyH.xarajat : joriyH.daromad, kategoriya: kategoriyaOl,
       turNomi: nom, markazNom: davr.nom,
-      bosilganda: function (id) { yozuvlarniOchish({ tur: turi, kategoriya: id, dan: davr.dan, gacha: davr.gacha, hisob: hisob }); },
-      // "Boshqalar": birlashgan kategoriyalar filtrlangan ro'yxat sifatida ochiladi
-      guruhBosilganda: function (idlar) { yozuvlarniOchish({ tur: turi, kategoriyalar: idlar, dan: davr.dan, gacha: davr.gacha, hisob: hisob }); }
+      bosilganda: function (id) { yozuvlarniOchish({ tur: turi, kategoriya: id, dan: davr.dan, gacha: davr.gacha, hisob: hisob }); }
     }));
     return k;
   }
@@ -4173,21 +4171,14 @@
     // oy strelkalari: "Naqd pul oqimi" oy tanlagichi bilan bitta umumiy oy holati (asosiyOy)
     function kochir(n) { asosiyOy = Calc.oyKochir(oylar, asosiyOy, n).oy; asosiyniQayta(); }
     var yon = [
-      { belgi: '‹', ariya: 'Oldingi oy', bosilganda: function () { kochir(-1); }, ochiq: oylar.indexOf(asosiyOy) < oylar.length - 1 },
-      { belgi: '›', ariya: 'Keyingi oy', bosilganda: function () { kochir(1); }, ochiq: oylar.indexOf(asosiyOy) > 0 }
+      { belgi: '‹', ikon: 'chevron-left', ariya: 'Oldingi oy', bosilganda: function () { kochir(-1); }, ochiq: oylar.indexOf(asosiyOy) < oylar.length - 1 },
+      { belgi: '›', ikon: 'chevron-right', ariya: 'Keyingi oy', bosilganda: function () { kochir(1); }, ochiq: oylar.indexOf(asosiyOy) > 0, yashirin: true }
     ];
-    if (!taqsimot.length) {
-      var bosM = el('div', undefined, 'dona-bosh');
-      bosM.appendChild(el('strong', OY_NOMLARI_UI[parseInt(asosiyOy.slice(5, 7), 10) - 1] + ' ' + asosiyOy.slice(0, 4)));
-      bosM.appendChild(el('p', 'Bu oyda ' + (xarajat ? 'xarajat' : 'daromad') + ' yo\'q.', 'xira'));
-      k.appendChild(Diagramma.donaQatori(bosM, yon));
-      return k;
-    }
     k.appendChild(Diagramma.dona({
       taqsimot: taqsimot, jami: xarajat ? h.xarajat : h.daromad, kategoriya: kategoriyaOl, turNomi: xarajat ? 'Xarajatlar' : 'Daromadlar', markazNom: davr.nom, yashirin: malumot.balansYashirin,
+      markazMatn: OY_NOMLARI_UI[parseInt(asosiyOy.slice(5, 7), 10) - 1] + ' oyi uchun ' + (xarajat ? 'xarajatlar' : 'daromadlar'),
       yonTugmalari: yon,
-      bosilganda: function (id) { yozuvlarniOchish({ tur: asosiyTur, kategoriya: id, dan: davr.dan, gacha: davr.gacha, hisob: '' }); },
-      guruhBosilganda: function (idlar) { yozuvlarniOchish({ tur: asosiyTur, kategoriyalar: idlar, dan: davr.dan, gacha: davr.gacha, hisob: '' }); }
+      bosilganda: function (id) { yozuvlarniOchish({ tur: asosiyTur, kategoriya: id, dan: davr.dan, gacha: davr.gacha, hisob: '' }); }
     }));
     return k;
   }

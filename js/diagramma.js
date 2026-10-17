@@ -59,12 +59,14 @@
   }
 
   // Doira yonidagi chap/o'ng tugmalar (masalan oldingi/keyingi oy): [chap, ong], har biri { belgi, ariya, bosilganda, ochiq }.
-  // Tugmalar kamida 44 px; ochiq false bo'lsa o'chiq. markaz — doira (yoki doira o'rnidagi matn) elementi.
+  // Tugmalar kamida 44 px; ochiq false bo'lsa o'chiq (yashirin: true bo'lsa ko'rinmaydi ham); ikon — Belgilar kaliti (belgi o'rniga). markaz — doira (yoki doira o'rnidagi matn) elementi.
   function donaQatori(markaz, yon) {
     var q = el('div', undefined, 'dona-qatori');
     function tugma(t, klass) {
-      var b = el('button', t.belgi, 'yon-tugma ' + klass);
+      var b = el('button', t.ikon ? undefined : t.belgi, 'yon-tugma ' + klass);
       b.type = 'button';
+      if (t.ikon) b.appendChild(global.Belgilar.chiz(t.ikon, 24));
+      if (t.yashirin && !t.ochiq) b.style.visibility = 'hidden';   // masalan joriy oyda "keyingi oy" ko'rinmaydi (joyi saqlanadi)
       b.setAttribute('aria-label', t.ariya);
       b.disabled = !t.ochiq;
       b.addEventListener('click', t.bosilganda);
@@ -77,16 +79,14 @@
   }
 
   // ======================================================================
-  // Doira (donut): kategoriyalar bo'yicha taqsimot (0.30.0 dizayni)
+  // Doira (donut): kategoriyalar bo'yicha taqsimot (TZ-sinxronlash.md 43-band)
   // opts: { taqsimot: [{ kategoriya_id, summa, foiz }] (kattasidan kichigiga), jami,
   //         kategoriya: function (id) -> { nom, rang, belgi } | undefined,
-  //         bosilganda: function (id), guruhBosilganda: function (idlar), turNomi, markazNom, yashirin, yonTugmalari }
-  // Eng katta 5 ta kategoriya alohida tilim; qolganlari va jami summaning 3% idan kichiklari bitta "Boshqalar" tilimida (Calc.donaGuruhlash).
-  // Ro'yxatda "Boshqalar" qatori "N ta, bosib oching" yozuvi bilan turadi: bosilsa ichidagi kategoriyalar shu qator ostida ochiladi, yana bossa yopiladi.
-  // Tilim ranglari — har bo'lak kategoriyaning O'Z rangida (0.31.0); "Boshqalar" bo'lagi kulrang (#7B8498).
-  // Tilimlar: stroke-dasharray bilan chizilgan aylana yoylari (uchlari tekis: stroke-linecap butt), orasida ≈7 px ochiq joy.
+  //         bosilganda: function (id), turNomi, markazNom, markazMatn, yashirin, yonTugmalari }
+  // Summasi bor HAMMA kategoriya o'z bo'lagida ("Boshqalar" yo'q). Har bo'lak — bitta <circle> (pathLength=100, stroke-dasharray/dashoffset,
+  // yumaloq uchlar), tepadan soat strelkasi bo'ylab. Bo'lak o'lchami Calc.donaBolaklari da: haqiqiy foizga to'liq mutanosib EMAS (kichiklarga minimal joy).
   // ======================================================================
-  var DONA_VB = 180, DONA_R = 64, DONA_QALINLIK = 22, DONA_BOSHLIQ = 7;
+  var DONA_VB = 300, DONA_R = 128, DONA_QALINLIK = 20;
   function toliqRang(r) { return /^#[0-9a-f]{6}$/i.test(r || '') ? r : global.Ikonlar.KULRANG; }
 
   // Ikon katagi (40 px yumaloq-kvadrat, to'liq kategoriya rangida): ui.js dagi belgiKatak bilan bir xil ko'rinish
@@ -101,77 +101,77 @@
 
   function dona(opts) {
     function sum(n) { return opts.yashirin ? '••••' : Calc.sumFormat(n); }   // summalar yashirilgan bo'lsa ••••
-    function qisqa(n) { return opts.yashirin ? '••••' : Calc.qisqaSum(n); }
+    function qisqa(n) { return opts.yashirin ? '••••' : Calc.qisqaSum(n) + ' so\'m'; }
     var quti = el('div', undefined, 'dona-quti');
-    var guruh = Calc.donaGuruhlash(opts.taqsimot);
-    var tilimlar = Calc.tilimBurchaklari(guruh.tilimlar);
-    var BOSHQALAR = 'boshqalar';
+    var natija = Calc.donaBolaklari(opts.taqsimot), bolaklar = natija.bolaklar;
     function malumot(id) {
-      if (id === BOSHQALAR) return { nom: 'Boshqalar', rang: global.Ikonlar.KULRANG, belgi: 'dots' };
       var k = opts.kategoriya(id);
       return { nom: k ? k.nom : 'Kategoriyasiz', rang: toliqRang(k && k.rang), belgi: k ? k.belgi || Calc.belgiTaxmin(k.nom, k.tur) : 'help-circle' };
     }
-    function nomi(t) {
-      return t.kategoriya_id === BOSHQALAR ? 'Boshqalar (' + guruh.boshqalar.soni + ' ta kategoriya)' : malumot(t.kategoriya_id).nom;
-    }
-    function matn(t) { return nomi(t) + ': ' + sum(t.summa) + ', ' + t.foiz + ' foiz'; }
-    function ochish(id) {
-      if (id === BOSHQALAR) opts.guruhBosilganda(guruh.boshqalar.idlar); else opts.bosilganda(id);
-    }
-    var guruhIdlari = {};   // "Boshqalar" ga kirgan kategoriya -> tilim kaliti
-    guruh.dum.forEach(function (x) { guruhIdlari[x.kategoriya_id] = BOSHQALAR; });
+    function matn(t) { return malumot(t.kategoriya_id).nom + ': ' + sum(t.summa) + ', ' + Calc.foizMatn(t.p) + ' foiz'; }
 
-    var CX = DONA_VB / 2, CY = DONA_VB / 2, R = DONA_R, C = 2 * Math.PI * R;
+    var CX = DONA_VB / 2, CY = DONA_VB / 2;
+    var tur = opts.turNomi || 'Xarajatlar';
     var s = svg('svg', { viewBox: '0 0 ' + DONA_VB + ' ' + DONA_VB, role: 'group', 'aria-label':
-      (opts.turNomi || 'Xarajatlar') + ' kategoriyalar bo\'yicha doira diagrammasi' + (opts.markazNom ? ', ' + opts.markazNom : '') + '. Jami ' + sum(opts.jami) + ', ' + opts.taqsimot.length + ' ta kategoriya' +
-      (guruh.boshqalar ? ', ' + (guruh.tilimlar.length - 1) + ' tasi alohida, qolgan ' + guruh.boshqalar.soni + ' tasi "Boshqalar" tilimida.' : '.') }, 'dona-svg');
+      tur + ' kategoriyalar bo\'yicha doira diagrammasi' + (opts.markazNom ? ', ' + opts.markazNom : '') + (bolaklar.length ? '. Jami ' + sum(opts.jami) + ', ' + bolaklar.length + ' ta kategoriya.' : '. Ma\'lumot yo\'q.') }, 'dona-svg');
     var tilimElementlari = {};
 
-    tilimlar.forEach(function (t) {
-      var m = malumot(t.kategoriya_id), e;
-      var bosh = (t.a0 + Math.PI / 2) / (2 * Math.PI) * C, uzun = t.ulush * C;
-      var kerak = tilimlar.length > 1;
-      var korinadigan = kerak ? Math.max(1.5, uzun - DONA_BOSHLIQ) : C;   // tilimlar orasida ≈7 px ochiq joy; bitta tilim — butun halqa
-      e = svg('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: m.rang, 'stroke-width': DONA_QALINLIK, 'stroke-linecap': 'butt',
-        'stroke-dasharray': korinadigan.toFixed(2) + ' ' + (C - korinadigan + 0.01).toFixed(2),
-        'stroke-dashoffset': (-(bosh + (kerak ? DONA_BOSHLIQ / 2 : 0))).toFixed(2), transform: 'rotate(-90 ' + CX + ' ' + CY + ')' });
+    if (!bolaklar.length) {
+      s.appendChild(svg('circle', { cx: CX, cy: CY, r: DONA_R, fill: 'none', 'stroke-width': DONA_QALINLIK }, 'dona-bosh-halqa'));
+    }
+    bolaklar.forEach(function (t) {
+      var m = malumot(t.kategoriya_id), atr = { cx: CX, cy: CY, r: DONA_R, fill: 'none', stroke: m.rang, 'stroke-width': DONA_QALINLIK, pathLength: 100, transform: 'rotate(-90 ' + CX + ' ' + CY + ')' };
+      if (bolaklar.length > 1) {
+        atr['stroke-linecap'] = 'round';
+        atr['stroke-dasharray'] = t.d.toFixed(3) + ' 100';
+        atr['stroke-dashoffset'] = (-t.bosh).toFixed(3);
+      }   // bitta kategoriya — butun halqa (uzluksiz, ochiq joysiz)
+      var e = svg('circle', atr, 'dona-tilim');
       e.style.stroke = m.rang;
-      e.setAttribute('class', 'dona-tilim' + (t.kategoriya_id === BOSHQALAR ? ' dona-boshqalar' : ''));
       e.setAttribute('role', 'img');
       e.setAttribute('aria-label', matn(t) + '. Yozuvlarni ochish uchun bosing');
       e.setAttribute('data-kategoriya', t.kategoriya_id);
       e.setAttribute('data-summa', t.summa);
-      e.setAttribute('data-foiz', t.foiz);
-      if (t.kategoriya_id === BOSHQALAR) e.setAttribute('data-soni', guruh.boshqalar.soni);
+      e.setAttribute('data-foiz', Calc.foizMatn(t.p));
       tilimElementlari[t.kategoriya_id] = e;
       s.appendChild(e);
     });
 
-    // Markaz: "Xarajat" (kichik) va jami summa (qisqa: "8,4 mln"); tilim ustida — tilim nomi va summasi
-    var markaz1 = svg('text', { x: CX, y: CY - 11, 'text-anchor': 'middle', 'aria-hidden': 'true' }, 'dona-markaz-1');
-    var markaz2 = svg('text', { x: CX, y: CY + 15, 'text-anchor': 'middle', 'aria-hidden': 'true' }, 'dona-markaz-2');
+    // Markaz: yuqorida kichik kulrang sarlavha, ostida qisqa jami ("19,2 mln so'm"); bo'lak ustida — kategoriya nomi va summasi.
+    // Shrift uzun matnga qarab kichrayadi (halqa ichiga sig'sin)
+    var markaz1 = svg('text', { x: CX, y: CY - 14, 'text-anchor': 'middle', 'aria-hidden': 'true' }, 'dona-markaz-1');
+    var markaz2 = svg('text', { x: CX, y: CY + 22, 'text-anchor': 'middle', 'aria-hidden': 'true' }, 'dona-markaz-2');
     s.appendChild(markaz1);
     s.appendChild(markaz2);
     function markazYoz(sarlavha, qiymat) {
-      markaz1.textContent = sarlavha.length > 16 ? sarlavha.slice(0, 15) + '…' : sarlavha;
-      markaz1.setAttribute('class', 'dona-markaz-1' + (sarlavha.length > 11 ? ' kichik' : ''));
+      if (sarlavha.length > 40) sarlavha = sarlavha.slice(0, 39) + '…';
+      markaz1.textContent = '';
+      // uzun sarlavha ikki qatorga bo'linadi (kichik ekranda o'qiladigan bo'lsin): o'rtaga eng yaqin bo'shliqda
+      var bosh = -1, i;
+      if (sarlavha.length > 16) for (i = 0; i < sarlavha.length; i++) if (sarlavha[i] === ' ' && (bosh < 0 || Math.abs(i - sarlavha.length / 2) < Math.abs(bosh - sarlavha.length / 2))) bosh = i;
+      var qatorlar = bosh > 0 ? [sarlavha.slice(0, bosh + 1), sarlavha.slice(bosh + 1)] : [sarlavha], eng = Math.max(qatorlar[0].trim().length, qatorlar[qatorlar.length - 1].length);
+      qatorlar.forEach(function (q, j) {
+        var ts = svg('tspan', { x: CX, dy: j ? 18 : 0 });
+        ts.textContent = q;
+        markaz1.appendChild(ts);
+      });
+      markaz1.setAttribute('y', CY - (qatorlar.length > 1 ? 30 : 14));
+      markaz1.style.fontSize = Math.min(16, Math.floor(190 / (eng * 0.56))) + 'px';
       markaz2.textContent = qiymat;
-      markaz2.setAttribute('class', 'dona-markaz-2' + (qiymat.length > 8 ? ' kichik' : ''));
+      markaz2.style.fontSize = Math.min(28, Math.floor(180 / (qiymat.length * 0.6))) + 'px';
     }
-    var markazSarlavha = opts.markazSarlavha || (opts.turNomi === 'Daromadlar' ? 'Daromad' : 'Xarajat');
-    function jamiKorsat() { markazYoz(markazSarlavha, qisqa(opts.jami)); }
+    var markazSarlavha = opts.markazMatn || (opts.markazNom ? opts.markazNom + ' uchun ' + tur.toLowerCase() : tur);
+    function jamiKorsat() { markazYoz(markazSarlavha, bolaklar.length ? qisqa(opts.jami) : 'Ma\'lumot yo\'q'); }
     jamiKorsat();
 
-    var qatorlar = {};   // ro'yxat qatorlari (kategoriya yoki "boshqalar" guruhi sarlavhasi)
+    var qatorlar = {};   // ro'yxat qatorlari
     function vurgula(kalit, x, y) {
       quti.classList.add('faol');
       Object.keys(tilimElementlari).forEach(function (k) { tilimElementlari[k].classList.toggle('vurgulangan', k === kalit); });
-      Object.keys(qatorlar).forEach(function (k) {
-        qatorlar[k].classList.toggle('vurgulangan', k === kalit || guruhIdlari[k] === kalit);
-      });
-      var t = tilimlar.filter(function (z) { return z.kategoriya_id === kalit; })[0], m = malumot(kalit);
-      markazYoz(t.kategoriya_id === BOSHQALAR ? 'Boshqalar' : m.nom, qisqa(t.summa));
-      if (x !== undefined) maslahatKorsat(nomi(t), [{ rang: m.rang, qiymat: sum(t.summa), nom: t.foiz + '%' }], x, y);
+      Object.keys(qatorlar).forEach(function (k) { qatorlar[k].classList.toggle('vurgulangan', k === kalit); });
+      var t = bolaklar.filter(function (z) { return z.kategoriya_id === kalit; })[0], m = malumot(kalit);
+      markazYoz(m.nom, qisqa(t.summa));
+      if (x !== undefined) maslahatKorsat(m.nom, [{ rang: m.rang, qiymat: sum(t.summa), nom: Calc.foizMatn(t.p) + '%' }], x, y);
     }
     function vurgulashniOlish() {
       quti.classList.remove('faol');
@@ -180,64 +180,42 @@
       jamiKorsat();
       maslahatYashir();
     }
-    tilimlar.forEach(function (t) {
+    bolaklar.forEach(function (t) {
       var e = tilimElementlari[t.kategoriya_id];
       e.addEventListener('pointerenter', function (ev) { vurgula(t.kategoriya_id, ev.clientX, ev.clientY); });
       e.addEventListener('pointermove', function (ev) { vurgula(t.kategoriya_id, ev.clientX, ev.clientY); });
       e.addEventListener('pointerleave', vurgulashniOlish);
-      e.addEventListener('click', function () { vurgulashniOlish(); ochish(t.kategoriya_id); });
+      e.addEventListener('click', function () { vurgulashniOlish(); opts.bosilganda(t.kategoriya_id); });
     });
     var rasm = el('div', undefined, 'dona-rasm');
     rasm.appendChild(s);
     if (opts.yonTugmalari) quti.appendChild(donaQatori(rasm, opts.yonTugmalari)); else quti.appendChild(rasm);
 
-    // Ro'yxat: har kategoriya uchun ikon katagi, nomi, foizi (va summasi). "Boshqalar" qatori yopiq turadi, bosilsa ichidagilar ochiladi.
-    // Bu — diagrammaning matnli (jadval) nusxasi
+    // Ro'yxat (diagrammaning matnli nusxasi): summasi bor har kategoriya — ikon katagi, nom, haqiqiy foiz (bir o'nli kasr), o'ngda summa
     var royxat = el('ul', undefined, 'dona-royxat');
-    function qator(kalit, nom, rang, summa, foiz, ariya, bosilganda, qoshimcha, belgiKaliti, izoh) {
-      var li = el('li', undefined, qoshimcha || '');
+    bolaklar.forEach(function (t) {
+      var m = malumot(t.kategoriya_id), li = el('li');
       var b = el('button', undefined, 'dona-qator');
       b.type = 'button';
-      b.setAttribute('aria-label', ariya);
-      b.setAttribute('data-kategoriya', kalit);
-      b.setAttribute('data-summa', summa);
-      b.setAttribute('data-foiz', foiz);
-      b.appendChild(belgiKatagi(belgiKaliti || 'tag', rang, 40));
+      b.setAttribute('aria-label', matn(t) + '. Yozuvlarni ochish');
+      b.setAttribute('data-kategoriya', t.kategoriya_id);
+      b.setAttribute('data-summa', t.summa);
+      b.setAttribute('data-foiz', Calc.foizMatn(t.p));
+      b.appendChild(belgiKatagi(m.belgi, m.rang, 40));
       var matnQism = el('span', undefined, 'dona-matn');
-      matnQism.appendChild(el('span', nom, 'dona-nom'));
-      matnQism.appendChild(el('span', izoh || sum(summa), 'dona-qiymat'));
+      matnQism.appendChild(el('span', m.nom, 'dona-nom'));
+      matnQism.appendChild(el('span', Calc.foizMatn(t.p) + '%', 'dona-foiz'));
       b.appendChild(matnQism);
-      b.appendChild(el('span', foiz + '%', 'dona-foiz'));
-      var tilimKaliti = guruhIdlari[kalit] || kalit;
-      b.addEventListener('pointerenter', function () { vurgula(tilimKaliti); });
+      b.appendChild(el('span', sum(t.summa), 'dona-qiymat'));
+      b.addEventListener('pointerenter', function () { vurgula(t.kategoriya_id); });
       b.addEventListener('pointerleave', vurgulashniOlish);
-      b.addEventListener('focus', function () { vurgula(tilimKaliti); });
+      b.addEventListener('focus', function () { vurgula(t.kategoriya_id); });
       b.addEventListener('blur', vurgulashniOlish);
-      b.addEventListener('click', function () { vurgulashniOlish(); bosilganda(b, li); });
-      qatorlar[kalit] = b;
+      b.addEventListener('click', function () { vurgulashniOlish(); opts.bosilganda(t.kategoriya_id); });
+      qatorlar[t.kategoriya_id] = b;
       li.appendChild(b);
       royxat.appendChild(li);
-      return li;
-    }
-    function kategoriyaQatori(x, ichki) {
-      var m = malumot(x.kategoriya_id);
-      return qator(x.kategoriya_id, m.nom, m.rang, x.summa, x.foiz, matn({ kategoriya_id: x.kategoriya_id, summa: x.summa, foiz: x.foiz }) + '. Yozuvlarni ochish',
-        function () { opts.bosilganda(x.kategoriya_id); }, ichki ? 'dona-ichki' : '', m.belgi);
-    }
-    var alohida = guruh.tilimlar.filter(function (t) { return t.kategoriya_id !== BOSHQALAR || !guruh.boshqalar; });
-    alohida.forEach(function (x) { kategoriyaQatori(x, false); });
-    if (guruh.boshqalar) {
-      var g = guruh.boshqalar, ichkilar = [];
-      var gQator = qator(BOSHQALAR, 'Boshqalar', global.Ikonlar.KULRANG, g.summa, g.foiz, 'Boshqalar: ' + g.soni + ' ta kategoriya, ' + sum(g.summa) + ', ' + g.foiz + ' foiz. Ochish yoki yopish', function (b) {
-        var ochiq = b.getAttribute('aria-expanded') !== 'true';
-        b.setAttribute('aria-expanded', String(ochiq));
-        ichkilar.forEach(function (li) { li.hidden = !ochiq; });
-        gQator.classList.toggle('ochiq', ochiq);
-        b.querySelector('.dona-qiymat').textContent = ochiq ? g.soni + ' ta kategoriya, yopish uchun bosing' : g.soni + ' ta, bosib oching';
-      }, 'dona-guruh', 'dots', g.soni + ' ta, bosib oching');
-      gQator.querySelector('.dona-qator').setAttribute('aria-expanded', 'false');
-      guruh.dum.forEach(function (x) { var li = kategoriyaQatori(x, true); li.hidden = true; ichkilar.push(li); });
-    }
+    });
     quti.appendChild(royxat);
     return quti;
   }

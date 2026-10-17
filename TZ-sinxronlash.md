@@ -389,8 +389,8 @@ Karta engil ko'k-kulrang fonda (yorug' `#E8EEF7`, qora `#1B2130`). Tepada "Naqd 
 ### 21.3 Donut diagramma (Kategoriyalar)
 - Yarqin ranglar: binafsha `#7C5CFF`, ko'k `#1E9BFF`, yashil `#19C37D`, sariq `#FFB020`, pushti `#FF5C8A` va yana `#14C8C8`, `#FF7A3D`, `#B25CFF`; har bo'lak boshqa rang; "Boshqalar" kulrang.
 - Tilimlar orasida ≈7 px ochiq joy, uchlari tekis (`stroke-linecap: butt`), halqa qalinligi 22 (viewBox 180, radius 64). Markazda "Xarajat" (yoki "Daromad") va qisqa jami summa ("8,4 mln").
-- Eng katta 5 ta kategoriya alohida; qolgani va jami summaning 3% idan kichiklari bitta "Boshqalar" bo'lagiga yig'iladi (faqat ko'rinish: summalar o'zgarmaydi; yig'iladigan kategoriya bittagina bo'lsa, u o'z bo'lagida qoladi).
-- Ro'yxat: har kategoriya uchun ikon katagi, nomi, foizi (va summasi). "Boshqalar" qatori "N ta, bosib oching" bilan yopiq; bosilsa ichidagi kategoriyalar shu qator ostida ochiladi, yana bossa yopiladi. Diagrammadagi "Boshqalar" bo'lagi bosilsa, o'sha kategoriyalarning yozuvlari ochiladi (avvalgidek).
+- ~~Eng katta 5 ta kategoriya alohida; qolgani va jami summaning 3% idan kichiklari bitta "Boshqalar" bo'lagiga yig'iladi~~ — BEKOR QILINGAN, 43-band bilan almashtirilgan: hamma kategoriya bitta halqada, "Boshqalar" yo'q.
+- Ro'yxat: har kategoriya uchun ikon katagi, nomi, foizi va summasi. (~~"Boshqalar" qatori va uni bosish mantig'i~~ — 43-band bilan olib tashlangan.)
 
 ### 21.4 Tarix
 Tepada engil rangli karta: "Oy balansi" va oy nomi (pill), ostida katta raqam (oy sof balansi), undan keyin Xarajat va Daromad ikki katakda YONMA-YON. Ostida sana sarlavhasi ("9-oktabr") va har kun uchun yumaloq kartada yozuvlar. Har yozuvda faqat kategoriya belgisi (40 px); hisob belgisi yo'q, hisob nomi kategoriya nomi ostida kichik oddiy matn. Summa o'ngda: xarajat qizil, daromad yashil.
@@ -1306,3 +1306,25 @@ Eksportda komissiya oddiy "Xarajat" qatori (kategoriya "Komissiyalar", hisob = q
 - **Server (mahalliy PostgreSQL 16, Supabase taqlidi):** 009 va 011 ikki marta, 012 — 19/19, 010 (24/24), 006 (16/16) va 001–008 o'tdi. **Haqiqiy Supabase'da foydalanuvchi ishga tushiradi** (supabase/README.md 1-e).
 - **Brauzer (`tools/qarz-komissiya-brauzer-sinovi.js`, haqiqiy ilova, 360 px yorug' va qorong'i): 88/88** — "Berdim"da komissiya yo'qligi, chiplar, yonma-yon maydonlar, uch qiymat bog'liqligi, xato, saqlash, qoldiq +100 000, Tarix ichki qatori va kun jami, tafsilot, tahrir va "Yo'q", komissiya qatori qarz tahririni ochishi, o'chirish va "Bekor qilish", komissiyasiz oddiy qarz, "Qaytarasiz teng".
 - **Tekshirilmagan:** haqiqiy telefon, haqiqiy Supabase, ikkinchi qurilmada sinxron, Excelda ko'rinish.
+
+## 43. Donut diagramma: barcha kategoriyalar bitta halqada (0.46.0)
+
+**21.3 dagi "eng katta 5 ta + Boshqalar (3% dan kichiklari)" qoidasi BEKOR QILINDI.** "Boshqalar" bo'lagi, ro'yxatdagi "Boshqalar" qatori ("N ta, bosib oching") va "Boshqalar" bo'lagini bosish mantig'i olib tashlandi. 21.3 dagi tilimlar orasidagi 7 px ochiq joy, tekis uchlar va qalinlik 22 (viewBox 180) ham shu band bilan almashtirildi. Server va sxema o'zgarmaydi (SQL kerak emas).
+
+**Qayerda.** Asosiy ekrandagi "Kategoriyalar" kartasi va Hisobot ekranidagi doira diagramma (ikkalasi `Diagramma.dona` komponentidan). Statistika bo'limidagi doira (`js/stat.js`) alohida kod: bu bandga KIRMAYDI.
+
+**Geometriya.** SVG `viewBox 0 0 300 300`, markaz (150, 150), radius R = 128, halqa qalinligi SW = 20 (diametrga ≈ 6,8%), uchlari yumaloq (`stroke-linecap: round`). Eni: eng ko'pi 240 px, kichik ekranga moslashadi. Markazda: yuqorida kichik kulrang sarlavha ("Oktabr oyi uchun xarajatlar", daromad tabida "… daromadlar"; uzun bo'lsa ikki qatorga bo'linadi), ostida qisqa jami ("19,7 mln so'm", 21.1 dagi qisqartirish qoidasi; summalar yashirilganda ••••). Chap tomonda "oldingi oy" (chevron-left), o'ngda "keyingi oy" (chevron-right) faqat joriy oy bo'lmaganda (joriy oyda ko'rinmaydi, joyi saqlanadi): mavjud oy tanlagichi mantig'i.
+
+**Bo'laklar.** Summasi bor HAMMA kategoriya (qarz amallari — "Olingan qarz"/"Berilgan qarz" — 19-band qoidasi bilan avvalgidek) bitta `<circle>` (`pathLength=100`, `stroke-dasharray`, `stroke-dashoffset`, `rotate(-90 150 150)`): tepadan (soat 12) soat strelkasi bo'ylab, kattadan kichikka (ro'yxat bilan bir xil tartib), har biri o'z kategoriyasining rangida (22.2). Summasi 0 yoki o'chirilgan kategoriyalar chiqarilmaydi.
+
+**Bo'lak o'lchami (sof funksiya `Calc.donaBolaklari`).** p_i — kategoriyaning HAQIQIY foizi (jamiga nisbatan). Minimal ulush m = 3,6 (halqaning %). k bisection bilan (60 qadam) shunday topiladi: Σ max(m, p_i·k) = 100; har bo'lak ulushi x_i = max(m, p_i·k). cap = SW / (2π·R) · 100 ≈ 2,49. Ochiq joy g_i = min(3, max(0, (x_i − m)·0,35)): kichik bo'laklar (x_i = m) bir-biriga tegib turadi (g = 0), katta bo'laklar orasida ochiq joy bor, bo'lak kichrayishi bilan u asta yo'qoladi. Chiziq uzunligi d_i = max(0,01, x_i − g_i − cap); boshlanishi = pos + g_i/2 + cap/2; pos += x_i.
+
+**Chekka holatlar.** Bitta kategoriya — butun halqa (uzluksiz, ochiq joysiz). N·m > 100 (N > 27) bo'lsa m = 100 / N, hamma bo'lak teng, g = 0. Jami 0 — kulrang bo'sh halqa (`--chiziq` rangi, yorug' va qorong'i rejimda mos) va markazda "Ma'lumot yo'q".
+
+**OCHIQ AYTILADI: bo'lak o'lchami haqiqiy foizga to'liq mutanosib EMAS** (kichik kategoriyalarga minimal joy beriladi, shuning uchun bo'lak kattaligidan foizni aniq o'qib bo'lmaydi). Haqiqiy foiz va summa ro'yxatda.
+
+**Ro'yxat.** Summasi bor hamma kategoriya, summa bo'yicha kattadan kichikka: ikon katagi, nom (ostida haqiqiy foiz, bir o'nli kasr, vergul: "7,6%"), o'ngda summa ("8 550 000 so'm"). Karta sarlavhasida "Kategoriyalar" yonida summasi bor kategoriyalar soni (kichik yumaloq belgi) va "Hammasi" havolasi.
+
+**O'zaro ta'sir.** Bo'lak yoki ro'yxat qatori bosilsa o'sha kategoriyaning yozuvlari ochiladi (avvalgidek). Qarz kategoriyalari bosilsa Qarzlar bo'limi ochiladi (19-band).
+
+**Sinov.** `tests.html?faqat=doira` (sof funksiya: N = 0, 1, 2, 3, 18, 27, 30, yig'indi 100, kichiklarda g = 0 va x = m, kattalarda 0 < g ≤ 3, bisection; DOM: "Boshqalar" yo'qligi, ro'yxat tartibi va foizlari) va `tools/doira-brauzer-sinovi.js` (haqiqiy ilova, 360 px yorug' va qorong'i, 18 kategoriya: 18 bo'lak, tegib turgan kichiklar, bo'lak bosilsa yozuvlar ochiladi).

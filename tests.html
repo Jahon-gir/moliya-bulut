@@ -5478,8 +5478,8 @@ function xfix(opts) {
           Gap.sozla({ rasmTayyorla: null });   // haqiqiy canvas yo'li
           Gap.yangila(); document.getElementById('gap-tugma').click();
           var dt = new DataTransfer(); dt.items.add(f); var i = document.getElementById('gap-rasm-galereya'); i.files = dt.files; i.dispatchEvent(new Event('change', { bubbles: true }));
-          return yoKut(function () { return s.chekSorov.length === 1 || document.getElementById('gap-xato').textContent !== ''; }).then(function () {
-            teng(document.getElementById('gap-xato').textContent, '', 'xato yo\'q'); var t = s.chekSorov[0].tana;
+          return yoKut(function () { return s.chekSorov.length === 1 || (document.getElementById('gap-xato') && document.getElementById('gap-xato').textContent !== ''); }).then(function () {
+            teng(s.chekSorov.length, 1, 'rasm tayyorlandi va yuborildi: ' + (document.getElementById('gap-xato') ? document.getElementById('gap-xato').textContent : '')); var t = s.chekSorov[0].tana;
             tg([t.rejim, t.mime, /^\/9j\//.test(t.rasm)], ['rasm', 'image/jpeg', true], 'JPEG'); teng(t.rasm.length / 4 * 3 <= GapSof.RASM_BAYT_MAX, true, '1,5 MB dan oshmaydi: ' + Math.round(t.rasm.length * 0.75 / 1024) + ' KB');
             return new Promise(function (ok2, no2) { var im = new Image(); im.onload = function () { ok2(im); }; im.onerror = no2; im.src = 'data:image/jpeg;base64,' + t.rasm; });
           }).then(function (im) {

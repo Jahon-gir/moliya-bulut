@@ -1110,3 +1110,29 @@ Android (Xiaomi/MIUI, Chrome, o'rnatilgan PWA): "Galereyadan tanlash" Chrome'nin
 
 ### 38.5. Ochiq masala
 Agar `accept`siz variant ham o'sha tanlagichni ochsa (MIUI Chrome versiyasiga bog'liq), keyingi qadam: PWA'da `showOpenFilePicker` yo'q (Android Chrome'da qo'llanmaydi), shuning uchun faqat kamera yo'li va "Fayllar" orqali tanlash qoladi — foydalanuvchi aytadi.
+
+## 39. Chek o'qish aniqligi (0.43.3)
+
+Server o'zgardi (`supabase/functions/yordamchi/index.ts`, `test.mjs`); ilova faqat versiya (0.43.3). **Edge Function'ni QAYTA JOYLASH shart** (yangi Secret kerak emas). 36.4 dagi "matn o'qish + evristika" yo'li (JAMI/sana/mahsulot qatorlarini regex bilan qidirish) almashtirildi; 36.4 ning qolgan qismi (himoya, limit, hajm, xato kodlari, maxfiylik) o'zgarmagan.
+
+### 39.1. Muammo (haqiqiy telefon, Korzinka cheki)
+Natija noto'g'ri edi: summa 0 (chekda "JAMI" emas, "TO'LOV UCHUN: 109 902,00" turibdi), sana/soat bugungi ("04/10/2026 12:28:37" o'qilmadi; pastda "2026-10-04 12:28:28" ham bor), izoh chek tepasidagi REKLAMA matni ("Haribo xarid qiling…"), kategoriya tanlanmadi. Sabab: Gemini matnni "qatorma-qator" qaytargani uchun reklama, bank bloki va mahsulotlar aralashgan, regexlar esa "TO'LOV UCHUN" + `DD/MM/YYYY` + ruscha/o'zbekcha qo'sh qatorlarni ishonchli ajratolmadi.
+
+### 39.2. Yangi oqim (`rasm` rejimi)
+1. **Gemini rasmdan TUZILGAN JSON qaytaradi** (`responseMimeType: application/json` + `responseSchema`, `temperature: 0`, 3000 token): `dokon` (do'kon nomi), `sana` (YYYY-MM-DD), `vaqt` (HH:MM), `jami` (butun so'm), `mahsulotlar` `[{nom, summa}]`, `chek_emas` (bool). Ko'rsatma (`CHEK_PROMPT`): faqat chekda yozilgan raqamlar, to'qima; reklama/aksiya matni, kassir ismi, STIR/INN, karta raqami, terminal va bank ma'lumotlari, manzil, telefon OLINMASIN; mahsulot nomi qisqa, o'zbekcha qatordan (ruscha tarjima qatori emas); `jami` = to'lanadigan yakuniy summa ("TO'LOV UCHUN", "JAMI", "ИТОГО", "К ОПЛАТЕ", "Оплата", "To'landi"), QQS emas; sana DD/MM/YYYY yoki DD.MM.YYYY bo'lsa ham YYYY-MM-DD.
+2. **Server tekshiruvi (`chekTekshir`, sof funksiya, testlanadi):**
+   - JSON yaroqsiz (obyekt emas, kesilgan) → `RASM_OQILMADI`; `chek_emas: true` yoki dokon/jami/mahsulot hech biri yo'q → `CHEK_EMAS`.
+   - **jami** butun son (matn "109 902,00" ham o'qiladi, tiyin yaxlitlanadi). Yo'q yoki ≤ 0 → summa BO'SH + ogohlantirish "JAMI summa chekdan topilmadi — summani kiriting".
+   - **Yig'indi tekshiruvi:** mahsulotlar summalari yig'indisi `jami` ga ±1 so'm ichida teng → ishonchli (ogohlantirishsiz). Teng emas → `jami` O'ZGARMAYDI, sariq ogohlantirish "Mahsulotlar yig'indisi jami bilan mos emas, summani tekshiring". Mahsulotlar yo'q bo'lsa yig'indi tekshirilmaydi. Yaroqsiz mahsulotlar (nomi yo'q, summa ≤ 0 yoki son emas) tashlanadi (≤ 100 ta).
+   - **Sana:** `DD/MM/YYYY`, `DD.MM.YYYY`, `YYYY-MM-DD` (haqiqiy sana). O'qilmasa yoki kelajakda bo'lsa `sana: null, vaqt: null` + "Sana chekdan o'qilmadi — bugungi sana qo'yildi" (ilova bugun va hozirgi soatni qo'yadi). Vaqt `HH:MM[:SS]` → `HH:MM`, faqat sana yaroqli bo'lsa.
+3. **Kategoriya va hisob:** mavjud yozuv tizimiga (o'z model → OpenAI zaxira, `YOZUV_PROVAYDER`) FAQAT qisqa matn beriladi: "bu chek matni: MAYDA BOZOR do'konidan xarid: Tovuq tuxumi, Guruch 1KG, …" (do'kon + eng qimmat ≤ 6 mahsulot nomi, ≤ 200 belgi; summa, sana va soat berilmaydi). Undan faqat `kategoriya`, `hisob`, `hisob_turi` olinadi. **Summa, sana, vaqt va izoh AI'dan emas, tekshirilgan JSON maydonlaridan** (22.1 qoida: AI raqam hisoblamaydi). Tizim hech javob bermasa ham yozuv qaytadi (kategoriya/hisob bo'sh).
+4. **Izoh (`chekIzohi`):** "Do'kon: nom summa, nom summa, …" — ENG QIMMAT mahsulotdan boshlab, summa mingliklar bilan ("Yopgan non 7 800"), jami ≤ 200 belgi (`IZOH_MAX`); hammasi sig'masa oxirida ", va yana N ta". Mahsulot yo'q: do'kon nomi, u ham yo'q: "Chek". Reklama va bank bloki izohga kira olmaydi (Gemini ularni olmaydi; olsa ham faqat `mahsulotlar` maydoni izohga o'tadi).
+5. Qolgani 36–37 dagidek: JWT, ruxsat, limit (1 ta so'rov), hajm/format, Gemini 503 da bir marta qayta urinish, log (faqat kod, KB, px), `{ ok:true, manba, yozuvlar:[bitta xarajat], chek:true }`.
+
+### 39.3. Sinov
+`node --test supabase/functions/yordamchi/test.mjs`: 86 tekshiruv. Yangi: summa/sana formatlari, to'g'ri chek (yig'indi = jami, ±1 so'm), yig'indi mos kelmasa ogohlantirish, jami yo'q/≤0, sana kelajakda/o'qilmagan, izoh (eng qimmatdan, ≤ 200, "va yana N ta"), `CHEK_EMAS`/`RASM_OQILMADI`, va **soxta Korzinka-uslubidagi chek** (o'zim yaratdim: tepada reklama, "TO'LOV UCHUN", `04/10/2026`, 7 mahsulot, pastda bank bloki; haqiqiy do'kon, ism, STIR, karta, manzil YO'Q): kutilgani — reklama izohda yo'q, summa = to'lov summasi, sana chekdan, yig'indi tekshiruvi o'tadi. `tests.html` dan faqat Gap/chek testlari.
+
+### 39.4. Cheklovlar va ochiq masalalar
+- **Haqiqiy Gemini bilan sinalmagan:** `responseSchema` qo'llab-quvvatlanishi `GEMINI_MODEL` ga bog'liq (standart `gemini-2.5-flash` qo'llaydi, tekshirilmagan). Model sxemani rad etsa `AI_PROVAYDER` + `gemini_400` chiqadi (Logs da `rasm: gemini_400 …`).
+- Gemini noto'g'ri `jami` (masalan QQS) yoki yaroqli-ko'rinishli, lekin xato mahsulot qaytarsa, faqat yig'indi tekshiruvi ogohlantirishi bor; ogohlantirish bo'lmasa ham foydalanuvchi "tekshiring" belgisi ostida summani ko'rishi kerak.
+- Chekdagi chegirma/qaytim qatorlari mahsulot sifatida kelsa yig'indi mos kelmay ogohlantirish chiqadi (jami to'g'ri qoladi).

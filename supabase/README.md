@@ -357,3 +357,6 @@ Ilovada "Gap bilan" -> kamera tugmasi -> "Galereyadan tanlash" -> o'zingizning c
 
 ### 8.4. Gemini band bo'lsa (0.43.1)
 Gemini 429/500/502/503/504 qaytarsa funksiya bir marta ~1,8 s kutib qayta urinadi; baribir band bo'lsa ilova "Rasm o'qish xizmati band. Bir daqiqadan keyin qayta urinib ko'ring." ko'rsatadi. Functions -> Logs da `rasm: gemini_503 http=503 mime=image/jpeg rasm=212KB 1600x1200` qatori (rasm, matn va kalit yo'q). **0.43.1 uchun funksiyani qayta joylash shart** (8.2 qadamlari).
+
+### 8.5. Chek aniqligi (0.43.3)
+Gemini endi rasmdan tuzilgan JSON (do'kon, sana, vaqt, jami, mahsulotlar) qaytaradi; summa, sana va izoh server tekshiruvidan o'tgan maydonlardan olinadi. `GEMINI_MODEL` strukturali JSON (`responseSchema`) qo'llaydigan model bo'lishi kerak (standart `gemini-2.5-flash`). Model sxemani rad etsa Logs da `rasm: gemini_400 …` chiqadi. **Funksiyani qayta joylash shart** (8.2 qadamlari).

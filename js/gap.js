@@ -216,9 +216,14 @@ var Gap = (function () {
 
   // ---- Chek skaneri (36-band): kamera/galereya -> rasm xotirada kichraytiriladi -> serverning `rasm` rejimi -> ovozdagi kabi karta ----
   // Rasm hech qayerga SAQLANMAYDI (IndexedDB, localStorage, kesh, fayl, URL.createObjectURL yo'q): faqat so'rovda ketadi va xotiradan tashlanadi.
+  // Rasmni ochadi. Juda katta rasm (12–50 MP) bosqichma-bosqich kichraytiriladi (createImageBitmap(resize)), shunda canvas xotirasi to'lmaydi.
+  // Xotira yetmasa (to'liq ochib bo'lmasa) kichraytirib ochishga urinadi; baribir bo'lmasa RASM_FORMAT.
   function rasmniOch(fayl) {   // -> Promise<{ manba, en, boy, yop() }>; EXIF yo'nalishi hisobga olinadi (en/boy aylantirilgan holda)
     var tur = String(fayl && fayl.type || '');
     if (tur && tur.indexOf('image/') !== 0) return Promise.reject(kodXato('RASM_FORMAT'));
+    function bitmapdan(b) {
+      return { manba: b, en: b.width, boy: b.height, yop: function () { try { b.close(); } catch (x) { /* ahamiyatsiz */ } } };
+    }
     function imgYol() {
       return new Promise(function (ok, no) {
         var r = new FileReader();
@@ -233,9 +238,24 @@ var Gap = (function () {
       });
     }
     if (typeof window.createImageBitmap !== 'function') return imgYol();
+    function kichraytirib(r) {   // katta bitmap -> bosqichma-bosqich yarmiga (har bosqichda eskisi yopiladi)
+      var q = GapSof.rasmBosqichlari(r.en, r.boy);
+      var z = Promise.resolve(r);
+      q.forEach(function (v) {
+        z = z.then(function (x) {
+          return window.createImageBitmap(x.manba, { resizeWidth: v[0], resizeHeight: v[1], resizeQuality: 'medium' }).then(function (b) { x.yop(); return bitmapdan(b); }, function () { return x; });   // bo'lmasa shu holicha qoladi
+        });
+      });
+      return z;
+    }
     return window.createImageBitmap(fayl, { imageOrientation: 'from-image' }).then(function (b) {
-      return { manba: b, en: b.width, boy: b.height, yop: function () { try { b.close(); } catch (x) { /* ahamiyatsiz */ } } };
-    }, imgYol);
+      return kichraytirib(bitmapdan(b));
+    }, function () {
+      // to'liq ochilmadi (xotira yoki qo'llanmaydigan variant): <img> yo'li, u ham bo'lmasa kichraytirib ochish (resizeWidth, nisbat saqlanadi)
+      return imgYol().then(kichraytirib, function () {
+        return window.createImageBitmap(fayl, { imageOrientation: 'from-image', resizeWidth: GapSof.RASM_UZUN_MAX * 2, resizeQuality: 'medium' }).then(function (b) { return bitmapdan(b); }, function () { throw kodXato('RASM_FORMAT'); });
+      });
+    });
   }
   function rasmKodla(manba) {
     return function (en, boy, sifat) {
@@ -243,11 +263,13 @@ var Gap = (function () {
         var cv = document.createElement('canvas'); cv.width = en; cv.height = boy;
         var cx = cv.getContext('2d');
         if (!cx) { no(kodXato('RASM_FORMAT')); return; }
-        cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, en, boy);   // shaffof PNG JPEG da qora bo'lib qolmasin
-        cx.drawImage(manba, 0, 0, en, boy);
+        try {
+          cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, en, boy);   // shaffof PNG JPEG da qora bo'lib qolmasin
+          cx.drawImage(manba, 0, 0, en, boy);
+        } catch (x) { cv.width = cv.height = 0; no(kodXato('RASM_KATTA')); return; }   // xotira yetmadi: rasmSiq o'lchamni kichraytirib qayta uradi
         cv.toBlob(function (blob) {
           cv.width = cv.height = 0;   // canvas xotirasi bo'shatiladi
-          blob ? ok({ hajm: blob.size, qiymat: blob }) : no(kodXato('RASM_FORMAT'));
+          blob ? ok({ hajm: blob.size, qiymat: blob }) : no(kodXato('RASM_KATTA'));
         }, 'image/jpeg', sifat);
       });
     };
@@ -258,7 +280,10 @@ var Gap = (function () {
       o = r;
       return GapSof.rasmSiq(r.en, r.boy, rasmKodla(r.manba));
     }).then(function (s) {
-      return blobBase64(s.qiymat).then(function (a) { return { rasm: a, mime: 'image/jpeg' }; });
+      return blobBase64(s.qiymat).then(function (a) {
+        if (a.length * 0.75 > GapSof.RASM_BAYT_MAX + 3) throw kodXato('RASM_KATTA');   // sig'magan rasm serverga yuborilmaydi
+        return { rasm: a, mime: 'image/jpeg' };
+      });
     }).then(function (x) { if (o) o.yop(); return x; }, function (err) { if (o) o.yop(); throw err; });
   };
   function rasmTayyorla(fayl) { return (dep.rasmTayyorla || haqiqiyRasm)(fayl); }
@@ -346,15 +371,17 @@ var Gap = (function () {
     document.addEventListener('click', menyuTashqari);
     var birinchi = mn.querySelector('button'); if (birinchi) birinchi.focus();
   }
+  // Ikki ALOHIDA input (37-band): kamera — capture bilan, galereya — capture'siz va aniq image MIME ro'yxati bilan. Ikkalasi DOM'da, display:none emas
+  // (ko'rinmas, lekin joyida: MIUI/Chrome da yashirin inputda tanlagich bo'sh chiqishi mumkin). click() faqat foydalanuvchi bosishi ichida chaqiriladi.
   function faylInput(id, kamera) {
     var i = document.createElement('input');
-    i.type = 'file'; i.accept = 'image/*'; i.id = id; i.hidden = true; i.tabIndex = -1; i.setAttribute('aria-hidden', 'true');
-    if (kamera) i.setAttribute('capture', 'environment');
+    i.type = 'file'; i.id = id; i.className = 'gp-fayl-yashirin'; i.tabIndex = -1; i.setAttribute('aria-hidden', 'true');
+    if (kamera) { i.accept = 'image/*'; i.setAttribute('capture', 'environment'); }
+    else i.accept = GapSof.GALEREYA_ACCEPT;
     i.addEventListener('change', function () {
       var f = i.files && i.files[0];
-      try { i.value = ''; } catch (x) { /* ahamiyatsiz */ }   // fayl havolasi qo'yib yuboriladi; shu rasmni qayta tanlash ham ishlaydi
       menyuYop();
-      if (f) chekBoshla(f);
+      if (f) chekBoshla(f);   // qiymat keyingi ochilishda tozalanadi (tanlangan fayl havolasi o'qilguncha buzilmasin)
     });
     return i;
   }
@@ -366,7 +393,7 @@ var Gap = (function () {
     var mn = e('div', undefined, 'gp-menyu'); mn.id = 'gap-kamera-menyu'; mn.setAttribute('role', 'menu'); mn.setAttribute('aria-label', 'Chek rasmi'); mn.hidden = true;
     var kamIn = faylInput('gap-rasm-kamera', true), galIn = faylInput('gap-rasm-galereya', false);
     [['camera', 'Suratga olish', kamIn], ['photo', 'Galereyadan tanlash', galIn]].forEach(function (v) {
-      var b = tugma('gp-menyu-band', undefined, function () { v[2].click(); });
+      var b = tugma('gp-menyu-band', undefined, function () { try { v[2].value = ''; } catch (x) { /* ahamiyatsiz */ } v[2].click(); });   // bir xil rasmni qayta tanlash ham ishlaydi
       b.setAttribute('role', 'menuitem'); b.appendChild(Ikonlar.chiz(v[0], 20)); b.appendChild(e('span', v[1]));
       mn.appendChild(b);
     });

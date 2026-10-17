@@ -230,14 +230,17 @@ export function ovozKirishiniTekshir(tana: Record<string, unknown>): { ovoz: Ovo
 }
 // Gemini xatosi logga: HTTP kod, Gemini error.message (≤ 300 belgi, kalit bo'lsa yashiriladi) va ilova yuborgan mime. Audio, rasm, kalit va tanilgan matn HECH QACHON loglanmaydi.
 // nom: "ovoz" yoki "rasm" (qaysi rejim).
-function ovozLogla(debug: string, holat: number | null, xabar: string, mime: string, kalit: string, nom = "ovoz"): void {
+function ovozLogla(debug: string, holat: number | null, xabar: string, mime: string, kalit: string, nom = "ovoz", info = ""): void {
   let x = xabar.replace(/\s+/g, " ").trim();
   if (kalit) x = x.split(kalit).join("***");
   x = x.replace(/AIza[0-9A-Za-z_-]{20,}/g, "***").slice(0, 300);
-  console.error(nom + ": " + debug + " http=" + (holat === null ? "-" : holat) + " mime=" + mime + (x ? " xabar=" + x : ""));
+  console.error(nom + ": " + debug + " http=" + (holat === null ? "-" : holat) + " mime=" + mime + (info ? " " + info : "") + (x ? " xabar=" + x : ""));
 }
 // Gemini ga bitta so'rov (ovoz va rasm uchun umumiy): matn (toza, qator tuzilishi saqlangan) yoki null (bo'sh/bloklangan javob).
-interface GeminiSorov { nom: "ovoz" | "rasm"; xizmat: string; prompt: string; mime: string; data: string; token: number; vaqtMs: number }
+// qayta: 429/500/502/503/504 da bir marta GEMINI_QAYTA.kutishMs dan keyin qayta uriniladi (faqat rasm); info: logga (faqat rasm hajmi va o'lchami)
+interface GeminiSorov { nom: "ovoz" | "rasm"; xizmat: string; prompt: string; mime: string; data: string; token: number; vaqtMs: number; qayta?: boolean; info?: string }
+export const GEMINI_QAYTA = { kutishMs: 1800 };
+const GEMINI_QAYTA_HOLAT = [429, 500, 502, 503, 504];
 async function geminiXom(q: GeminiSorov, muhit: Muhit, fetchFn: FetchFn): Promise<string | null> {
   const kalit = (muhit.get("GEMINI_API_KEY") || "").trim();
   if (!kalit) { ovozLogla("gemini_kalit_yoq", null, "GEMINI_API_KEY sozlanmagan", q.mime, "", q.nom); throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati sozlanmagan (GEMINI_API_KEY yo'q).", true, "gemini_kalit_yoq"); }
@@ -248,11 +251,12 @@ async function geminiXom(q: GeminiSorov, muhit: Muhit, fetchFn: FetchFn): Promis
     contents: [{ role: "user", parts: [{ text: q.prompt }, { inline_data: { mime_type: q.mime, data: q.data } }] }],
     generationConfig: { temperature: 0, maxOutputTokens: q.token },
   };
-  let javob: Response;
-  try {
-    javob = await fetchFn(url, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": kalit }, body: JSON.stringify(tana), signal: AbortSignal.timeout(q.vaqtMs) });
-  } catch (_e) { ovozLogla("gemini_tarmoq", null, "so'rov yuborilmadi (tarmoq yoki vaqt)", q.mime, kalit, q.nom); throw new ProvayderXatosi("NETWORK", XATO_MATNI.NETWORK, false, "gemini_tarmoq"); }
-  if (!javob.ok) {
+  let javob: Response | null = null;
+  for (let urinish = 0; urinish < (q.qayta ? 2 : 1); urinish++) {
+    try {
+      javob = await fetchFn(url, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": kalit }, body: JSON.stringify(tana), signal: AbortSignal.timeout(q.vaqtMs) });
+    } catch (_e) { ovozLogla("gemini_tarmoq", null, "so'rov yuborilmadi (tarmoq yoki vaqt)", q.mime, kalit, q.nom, q.info); throw new ProvayderXatosi("NETWORK", XATO_MATNI.NETWORK, false, "gemini_tarmoq"); }
+    if (javob.ok) break;
     let xabar = "";
     try {
       const tx = await javob.text();
@@ -260,11 +264,13 @@ async function geminiXom(q: GeminiSorov, muhit: Muhit, fetchFn: FetchFn): Promis
     } catch (_e) { xabar = ""; }
     const mimeMi = /mime|audio format|unsupported|not supported|invalid.*argument.*audio/i.test(xabar);
     const debug = "gemini_" + javob.status + (mimeMi ? "_mime" : "");
-    ovozLogla(debug, javob.status, xabar, q.mime, kalit, q.nom);
+    ovozLogla(debug, javob.status, xabar, q.mime, kalit, q.nom, q.info);
+    if (q.qayta && urinish === 0 && GEMINI_QAYTA_HOLAT.indexOf(javob.status) >= 0) { await new Promise((r) => setTimeout(r, GEMINI_QAYTA.kutishMs)); continue; }   // band: bir marta qayta
     throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati xato qaytardi (HTTP " + javob.status + ").", false, debug);
   }
+  if (!javob) throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati javob bermadi.", false, "gemini_tarmoq");
   let d: unknown;
-  try { d = await javob.json(); } catch (_e) { ovozLogla("gemini_json", javob.status, "javob JSON emas", q.mime, kalit, q.nom); throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati noto'g'ri javob berdi.", false, "gemini_json"); }
+  try { d = await javob.json(); } catch (_e) { ovozLogla("gemini_json", javob.status, "javob JSON emas", q.mime, kalit, q.nom, q.info); throw new ProvayderXatosi("AI_PROVAYDER", q.xizmat + " xizmati noto'g'ri javob berdi.", false, "gemini_json"); }
   // deno-lint-ignore no-explicit-any
   const qismlar = (d as any)?.candidates?.[0]?.content?.parts;
   const xom = Array.isArray(qismlar) ? qismlar.map((x: { text?: unknown }) => typeof x?.text === "string" ? x.text : "").join("\n") : "";
@@ -272,7 +278,7 @@ async function geminiXom(q: GeminiSorov, muhit: Muhit, fetchFn: FetchFn): Promis
   if (!matn) {   // bo'sh javob: sababi faqat Gemini kodlari (matn emas)
     const kod = (v: unknown) => typeof v === "string" && /^[A-Z_]{1,40}$/.test(v) ? v : "-";
     // deno-lint-ignore no-explicit-any
-    ovozLogla("gemini_bosh", javob.status, "finish=" + kod((d as any)?.candidates?.[0]?.finishReason) + " block=" + kod((d as any)?.promptFeedback?.blockReason), q.mime, kalit, q.nom);
+    ovozLogla("gemini_bosh", javob.status, "finish=" + kod((d as any)?.candidates?.[0]?.finishReason) + " block=" + kod((d as any)?.promptFeedback?.blockReason), q.mime, kalit, q.nom, q.info);
     return null;
   }
   return matn;
@@ -1049,7 +1055,7 @@ export const RASM_MAX_BAYT = 2 * 1024 * 1024;                          // rasm a
 export const RASM_MIME = ["image/jpeg", "image/png", "image/webp"];
 export const CHEK_PROMPT = "Bu chek (kvitansiya) rasmi. Chekdagi matnni qatorma-qator AYNAN qaytar. Hech narsa qo'shma, izoh yozma, raqam to'qima, o'qilmagan joyni o'tkazib yubor. Rasmda chek bo'lmasa faqat CHEK_EMAS deb qaytar.";
 const CHEK_TOKEN = 2000;
-const CHEK_TAYM_AUT_MS = 30000;
+const CHEK_TAYM_AUT_MS = 20000;                                        // Gemini bitta urinishi; 2 urinish + 1,8 s ≈ 42 s, keyin yozuv tizimi (≤ ~45 s): jami Edge Function chegarasidan (150 s) kam
 const CHEK_MATN_MAX = 4000;                                            // Gemini matnidan shuncha belgi ishlatiladi
 const CHEK_MODELGA_MAX = 900;                                          // yozuv tizimiga beriladigan chek matni (model kontekst oynasi kichik)
 const CHEK_ELEMENT_MAX = 12;                                           // izohga ko'pi bilan nechta mahsulot
@@ -1057,6 +1063,29 @@ export const CHEK_SANA_OGOH = "Sana chekdan o'qilmadi — bugungi sana qo'yildi"
 export const CHEK_JAMI_OGOH = "JAMI summa chekdan topilmadi — summani kiriting";
 // rasm boshidagi baytlar (base64 ko'rinishida): fayl turi mimega mos kelishi shart
 const RASM_BOSHI: Record<string, RegExp> = { "image/jpeg": /^\/9j\//, "image/png": /^iVBORw0KGgo/, "image/webp": /^UklGR/ };
+
+// Rasm o'lchami (piksel) — faqat logga: JPEG/PNG/WebP sarlavhasidan; rasmning o'zi hech qayerga yozilmaydi. Aniqlanmasa "?".
+export function rasmOlchami(b64: string): string {
+  try {
+    const b = atob(b64.slice(0, 262144 - (262144 % 4)));
+    const u = (i: number) => b.charCodeAt(i);
+    if (b.startsWith("\x89PNG")) return ((u(16) << 24 | u(17) << 16 | u(18) << 8 | u(19)) >>> 0) + "x" + ((u(20) << 24 | u(21) << 16 | u(22) << 8 | u(23)) >>> 0);
+    if (b.startsWith("RIFF") && b.slice(8, 12) === "WEBP") {
+      const t = b.slice(12, 16);
+      if (t === "VP8X") return (1 + (u(24) | u(25) << 8 | u(26) << 16)) + "x" + (1 + (u(27) | u(28) << 8 | u(29) << 16));
+      if (t === "VP8 ") return ((u(26) | u(27) << 8) & 0x3fff) + "x" + ((u(28) | u(29) << 8) & 0x3fff);
+      if (t === "VP8L") { const v = (u(21) | u(22) << 8 | u(23) << 16 | u(24) << 24) >>> 0; return (1 + (v & 0x3fff)) + "x" + (1 + ((v >>> 14) & 0x3fff)); }
+      return "?";
+    }
+    let i = 2;
+    while (i + 9 < b.length && u(i) === 0xff) {
+      const m = u(i + 1);
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return (u(i + 7) << 8 | u(i + 8)) + "x" + (u(i + 5) << 8 | u(i + 6));
+      i += 2 + (u(i + 2) << 8 | u(i + 3));
+    }
+  } catch (_e) { /* o'lcham noma'lum */ }
+  return "?";
+}
 
 export interface RasmKirishi { rasm: string; mime: string; yozuv: Kirish }
 export function rasmKirishiniTekshir(tana: Record<string, unknown>): { kirish: RasmKirishi } | { kod: XatoKodi } {
@@ -1199,7 +1228,7 @@ async function rasmIshlov(xom: Record<string, unknown>, muhit: Muhit, fetchFn: F
   if (soni === null) return xatoJavob("AI_LIMIT", 503, cors, "Limitni tekshirib bo'lmadi (007_ai_limit.sql ishga tushirilganmi?).");
   if (soni > KUNLIK_LIMIT) return xatoJavob("AI_LIMIT", 429, cors);
   try {
-    const xomMatn = await geminiXom({ nom: "rasm", xizmat: "Rasm", prompt: CHEK_PROMPT, mime: t.kirish.mime, data: t.kirish.rasm, token: CHEK_TOKEN, vaqtMs: CHEK_TAYM_AUT_MS }, muhit, fetchFn);
+    const xomMatn = await geminiXom({ nom: "rasm", xizmat: "Rasm", prompt: CHEK_PROMPT, mime: t.kirish.mime, data: t.kirish.rasm, token: CHEK_TOKEN, vaqtMs: CHEK_TAYM_AUT_MS, qayta: true, info: "rasm=" + Math.round(t.kirish.rasm.length * 3 / 4 / 1024) + "KB " + rasmOlchami(t.kirish.rasm) }, muhit, fetchFn);
     if (xomMatn === null) return xatoJavob("RASM_OQILMADI", 422, cors);
     const matn = xomMatn.slice(0, CHEK_MATN_MAX);
     if ((/CHEK_EMAS/i.test(matn) && matn.length < 60) || !/\d/.test(matn)) return xatoJavob("CHEK_EMAS", 422, cors);

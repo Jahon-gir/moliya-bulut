@@ -354,3 +354,6 @@ Gap ekranidagi kamera tugmasi chek rasmini funksiyaga yuboradi. Funksiya avval G
 
 ### 8.3. Tekshirish
 Ilovada "Gap bilan" -> kamera tugmasi -> "Galereyadan tanlash" -> o'zingizning chek rasmingiz -> "Chekdan o'qildi · tekshiring" kartasi chiqishi kerak. Xato kodlari: `RASM_KATTA` (2 MB dan katta), `RASM_FORMAT` (JPEG/PNG/WebP emas), `CHEK_EMAS` (rasmda chek yo'q), `RASM_OQILMADI` (Gemini matn o'qiy olmadi), `AI_PROVAYDER` + sabab (`gemini_...`: kalit, model yoki Google xatosi; Functions -> Logs da `rasm: gemini_... http=...` qatori). Har rasm so'rovi kunlik limitga (200) 1 ta bo'lib sanaladi.
+
+### 8.4. Gemini band bo'lsa (0.43.1)
+Gemini 429/500/502/503/504 qaytarsa funksiya bir marta ~1,8 s kutib qayta urinadi; baribir band bo'lsa ilova "Rasm o'qish xizmati band. Bir daqiqadan keyin qayta urinib ko'ring." ko'rsatadi. Functions -> Logs da `rasm: gemini_503 http=503 mime=image/jpeg rasm=212KB 1600x1200` qatori (rasm, matn va kalit yo'q). **0.43.1 uchun funksiyani qayta joylash shart** (8.2 qadamlari).

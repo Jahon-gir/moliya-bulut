@@ -1055,3 +1055,32 @@ Mijoz kutish chegarasi 90 s (ikki bosqich), `VAQT`.
 - `sw.js` ga tegilmadi (CLAUDE.md: kesh versiyasi `index.html` dagi `?v=` dan olinadi, u 0.43.0 ga oshirildi).
 - HEIC: iPhone galereyasida `accept="image/*"` rasmni odatda JPEG ga o'giradi; o'girmasa va brauzer ocholmasa `RASM_FORMAT`.
 - Mikrofon va kamera bir vaqtda ishlamaydi (biri band bo'lsa ikkinchisi xabar beradi).
+
+## 37. Chek skaneri: telefondagi xatolarni tuzatish (0.43.1)
+
+Faqat 36-bandagi chek skaneri tuzatildi; yangi funksiya yo'q. Ma'lumot tuzilishi, sinxronlash va zaxira o'zgarmagan. O'zgargan: `js/gap.js`, `js/gap-sof.js`, `style.css`, `supabase/functions/yordamchi/index.ts`, `supabase/README.md`. **Edge Function'ni QAYTA JOYLASH shart** (qayta urinish, vaqt chegarasi va log serverda). Haqiqiy telefonda (Android, Xiaomi/MIUI, Chrome, o'rnatilgan PWA) ikki xato topilgan edi.
+
+### 37.1. Xato: "Suratga olish" bilan olingan rasm `AI_PROVAYDER, gemini_503` berdi
+- **Kodda tekshirilgani:** siqish zanjiri (36.3) kamera rasmida ham ishlaydi, lekin ikki zaif joyi bor edi: (a) 12–50 MP rasm bir yo'la canvasga chizilganda xotira yetmasa `drawImage`/`toBlob` xato berar va xato "siqib bo'lmadi" deb to'xtab qolardi (kichraytirib qayta urinilmasdi); (b) siqilgan natija hajmi yuborishdan oldin qayta tekshirilmasdi. `gemini_503` — Gemini'ning o'zi "band" deyishi (HTTP 503), rasm hajmidan emas, lekin server qayta urinmasdi va telefondagi xato matni noaniq edi. Galereya rasmi bilan ishlagani — o'sha paytda Gemini band bo'lmagani bilan mos (aniq sabab telefonda tasdiqlanmagan).
+- **Ilova (siqish):**
+  - Rasm `createImageBitmap(fayl, { imageOrientation: 'from-image' })` bilan ochiladi (EXIF yo'nalishi). Uzun tomon 3200 px dan oshsa, `createImageBitmap(bitmap, { resizeWidth, resizeHeight })` bilan bosqichma-bosqich yarmiga kichraytiriladi (48 MP: 8000 → 4000 → 2000), har bosqichda eskisi `close()`; shundan keyin canvas 1600 px gacha.
+  - To'liq ochib bo'lmasa (xotira): `<img>` yo'li, u ham bo'lmasa `createImageBitmap(fayl, { resizeWidth: 3200 })` (nisbat saqlanadi). Hech biri bo'lmasa `RASM_FORMAT`.
+  - Canvas xatosi (`drawImage` istisno, `toBlob` null) endi to'xtatmaydi: o'lcham 0,8 baravar kichraytirilib qayta uriniladi (4 martagacha, sifat 0.8 → 0.5 bilan); baribir bo'lmasa `RASM_KATTA`. Natija 1,5 MB dan oshsa (yuborishdan oldingi yakuniy tekshiruv) rasm **serverga yuborilmaydi**, `RASM_KATTA`.
+  - Mijoz kutish chegarasi 90 s → 100 s (server 2 ta Gemini urinishini hisobga oladi, 150 s lik Edge Function chegarasidan kam).
+- **Server (`rasm` rejimi):**
+  - Gemini `429/500/502/503/504` qaytarsa **bir marta**, 1,8 s kutib qayta uriniladi (`GEMINI_QAYTA.kutishMs`). Ikkinchisi ham band bo'lsa `AI_PROVAYDER` + `debug: gemini_<kod>`. 400 va boshqa kodlar qayta urinilmaydi; tarmoq/vaqt xatosi qayta urinilmaydi. **`ovoz` rejimi o'zgarmagan** (qayta urinish yo'q). Limit baribir 1 ta so'rov.
+  - **Vaqt chegarasi:** Gemini bitta urinishi 20 s (`CHEK_TAYM_AUT_MS`, avval 30 s). Eng yomon holat: 2 × 20 s + 1,8 s ≈ 42 s, keyin yozuv tizimi (o'z model ≤ 25 s, zaxira OpenAI ≤ 20 s) ≈ 45 s: jami ≈ 87 s < Edge Function chegarasi (150 s) va < mijoz 100 s.
+  - **Log:** har muvaffaqiyatsiz urinishda bitta qator: `rasm: gemini_503 http=503 mime=image/jpeg rasm=212KB 1600x1200 xabar=<Gemini error.message ≤ 300 belgi>`. Hajm asl baytlardan, o'lcham JPEG/PNG/WebP sarlavhasidan (`rasmOlchami`), noma'lum bo'lsa `?`. Rasm, chek matni va kalit HECH QACHON loglanmaydi; `index.ts` da `console.*` hamon bitta.
+- **Xato matni:** `AI_PROVAYDER` + sabab `gemini_429|500|502|503|504` bo'lsa: "Rasm o'qish xizmati band. Bir daqiqadan keyin qayta urinib ko'ring." + "(kod: AI_PROVAYDER, sabab: gemini_503)". Boshqa sabablarda avvalgi matn.
+
+### 37.2. Xato: "Galereyadan tanlash" bosilsa oyna ochiladi, rasmlar ko'rinmaydi
+- **Ikki alohida input** (36-bandda ham shunday edi, endi sinov bilan mustahkamlandi): `#gap-rasm-kamera` — `accept="image/*"` + `capture="environment"`; `#gap-rasm-galereya` — `capture` ATRIBUTISIZ. Bitta inputni qayta ishlatib `capture` ni yoqib-o'chirish yo'q.
+- **Galereya `accept`:** `image/jpeg,image/png,image/webp,image/heic,image/heif`. **Sababi** (Chromium manba kodi va hujjatlariga tayanib; **telefonda tasdiqlanmagan**): Android Chrome faqat `image/…` MIME turlaridan iborat `accept` uchun tizim "Photo Picker"ini (rasmlar katalogi) ochadi; kengaytma (`.jpg`) aralashsa yoki `*/*` bo'lsa umumiy fayl tanlagichga (MIUI'da "Hujjatlar", ko'pincha bo'sh "Yaqinlar" ro'yxati) o'tadi. Aniq ro'yxat `image/*` dan farqli ravishda MIUI tanlagichiga ham rasm turlarini aniq beradi va HEIC/HEIF ni ham tanlatadi. Agar bu telefonda baribir bo'sh chiqsa, keyingi urinish: `accept` ni `image/*` ga qaytarish (bitta o'zgarmas `GapSof.GALEREYA_ACCEPT` qiymati).
+- **HEIC/HEIF:** brauzer ochib bo'lmasa (`createImageBitmap` va `<img>` ikkalasi ham rad etsa) "Bu rasm turi qabul qilinmaydi. JPEG, PNG yoki WebP rasm tanlang. (kod: RASM_FORMAT)"; serverga hech narsa ketmaydi.
+- **Inputlar DOM'da, `display:none`/`hidden` emas:** avval `hidden` atributi (= `display:none`) edi; endi `.gp-fayl-yashirin` (1×1 px, `opacity:0`, `clip`, `pointer-events:none`, joyida) — ayrim brauzerlar yashirin inputda tanlagichni to'liq ko'rsatmasligi ma'lum. Bu telefonda sinalmagan: ehtimoliy tuzatish, shu sababli ro'yxat va ko'rinish ikkalasi o'zgartirildi.
+- **`click()` foydalanuvchi bosishi ichida:** menyu bandi bosilishi ichida to'g'ridan-to'g'ri `input.click()` (kutish, `setTimeout` yoki `Promise` yo'q). Input qiymati (`value = ''`) endi tanlagich ochilishidan OLDIN tozalanadi (avval tanlangandan keyin edi): tanlangan fayl havolasi o'qilguncha buzilmaydi, bir xil rasmni qayta tanlash ham ishlaydi.
+
+### 37.3. Sinov
+- Server `node --test supabase/functions/yordamchi/test.mjs`: 83 tekshiruv (4 ta yangi: 503/429/500 da bir marta qayta urinish, ikkinchisi ham band bo'lsa xato va qayta urinilmaydigan holatlar (400, `ovoz`), log formati va maxfiylik, `rasmOlchami`).
+- `tests.html` (faqat Gap va chek testlari): yangi — ikki alohida input (accept, capture, DOM'da, ko'rinmas, bosish ichida `click`), canvas xatosida kichraytirib qayta urinish va `RASM_KATTA`, bosqichma-bosqich kichraytirish ro'yxati, 503 xato matni, haqiqiy canvasda 27 MP (6000×4500) rasm 1600 px va ≤ 1,5 MB ga siqilishi, HEIC `RASM_FORMAT`. `tools/gap-chek-brauzer-sinovi.js` 360 px yorug'/qorong'i.
+- **Telefonda sinalmagan:** Xiaomi/MIUI tanlagichi, haqiqiy 50 MP kamera rasmi, haqiqiy Gemini 503. Yuqoridagi tuzatishlar kod tahliliga va soxta javob/headless Chromium sinoviga asoslangan.

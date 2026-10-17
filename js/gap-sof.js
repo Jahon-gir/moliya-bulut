@@ -133,7 +133,8 @@ var GapSof = (function () {
   var RASM_SIFAT_POGONA = [0.8, 0.7, 0.6, 0.5];
   var RASM_KICHRAYTIRISH = 0.8;             // sig'masa o'lcham shuncha marta kichraytiriladi
   var RASM_KICHRAYTIRISH_MAX = 4;
-  var CHEK_KUTISH_MS = 90000;               // ikki bosqich (rasm o'qish + yozuv): 60 s yetmasligi mumkin
+  var CHEK_KUTISH_MS = 100000;              // ikki bosqich (rasm o'qish + yozuv, Gemini 1 marta qayta urinishi bilan): 60 s yetmaydi; Edge Function chegarasidan (150 s) kam
+  var GALEREYA_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif';   // 37-band: faqat image/* MIME turlari (Android Photo Picker), HEIC ham
   var CHEK_BELGI = 'Chekdan o\'qildi · tekshiring';
   var CHEK_XATOLAR = {
     RASM_KATTA: 'Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling.',
@@ -149,28 +150,41 @@ var GapSof = (function () {
     return { en: Math.max(1, Math.round(en * k)), boy: Math.max(1, Math.round(boy * k)) };
   }
   // Siqish: kodla(en, boy, sifat) -> Promise<{ hajm, qiymat }>. Avval sifat tushiriladi (0,8 -> 0,5), sig'masa o'lcham 0,8 baravar kichraytiriladi.
-  // Natija: { en, boy, sifat, hajm, qiymat } yoki RASM_KATTA xatosi. Rasm piksellari bu yerda ushlab turilmaydi.
+  // kodla xato bersa (katta rasmda canvas xotirasi yetmasa) ham o'lcham kichraytirib qayta uriniladi. Natija: { en, boy, sifat, hajm, qiymat } yoki RASM_KATTA xatosi:
+  // sig'magan rasm serverga YUBORILMAYDI. Rasm piksellari bu yerda ushlab turilmaydi.
   function rasmSiq(en, boy, kodla, bayt) {
     bayt = bayt || RASM_BAYT_MAX;
     var o = rasmOlchami(en, boy), urinish = 0;
+    function katta() { var x = new Error('RASM_KATTA'); x.kod = 'RASM_KATTA'; return x; }
+    function kichraytir() {
+      if (++urinish > RASM_KICHRAYTIRISH_MAX) throw katta();
+      o = { en: Math.max(1, Math.round(o.en * RASM_KICHRAYTIRISH)), boy: Math.max(1, Math.round(o.boy * RASM_KICHRAYTIRISH)) };
+      return sifatdan(0);
+    }
     function sifatdan(i) {
       return kodla(o.en, o.boy, RASM_SIFAT_POGONA[i]).then(function (r) {
         if (r && r.hajm > 0 && r.hajm <= bayt) return { en: o.en, boy: o.boy, sifat: RASM_SIFAT_POGONA[i], hajm: r.hajm, qiymat: r.qiymat };
-        if (i + 1 < RASM_SIFAT_POGONA.length) return sifatdan(i + 1);
-        if (++urinish > RASM_KICHRAYTIRISH_MAX) { var x = new Error('RASM_KATTA'); x.kod = 'RASM_KATTA'; throw x; }
-        o = { en: Math.max(1, Math.round(o.en * RASM_KICHRAYTIRISH)), boy: Math.max(1, Math.round(o.boy * RASM_KICHRAYTIRISH)) };
-        return sifatdan(0);
-      });
+        return i + 1 < RASM_SIFAT_POGONA.length ? sifatdan(i + 1) : kichraytir();
+      }, function () { return kichraytir(); });   // canvas xatosi (xotira): o'lchamni kichraytirib qayta
     }
     return sifatdan(0);
+  }
+  // Juda katta rasm (12–50 MP) bir yo'la canvasga sig'maydi: uzun tomon max*2 dan oshmaguncha bosqichma-bosqich yarmiga kichraytiriladi. [en, boy] ro'yxati (oxirgisi nishon).
+  function rasmBosqichlari(en, boy, max) {
+    max = max || RASM_UZUN_MAX;
+    var q = [], u = Math.max(en, boy);
+    while (u > max * 2) { u = Math.ceil(u / 2); q.push(Math.max(1, Math.round(en * u / Math.max(en, boy)))); }
+    return q.map(function (x) { return [x, Math.max(1, Math.round(x * boy / en))]; });
   }
   // Serverga ketadigan tana: yozuv rejimidagi kategoriya/hisob/eski ro'yxatlari bilan bir xil (28.2), gap o'rniga rasm
   function rasmTanasi(rasm, mime, m, bugun) {
     var kategoriyalar = kategoriyaNomlari(m);
     return { rejim: 'rasm', rasm: rasm, mime: mime, bugun: bugun, kategoriyalar: kategoriyalar, hisoblar: hisobRoyxati(m), eski: eskiTanla(m.yozuvlar, m, kategoriyalar) };
   }
+  var BAND_MATNI = 'Rasm o\'qish xizmati band. Bir daqiqadan keyin qayta urinib ko\'ring.';
   function chekXatoMatni(kod, debug) {
     var k = String(kod || '');
+    if (k === 'AI_PROVAYDER' && /^gemini_(429|500|502|503|504)$/.test(String(debug || ''))) return BAND_MATNI + '\n(kod: ' + k + ', sabab: ' + debug + ')';
     if (CHEK_XATOLAR[k]) return CHEK_XATOLAR[k] + '\n(kod: ' + k + ')';
     return ovozXatoMatni(k, debug);
   }
@@ -384,7 +398,7 @@ var GapSof = (function () {
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
     MANBA_SARLAVHA: MANBA_SARLAVHA, MANBA_MATNLARI: MANBA_MATNLARI, OVOZ_IZOHI: OVOZ_IZOHI, manbaNomi: manbaNomi, manbaIzohi: manbaIzohi, soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
     CHEK_BELGI: CHEK_BELGI, CHEK_IZOHI: CHEK_IZOHI, CHEK_KUTISH_MS: CHEK_KUTISH_MS, RASM_UZUN_MAX: RASM_UZUN_MAX, RASM_SIFAT: RASM_SIFAT, RASM_BAYT_MAX: RASM_BAYT_MAX, CHEK_XATOLAR: CHEK_XATOLAR,
-    rasmOlchami: rasmOlchami, rasmSiq: rasmSiq, rasmTanasi: rasmTanasi, chekXatoMatni: chekXatoMatni,
+    rasmOlchami: rasmOlchami, rasmSiq: rasmSiq, rasmBosqichlari: rasmBosqichlari, GALEREYA_ACCEPT: GALEREYA_ACCEPT, BAND_MATNI: BAND_MATNI, rasmTanasi: rasmTanasi, chekXatoMatni: chekXatoMatni,
     wavYasa: wavYasa, monoQil: monoQil, OVOZ_WAV_HZ: OVOZ_WAV_HZ, mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
     xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
     kategoriyaNomlari: kategoriyaNomlari, hisobRoyxati: hisobRoyxati, eskiTanla: eskiTanla, sorovTanasi: sorovTanasi,

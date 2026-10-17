@@ -1,4 +1,4 @@
-// Statistika ekrani (TZ-sinxronlash.md 34-band) uchun brauzer sinovi: HAQIQIY ilova (index.html, haqiqiy IndexedDB), faqat UYDIRMA yozuvlar.
+// Statistika ekrani (TZ-sinxronlash.md 34-band, daromad grafigi 34.5) uchun brauzer sinovi: HAQIQIY ilova (index.html, haqiqiy IndexedDB), faqat UYDIRMA yozuvlar.
 // Faqat ishlab chiqish vaqtida; ilovaning o'zi uni ishlatmaydi.
 // Ishga tushirish: avval  python3 -m http.server 8000  (repozitoriy papkasida), keyin
 //   node tools/stat-brauzer-sinovi.js [rasmlar_papkasi]      (Playwright va Chromium kerak; PLAYWRIGHT_MODULE, CHROMIUM_PATH, ILOVA_MANZIL o'zgaruvchilari ixtiyoriy)
@@ -42,7 +42,7 @@ async function senariy(brauzer, tema) {
   await p.reload();
   await p.waitForFunction(() => document.querySelector('#ekran h1'));
   // Asosiy "Naqd pul oqimi" xarajati (joriy oy)
-  const asosiyXarajat = raqamlar(await p.textContent('.oqim-xarajat .oqim-raqam'));
+  const asosiyXarajat = raqamlar(await p.textContent('.oqim-xarajat .oqim-raqam')), asosiyDaromad = raqamlar(await p.textContent('.oqim-daromad .oqim-raqam'));
   await p.click('[data-bolim="koproq"]');
   teng(await p.isVisible('#kp-statistika'), true, '"Ko\'proq" menyusida "Statistika" bor');
   await p.click('#kp-statistika');
@@ -50,8 +50,11 @@ async function senariy(brauzer, tema) {
   teng(await p.isVisible('.orqaga-tugma'), true, 'Orqaga tugmasi');
   teng(await p.locator('#ekran > .karta, #ekran .st-karta').count(), 4, '4 ta karta');
   teng(await p.locator('.oy-yorliq').count() >= 12, true, 'oy chiplari');
-  const jamiMatn = raqamlar(await p.textContent('#stat-jami strong'));
-  teng(jamiMatn, asosiyXarajat, 'Jami Asosiy "Naqd pul oqimi" bilan bir xil (' + jamiMatn + ')');
+  teng(await p.textContent('.st-grafik h2'), 'Daromad va xarajat grafigi', 'karta nomi');
+  const jamiX = raqamlar(await p.textContent('#stat-jami-xarajat')), jamiD = raqamlar(await p.textContent('#stat-jami-daromad'));
+  teng(jamiX, asosiyXarajat, 'Jami xarajat Asosiy "Naqd pul oqimi" bilan bir xil (' + jamiX + ')');
+  teng(jamiD, asosiyDaromad, 'Jami daromad Asosiy "Naqd pul oqimi" bilan bir xil (' + jamiD + ')');
+  teng(await p.evaluate(() => [...document.querySelectorAll('.st-seriya')].map((b) => [getComputedStyle(b.querySelector('.st-seriya-kv')).backgroundColor, Math.round(b.getBoundingClientRect().height) >= 44, b.getBoundingClientRect().top === document.querySelector('.st-seriya').getBoundingClientRect().top])), [['rgb(29, 158, 117)', true, true], ['rgb(216, 90, 48)', true, true]], 'katakchalar yonma-yon: daromad #1D9E75 chapda, xarajat #D85A30 o\'ngda');
   const olchov = async (izoh) => {
     teng(await p.evaluate(() => document.documentElement.scrollWidth <= 360 && document.getElementById('ekran').scrollWidth <= 360), true, izoh + ': gorizontal aylanish yo\'q');
     teng(await p.evaluate(() => [...document.querySelectorAll('#ekran button')].filter((b) => { const r = b.getBoundingClientRect(); return r.width > 0 && getComputedStyle(b).visibility !== 'hidden' && !b.closest('[hidden]') && r.height < 43.5; }).map((b) => b.className + ':' + b.textContent)), [], izoh + ': tugmalar ≥ 44 px');
@@ -59,9 +62,25 @@ async function senariy(brauzer, tema) {
   };
   await olchov('ustun/oy');
   await p.screenshot({ path: path.join(RASMLAR, tema + '-1-ustun-oy.png'), fullPage: true });
-  teng(await p.locator('.st-grafik .st-ustun').count(), await p.evaluate(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()), 'oy ustunlari = oy kunlari');
+  const oyKunlari = await p.evaluate(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate());
+  teng([await p.locator('.st-grafik .st-ustun-d').count(), await p.locator('.st-grafik .st-ustun-x').count()], [oyKunlari, oyKunlari], 'oy: har kunda juft ustun');
+  // seriyani yashirish / qaytarish; oxirgisini yashirib bo'lmaydi
+  await p.click('#stat-seriya-daromad');
+  teng([await p.locator('.st-grafik .st-ustun-d').count(), await p.locator('.st-grafik .st-ustun-x').count(), await p.getAttribute('#stat-seriya-daromad', 'aria-pressed')], [0, oyKunlari, 'false'], 'daromad yashirildi');
+  teng(await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('#stat-seriya-daromad')).opacity)), 0.45, 'yashirilgan katak xira');
+  await p.screenshot({ path: path.join(RASMLAR, tema + '-1b-daromad-yashirin.png') });
+  await p.click('#stat-seriya-xarajat', { force: true });   // aria-disabled: oxirgisi
+  teng(await p.getAttribute('#stat-seriya-xarajat', 'aria-pressed'), 'true', 'oxirgi ko\'rinib turganini yashirib bo\'lmaydi');
+  await p.click('#stat-seriya-daromad');
+  teng(await p.locator('.st-grafik .st-ustun-d').count(), oyKunlari, 'qayta bossa qaytdi');
+  await p.click('#stat-seriya-xarajat');
+  teng([await p.locator('.st-grafik .st-ustun-x').count(), await p.locator('.st-grafik .st-ustun-d').count()], [0, oyKunlari], 'xarajat yashirildi: daromad qoldi');
+  teng(await p.evaluate(() => { const j = JSON.parse(localStorage.getItem('moliya-stat-grafik')); return [j.daromad, j.xarajat]; }), [true, false], 'tanlov saqlandi');
+  await p.screenshot({ path: path.join(RASMLAR, tema + '-1c-xarajat-yashirin.png') });
+  await p.click('#stat-seriya-xarajat');
   // grafik turlari
   for (const [tur, soz] of [['chiziq', 'chiziq'], ['maydon', 'maydon'], ['doira', 'doira']]) {
+    if (tur === 'doira') {}
     await p.click('#stat-tur');
     if (tur === 'chiziq') await p.screenshot({ path: path.join(RASMLAR, tema + '-2-tur-menyusi.png') });
     await p.click('[data-tur="' + tur + '"]');
@@ -69,10 +88,21 @@ async function senariy(brauzer, tema) {
     await olchov(soz);
     await p.screenshot({ path: path.join(RASMLAR, tema + '-3-' + tur + '.png'), fullPage: false });
   }
+  teng(await p.locator('.st-seriyalar').count(), 0, 'doira: katakchalar o\'rniga almashtirgich');
+  teng(await p.evaluate(() => [...document.querySelectorAll('.st-ulush button')].map((b) => b.textContent)), ['Xarajat ulushi', 'Daromad ulushi'], 'ikki bo\'lakli almashtirgich');
   teng(await p.locator('.st-davr button:disabled').count(), 4, 'doira: davr tugmalari xira');
   teng(await p.evaluate(() => getComputedStyle(document.querySelector('.st-davr')).opacity), '0.45', 'xira ko\'rinish');
   const leg = await p.locator('.st-leg-qator').count(); teng(leg >= 1 && leg <= 6, true, 'legenda ≤ 6 ta (' + leg + ')');
   teng(await p.evaluate(() => [...document.querySelectorAll('.st-leg-foiz')].reduce((a, e) => a + parseInt(e.textContent, 10), 0)), 100, 'legenda foizlari yig\'indisi 100');
+  // daromad ulushi
+  await p.click('[data-ulush="daromad"]');
+  const legD = await p.locator('.st-leg-qator').count(); teng(legD >= 1 && legD <= 6, true, 'daromad ulushi: legenda ≤ 6 ta (' + legD + ')');
+  teng(await p.evaluate(() => [...document.querySelectorAll('.st-leg-foiz')].reduce((a, e) => a + parseInt(e.textContent, 10), 0)), 100, 'daromad foizlari yig\'indisi 100');
+  teng(raqamlar(await p.textContent('#stat-jami strong')), asosiyDaromad, 'daromad ulushi jami = Asosiy daromad');
+  teng(await p.evaluate(() => JSON.parse(localStorage.getItem('moliya-stat-grafik')).ulush), 'daromad', 'ulush saqlandi');
+  await olchov('doira/daromad');
+  await p.screenshot({ path: path.join(RASMLAR, tema + '-3b-doira-daromad.png') });
+  await p.click('[data-ulush="xarajat"]');
   // davr tugmalari: tur ustunga qaytib
   await p.click('#stat-tur'); await p.click('[data-tur="ustun"]');
   for (const d of ['kun', 'hafta', 'yil']) {
@@ -82,7 +112,7 @@ async function senariy(brauzer, tema) {
     if (d === 'kun') teng(await p.textContent('.st-grafik .st-izoh'), 'Vaqti yozilmagan yozuvlar kunlik grafikka kirmaydi.', 'kun: vaqt izohi');
     await p.screenshot({ path: path.join(RASMLAR, tema + '-4-davr-' + d + '.png'), fullPage: false });
   }
-  teng(await p.locator('.st-grafik .st-ustun').count(), 12, 'yil: 12 ustun');
+  teng([await p.locator('.st-grafik .st-ustun-d').count(), await p.locator('.st-grafik .st-ustun-x').count()], [12, 12], 'yil: 12 juft ustun');
   // ‹ ›
   await p.click('[data-davr="oy"]');
   const nom0 = await p.textContent('#stat-davr-nomi');

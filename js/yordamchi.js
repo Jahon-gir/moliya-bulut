@@ -47,8 +47,9 @@ var Yordamchi = (function () {
   function xato(kod, holat) { var e = new Error(kod); e.kod = kod; e.holat = holat || 0; return e; }
 
   // ms berilsa: shu vaqtdan keyin so'rov to'xtatiladi (xato kodi VAQT). Chat uchun berilmaydi (o'zgarishsiz).
-  function yubor(tana, token, ms) {
-    var ac = ms && typeof AbortController !== 'undefined' ? new AbortController() : null;
+  // tashqi (ixtiyoriy AbortController): chaqiruvchi so'rovni o'zi to'xtata oladi ("Bekor", 36-band)
+  function yubor(tana, token, ms, tashqi) {
+    var ac = tashqi || (ms && typeof AbortController !== 'undefined' ? new AbortController() : null);
     var p = dep.fetch(dep.manzil() + FUNKSIYA_YOLI, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: dep.kalit(), Authorization: 'Bearer ' + token },
@@ -64,11 +65,11 @@ var Yordamchi = (function () {
     });
   }
   // Bitta so'rov. 401 bo'lsa token bir marta yangilanib qayta yuboriladi; shunda ham 401 bo'lsa kirish muddati tugagan.
-  function chaqir(tana, ms) {
+  function chaqir(tana, ms, tashqi) {
     function tokenBilan(qayta) {
       return (qayta ? dep.tokenYangila() : dep.tokenOl()).then(function (t) {
         if (!t) throw xato('AUTH_EXPIRED');
-        return yubor(tana, t, ms);
+        return yubor(tana, t, ms, tashqi);
       }, function (e) { if (e && e.kod) throw e; throw xato('NETWORK'); }).then(function (r) {
         if (r.holat === 401) { if (!qayta) return tokenBilan(true); throw xato('AUTH_EXPIRED', 401); }
         if (r.ok && r.j && r.j.ok === true) return r.j;

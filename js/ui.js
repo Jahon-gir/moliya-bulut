@@ -3992,6 +3992,22 @@
     // Oxirgi ishlatilgan hisoblar: faqat shu qurilmada (localStorage), serverga va sinxronlashga tushmaydi (TZ-sinxronlash.md 30-band)
     oxirgiOl: function () { try { var o = JSON.parse(localStorage.getItem('moliya-oxirgi-hisob') || 'null'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } },
     oxirgiYoz: function (o) { try { localStorage.setItem('moliya-oxirgi-hisob', JSON.stringify(o)); } catch (e) { /* ahamiyatsiz */ } },
+    // Chek kartasidagi "Tahrirlash" (36-band): oddiy yozuv formasi (5 qadam) karta qiymatlari bilan to'ldirilib ochiladi. Bu yerda hech narsa saqlanmaydi.
+    tahrirla: function (k) {
+      qoshishOldingi = joriy === 'qoshish' ? qoshishOldingi : joriy;
+      qoshishRejimi = 'yozuv';
+      var w = wizardYangi();
+      w.tur = k.tur === 'daromad' || k.tur === 'otkazma' ? k.tur : 'xarajat';
+      w.summa = k.summa || '';
+      w.kategoriya = w.tur === 'otkazma' ? null : (k.kategoriya || null);
+      if (k.hisob) w.hisob = k.hisob;
+      if (w.tur === 'otkazma') w.qabul = k.hisob2 || '';
+      var hozir = Calc.hozir();
+      w.vaqt = k.sana ? { sana: k.sana, vaqt: k.vaqt || (k.sana === hozir.sana ? hozir.vaqt : '00:00') } : null;
+      w.izoh = k.izoh || '';
+      wiz = w;
+      korsat('qoshish');
+    },
     tugadi: function (n) {
       if (joriy === 'bosh' && !stek.length) asosiyniQayta();   // yangi yozuvlar Asosiy sahifada ko'rinsin
       qisqaXabar(n + ' ta yozuv saqlandi');

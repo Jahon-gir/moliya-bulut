@@ -55,15 +55,17 @@ var GapSof = (function () {
     openai: 'Sizning modelingiz javob bermadi, gapni OpenAI o\'qidi (zaxira).'
   };
   var OVOZ_IZOHI = 'Ovozdan matnni Gemini yozgan.';
+  var CHEK_IZOHI = 'Chek rasmidagi matnni Gemini o\'qigan.';
   var MANBA_SARLAVHA = 'Tekshiring va saqlang';
   // Noma'lum yoki yaroqsiz qiymat -> '' (belgi ko'rinmaydi). Qiymat ham rang (model: yashil, openai: sariq) ham matnni tanlaydi.
   function manbaNomi(m) { return m === 'model' || m === 'openai' ? m : ''; }
   // Izoh qutisidagi qatorlar: manba qatori, ovozdan kelgan bo'lsa ikkinchi qator. Manba noma'lum bo'lsa belgi yo'q, shuning uchun qator ham yo'q.
-  function manbaIzohi(manba, ovozdan) {
+  function manbaIzohi(manba, ovozdan, chek) {
     var n = manbaNomi(manba);
     if (!n) return [];
     var q = [MANBA_MATNLARI[n]];
     if (ovozdan) q.push(OVOZ_IZOHI);
+    if (chek) q.push(CHEK_IZOHI);
     return q;
   }
 
@@ -121,6 +123,56 @@ var GapSof = (function () {
     var a = String(mavjud == null ? '' : mavjud).replace(/\s+$/, ''), b = birQator(yangi);
     if (!b) return a;
     return (a ? a + ' ' + b : b).slice(0, GAP_MAX);
+  }
+
+
+  // ---- Chek skaneri (TZ-sinxronlash.md 36-band): rasm -> serverning `rasm` rejimi -> ovozdagi kabi karta. Rasm hech qayerda saqlanmaydi ----
+  var RASM_UZUN_MAX = 1600;                 // uzun tomon (piksel)
+  var RASM_SIFAT = 0.8;                     // JPEG sifati
+  var RASM_BAYT_MAX = 1572864;              // 1,5 MB: siqilgan rasm shundan oshmaydi
+  var RASM_SIFAT_POGONA = [0.8, 0.7, 0.6, 0.5];
+  var RASM_KICHRAYTIRISH = 0.8;             // sig'masa o'lcham shuncha marta kichraytiriladi
+  var RASM_KICHRAYTIRISH_MAX = 4;
+  var CHEK_KUTISH_MS = 90000;               // ikki bosqich (rasm o'qish + yozuv): 60 s yetmasligi mumkin
+  var CHEK_BELGI = 'Chekdan o\'qildi · tekshiring';
+  var CHEK_XATOLAR = {
+    RASM_KATTA: 'Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling.',
+    RASM_FORMAT: 'Bu rasm turi qabul qilinmaydi. JPEG, PNG yoki WebP rasm tanlang.',
+    CHEK_EMAS: 'Rasmda chek topilmadi.',
+    RASM_OQILMADI: 'Rasmdagi matnni o\'qib bo\'lmadi. Chekni aniqroq suratga oling.',
+    AI_HAJM: 'Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling.'
+  };
+  // Uzun tomoni max dan oshmasin, nisbat saqlanadi (kichik rasm kattalashtirilmaydi)
+  function rasmOlchami(en, boy, max) {
+    en = Math.max(1, Math.round(en)); boy = Math.max(1, Math.round(boy)); max = max || RASM_UZUN_MAX;
+    var k = Math.min(1, max / Math.max(en, boy));
+    return { en: Math.max(1, Math.round(en * k)), boy: Math.max(1, Math.round(boy * k)) };
+  }
+  // Siqish: kodla(en, boy, sifat) -> Promise<{ hajm, qiymat }>. Avval sifat tushiriladi (0,8 -> 0,5), sig'masa o'lcham 0,8 baravar kichraytiriladi.
+  // Natija: { en, boy, sifat, hajm, qiymat } yoki RASM_KATTA xatosi. Rasm piksellari bu yerda ushlab turilmaydi.
+  function rasmSiq(en, boy, kodla, bayt) {
+    bayt = bayt || RASM_BAYT_MAX;
+    var o = rasmOlchami(en, boy), urinish = 0;
+    function sifatdan(i) {
+      return kodla(o.en, o.boy, RASM_SIFAT_POGONA[i]).then(function (r) {
+        if (r && r.hajm > 0 && r.hajm <= bayt) return { en: o.en, boy: o.boy, sifat: RASM_SIFAT_POGONA[i], hajm: r.hajm, qiymat: r.qiymat };
+        if (i + 1 < RASM_SIFAT_POGONA.length) return sifatdan(i + 1);
+        if (++urinish > RASM_KICHRAYTIRISH_MAX) { var x = new Error('RASM_KATTA'); x.kod = 'RASM_KATTA'; throw x; }
+        o = { en: Math.max(1, Math.round(o.en * RASM_KICHRAYTIRISH)), boy: Math.max(1, Math.round(o.boy * RASM_KICHRAYTIRISH)) };
+        return sifatdan(0);
+      });
+    }
+    return sifatdan(0);
+  }
+  // Serverga ketadigan tana: yozuv rejimidagi kategoriya/hisob/eski ro'yxatlari bilan bir xil (28.2), gap o'rniga rasm
+  function rasmTanasi(rasm, mime, m, bugun) {
+    var kategoriyalar = kategoriyaNomlari(m);
+    return { rejim: 'rasm', rasm: rasm, mime: mime, bugun: bugun, kategoriyalar: kategoriyalar, hisoblar: hisobRoyxati(m), eski: eskiTanla(m.yozuvlar, m, kategoriyalar) };
+  }
+  function chekXatoMatni(kod, debug) {
+    var k = String(kod || '');
+    if (CHEK_XATOLAR[k]) return CHEK_XATOLAR[k] + '\n(kod: ' + k + ')';
+    return ovozXatoMatni(k, debug);
   }
 
   // ---- Yordamchilar ----
@@ -230,11 +282,13 @@ var GapSof = (function () {
     var ogoh = (Array.isArray(y.ogohlantirish) ? y.ogohlantirish : []).filter(function (x) { return typeof x === 'string' && birQator(x); })
       .map(function (x) { return birQator(x).slice(0, OGOH_MAX); }).slice(0, 5);
     var karta = {
-      manba: manbaNomi(qosh.manba), ovozdan: !!qosh.ovozdan, manbaOchiq: false,
+      manba: manbaNomi(qosh.manba), ovozdan: !!qosh.ovozdan, chek: !!qosh.chek, manbaOchiq: false,
       tur: t[0], qarzAmal: t[1], summa: summa, kategoriya: katTop ? katTop.id : '', hisob: h ? h.id : '', hisob2: h2 && (!h || h2.id !== h.id) ? h2.id : '',
       shaxs: typeof y.shaxs === 'string' ? birQator(y.shaxs).slice(0, NOM_MAX) : '', sana: sanaYaroqli(y.sana, bugun) ? y.sana : bugun,
       izoh: birQator(y.izoh).slice(0, IZOH_MAX), vaqt: soatYaroqli(qosh.soat) ? qosh.soat : '', ogohlantirish: ogoh, xatolar: {}, saqlanmoqda: false
     };
+    // Chek: soat chekdan (sana ham chekdan o'qilgan bo'lsa). Bugungi sanada hozirdan keyingi soat qo'yilmaydi.
+    if (qosh.chek && sanaYaroqli(y.sana, bugun) && soatYaroqli(y.vaqt) && !(y.sana === bugun && soatYaroqli(qosh.soat) && y.vaqt > qosh.soat)) karta.vaqt = y.vaqt;
     return oxirgiHisobQoy(karta, m, qosh.oxirgi);
   }
   // Tepada doim bitta qator, undan keyin serverning ogohlantirishlari
@@ -329,6 +383,8 @@ var GapSof = (function () {
     GAP_MAX: GAP_MAX, HISOBLAGICH_BOSHI: HISOBLAGICH_BOSHI, ESKI_MAX: ESKI_MAX, ESKI_IZOH_MAX: ESKI_IZOH_MAX, IZOH_MAX: IZOH_MAX, KARTA_MAX: KARTA_MAX, KUTISH_MS: KUTISH_MS,
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
     MANBA_SARLAVHA: MANBA_SARLAVHA, MANBA_MATNLARI: MANBA_MATNLARI, OVOZ_IZOHI: OVOZ_IZOHI, manbaNomi: manbaNomi, manbaIzohi: manbaIzohi, soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
+    CHEK_BELGI: CHEK_BELGI, CHEK_IZOHI: CHEK_IZOHI, CHEK_KUTISH_MS: CHEK_KUTISH_MS, RASM_UZUN_MAX: RASM_UZUN_MAX, RASM_SIFAT: RASM_SIFAT, RASM_BAYT_MAX: RASM_BAYT_MAX, CHEK_XATOLAR: CHEK_XATOLAR,
+    rasmOlchami: rasmOlchami, rasmSiq: rasmSiq, rasmTanasi: rasmTanasi, chekXatoMatni: chekXatoMatni,
     wavYasa: wavYasa, monoQil: monoQil, OVOZ_WAV_HZ: OVOZ_WAV_HZ, mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
     xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,
     kategoriyaNomlari: kategoriyaNomlari, hisobRoyxati: hisobRoyxati, eskiTanla: eskiTanla, sorovTanasi: sorovTanasi,

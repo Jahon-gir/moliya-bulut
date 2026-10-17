@@ -33,6 +33,7 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 | `tests.html` | Avtomatik birlik testlari (brauzerda). Faqat tegishlilari: `tests.html?faqat=komissiya` (nomida shu so'z bor testlar) |
 | `tools/gap-brauzer-sinovi.js` | "Gap bilan qo'shish" brauzer sinovi: haqiqiy ilova, soxta server javobi, 360 px yorug'/qorong'i (`python3 -m http.server 8000`, so'ng `node tools/gap-brauzer-sinovi.js`; Playwright kerak) |
 | `tools/komissiya-brauzer-sinovi.js` | O'tkazma komissiyasi brauzer sinovi: haqiqiy ilova va IndexedDB, uydirma ma'lumot, 360 px yorug'/qorong'i (`python3 -m http.server 8000`, so'ng `node tools/komissiya-brauzer-sinovi.js`) |
+| `tools/kategoriya-birlashtirish-brauzer-sinovi.js` | Kategoriyalarni birlashtirish brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/kategoriya-birlashtirish-brauzer-sinovi.js`) |
 
 ## Ma'lum cheklovlar
 

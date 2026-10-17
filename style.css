@@ -1494,3 +1494,12 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 /* Tarix: o'tkazma ostidagi ichki qator (chapdan surilgan) */
 .yozuv-kv.kom-ichki { width: calc(100% - 28px); min-height: 44px; margin-left: 28px; padding: 6px 0; gap: 10px; border-top: 0; }
 .kom-ichki .yozuv-nom { font-size: 14px; }
+
+/* 0.44.1: kategoriyalarni birlashtirish (TZ-sinxronlash.md 41-band) */
+.birlashtirish-tugma { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-bottom: 12px; }
+.birl-royxat { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.birl-qator { min-height: 56px; }
+.birl-nom { font-weight: 600; min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.birl-matn { margin: 8px 0 4px; }
+.birl-ogoh { margin: 0 0 12px; font-weight: 700; color: var(--xarajat); }
+.birl-ok { width: 100%; min-height: 48px; margin: 4px 0 8px; }

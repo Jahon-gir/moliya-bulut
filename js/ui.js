@@ -1552,7 +1552,62 @@
       kategoriyaniSaqlash({ id: k.id, yaratilgan: k.yaratilgan, nom: k.nom, tur: k.tur, rang: k.rang, belgi: k.belgi, arxivlangan: true },
         'Kategoriya arxivlandi');
     }));
+
+    // Boshqa kategoriyaga birlashtirish (41-band): yozuvlar va byudjet o'tadi, bu kategoriya o'chadi
+    var birl = tugma(undefined, 'ikkinchi-tugma birlashtirish-tugma', function () { kategoriyaBirlashtirishOynasi(k); });
+    birl.id = 'kategoriya-birlashtirish';
+    birl.appendChild(Ikonlar.chiz('arrow-merge', 20));
+    birl.appendChild(document.createTextNode(' Boshqa kategoriyaga birlashtirish'));
+    bloklar.push(birl);
     return bloklar;
+  }
+
+  // 1-qadam: faqat shu turdagi, arxivlanmagan, o'zidan boshqa kategoriyalar ro'yxati. 2-qadam: tasdiq ("Natija kategoriya nomi" bilan). Qaytarib bo'lmaydi.
+  function kategoriyaBirlashtirishOynasi(k) {
+    var nomzodlar = malumot.kategoriyalar.filter(function (x) { return x.tur === k.tur && !x.arxivlangan && x.id !== k.id; });
+    if (!nomzodlar.length) { qisqaXabar('Birlashtirish uchun shu turda boshqa kategoriya yo\'q'); return; }
+    pastkiOyna('Qaysi kategoriyaga birlashtiramiz?', function (oyna, yop) {
+      var royxat = el('div', undefined, 'birl-royxat');
+      nomzodlar.forEach(function (n) {
+        var b = tugma(undefined, 'tanlov-qator birl-qator', function () { yop(false); kategoriyaBirlashtirishTasdiq(k, n); });
+        b.setAttribute('data-kategoriya', n.id);
+        b.appendChild(kategBadge(n, 40));
+        b.appendChild(el('span', n.nom, 'birl-nom'));
+        royxat.appendChild(b);
+      });
+      oyna.appendChild(royxat);
+    });
+  }
+  function kategoriyaBirlashtirishTasdiq(k, nishon) {
+    var soni = malumot.yozuvlar.filter(function (y) { return y.kategoriya_id === k.id; }).length;
+    pastkiOyna('Birlashtirishni tasdiqlang', function (oyna, yop) {
+      oyna.appendChild(el('p', soni + ' ta yozuv "' + nishon.nom + '" ga o\'tadi, "' + k.nom + '" kategoriyasi o\'chiriladi.', 'birl-matn'));
+      oyna.appendChild(el('p', 'Bu amalni qaytarib bo\'lmaydi.', 'birl-ogoh'));
+      var maydon = el('div', undefined, 'maydon');
+      var belgi = el('label', 'Natija kategoriya nomi');
+      belgi.setAttribute('for', 'birl-nom');
+      var nom = document.createElement('input');
+      nom.id = 'birl-nom'; nom.type = 'text'; nom.autocomplete = 'off'; nom.value = nishon.nom;
+      var xato = el('div', undefined, 'xato-matn');
+      nom.addEventListener('input', function () { xato.textContent = ''; nom.classList.remove('xatoli'); });
+      maydon.appendChild(belgi); maydon.appendChild(nom); maydon.appendChild(xato);
+      oyna.appendChild(maydon);
+      oyna.appendChild(el('p', 'Ikon va rang "' + nishon.nom + '" nikida qoladi.', 'xira'));
+      var ok = tugma('Birlashtirish', 'qizil-tugma birl-ok', function () {
+        var n = Calc.kategoriyaNomTekshir(nom.value, malumot.kategoriyalar.filter(function (x) { return x.tur === k.tur && !x.arxivlangan && x.id !== k.id && x.id !== nishon.id; }));
+        if (n.xato) { xato.textContent = n.xato; nom.classList.add('xatoli'); nom.focus(); return; }
+        ok.disabled = true;
+        Data.kategoriyalarniBirlashtirish(k.id, nishon.id, n.nom).then(yuklash).then(function () {
+          yop(false);
+          qisqaXabar('Kategoriyalar birlashtirildi');
+          orqaga();
+        }).catch(function (e) { ok.disabled = false; xato.textContent = 'Birlashtirib bo\'lmadi: ' + (e && e.message ? e.message : e); });
+      });
+      ok.id = 'birl-tasdiq';
+      oyna.appendChild(ok);
+      var bekor = tugma('Bekor qilish', 'ikkinchi-tugma', function () { yop(); });
+      oyna.appendChild(bekor);
+    });
   }
 
   function kategoriyaniSaqlash(kat, xabarMatni) {

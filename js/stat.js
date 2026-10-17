@@ -10,7 +10,7 @@ var Stat = (function () {
   var TUR_IKONI = { ustun: 'chart-bar', chiziq: 'chart-line', maydon: 'chart-area', doira: 'chart-pie' };
   var DAVR_NOMI = { kun: 'Kun', hafta: 'Hafta', oy: 'Oy', yil: 'Yil' };
 
-  var holat = { sana: '', tur: 'ustun', davr: 'oy', tanlov: null, menyuOchiq: false };
+  var holat = { sana: '', tur: 'ustun', davr: 'oy', daromad: true, xarajat: true, ulush: 'xarajat', menyuOchiq: false };
 
   function el(teg, matn, klass) { var e = document.createElement(teg); if (matn !== undefined) e.textContent = matn; if (klass) e.className = klass; return e; }
   function tugma(matn, klass, bosilganda) { var b = el('button', matn, klass); b.type = 'button'; if (bosilganda) b.addEventListener('click', bosilganda); return b; }
@@ -29,7 +29,7 @@ var Stat = (function () {
   // Ekran ochilganda: sana — bugun, tur va davr — qurilmada saqlangan (yaroqsiz bo'lsa ustun / oy)
   function boshlash(bugunSana) {
     var t = StatSof.grafikTanlovi(oqi());
-    holat.tur = t.tur; holat.davr = t.davr; holat.sana = bugunSana; holat.menyuOchiq = false; qimmatRejimi = 'hafta';
+    holat.tur = t.tur; holat.davr = t.davr; holat.daromad = t.daromad; holat.xarajat = t.xarajat; holat.ulush = t.ulush; holat.sana = bugunSana; holat.menyuOchiq = false; qimmatRejimi = 'hafta';
   }
 
   function karta(klass) { return el('div', undefined, 'karta st-karta' + (klass ? ' ' + klass : '')); }
@@ -57,7 +57,7 @@ var Stat = (function () {
     return q;
   }
 
-  // ---- 2) Xarajat grafigi ----
+  // ---- 2) Daromad va xarajat grafigi ----
   function turTugmasi(h) {
     var quti = el('div', undefined, 'st-tur');
     var t = tugma(undefined, 'st-tur-tugma', null);
@@ -113,10 +113,12 @@ var Stat = (function () {
     return q;
   }
 
-  // Ustun / chiziq / maydon (SVG). Hamma tur bir xil o'q va tarmoqdan foydalanadi
+  // Ustun / chiziq / maydon (SVG). Hamma tur bir xil o'q va tarmoqdan foydalanadi; shkala faqat ko'rinib turgan seriyalar bo'yicha (umumiy)
   var W = 300, H = 180, CHAP = 44, ONG = 8, TEPA = 10, PAST = 26;
+  var SERIYALAR = [['daromad', 'Daromad', 'd'], ['xarajat', 'Xarajat', 'x']];
   function vaqtDiagrammasi(h, m, tur, oqish) {
-    var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Xarajat grafigi: ' + m.nom + ', jami ' + h.pul(m.jami) }, 'st-svg');
+    var kor = m.korinadi, korinadigan = SERIYALAR.filter(function (q) { return kor[q[0]]; });
+    var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Daromad va xarajat grafigi: ' + m.nom }, 'st-svg');
     var kenglik = W - CHAP - ONG, balandlik = H - TEPA - PAST, tik = Calc.chiroyliTiklar(m.eng, 4), n = m.bucketlar.length, slot = kenglik / n;
     function y(q) { return TEPA + balandlik - (tik.eng > 0 ? q / tik.eng * balandlik : 0); }
     tik.tiklar.forEach(function (q) {
@@ -125,28 +127,31 @@ var Stat = (function () {
       s.appendChild(t);
     });
     function x(i) { return CHAP + slot * (i + 0.5); }
-    function tanlash(b, i) { oqish.textContent = b.toliq + ': ' + h.pul(b.summa); oqish.setAttribute('data-i', String(i)); }
+    function qiymatMatni(b) { return b.toliq + ' — ' + korinadigan.map(function (q) { return q[1] + ' ' + h.pul(b[q[0]]); }).join(' · '); }
     if (tur === 'ustun') {
-      var kengUstun = Math.min(22, slot * 0.62);
+      var juft = korinadigan.length === 2, keng = juft ? Math.min(11, slot * 0.36) : Math.min(22, slot * 0.62);
       m.bucketlar.forEach(function (b, i) {
-        var bal = Calc.ustunBalandligi(b.summa, tik.eng, balandlik, 2);
-        var r = svg('rect', { x: x(i) - kengUstun / 2, y: TEPA + balandlik - bal, width: kengUstun, height: bal, rx: Math.min(3, kengUstun / 2) }, 'st-ustun');
-        s.appendChild(r);
+        korinadigan.forEach(function (q, k) {
+          var bal = Calc.ustunBalandligi(b[q[0]], tik.eng, balandlik, 2), cx = juft ? x(i) + (k === 0 ? -keng / 2 : keng / 2) : x(i);   // juft ustun: daromad chapda, xarajat o'ngda
+          s.appendChild(svg('rect', { x: cx - keng / 2, y: TEPA + balandlik - bal, width: keng, height: bal, rx: Math.min(3, keng / 2) }, 'st-ustun-' + q[2]));
+        });
       });
     } else {
-      var nuqtalar = m.bucketlar.map(function (b, i) { return [x(i), y(b.summa)]; });
-      if (tur === 'maydon') {
-        var yo = 'M' + nuqtalar[0][0] + ' ' + (TEPA + balandlik) + nuqtalar.map(function (p) { return ' L' + p[0] + ' ' + p[1]; }).join('') + ' L' + nuqtalar[n - 1][0] + ' ' + (TEPA + balandlik) + ' Z';
-        s.appendChild(svg('path', { d: yo }, 'st-maydon'));
-      }
-      s.appendChild(svg('polyline', { points: nuqtalar.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') }, 'st-chiziq'));
-      if (n <= 12) nuqtalar.forEach(function (p) { s.appendChild(svg('circle', { cx: p[0], cy: p[1], r: 2.6 }, 'st-nuqta')); });
+      korinadigan.forEach(function (q) {
+        var nuqtalar = m.bucketlar.map(function (b, i) { return [x(i), y(b[q[0]])]; });
+        if (tur === 'maydon') {
+          var yo = 'M' + nuqtalar[0][0] + ' ' + (TEPA + balandlik) + nuqtalar.map(function (p) { return ' L' + p[0] + ' ' + p[1]; }).join('') + ' L' + nuqtalar[n - 1][0] + ' ' + (TEPA + balandlik) + ' Z';
+          s.appendChild(svg('path', { d: yo }, 'st-maydon st-maydon-' + q[2]));
+        }
+        s.appendChild(svg('polyline', { points: nuqtalar.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') }, 'st-chiziq st-chiziq-' + q[2]));
+        if (tur === 'chiziq' || n <= 12) nuqtalar.forEach(function (p) { s.appendChild(svg('circle', { cx: p[0], cy: p[1], r: 2.6 }, 'st-nuqta st-nuqta-' + q[2])); });
+      });
     }
-    // bosiladigan (va klaviaturadan fokus oladigan) ustunlar: qiymat tagida ko'rinadi
+    // bosiladigan (va klaviaturadan fokus oladigan) joylar: qiymat tagida ko'rinadi
     m.bucketlar.forEach(function (b, i) {
-      var tg = svg('rect', { x: CHAP + slot * i, y: TEPA, width: slot, height: balandlik, tabindex: 0, role: 'button', 'aria-label': b.toliq + ': ' + h.pul(b.summa) }, 'st-tegish');
-      tg.addEventListener('click', function () { tanlash(b, i); });
-      tg.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tanlash(b, i); } });
+      var tg = svg('rect', { x: CHAP + slot * i, y: TEPA, width: slot, height: balandlik, tabindex: 0, role: 'button', 'aria-label': qiymatMatni(b) }, 'st-tegish');
+      tg.addEventListener('click', function () { oqish.textContent = qiymatMatni(b); });
+      tg.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); oqish.textContent = qiymatMatni(b); } });
       s.appendChild(tg);
       if (b.belgi) {
         var t = svg('text', { x: x(i), y: H - 8, 'text-anchor': 'middle' }, 'st-yorliq'); t.textContent = b.qisqa; s.appendChild(t);
@@ -155,10 +160,10 @@ var Stat = (function () {
     return s;
   }
 
-  // Doira (halqa): kategoriyalar ulushi, tagida legenda (≤ 6 ta, foiz bilan)
+  // Doira (halqa): kategoriyalar/manbalar ulushi, tagida legenda (≤ 6 ta, foiz bilan)
   function doira(h, d) {
     var q = el('div', undefined, 'st-doira');
-    var s = svg('svg', { viewBox: '0 0 120 120', role: 'img', 'aria-label': 'Xarajat ulushi: ' + d.nom }, 'st-doira-svg');
+    var s = svg('svg', { viewBox: '0 0 120 120', role: 'img', 'aria-label': (d.ulush === 'daromad' ? 'Daromad ulushi: ' : 'Xarajat ulushi: ') + d.nom }, 'st-doira-svg');
     var elementlar = d.royxat.map(function (x) {
       var k = x.id === 'boshqa' ? null : h.kategoriya(x.id);
       return { id: x.id, nom: x.id === 'boshqa' ? 'Boshqa' : (k ? k.nom : 'Kategoriyasiz'), rang: x.id === 'boshqa' ? Ikonlar.KULRANG : ((k && /^#[0-9a-f]{6}$/i.test(k.rang || '')) ? k.rang : Ikonlar.KULRANG), summa: x.summa, foiz: x.foiz };
@@ -183,25 +188,61 @@ var Stat = (function () {
     return q;
   }
 
+  // Daromad / Xarajat katakchalari (davr jami bilan). Bosilsa seriya grafikdan yashiriladi (xira), qayta bosilsa qaytadi; oxirgisini yashirib bo'lmaydi
+  function seriyaKatakchalari(h, jami) {
+    var q = el('div', undefined, 'st-seriyalar'); q.setAttribute('role', 'group'); q.setAttribute('aria-label', 'Grafikdagi seriyalar');
+    var yagona = !(holat.daromad && holat.xarajat);
+    SERIYALAR.forEach(function (c) {
+      var kor = holat[c[0]];
+      var b = tugma(undefined, 'st-seriya' + (kor ? '' : ' st-seriya-yopiq'), function () {
+        var y = StatSof.seriyaniAlmashtir(holat, c[0]);
+        if (!y.ozgardi) return;
+        holat.daromad = y.daromad; holat.xarajat = y.xarajat; saqla(); h.qayta();
+      });
+      b.id = 'stat-seriya-' + c[0]; b.setAttribute('data-seriya', c[0]); b.setAttribute('aria-pressed', String(kor));
+      if (kor && yagona) b.setAttribute('aria-disabled', 'true');   // oxirgi ko'rinib turgani
+      b.setAttribute('aria-label', c[1] + ': ' + h.pul(jami[c[0]]) + (kor ? ', grafikda ko\'rinadi' : ', grafikdan yashirilgan'));
+      var ust = el('span', undefined, 'st-seriya-ust');
+      var kv = el('span', undefined, 'st-seriya-kv st-seriya-kv-' + c[2]); ust.appendChild(kv); ust.appendChild(el('span', c[1], 'st-seriya-nom'));
+      b.appendChild(ust);
+      var summa = el('span', h.pul(jami[c[0]]), 'st-seriya-summa'); summa.id = 'stat-jami-' + c[0];
+      b.appendChild(summa);
+      q.appendChild(b);
+    });
+    return q;
+  }
+  // Doira: "Xarajat ulushi" | "Daromad ulushi"
+  function ulushAlmashtirgichi(h) {
+    var q = el('div', undefined, 'tanlov st-ulush'); q.setAttribute('role', 'group'); q.setAttribute('aria-label', 'Doira turi');
+    [['xarajat', 'Xarajat ulushi'], ['daromad', 'Daromad ulushi']].forEach(function (t) {
+      var b = tugma(t[1], undefined, function () { holat.ulush = t[0]; saqla(); h.qayta(); });
+      b.setAttribute('aria-pressed', String(holat.ulush === t[0])); b.setAttribute('data-ulush', t[0]);
+      q.appendChild(b);
+    });
+    return q;
+  }
+
   function grafikKartasi(h) {
     var k = karta('st-grafik');
-    k.appendChild(sarlavha('Xarajat grafigi', turTugmasi(h)));
+    k.appendChild(sarlavha('Daromad va xarajat grafigi', turTugmasi(h)));
     k.appendChild(davrTugmalari(h));
-    var yozuvlar = h.yozuvlar(), davr = holat.tur === 'doira' ? 'oy' : holat.davr;
-    var d = holat.tur === 'doira' ? StatSof.doiraMalumoti(yozuvlar, holat.sana) : StatSof.grafikMalumoti(yozuvlar, davr, holat.sana);
+    var yozuvlar = h.yozuvlar(), doiramu = holat.tur === 'doira', davr = doiramu ? 'oy' : holat.davr;
+    var d = doiramu ? StatSof.doiraMalumoti(yozuvlar, holat.sana, holat.ulush) : StatSof.grafikMalumoti(yozuvlar, davr, holat.sana, holat);
     k.appendChild(navQatori(h, davr, d.nom));
-    var j = el('div', undefined, 'st-jami'); j.id = 'stat-jami';
-    j.appendChild(document.createTextNode('Jami: '));
-    j.appendChild(el('strong', h.pul(d.jami)));
-    k.appendChild(j);
+    if (doiramu) {
+      k.appendChild(ulushAlmashtirgichi(h));
+      var j = el('div', undefined, 'st-jami'); j.id = 'stat-jami';
+      j.appendChild(document.createTextNode('Jami: ')); j.appendChild(el('strong', h.pul(d.jami)));
+      k.appendChild(j);
+    } else k.appendChild(seriyaKatakchalari(h, d.jami));
     if (d.bosh) { var b = el('p', 'Bu davrda yozuv yo\'q.', 'xira st-bosh-matn'); b.id = 'stat-bosh'; k.appendChild(b); }
-    else if (holat.tur === 'doira') k.appendChild(doira(h, d));
+    else if (doiramu) k.appendChild(doira(h, d));
     else {
       var oqish = el('div', 'Ustunni bosing: qiymati shu yerda ko\'rinadi', 'xira st-oqish'); oqish.id = 'stat-oqish'; oqish.setAttribute('aria-live', 'polite');
       k.appendChild(vaqtDiagrammasi(h, d, holat.tur, oqish));
       k.appendChild(oqish);
     }
-    if (holat.tur !== 'doira' && davr === 'kun') k.appendChild(el('p', 'Vaqti yozilmagan yozuvlar kunlik grafikka kirmaydi.', 'xira st-izoh'));
+    if (!doiramu && davr === 'kun') k.appendChild(el('p', 'Vaqti yozilmagan yozuvlar kunlik grafikka kirmaydi.', 'xira st-izoh'));
     return k;
   }
 

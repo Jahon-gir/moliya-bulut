@@ -1379,3 +1379,28 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 .st-farq-summa { font-size: 13px; }
 .st-farq-ong { flex: none; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .st-farq-farq { font-size: 12px; }
+
+/* ===== 0.41.0: grafikka daromad qo'shildi (TZ-sinxronlash.md 34.5). Seriya ranglari tasdiqlangan maketdan: daromad #1D9E75, xarajat #D85A30 ===== */
+.st-seriyalar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 10px; }
+.st-seriya {
+  min-width: 0; min-height: 56px; padding: 8px 10px; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+  color: var(--matn); background: var(--fon); border: 1px solid var(--chiziq); border-radius: 14px;
+}
+.st-seriya-yopiq { opacity: .45; }
+.st-seriya[aria-disabled="true"] { cursor: default; }
+.st-seriya-ust { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--xira); }
+.st-seriya-kv { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.st-seriya-kv-d { background: #1D9E75; }
+.st-seriya-kv-x { background: #D85A30; }
+.st-seriya-summa { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.st-seriya:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.st-ustun-d { fill: #1D9E75; }
+.st-ustun-x { fill: #D85A30; }
+.st-chiziq-d { stroke: #1D9E75; }
+.st-chiziq-x { stroke: #D85A30; }
+.st-maydon-d { fill: #1D9E75; opacity: .28; }
+.st-maydon-x { fill: #D85A30; opacity: .28; }
+.st-nuqta-d { stroke: #1D9E75; }
+.st-nuqta-x { stroke: #D85A30; }
+.st-ulush { margin: 8px 0 4px; }
+.st-ulush button { min-height: 44px; }

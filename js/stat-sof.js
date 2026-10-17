@@ -12,17 +12,38 @@ var StatSof = (function () {
   var HAFTA_KUNI_TOLIQ = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'];
   var DOIRA_ENG_KOP = 6;   // legendada ko'pi bilan 6 ta element (oxirgisi "Boshqa")
   var UCH_OY = 3;          // "eng qimmat kun": oxirgi 3 oy
+  var DAROMAD_RANGI = '#1D9E75', XARAJAT_RANGI = '#D85A30';   // grafik seriyalari (tasdiqlangan maket)
 
-  // ---- Tanlovni saqlash (localStorage matni <-> { tur, davr }); yaroqsiz bo'lsa boshlang'ich ----
+  // ---- Tanlovni saqlash (localStorage matni <-> { tur, davr, daromad, xarajat, ulush }); yaroqsiz bo'lsa boshlang'ich ----
+  // daromad / xarajat — seriya grafikda ko'rinadimi (kamida bittasi ko'rinadi); ulush — doira: 'xarajat' | 'daromad'
+  function korinishTekshir(daromad, xarajat) {
+    var d = daromad !== false, x = xarajat !== false;
+    return d || x ? { daromad: d, xarajat: x } : { daromad: true, xarajat: true };
+  }
   function grafikTanlovi(matn) {
     var j = null;
     try { j = JSON.parse(matn); } catch (e) { j = null; }
+    if (!j || typeof j !== 'object') j = {};
+    var k = korinishTekshir(j.daromad, j.xarajat);
     return {
-      tur: j && TURLAR.indexOf(j.tur) >= 0 ? j.tur : 'ustun',
-      davr: j && DAVRLAR.indexOf(j.davr) >= 0 ? j.davr : 'oy'
+      tur: TURLAR.indexOf(j.tur) >= 0 ? j.tur : 'ustun',
+      davr: DAVRLAR.indexOf(j.davr) >= 0 ? j.davr : 'oy',
+      daromad: k.daromad, xarajat: k.xarajat,
+      ulush: j.ulush === 'daromad' ? 'daromad' : 'xarajat'
     };
   }
-  function grafikTanloviMatni(t) { return JSON.stringify({ tur: t.tur, davr: t.davr }); }
+  function grafikTanloviMatni(t) {
+    var k = korinishTekshir(t.daromad, t.xarajat);
+    return JSON.stringify({ tur: t.tur, davr: t.davr, daromad: k.daromad, xarajat: k.xarajat, ulush: t.ulush === 'daromad' ? 'daromad' : 'xarajat' });
+  }
+  // Seriyani yashirish/qaytarish: oxirgi ko'rinib turganini yashirib bo'lmaydi (o'zgarmaydi). Natija: { daromad, xarajat, ozgardi }
+  function seriyaniAlmashtir(korinadi, kalit) {
+    var y = { daromad: korinadi.daromad !== false, xarajat: korinadi.xarajat !== false };
+    var boshqa = kalit === 'daromad' ? 'xarajat' : 'daromad';
+    if (y[kalit] && !y[boshqa]) return { daromad: y.daromad, xarajat: y.xarajat, ozgardi: false };
+    y[kalit] = !y[kalit];
+    return { daromad: y.daromad, xarajat: y.xarajat, ozgardi: true };
+  }
 
   // ---- Yordamchilar ----
   function xarajatmi(y) { return y.tur === 'xarajat'; }
@@ -73,33 +94,42 @@ var StatSof = (function () {
     return !!birinchi && c2.gacha >= birinchi && c2.dan !== c.dan;
   }
 
-  // ---- 2) Xarajat grafigi ma'lumoti (ustun, chiziq, maydon). Natija: { davr, dan, gacha, nom, jami, bucketlar: [{ qisqa, belgi (ko'rsatiladimi), toliq, summa }], eng, bosh, vaqtsiz }
-  // jami — davrdagi BARCHA xarajat (Asosiy bilan bir xil); kunda vaqti yo'q yozuvlar ustunlarga kirmaydi (vaqtsiz — shularning soni)
-  function grafikMalumoti(yozuvlar, davr, sana) {
-    var c = Calc.davrChegarasi(davr, sana), bucketlar = [], jami = 0, vaqtsiz = 0, eng = 0;
+  // ---- 2) Daromad va xarajat grafigi ma'lumoti (ustun, chiziq, maydon) ----
+  // Natija: { davr, dan, gacha, nom, jami: { daromad, xarajat }, bucketlar: [{ qisqa, belgi (yorliq ko'rsatiladimi), toliq, daromad, xarajat }], eng, bosh, vaqtsiz }
+  // jami — davrdagi BARCHA daromad va xarajat (Asosiy "Naqd pul oqimi" bilan bir xil qoida: qarz amallari ham, o'tkazma yo'q); kunda vaqti yo'q yozuvlar
+  // ustunlarga kirmaydi (vaqtsiz — shularning soni), lekin jamiga kiradi. eng — faqat KO'RINIB TURGAN seriyalar bo'yicha (umumiy shkala).
+  // bosh — ko'rinib turgan seriyalarda davrda hech narsa yo'q.
+  function grafikMalumoti(yozuvlar, davr, sana, korinadi) {
+    var kor = korinishTekshir(korinadi && korinadi.daromad, korinadi && korinadi.xarajat);
+    var c = Calc.davrChegarasi(davr, sana), bucketlar = [], jami = { daromad: 0, xarajat: 0 }, vaqtsiz = 0, eng = 0;
     if (davr === 'kun') {
-      KUN_ORALIQLARI.forEach(function (q) { bucketlar.push({ qisqa: q, belgi: true, toliq: q.replace('–', ':00 – ') + ':00', summa: 0 }); });
+      KUN_ORALIQLARI.forEach(function (q) { bucketlar.push({ qisqa: q, belgi: true, toliq: q.replace('–', ':00 – ') + ':00', daromad: 0, xarajat: 0 }); });
       yozuvlar.forEach(function (y) {
-        if (!xarajatmi(y) || y.sana !== sana) return;
-        jami += y.summa;
+        if ((y.tur !== 'xarajat' && y.tur !== 'daromad') || y.sana !== sana) return;
+        jami[y.tur] += y.summa;
         if (!Calc.vaqtFormatiTogrimi(y.vaqt)) { vaqtsiz++; return; }
-        bucketlar[Math.floor(parseInt(y.vaqt.slice(0, 2), 10) / 4)].summa += y.summa;
+        bucketlar[Math.floor(parseInt(y.vaqt.slice(0, 2), 10) / 4)][y.tur] += y.summa;
       });
     } else {
       var d = Calc.diagrammaVaqt(yozuvlar, davr, sana, '');
-      jami = d.jami.xarajat;
+      jami = { daromad: d.jami.daromad, xarajat: d.jami.xarajat };
       d.bucketlar.forEach(function (b, i) {
-        bucketlar.push({ qisqa: b.qisqa, belgi: davr === 'oy' ? i % 3 === 0 : true, toliq: b.toliq, summa: b.xarajat });   // oy: yorliqlar siyrak (har 3-si)
+        bucketlar.push({ qisqa: b.qisqa, belgi: davr === 'oy' ? i % 3 === 0 : true, toliq: b.toliq, daromad: b.daromad, xarajat: b.xarajat });   // oy: yorliqlar siyrak (har 3-si)
       });
     }
-    bucketlar.forEach(function (b) { if (b.summa > eng) eng = b.summa; });
-    return { davr: davr, dan: c.dan, gacha: c.gacha, nom: Calc.davrNomi(davr, sana), jami: jami, bucketlar: bucketlar, eng: eng, bosh: jami === 0, vaqtsiz: vaqtsiz };
+    bucketlar.forEach(function (b) {
+      if (kor.daromad && b.daromad > eng) eng = b.daromad;
+      if (kor.xarajat && b.xarajat > eng) eng = b.xarajat;
+    });
+    var korinibJami = (kor.daromad ? jami.daromad : 0) + (kor.xarajat ? jami.xarajat : 0);
+    return { davr: davr, dan: c.dan, gacha: c.gacha, nom: Calc.davrNomi(davr, sana), jami: jami, bucketlar: bucketlar, eng: eng, bosh: korinibJami === 0, vaqtsiz: vaqtsiz, korinadi: kor };
   }
 
-  // ---- Doira: tanlangan oyning xarajat ulushi (kategoriyalar bo'yicha). Legenda ≤ 6 ta; qolgani "Boshqa"ga. Foizlar yig'indisi 100 ----
-  // Natija: { dan, gacha, nom, jami, bosh, royxat: [{ id, summa, foiz }] }  (id 'boshqa' — qo'shilgan qism)
-  function doiraMalumoti(yozuvlar, sana) {
-    var c = Calc.davrChegarasi('oy', sana), h = Calc.hisobot(yozuvlar, c.dan, c.gacha, ''), t = h.xarajatTaqsimoti, royxat;
+  // ---- Doira: tanlangan oyning xarajat yoki daromad ulushi (kategoriyalar/manbalar bo'yicha). Legenda ≤ 6 ta; qolgani "Boshqa"ga. Foizlar yig'indisi 100 ----
+  // ulush: 'xarajat' (boshlang'ich) | 'daromad'. Natija: { ulush, dan, gacha, nom, jami, bosh, royxat: [{ id, summa, foiz }] }  (id 'boshqa' — qo'shilgan qism)
+  function doiraMalumoti(yozuvlar, sana, ulush) {
+    var daromad = ulush === 'daromad';
+    var c = Calc.davrChegarasi('oy', sana), h = Calc.hisobot(yozuvlar, c.dan, c.gacha, ''), t = daromad ? h.daromadTaqsimoti : h.xarajatTaqsimoti, jami = daromad ? h.daromad : h.xarajat, royxat;
     if (t.length <= DOIRA_ENG_KOP) royxat = t.map(function (x) { return { id: x.kategoriya_id, summa: x.summa }; });
     else {
       royxat = t.slice(0, DOIRA_ENG_KOP - 1).map(function (x) { return { id: x.kategoriya_id, summa: x.summa }; });
@@ -107,7 +137,7 @@ var StatSof = (function () {
     }
     var f = Calc.foizlar(royxat.map(function (x) { return x.summa; }));
     royxat.forEach(function (x, i) { x.foiz = f[i]; });
-    return { dan: c.dan, gacha: c.gacha, nom: Calc.davrNomi('oy', sana), jami: h.xarajat, bosh: h.xarajat === 0, royxat: royxat };
+    return { ulush: daromad ? 'daromad' : 'xarajat', dan: c.dan, gacha: c.gacha, nom: Calc.davrNomi('oy', sana), jami: jami, bosh: jami === 0, royxat: royxat };
   }
 
   // ---- 3) Kunlik o'rtacha xarajat ----
@@ -188,12 +218,15 @@ var StatSof = (function () {
 
   // Tanlangan oy xarajati: Asosiy sahifadagi "Naqd pul oqimi" bilan AYNAN bir xil (Calc.oyJami)
   function oyXarajati(yozuvlar, oy) { return Calc.oyJami(yozuvlar, oy).xarajat; }
+  // Tanlangan oy daromadi: Asosiy "Naqd pul oqimi" daromadi bilan AYNAN bir xil (Olingan qarz kirim sifatida kiradi)
+  function oyDaromadi(yozuvlar, oy) { return Calc.oyJami(yozuvlar, oy).daromad; }
 
   return {
     TURLAR: TURLAR, DAVRLAR: DAVRLAR, SAQLASH_KALITI: SAQLASH_KALITI, KUN_ORALIQLARI: KUN_ORALIQLARI, HAFTA_KUNI_TOLIQ: HAFTA_KUNI_TOLIQ, DOIRA_ENG_KOP: DOIRA_ENG_KOP,
-    grafikTanlovi: grafikTanlovi, grafikTanloviMatni: grafikTanloviMatni, oyMarkazi: oyMarkazi, oyChiplari: oyChiplari, chipSanasi: chipSanasi,
+    grafikTanlovi: grafikTanlovi, grafikTanloviMatni: grafikTanloviMatni, seriyaniAlmashtir: seriyaniAlmashtir, korinishTekshir: korinishTekshir,
+    DAROMAD_RANGI: DAROMAD_RANGI, XARAJAT_RANGI: XARAJAT_RANGI, oyMarkazi: oyMarkazi, oyChiplari: oyChiplari, chipSanasi: chipSanasi,
     suril: suril, surishMumkinmi: surishMumkinmi, birinchiSana: birinchiSana, grafikMalumoti: grafikMalumoti, doiraMalumoti: doiraMalumoti,
     taqqosla: taqqosla, kunlikOrtacha: kunlikOrtacha, engQimmatKun: engQimmatKun, kategoriyaFarqi: kategoriyaFarqi,
-    belgiliRaqam: belgiliRaqam, foizMatni: foizMatni, oyXarajati: oyXarajati
+    belgiliRaqam: belgiliRaqam, foizMatni: foizMatni, oyXarajati: oyXarajati, oyDaromadi: oyDaromadi
   };
 })();

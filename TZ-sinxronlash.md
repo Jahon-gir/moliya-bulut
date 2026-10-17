@@ -953,3 +953,34 @@ Faqat ilova qismi (`js/stat-sof.js`, `js/stat.js`, `style.css`). **Server o'zgar
 - **Kun grafigi:** vaqti yo'q yozuvlar (daromad ham, xarajat ham) ustunlarga kirmaydi, izoh saqlangan; "Jami" ularni sanaydi (34.3 dagi qaror). Daromadning kundagi oralig'i ham yozuvning `vaqt` maydonidan.
 - **Bo'sh holat:** ko'rinib turgan seriyalarda davrda hech narsa bo'lmasa "Bu davrda yozuv yo'q." (masalan, xarajat yashirilgan va bu haftada daromad yo'q).
 - **Sinov:** `tests.html` 590 / 590 (yangi: daromad bo'laklari kun/hafta/oy/yil, vaqtsiz daromad, umumiy shkala, yashirish qoidasi, saqlash va eski yozuv, jami = Asosiy daromad/xarajat, qarz qoidalari, daromad ulushi doirasi, ekran (DOM)); `tools/stat-brauzer-sinovi.js` 136 tekshiruv (360 px yorug'/qorong'i). Tekshirilmagan: haqiqiy telefon.
+
+## 35. Statistika (2-qism, 0.42.0)
+
+Faqat ilova qismi (`js/stat-sof.js`, `js/stat.js`, `style.css`; `ui.js` ga faqat `qarzlar` ulandi). **Server o'zgarmagan, ma'lumot tuzilishi o'zgarmagan, qayta Deploy kerak emas.** Yangi fayl yo'q (`sw.js` ro'yxati o'zgarmadi, versiya `?v=0.42.0`). Statistika ekranining oxiriga (34-banddagi kartalardan keyin) 3 ta ixcham karta qo'shildi; hammasi tanlangan oy chipiga bog'liq (qarz qoldig'i bundan mustasno, pastga qarang) va mavjud `Calc` funksiyalaridan olinadi. Summalar yashirilgan (••••) bo'lsa bu kartalarda ham yashiriladi (foizlar summa emas, ko'rinadi).
+
+### 35.1. Tejash ulushi
+- Bitta ixcham qator: chapda "Tejash ulushi", o'ngda katta foiz va (bo'lsa) strelka + "N ball". Ostida yupqa chiziq: chapda to'q sariq-qizil "Sarflandi N%" (`#D85A30`), o'ngda yashil "Qoldi N%" (`#1D9E75`); eng pastda kichik yorliq "Kirim … · Chiqim …".
+- **Formula:** qoldi% = (kirim − chiqim) / kirim × 100, butun songa yaxlitlanadi; sarflandi% = 100 − qoldi% (chiziq uchun 0..100 ga qisiladi, shunda ikkala bo'lak yig'indisi 100). **Kirim/chiqim — grafikdagi qoida bilan** (`Calc.oyJami`: qarzlar hisobotdagidek — Olingan qarz kirim, Berilgan qarz chiqim; o'tkazma yo'q).
+- **Kirim 0 bo'lsa** foiz "—", chiziq va ball yo'q, "Bu oyda kirim yo'q.". **Chiqim kirimdan ko'p bo'lsa** foiz manfiy ("−25%", qizil), chiziq to'liq to'q sariq-qizil ("Sarflandi 100%"), "Qoldi −25%" qizil.
+- **Ball** = shu oy qoldi% − o'tgan oy qoldi% (ikkalasi yaxlitlangan butun foiz; farq butun ball). Ko'proq tejagan — yashil, strelka tepaga; kamroq — qizil, strelka pastga; teng — strelkasiz. O'tgan oyda kirim 0 bo'lsa ball ko'rsatilmaydi.
+
+### 35.2. "Eng katta 5 xarajat" / "Eng kam 5 kun" (bitta karta, ikki bo'lakli almashtirgich; ekran ochilganda "Eng katta 5 xarajat")
+- **Eng katta 5 xarajat:** tanlangan oydagi eng katta 5 ta alohida xarajat YOZUVI. Qator: tartib raqami, izoh (izoh bo'lmasa kategoriya nomi), kichik yorliq "Kategoriya · sana" (masalan "Taksi · 14 Okt"), o'ngda summa. **Qarz amallari kirmaydi** (virtual yozuvlar: Berilgan qarz va qarz to'lovlari; "Berilgan qarz" kategoriyasi haqiqiy xarajat emas). Summa teng bo'lsa yangisi birinchi.
+- **Eng kam 5 kun:** kunlik jami xarajati eng kam 5 kun, o'sish tartibida. **Xarajati 0 bo'lgan kunlar kirmaydi.** Qator: raqam, "5 Okt, Du" (sana va hafta kuni qisqa), kichik "N yozuv", o'ngda summa. Kunlik jami grafikdagi qoida bilan (**Qabul qilingan taxmin:** bu yerda qarz amallari kunlik jamiga KIRADI, chunki talab faqat birinchi ro'yxatdan qarzni chiqarishni aytgan; kunlik jami grafik va "kunlik o'rtacha" bilan mos).
+- Ostida izoh "Xarajatsiz kunlar (N ta) kirmaydi." — N = o'tib bo'lgan kunlardan xarajati yo'qlari soni: joriy oyda 1-kundan bugungacha, o'tgan oyda butun oy (kelajak kunlar sanalmaydi).
+- Yozuv yetarli bo'lmasa bor qadar ko'rsatiladi; umuman yo'q bo'lsa "Bu davrda yozuv yo'q.".
+
+### 35.3. Qarz hisoboti
+- Tepada chapda "Qarz hisoboti", o'ngda "Sof holat" va summa: sof = menga qarzdor − men qarzdorman (musbat yashil "+", manfiy qizil "−").
+- Ikki katak yonma-yon: "Men qarzdorman" (qizil) va "Menga qarzdor" (yashil). **Bu HOZIRGI qoldiq** (`Calc.qarzlarJami`: qarzlarning to'lanmagan qismi), tanlangan oyga bog'liq emas; kartada shu haqda izoh bor. Yopilgan qarz qoldiqqa kirmaydi, mantiqiy o'chirilgan to'lov (`deleted`) hisobga olinmaydi.
+- Ostida "Tanlangan oy harakati" — 4 teng katak: "Olindi" (+, yashil), "Berildi" (−, qizil), "Men qaytardim" (−, qizil), "Menga qaytdi" (+, yashil). Manba: `Calc.qarzYozuvlari` (Asosiy hisobot bilan bir xil qoida; yozuv sanasi shu oyga tushsa): qarzning o'zi — Olindi/Berildi (yo'nalishiga qarab), to'lov — Menga qaytdi (berilgan qarz qaytsa) yoki Men qaytardim (olingan qarzni qaytarsam). Summalar tor katakka sig'ishi uchun qisqa ("500 k", "1,3 M", "2 B"); to'liq summa katakning `title` va `aria-label` ida (yashirin bo'lsa ikkalasida ham ••••).
+- Eng pastda eng katta 3 qoldiq (`Calc.qarzlarShaxsBoyicha`: shaxs va yo'nalish bo'yicha jamlangan): raqam, shaxs nomi, kichik "menga qarzdor" / "men qarzdorman", o'ngda summa (mos rang).
+- Qarz yozuvlari umuman yo'q bo'lsa karta o'rniga "Qarz yozuvlari yo'q.". Yangi qarz mantiqi o'ylab topilmagan: hamma raqam mavjud Calc qarz funksiyalaridan.
+
+### 35.4. Nima qilinmadi
+- **Byudjet kartasi QASDDAN qo'shilmadi** (talab shunday). Byudjet o'z bo'limida (Ko'proq → Byudjet) qoladi.
+- Bu kartalarda saqlanadigan yangi tanlov yo'q (`moliya-stat-grafik` o'zgarmagan; "Eng katta/kam" tanlovi ekran ochilganda boshlang'ichga qaytadi).
+
+### 35.5. Sinov
+- `tests.html`: 595 / 595 (yangi: tejash formulasi — kirim 0, manfiy, ball, yaxlitlash, qarz kirimi; eng katta 5 — qarz berish kirmasligi, oy chegarasi; eng kam 5 kun — 0 kunlar kirmasligi, xarajatsiz kunlar soni; qarz jami, sof, oy harakati, eng katta 3 qoldiq, o'chirilgan to'lov; qisqa summa; ekran (DOM): ranglar, strelkalar, yashirin summalar, bo'sh holatlar, oy chipiga bog'liqlik). Uydirma raqamlar va ismlar.
+- `tools/stat-brauzer-sinovi.js`: 178 tekshiruv, 360 px yorug'/qorong'i (tejash foizi Asosiy kirim/chiqimidan hisoblangan qiymatga teng, ro'yxatlar tartibi, 4 katak bir qatorda, gorizontal aylanish yo'q, tugmalar ≥ 44 px). Rasmlar ko'zdan kechirilgan. Tekshirilmagan: haqiqiy telefon.

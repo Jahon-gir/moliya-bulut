@@ -29,7 +29,7 @@ var Stat = (function () {
   // Ekran ochilganda: sana — bugun, tur va davr — qurilmada saqlangan (yaroqsiz bo'lsa ustun / oy)
   function boshlash(bugunSana) {
     var t = StatSof.grafikTanlovi(oqi());
-    holat.tur = t.tur; holat.davr = t.davr; holat.daromad = t.daromad; holat.xarajat = t.xarajat; holat.ulush = t.ulush; holat.sana = bugunSana; holat.menyuOchiq = false; qimmatRejimi = 'hafta';
+    holat.tur = t.tur; holat.davr = t.davr; holat.daromad = t.daromad; holat.xarajat = t.xarajat; holat.ulush = t.ulush; holat.sana = bugunSana; holat.menyuOchiq = false; qimmatRejimi = 'hafta'; royxatRejimi = 'katta';
   }
 
   function karta(klass) { return el('div', undefined, 'karta st-karta' + (klass ? ' ' + klass : '')); }
@@ -340,8 +340,123 @@ var Stat = (function () {
     return k;
   }
 
+  // ---- 6) Tejash ulushi (bitta ixcham qator) ----
+  function yashirinMi(h) { return !!(h.yashirin && h.yashirin()); }
+  function qisqaPul(h, n) { return yashirinMi(h) ? '••••' : StatSof.qisqaK(n); }
+  function foizBelgili(n) { return (n < 0 ? '−' : '') + Math.abs(n) + '%'; }   // manfiy: '−' (Calc uslubida)
+  function tejashKartasi(h) {
+    var t = StatSof.tejash(h.yozuvlar(), holat.sana.slice(0, 7));
+    var k = karta('st-tejash');
+    var ong = el('div', undefined, 'st-tejash-ong');
+    var foiz = el('span', t.qoldi === null ? '—' : foizBelgili(t.qoldi), 'st-tejash-foiz' + (t.manfiy ? ' st-manfiy' : '')); foiz.id = 'stat-tejash-foiz';
+    ong.appendChild(foiz);
+    if (t.ball !== null) {
+      var b = el('span', undefined, 'st-foiz st-ball st-' + (t.yon === 'yuqori' ? 'past' : t.yon === 'past' ? 'yuqori' : 'teng')); b.id = 'stat-tejash-ball';   // ko'proq tejash — yashil, kam — qizil
+      if (t.yon === 'yuqori') b.appendChild(belgi('arrow-up', 14)); else if (t.yon === 'past') b.appendChild(belgi('arrow-down', 14));
+      b.appendChild(el('span', Math.abs(t.ball) + ' ball'));
+      b.setAttribute('aria-label', 'O\'tgan oyga nisbatan ' + (t.ball > 0 ? 'ko\'proq' : t.ball < 0 ? 'kamroq' : 'xuddi shuncha') + ' tejalgan: ' + Math.abs(t.ball) + ' ball');
+      ong.appendChild(b);
+    }
+    k.appendChild(sarlavha('Tejash ulushi', ong));
+    if (t.qoldi === null) { var yo = el('p', 'Bu oyda kirim yo\'q.', 'xira st-bosh-matn'); yo.id = 'stat-tejash-bosh'; k.appendChild(yo); }
+    else {
+      var chiziq = el('div', undefined, 'st-bar'); chiziq.setAttribute('role', 'img'); chiziq.setAttribute('aria-label', 'Sarflandi ' + t.sarflandi + '%, qoldi ' + foizBelgili(t.qoldi));
+      var sarf = el('span', undefined, 'st-bar-sarf'); sarf.style.width = t.sarflandi + '%'; chiziq.appendChild(sarf);
+      var qoldi = el('span', undefined, 'st-bar-qoldi'); qoldi.style.width = (100 - t.sarflandi) + '%'; chiziq.appendChild(qoldi);
+      k.appendChild(chiziq);
+      var yor = el('div', undefined, 'st-bar-yorliq');
+      yor.appendChild(el('span', 'Sarflandi ' + t.sarflandi + '%', 'st-bar-sarf-matn'));
+      var qm = el('span', 'Qoldi ' + foizBelgili(t.qoldi), 'st-bar-qoldi-matn' + (t.manfiy ? ' st-manfiy' : '')); qm.id = 'stat-tejash-qoldi'; yor.appendChild(qm);
+      k.appendChild(yor);
+    }
+    k.appendChild(el('div', 'Kirim ' + h.pul(t.kirim) + ' · Chiqim ' + h.pul(t.chiqim), 'xira st-tejash-izoh'));
+    return k;
+  }
+
+  // ---- 7) Eng katta 5 xarajat / eng kam 5 kun ----
+  var royxatRejimi = 'katta';   // 'katta' | 'kam' (ekran ochilganda "Eng katta 5 xarajat")
+  function qatorYasash(raqam, nom, kichik, summa) {
+    var q = el('div', undefined, 'st-qator');
+    q.appendChild(el('span', String(raqam), 'st-qator-raqam'));
+    var o = el('div', undefined, 'st-qator-matn');
+    o.appendChild(el('div', nom, 'st-qator-nom')); o.appendChild(el('div', kichik, 'xira st-qator-kichik'));
+    q.appendChild(o);
+    q.appendChild(el('strong', summa, 'st-qator-summa'));
+    return q;
+  }
+  function enKartasi(h) {
+    var oy = holat.sana.slice(0, 7), bugun = h.bugun(), katta = royxatRejimi === 'katta';
+    var k = karta('st-en');
+    var tanlov = el('div', undefined, 'tanlov st-almashtirgich'); tanlov.setAttribute('role', 'group'); tanlov.setAttribute('aria-label', 'Ro\'yxat turi');
+    [['katta', 'Eng katta 5 xarajat'], ['kam', 'Eng kam 5 kun']].forEach(function (t) {
+      var b = tugma(t[1], undefined, function () { royxatRejimi = t[0]; h.qayta(); });
+      b.setAttribute('aria-pressed', String(royxatRejimi === t[0])); b.setAttribute('data-royxat', t[0]);
+      tanlov.appendChild(b);
+    });
+    k.appendChild(tanlov);
+    var ro = el('div', undefined, 'st-royxat'); ro.id = 'stat-royxat';
+    if (katta) {
+      StatSof.engKattaXarajatlar(h.yozuvlar(), oy, 5).forEach(function (x, i) {
+        var kat = h.kategoriya(x.kategoriya_id), katNom = kat ? kat.nom : 'Kategoriyasiz';
+        ro.appendChild(qatorYasash(i + 1, x.izoh || katNom, katNom + ' · ' + StatSof.qisqaSana(x.sana), h.pul(x.summa)));
+      });
+      if (!ro.children.length) ro.appendChild(el('p', 'Bu davrda yozuv yo\'q.', 'xira st-bosh-matn'));
+      k.appendChild(ro);
+    } else {
+      var m = StatSof.engKamKunlar(h.yozuvlar(), oy, bugun, 5);
+      m.royxat.forEach(function (x, i) { ro.appendChild(qatorYasash(i + 1, StatSof.qisqaSana(x.sana) + ', ' + x.kun, x.soni + ' yozuv', h.pul(x.summa))); });
+      if (!m.bor) ro.appendChild(el('p', 'Bu davrda yozuv yo\'q.', 'xira st-bosh-matn'));
+      k.appendChild(ro);
+      if (m.bor) { var iz = el('p', 'Xarajatsiz kunlar (' + m.nolKunlar + ' ta) kirmaydi.', 'xira st-izoh'); iz.id = 'stat-kam-izoh'; k.appendChild(iz); }
+    }
+    return k;
+  }
+
+  // ---- 8) Qarz hisoboti ----
+  function qarzKartasi(h) {
+    var q = StatSof.qarzHisoboti(h.qarzlar ? h.qarzlar() : [], holat.sana.slice(0, 7), h.bugun());
+    var k = karta('st-qarz');
+    if (!q.bor) { k.appendChild(sarlavha('Qarz hisoboti')); var yo = el('p', 'Qarz yozuvlari yo\'q.', 'xira st-bosh-matn'); yo.id = 'stat-qarz-bosh'; k.appendChild(yo); return k; }
+    var ong = el('div', undefined, 'st-qarz-sof');
+    ong.appendChild(el('span', 'Sof holat', 'xira'));
+    var sof = el('strong', (q.sof > 0 ? '+' : q.sof < 0 ? '−' : '') + (yashirinMi(h) ? '••••' : Calc.sumFormat(Math.abs(q.sof))), 'st-qarz-sof-summa ' + (q.sof > 0 ? 'st-yashil' : q.sof < 0 ? 'st-qizil' : '')); sof.id = 'stat-qarz-sof';
+    ong.appendChild(sof);
+    k.appendChild(sarlavha('Qarz hisoboti', ong));
+    var juft = el('div', undefined, 'st-qarz-juft');
+    [['men', 'Men qarzdorman', q.men, 'st-qizil'], ['menga', 'Menga qarzdor', q.menga, 'st-yashil']].forEach(function (c) {
+      var x = el('div', undefined, 'st-qarz-katak'); x.setAttribute('data-qarz', c[0]);
+      x.appendChild(el('div', c[1], 'xira st-qarz-nom'));
+      var s = el('strong', h.pul(c[2]), 'st-qarz-summa ' + c[3]); s.id = 'stat-qarz-' + c[0]; x.appendChild(s);
+      juft.appendChild(x);
+    });
+    k.appendChild(juft);
+    k.appendChild(el('p', 'Hozirgi qoldiq (oy tanlanishiga bog\'liq emas).', 'xira st-izoh'));
+    k.appendChild(el('div', 'Tanlangan oy harakati', 'xira st-qarz-oy'));
+    var turt = el('div', undefined, 'st-qarz-harakat');
+    [['olindi', 'Olindi', '+', q.harakat.olindi, 'st-yashil'], ['berildi', 'Berildi', '−', q.harakat.berildi, 'st-qizil'], ['menQaytardim', 'Men qaytardim', '−', q.harakat.menQaytardim, 'st-qizil'], ['mengaQaytdi', 'Menga qaytdi', '+', q.harakat.mengaQaytdi, 'st-yashil']].forEach(function (c) {
+      var x = el('div', undefined, 'st-qarz-h'); x.setAttribute('data-harakat', c[0]);
+      var toliq = (c[3] ? c[2] : '') + h.pul(c[3]);
+      x.setAttribute('title', c[1] + ': ' + toliq); x.setAttribute('aria-label', c[1] + ': ' + toliq); x.tabIndex = 0;   // qisqa ko'rinadi, to'liq summa — sarlavhada
+      x.appendChild(el('div', (c[3] ? c[2] : '') + qisqaPul(h, c[3]), 'st-qarz-h-summa ' + (c[3] ? c[4] : '')));
+      x.appendChild(el('div', c[1], 'st-qarz-h-nom'));
+      turt.appendChild(x);
+    });
+    k.appendChild(turt);
+    if (q.eng.length) {
+      k.appendChild(el('div', 'Eng katta qoldiqlar', 'xira st-qarz-oy'));
+      var ro = el('div', undefined, 'st-royxat');
+      q.eng.forEach(function (x, i) {
+        var r = qatorYasash(i + 1, x.shaxs, x.yonalish === 'berdim' ? 'menga qarzdor' : 'men qarzdorman', h.pul(x.qolgan));
+        r.querySelector('.st-qator-summa').className += x.yonalish === 'berdim' ? ' st-yashil' : ' st-qizil';
+        ro.appendChild(r);
+      });
+      k.appendChild(ro);
+    }
+    return k;
+  }
+
   function bloklar(h) {
-    return [oyChiplari(h), grafikKartasi(h), ortachaKartasi(h), qimmatKartasi(h), farqKartasi(h)];
+    return [oyChiplari(h), grafikKartasi(h), ortachaKartasi(h), qimmatKartasi(h), farqKartasi(h), tejashKartasi(h), enKartasi(h), qarzKartasi(h)];
   }
 
   return { boshlash: boshlash, bloklar: bloklar, holat: function () { return holat; } };

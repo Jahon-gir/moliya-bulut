@@ -208,6 +208,74 @@ var StatSof = (function () {
       return { id: x.kategoriya_id, summa: x.summa, oldingi: ol, farq: t.farq, foiz: t.foiz, yon: t.foiz === null ? 'yangi' : t.foiz > 0 ? 'yuqori' : t.foiz < 0 ? 'past' : 'teng' };
     });
   }
+  // ---- 6) Tejash ulushi: qoldi% = (kirim − chiqim) / kirim × 100 (kirim/chiqim grafikdagi qoida bilan: Calc.oyJami, qarzlar hisobotdagidek) ----
+  // Natija: { kirim, chiqim, qoldi (butun foiz | null: kirim 0), sarflandi (0..100, chiziq uchun: qoldi + sarflandi = 100), manfiy (chiqim kirimdan ko'p),
+  //   ball (o'tgan oyga nisbatan foiz ballar farqi | null), yon: 'yuqori' (ko'proq tejagan) | 'past' | 'teng' | 'yoq' }
+  function qoldiFoizi(j) { return j.daromad > 0 ? (Math.round((j.daromad - j.xarajat) * 100 / j.daromad) || 0) : null; }
+  function tejash(yozuvlar, oy) {
+    var j = Calc.oyJami(yozuvlar, oy), o = Calc.oyJami(yozuvlar, Calc.oyKalitiSur(oy, -1));
+    var qoldi = qoldiFoizi(j), oldingi = qoldiFoizi(o), ball = qoldi === null || oldingi === null ? null : qoldi - oldingi;
+    return {
+      kirim: j.daromad, chiqim: j.xarajat, qoldi: qoldi, oldingi: oldingi,
+      sarflandi: qoldi === null ? 0 : Math.max(0, Math.min(100, 100 - qoldi)), manfiy: qoldi !== null && qoldi < 0,
+      ball: ball, yon: ball === null ? 'yoq' : ball > 0 ? 'yuqori' : ball < 0 ? 'past' : 'teng'
+    };
+  }
+
+  // ---- 7) Eng katta 5 xarajat (alohida yozuvlar) va eng kam 5 kun ----
+  var OY_QISQA_NOMI = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
+  function qisqaSana(sana) { return parseInt(sana.slice(8, 10), 10) + ' ' + OY_QISQA_NOMI[parseInt(sana.slice(5, 7), 10) - 1]; }
+  // Tanlangan oydagi eng katta n ta xarajat yozuvi. Qarz amallari (virtual: Berilgan qarz va qarz to'lovlari) haqiqiy xarajat emas — kirmaydi.
+  // Natija: [{ id, summa, izoh, kategoriya_id, sana }], teng bo'lsa yangisi birinchi
+  function engKattaXarajatlar(yozuvlar, oy, n) {
+    var c = Calc.davrChegarasi('oy', oyBoshi(oy));
+    return yozuvlar.filter(function (y) { return y.tur === 'xarajat' && !y.virtual && !Calc.qarzKategoriyami(y.kategoriya_id) && y.sana >= c.dan && y.sana <= c.gacha; })
+      .sort(function (a, b) { return b.summa - a.summa || (a.sana < b.sana ? 1 : a.sana > b.sana ? -1 : 0); })
+      .slice(0, n || 5).map(function (y) { return { id: y.id, summa: y.summa, izoh: String(y.izoh || '').trim(), kategoriya_id: y.kategoriya_id, sana: y.sana }; });
+  }
+  // Kunlik jami xarajati eng kam n ta kun (xarajati 0 kunlar KIRMAYDI), o'sish tartibida; kunlik jami grafikdagi qoida bilan (qarz amallari ham).
+  // Faqat o'tib bo'lgan kunlar (joriy oyda bugungacha). Natija: { bor, royxat: [{ sana, kun (hafta kuni qisqa), summa, soni }], nolKunlar }
+  function engKamKunlar(yozuvlar, oy, bugunSana, n) {
+    var marka = oyMarkazi(oy, bugunSana), jami = {}, soni = {}, kunlar = 0;
+    yozuvlar.forEach(function (y) {
+      if (!xarajatmi(y) || y.sana < oyBoshi(oy) || y.sana > marka) return;
+      jami[y.sana] = (jami[y.sana] || 0) + y.summa; soni[y.sana] = (soni[y.sana] || 0) + 1;
+    });
+    kunlar = kunRaqami(marka);
+    var royxat = Object.keys(jami).filter(function (k) { return jami[k] > 0; }).sort(function (a, b) { return jami[a] - jami[b] || (a < b ? -1 : 1); }).slice(0, n || 5)
+      .map(function (k) { return { sana: k, kun: Calc.HAFTA_KUNI_QISQA[haftaKuniIndeksi(k)], summa: jami[k], soni: soni[k] }; });
+    var xarajatliKunlar = Object.keys(jami).filter(function (k) { return jami[k] > 0; }).length;
+    return { bor: xarajatliKunlar > 0, royxat: royxat, nolKunlar: kunlar - xarajatliKunlar };
+  }
+
+  // ---- 8) Qarz hisoboti ----
+  // Joriy qoldiq (tanlangan oydan qat'i nazar, hozirgi holat): Calc.qarzlarJami — menga qarzdor (olishKerak) va men qarzdorman (qaytarishKerak); sof = menga − men.
+  // Oy harakati: Calc.qarzYozuvlari (Asosiy hisobot bilan bir xil qoida) dan: q: — qarzning o'zi (Olindi — kirim, Berildi — chiqim), t: — to'lov
+  // (Menga qaytdi — kirim, Men qaytardim — chiqim). Eng katta 3 qoldiq — shaxs va yo'nalish bo'yicha (Calc.qarzlarShaxsBoyicha).
+  function qarzHisoboti(qarzlar, oy, bugunSana) {
+    if (!qarzlar || !qarzlar.length) return { bor: false };
+    var j = Calc.qarzlarJami(qarzlar), c = Calc.davrChegarasi('oy', oyBoshi(oy)), h = { olindi: 0, berildi: 0, menQaytardim: 0, mengaQaytdi: 0 };
+    Calc.qarzYozuvlari(qarzlar).forEach(function (y) {
+      if (y.sana < c.dan || y.sana > c.gacha) return;
+      var qarz = y.id.charAt(0) === 'q', kirim = y.tur === 'daromad';
+      if (qarz) h[kirim ? 'olindi' : 'berildi'] += y.summa; else h[kirim ? 'mengaQaytdi' : 'menQaytardim'] += y.summa;
+    });
+    var eng = Calc.qarzlarShaxsBoyicha(qarzlar, bugunSana).ochiq.slice().sort(function (a, b) { return b.qolgan - a.qolgan; }).slice(0, 3)
+      .map(function (g) { return { shaxs: g.shaxs, yonalish: g.yonalish, qolgan: g.qolgan }; });
+    return { bor: true, men: j.qaytarishKerak, menga: j.olishKerak, sof: j.olishKerak - j.qaytarishKerak, harakat: h, eng: eng };
+  }
+
+  // Qisqa summa tor kataklar uchun: 500 000 -> "500 k", 1 250 000 -> "1,3 M", 2 000 000 000 -> "2 B" (bitta o'nlik xona, nol bo'lsa tushadi)
+  function qisqaK(n) {
+    var a = Math.abs(Math.round(n)), b = [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
+    for (var i = 0; i < b.length; i++) {
+      if (a < b[i][0]) continue;
+      var r = Math.round(a / b[i][0] * 10) / 10;
+      if (r >= 1000 && i > 0) return String(Math.round(a / b[i - 1][0] * 10) / 10).replace('.', ',') + ' ' + b[i - 1][1];   // 999 950 -> "1 M"
+      return String(r).replace('.', ',') + ' ' + b[i][1];
+    }
+    return String(a);
+  }
   // "+190 000" / "−52 000" / "0" (so'msiz)
   function belgiliRaqam(n) {
     var s = String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -227,6 +295,7 @@ var StatSof = (function () {
     DAROMAD_RANGI: DAROMAD_RANGI, XARAJAT_RANGI: XARAJAT_RANGI, oyMarkazi: oyMarkazi, oyChiplari: oyChiplari, chipSanasi: chipSanasi,
     suril: suril, surishMumkinmi: surishMumkinmi, birinchiSana: birinchiSana, grafikMalumoti: grafikMalumoti, doiraMalumoti: doiraMalumoti,
     taqqosla: taqqosla, kunlikOrtacha: kunlikOrtacha, engQimmatKun: engQimmatKun, kategoriyaFarqi: kategoriyaFarqi,
+    tejash: tejash, engKattaXarajatlar: engKattaXarajatlar, engKamKunlar: engKamKunlar, qarzHisoboti: qarzHisoboti, qisqaSana: qisqaSana, qisqaK: qisqaK,
     belgiliRaqam: belgiliRaqam, foizMatni: foizMatni, oyXarajati: oyXarajati, oyDaromadi: oyDaromadi
   };
 })();

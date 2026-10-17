@@ -1084,3 +1084,29 @@ Faqat 36-bandagi chek skaneri tuzatildi; yangi funksiya yo'q. Ma'lumot tuzilishi
 - Server `node --test supabase/functions/yordamchi/test.mjs`: 83 tekshiruv (4 ta yangi: 503/429/500 da bir marta qayta urinish, ikkinchisi ham band bo'lsa xato va qayta urinilmaydigan holatlar (400, `ovoz`), log formati va maxfiylik, `rasmOlchami`).
 - `tests.html` (faqat Gap va chek testlari): yangi — ikki alohida input (accept, capture, DOM'da, ko'rinmas, bosish ichida `click`), canvas xatosida kichraytirib qayta urinish va `RASM_KATTA`, bosqichma-bosqich kichraytirish ro'yxati, 503 xato matni, haqiqiy canvasda 27 MP (6000×4500) rasm 1600 px va ≤ 1,5 MB ga siqilishi, HEIC `RASM_FORMAT`. `tools/gap-chek-brauzer-sinovi.js` 360 px yorug'/qorong'i.
 - **Telefonda sinalmagan:** Xiaomi/MIUI tanlagichi, haqiqiy 50 MP kamera rasmi, haqiqiy Gemini 503. Yuqoridagi tuzatishlar kod tahliliga va soxta javob/headless Chromium sinoviga asoslangan.
+
+## 38. Galereya: tizim tanlagichini ochish (0.43.2)
+
+Faqat ilova (`js/gap.js`, `js/gap-sof.js`, `tests.html`, versiya). **Server o'zgarmagan: qayta deploy kerak emas.** 37.2 dagi galereya `accept` qarori almashtirildi.
+
+### 38.1. Muammo
+Android (Xiaomi/MIUI, Chrome, o'rnatilgan PWA): "Galereyadan tanlash" Chrome'ning o'z rasm tanlagichini ("Rasmni tanlang", Kamera/Tanlash kataklari) ochdi; rasmlar kulrang katak bo'lib ko'rindi. Ruxsat berilgan edi; "Tanlash" katagi orqali tizim galereyasi ishladi. Sababi: 37.2 da qo'yilgan `accept="image/jpeg,image/png,image/webp,image/heic,image/heif"` faqat rasm MIME turlaridan iborat; Chrome (Android) aynan shunda o'zining ichki rasm tanlagichini (Photo Picker) ochadi. 37.2 dagi taxmin ("Photo Picker rasmlar katalogini ko'rsatadi") MIUI'da noto'g'ri chiqdi.
+
+### 38.2. Qaror
+- **Galereya inputi (`#gap-rasm-galereya`):** `accept` atributi umuman YO'Q (va `capture` ham yo'q). `accept`siz input uchun Chrome Android tizimning umumiy fayl tanlagichini (Galereya/Fayllar) ochadi.
+- **Nega aynan `accept`ni olib tashlash:** "rasm bo'lmagan tur qo'shish" (masalan `image/*,application/octet-stream` yoki `.jpg` kengaytmalari) varianti Chrome'ning qaysi qoidasi bo'yicha tanlagich tanlashiga bog'liq (kengaytma/MIME aralashmasi qurilma va versiyaga qarab turlicha ishlaydi) — ishonchsizroq. `accept`siz variantda tanlagichni tanlash uchun Chrome'da "faqat rasm" sharti bajarilmaydi, shuning uchun tizim tanlagichi ochiladi. Bu Chrome'ning hujjatlangan xatti-harakatiga va foydalanuvchining telefondagi kuzatuviga (`Tanlash` katagi tizim galereyasini ochadi) tayanadi; **telefonda tasdiqlanmagan**.
+- **Kamera inputi o'zgarmagan:** `accept="image/*"` + `capture="environment"`.
+- **Kamchiligi:** tanlagichda rasm bo'lmagan fayllar ham ko'rinadi. Shuning uchun tur kodda tekshiriladi.
+- Inputlar ikki alohida, DOM'da, ko'rinmas (`.gp-fayl-yashirin`), `click()` foydalanuvchi bosishi ichida (37.2 o'zgarmagan).
+
+### 38.3. Fayl turini tekshirish (`GapSof.rasmFaylimi`, `rasmniOch` boshida)
+- Fayl `type` si bor: `image/…` bo'lsa o'tadi; bo'lmasa (PDF, matn va h.k.) rad.
+- `type` bo'sh (ba'zi Android fayl tanlagichlari shunday beradi): kengaytma `jpg, jpeg, png, webp, heic, heif` bo'lsa o'tadi, aks holda rad.
+- O'tgan fayl rasmga ochilishi shart (`createImageBitmap`/`<img>`); ochilmasa (HEIC'ni brauzer bilmasa, buzuq fayl, `.jpg` nomli matn) ham rad.
+- Rad: "Bu rasm turi qabul qilinmaydi. JPEG, PNG yoki WebP rasm tanlang. (kod: RASM_FORMAT)"; **serverga hech narsa ketmaydi**, hech narsa saqlanmaydi, qayta urinsa bo'ladi.
+
+### 38.4. Sinov
+`tests.html` (faqat Gap va chek testlari, 41 ta o'tdi): galereya inputida `accept` atributi yo'q (HTML'da ham), kamera `image/*`+`capture`; `rasmFaylimi` jadvali; PDF, matn, turi/kengaytmasi yo'q fayl va `.jpg` nomli buzuq fayl galereyadan tanlansa `RASM_FORMAT` va serverga so'rov ketmaydi. `tools/gap-chek-brauzer-sinovi.js` 44/44 (360 px yorug'/qorong'i). Haqiqiy Xiaomi/MIUI'da sinalmagan.
+
+### 38.5. Ochiq masala
+Agar `accept`siz variant ham o'sha tanlagichni ochsa (MIUI Chrome versiyasiga bog'liq), keyingi qadam: PWA'da `showOpenFilePicker` yo'q (Android Chrome'da qo'llanmaydi), shuning uchun faqat kamera yo'li va "Fayllar" orqali tanlash qoladi — foydalanuvchi aytadi.

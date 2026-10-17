@@ -82,7 +82,8 @@
   // Doira (donut): kategoriyalar bo'yicha taqsimot (TZ-sinxronlash.md 43-band)
   // opts: { taqsimot: [{ kategoriya_id, summa, foiz }] (kattasidan kichigiga), jami,
   //         kategoriya: function (id) -> { nom, rang, belgi } | undefined,
-  //         bosilganda: function (id), turNomi, markazNom, markazMatn, yashirin, yonTugmalari }
+  //         bosilganda: function (id), turNomi, markazNom, markazMatn, yashirin, yonTugmalari,
+//         royxatSoni: ro'yxatda ko'rsatiladigan eng katta kategoriyalar soni (berilmasa — hammasi; diagramma har doim hammasini ko'rsatadi) }
   // Summasi bor HAMMA kategoriya o'z bo'lagida ("Boshqalar" yo'q). Har bo'lak — bitta <circle> (pathLength=100, stroke-dasharray/dashoffset,
   // yumaloq uchlar), tepadan soat strelkasi bo'ylab. Bo'lak o'lchami Calc.donaBolaklari da: haqiqiy foizga to'liq mutanosib EMAS (kichiklarga minimal joy).
   // ======================================================================
@@ -193,7 +194,7 @@
 
     // Ro'yxat (diagrammaning matnli nusxasi): summasi bor har kategoriya — ikon katagi, nom, haqiqiy foiz (bir o'nli kasr), o'ngda summa
     var royxat = el('ul', undefined, 'dona-royxat');
-    bolaklar.forEach(function (t) {
+    (opts.royxatSoni ? bolaklar.slice(0, opts.royxatSoni) : bolaklar).forEach(function (t) {
       var m = malumot(t.kategoriya_id), li = el('li');
       var b = el('button', undefined, 'dona-qator');
       b.type = 'button';

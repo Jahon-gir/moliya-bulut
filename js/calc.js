@@ -345,7 +345,7 @@
   // ---- Doira (TZ-sinxronlash.md 43-band): HAMMA kategoriya o'z bo'lagida, "Boshqalar" yo'q ----
   // Bo'lak o'lchami haqiqiy foizga to'liq mutanosib EMAS: kichik kategoriyalar ham ko'rinishi uchun har bo'lakka kamida m (3,6%) joy beriladi.
   // k ni bisection bilan shunday topamiz: yig'indi max(m, p_i * k) = 100. Haqiqiy foiz va summa ro'yxatda.
-  var DONA_MIN = 3.6, DONA_OCHIQ_ENG = 3, DONA_OCHIQ_KOEF = 0.35, DONA_R = 128, DONA_QALINLIK = 20;
+  var DONA_MIN = 3.6, DONA_OCHIQ_ENG = 0.6, DONA_OCHIQ_KOEF = 0.1, DONA_R = 128, DONA_QALINLIK = 20;
   var DONA_CAP = DONA_QALINLIK / (2 * Math.PI * DONA_R) * 100;   // yumaloq uchining halqa foizidagi uzunligi (≈2,49)
   // taqsimot — [{ kategoriya_id, summa, foiz }] kattasidan kichigiga. Summasi 0 yoki manfiylar chiqarilmaydi.
   // Natija: { m, k, bolaklar: [{ kategoriya_id, summa, p (haqiqiy foiz), x (halqadagi ulush), g (ochiq joy), d (chiziq uzunligi), bosh }] }

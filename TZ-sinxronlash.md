@@ -1328,3 +1328,12 @@ Eksportda komissiya oddiy "Xarajat" qatori (kategoriya "Komissiyalar", hisob = q
 **O'zaro ta'sir.** Bo'lak yoki ro'yxat qatori bosilsa o'sha kategoriyaning yozuvlari ochiladi (avvalgidek). Qarz kategoriyalari bosilsa Qarzlar bo'limi ochiladi (19-band).
 
 **Sinov.** `tests.html?faqat=doira` (sof funksiya: N = 0, 1, 2, 3, 18, 27, 30, yig'indi 100, kichiklarda g = 0 va x = m, kattalarda 0 < g ≤ 3, bisection; DOM: "Boshqalar" yo'qligi, ro'yxat tartibi va foizlari) va `tools/doira-brauzer-sinovi.js` (haqiqiy ilova, 360 px yorug' va qorong'i, 18 kategoriya: 18 bo'lak, tegib turgan kichiklar, bo'lak bosilsa yozuvlar ochiladi).
+
+### 43.x Oraliq va ro'yxat (0.46.1)
+
+**Nima o'zgardi.**
+1. Bo'laklar orasidagi ochiq joy kichraydi. 43-banddagi formulada FAQAT g_i o'zgardi: g_i = min(0,6; max(0; (x_i − m)·0,1)) (avval min(3,0; max(0; (x_i − m)·0,35))). Qolgani o'zgarmadi: m = 3,6, bisection, cap, kichik bo'laklar (x_i = m) tegib turadi (g = 0), yumaloq uchlar, tepadan soat strelkasi bo'ylab, kattadan kichikka. *Sabab:* katta ochiq joy halqani "uzilgan" ko'rsatardi.
+2. Ro'yxat: 5 ta + "Hammasi". Yopiq holatda ro'yxatda faqat eng katta 5 ta kategoriya (summa bo'yicha). Karta sarlavhasining o'ng tomonida "Hammasi" matni va chevron-down (16 px, accent rangda; bosish maydoni kamida 44 px). Bosilsa ro'yxat to'liq ochiladi (summasi bor hamma kategoriya), matn "Yig'ish" va chevron-up bo'ladi; yana bosilsa 5 tagacha yig'iladi. 5 tadan kam kategoriya bo'lsa tugma ko'rinmaydi. Ro'yxat ostida alohida "Hammasini ko'rish" tugmasi YO'Q. Diagramma har doim summasi bor HAMMA kategoriyani ko'rsatadi. *Sabab:* uzun ro'yxat (18 ta) Asosiy ekranni cho'zib yuborardi.
+3. Holat xotirada (ilova ichida; qurilma xotirasiga saqlanmaydi): tab almashganda va oy almashganda saqlanadi, xarajat/daromad tabi almashsa yopiq holatga qaytadi. Hisobot ekranidagi doira ro'yxati o'zgarmaydi (hammasi).
+4. Sarlavhadagi eski "Hammasi" (Hisobot ekranini ochardi) endi faqat ikon (chart-pie, aria-label "Hisobotni ochish") bo'lib qoldi, mantig'i o'zgarmadi; yangi "Hammasi" faqat ro'yxatni ochib-yopadi.
+

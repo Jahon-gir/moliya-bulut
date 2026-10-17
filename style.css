@@ -1477,3 +1477,20 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 
 /* 0.43.1: fayl tanlash inputlari DOM'da, ko'rinmas (display:none emas) */
 .gp-fayl-yashirin { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; opacity: 0; clip: rect(0 0 0 0); pointer-events: none; }
+
+/* 0.44.0: o'tkazma komissiyasi (TZ-sinxronlash.md 40-band) */
+.kom-qism { margin-top: 2px; }
+.kom-bosh { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.kom-nom { font-size: 14px; color: var(--xira); }
+.kom-chiplar { gap: 6px; flex-wrap: nowrap; }
+.kom-chiplar .chip { flex: 1 1 auto; min-width: 44px; padding: 8px 4px; text-align: center; white-space: nowrap; font-size: 15px; }
+.kom-kiritish { margin: 10px 0 0; }
+.kom-kiritish[hidden] { display: none; }
+.kom-natija { margin-top: 10px; }
+.kom-natija:empty { display: none; }
+.kom-satr { font-size: 15px; color: var(--matn); }
+.kom-jami { display: block; margin-top: 2px; font-size: 16px; font-weight: 700; }
+.kom-eslatma { margin-top: 8px; font-size: 13px; color: var(--xira); }
+/* Tarix: o'tkazma ostidagi ichki qator (chapdan surilgan) */
+.yozuv-kv.kom-ichki { width: calc(100% - 28px); min-height: 44px; margin-left: 28px; padding: 6px 0; gap: 10px; border-top: 0; }
+.kom-ichki .yozuv-nom { font-size: 14px; }

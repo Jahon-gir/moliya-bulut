@@ -15,10 +15,12 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 | `006_sinxron_xizmat_testi.sql` | 005 ni tekshiradi (16 tekshiruv). Supabase'da ishga tushiriladi |
 | `007_ai_limit.sql` | AI yordamchi kunlik limiti: yangi jadval `ai_limit` (RLS, siyosatsiz) va `ai_limit_oshir()` funksiyasi. Supabase'da ishga tushiriladi |
 | `008_ai_limit_testi.sql` | 007 ni tekshiradi (11 tekshiruv). Supabase'da ishga tushiriladi |
+| `009_yozuv_bogi.sql` | Yozuvga ixtiyoriy `bog_id` ustuni (o'tkazma komissiyasi o'tkazmaga bog'lanadi, ilova 0.44.0), tashqi kalit, indeks va yangilangan `tombstone_tozalash()`. Supabase'da ishga tushiriladi |
+| `010_yozuv_bogi_testi.sql` | 009 ni tekshiradi (24 tekshiruv). Supabase'da ishga tushiriladi |
 | `functions/yordamchi/index.ts` | AI yordamchi Edge Function (bitta fayl). Supabase Dashboard'ga nusxalab joylanadi (5-bo'lim) |
 | `functions/yordamchi/test.mjs` | Funksiya sinovi (kompyuterda, `node --test`). AI taqlid qilinadi, haqiqiy kalit kerak emas |
 | `../model-server/kopri.py`, `test_kopri.py` | "Ko'prik": uyingizdagi Ollama oldidagi kalit tekshiruvchi darvoza va uning sinovi (yozuv rejimi uchun, 6-bo'lim) |
-| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–008) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
+| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–010) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
 
@@ -70,6 +72,15 @@ Bu fayl **ixtiyoriy, lekin tavsiya etiladi**: ilova uni bo'lmasa ham ishlaydi. N
 **Xavfsizlik:** `tombstone_tozalash` ga faqat jadval egasi (pg_cron, SQL Editor) kira oladi; `authenticated` va `anon` ga EXECUTE yo'q. U faqat 90 kundan eski `deleted = true` qatorlarni o'chiradi va ularga bog'langan tirik yoki yangi o'chirilgan qator bo'lsa tegmaydi (tashqi kalit buzilmaydi). `sinxron_holati` faqat kirgan foydalanuvchining o'z qatorlarini ko'radi (RLS).
 
 **Cheklov:** 90 kundan ortiq internetsiz qolgan qurilma boshqa qurilmada o'chirilgan qatorni "tirik" deb saqlab qolishi mumkin (u qator qurilmada qoladi, serverga qaytarilmaydi, o'zgartirilmaguncha).
+
+## 1-d. Yozuv bog'i: o'tkazma komissiyasi uchun (0.44.0): 009 va 010
+
+**Ilova yangilanishidan OLDIN (yoki darhol) ishga tushiring.** 001, 003 va 005 ishga tushirilgan bo'lishi shart. 009 mavjud ma'lumotga tegmaydi (faqat bo'sh ustun qo'shadi), qayta ishga tushirish xavfsiz. Ilova 0.44.0 komissiyali o'tkazma saqlasa, komissiya qatori serverga `bog_id` bilan boradi; 009 bo'lmasa server shu qatorni rad etadi ("Server qatorni qabul qilmadi", kod `PG_PGRST204`), qolgan yozuvlar sinxronlanaveradi.
+
+1. Supabase → **SQL Editor** → **New query**. `supabase/009_yozuv_bogi.sql` ning **hamma matnini** nusxalab qo'ying va **Run** ni bosing. Natija: **"Success. No rows returned"**.
+2. Yana **New query**. `supabase/010_yozuv_bogi_testi.sql` ni nusxalab **Run** ni bosing. Eng pastki qator: `JAMI: 24 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov hech narsa saqlamaydi.
+
+**Nima o'zgaradi:** `yozuvlar.bog_id` (uuid, bo'sh bo'lishi mumkin); tashqi kalit (o'z egasi qatoriga, kechiktirilgan); o'ziga ishora taqiqlangan; yangi indeks; `tombstone_tozalash()` bog'langan qatorlarni tartib bilan tozalaydi (ota qator, unga ishora qiluvchi qator bor ekan, qoladi). RLS, ruxsatlar va triggerlar o'zgarmaydi. Sababi va cheklovlar: TZ-sinxronlash.md 40-band.
 
 ## 2. Qanday tekshirish (qo'shimcha)
 

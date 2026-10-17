@@ -4,7 +4,7 @@
 
   var DB_NOMI = 'moliya';
   var DB_VERSIYASI = 1;      // IndexedDB tuzilishi (to'plamlar ro'yxati)
-  var SXEMA_VERSIYASI = 7;   // ma'lumot tuzilishi: 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`; 7 — mahalliy ID lar UUID, har qatorda `updated_at` va `deleted` (mantiqiy o'chirish); 6 — sozlamalarda `tema`; 5 — kategoriyada `belgi`, hisobda `tur`, `belgi`, `rang`, `oxirgi4`
+  var SXEMA_VERSIYASI = 8;   // ma'lumot tuzilishi: 8 — yozuvga ixtiyoriy `bog_id` (o'tkazma komissiyasi o'tkazmaga bog'lanadi); 2 — yozuvga `vaqt` (HH:MM); 3 — qarzlar (to'lovlar ichida, `vaqt`, `yopilgan`); 4 — sozlamalarda `balans_yashirin`; 7 — mahalliy ID lar UUID, har qatorda `updated_at` va `deleted` (mantiqiy o'chirish); 6 — sozlamalarda `tema`; 5 — kategoriyada `belgi`, hisobda `tur`, `belgi`, `rang`, `oxirgi4`
   // To'plamlar (TZ 7-band). Byudjetning kaliti kategoriya_id, qolganlariniki id.
   var TOPLAMLAR = {
     hisoblar: 'id',
@@ -124,6 +124,91 @@
       };
     });
   }
+  // ---- O'tkazma + komissiya (TZ-sinxronlash.md 40-band) ----
+  // Komissiya — o'tkazmaga `bog_id` bilan bog'langan oddiy xarajat yozuvi. O'tkazma, komissiya yozuvi va (kerak bo'lsa) "Komissiya" kategoriyasi
+  // BITTA tranzaksiyada saqlanadi: xato bo'lsa hech biri yozilmaydi (yarim holat bo'lmaydi). Navbatga avval o'tkazma, keyin komissiya yoziladi.
+  // Bitta qatorni (id bilan) tranzaksiya ichida saqlaydi: saqlash() dagi bilan bir xil qoida (updated_at yangilanadi, deleted=false, eski_id saqlanadi).
+  function qatorniYoz(tx, toplam, qiymat, mavjud, hozir) {
+    var q = Object.assign({}, qiymat);
+    if (mavjud && mavjud.eski_id !== undefined && q.eski_id === undefined) q.eski_id = mavjud.eski_id;
+    q.deleted = q.deleted === true;
+    q.updated_at = hozir;
+    tx.objectStore(toplam).put(q);
+    navbatgaYoz(tx, toplam, q.id, hozir);
+    return q;
+  }
+  // otkazma — to'liq yozuv obyekti (tur "otkazma", bo'lmasa id beriladi). kom — null (komissiya yo'q: mavjud komissiya mantiqiy o'chiriladi)
+  // yoki { summa, izoh }. Komissiya o'tkazmaning sana, vaqt va "Qayerdan" hisobi bilan yoziladi. Natija: { otkazma, komissiya|null, kategoriya|null (yangi yaratilgan) }.
+  // Boshqa turdagi yozuv (xarajat, daromad) uchun ham ishlaydi (kom = null): o'tkazma xarajatga aylantirilsa, komissiyasi o'chadi.
+  function otkazmaniSaqlash(otkazma, kom) {
+    return new Promise(function (resolve, reject) {
+      var natija = { otkazma: null, komissiya: null, kategoriya: null };
+      var tx = db.transaction(['yozuvlar', 'kategoriyalar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      var yz = tx.objectStore('yozuvlar'), hozir = new Date().toISOString();
+      var q = Object.assign({}, otkazma);
+      if (!q.id) q.id = yangiId();
+      yz.get(q.id).onsuccess = function (e) {
+        natija.otkazma = qatorniYoz(tx, 'yozuvlar', q, e.target.result, hozir);
+        yz.getAll().onsuccess = function (e2) {
+          var bolalar = e2.target.result.filter(function (y) { return y.bog_id === q.id && y.tur === 'xarajat'; });
+          var tirik = bolalar.filter(function (y) { return y.deleted !== true; }), ochirilgan = bolalar.filter(function (y) { return y.deleted === true; });
+          function ortiqchaniOchir(saqlanadigan) {
+            tirik.forEach(function (y) { if (y !== saqlanadigan) qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: true }), y, hozir); });
+          }
+          if (!kom) { ortiqchaniOchir(null); return; }
+          var bola = tirik[0] || ochirilgan[0];   // mavjud komissiya yozuvi qayta ishlatiladi (qator ko'payib ketmasin)
+          ortiqchaniOchir(bola);
+          tx.objectStore('kategoriyalar').getAll().onsuccess = function (e3) {
+            var kat = Calc.komissiyaKategoriyasiniTop(e3.target.result);
+            if (!kat) {
+              kat = qatorniYoz(tx, 'kategoriyalar', { id: yangiId(), yaratilgan: hozir, nom: Calc.KOMISSIYA.nom, tur: 'xarajat', rang: Calc.KOMISSIYA.rang, belgi: Calc.KOMISSIYA.belgi, arxivlangan: false }, null, hozir);
+              natija.kategoriya = kat;
+            }
+            natija.komissiya = qatorniYoz(tx, 'yozuvlar', {
+              id: bola ? bola.id : yangiId(), yaratilgan: bola && bola.yaratilgan ? bola.yaratilgan : hozir,
+              tur: 'xarajat', summa: kom.summa, sana: q.sana, vaqt: q.vaqt, hisob_id: q.hisob_id, kategoriya_id: kat.id, izoh: kom.izoh || '', bog_id: q.id
+            }, bola, hozir);
+          };
+        };
+      };
+    });
+  }
+  // Yozuvni va unga bog'langan komissiyani mantiqiy o'chiradi (bitta tranzaksiya). Natija: o'chirilgan yozuvlarning avvalgi holati
+  // (o'tkazma birinchi) — "Bekor qilish" uchun yozuvlarniQaytarish() ga beriladi.
+  function yozuvniKomissiyasiBilanOchirish(id) {
+    return new Promise(function (resolve, reject) {
+      var olingan = [];
+      var tx = db.transaction(['yozuvlar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(olingan); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      var yz = tx.objectStore('yozuvlar'), hozir = new Date().toISOString();
+      yz.get(id).onsuccess = function (e) {
+        var x = e.target.result;
+        if (!x) return;
+        if (x.deleted !== true) olingan.push(x);
+        yz.getAll().onsuccess = function (e2) {
+          e2.target.result.filter(function (y) { return y.bog_id === id && y.tur === 'xarajat' && y.deleted !== true; }).forEach(function (y) { olingan.push(y); });
+          olingan.forEach(function (y) { qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: true }), y, hozir); });
+        };
+      };
+    });
+  }
+  // Bir nechta yozuvni birga qaytaradi/saqlaydi (bitta tranzaksiya, berilgan tartibda: o'tkazma komissiyadan oldin)
+  function yozuvlarniQaytarish(royxat) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['yozuvlar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(); ozgarishXabari(); };
+      tx.onerror = function () { reject(tx.error); };
+      tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
+      var hozir = new Date().toISOString();
+      royxat.forEach(function (y) { qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: false }), y, hozir); });
+    });
+  }
+
   // Serverga yuborish navbati (S5). Faqat sinxron yoqilgan bo'lsa (sinxron yozuvida navbat = true) yoziladi. Navbat — o'zgargan qatorlarning
   // KALITLARI (qator mazmuni emas): yuborish paytida bazadan oxirgi holati o'qiladi, shuning uchun bir qator ko'p marta o'zgarsa ham bir marta yuboriladi.
   // Qiymat — qatorning updated_at i: yuborilgandan keyin navbatdan shu qiymat bo'yicha olinadi (yuborish paytida yana o'zgargan qator navbatda qoladi).
@@ -188,7 +273,8 @@
   }
 
   // Ma'lumot tuzilishini yangi versiyaga o'tkazadi: 1 -> 2 (yozuvlarga `vaqt`), 2 -> 3 (qarzlarda tushib qolgan maydonlar), 3 -> 4 (`balans_yashirin`),
-  // 4 -> 5 (kategoriyaga belgi; hisobga tur, belgi, rang, oxirgi4), 5 -> 6 (`tema`), 6 -> 7 (ID lar UUID, har qatorda `updated_at` va `deleted`).
+  // 4 -> 5 (kategoriyaga belgi; hisobga tur, belgi, rang, oxirgi4), 5 -> 6 (`tema`), 6 -> 7 (ID lar UUID, har qatorda `updated_at` va `deleted`),
+  // 7 -> 8 (yozuvga ixtiyoriy `bog_id`: eski yozuvlar o'zgarmaydi).
   // Hisoblash sof funksiyada (Calc.malumotniYangilash), bu yerda faqat o'qish va yozish.
   // XAVFSIZLIK: hammasi (o'qish, ma'lumotning ESKI holatdagi nusxasi, yangi qatorlar, versiya belgisi) BITTA tranzaksiyada. Telefon o'chsa yoki
   // ilova yopilsa, tranzaksiya to'liq bekor bo'ladi: ma'lumot va versiya avvalgidek qoladi, keyingi ochilishda migratsiya qaytadan boshlanadi.
@@ -661,6 +747,7 @@
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
+    otkazmaniSaqlash: otkazmaniSaqlash, yozuvniKomissiyasiBilanOchirish: yozuvniKomissiyasiBilanOchirish, yozuvlarniQaytarish: yozuvlarniQaytarish,
     ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, navbatgaQoshish: navbatgaQoshish, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
     tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
     hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI,

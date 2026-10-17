@@ -10,11 +10,15 @@ var SinxronSof = (function () {
   function iso(x) { var d = new Date(x); return typeof x === 'string' && !isNaN(d.getTime()) ? d.toISOString() : x; }   // serverdan "+00:00" bilan keladi: mahalliy ko'rinish (Z, ms) ga keltiriladi
   function hhmm(x) { return typeof x === 'string' ? x.slice(0, 5) : x; }                                                 // serverdan "10:30:00" keladi
 
+  // `bog_id` (komissiya -> o'tkazma) faqat qiymati bor qatorda yuboriladi: u yo'q qatorlar serverda 009 ishga tushmagan bo'lsa ham o'tadi,
+  // eski ilova versiyasi esa bu ustunni umuman yubormaydi va serverdagi qiymatni o'chira olmaydi (TZ 40-band).
+  function yozuvQatori(q, x) { if (x.bog_id) q.bog_id = x.bog_id; return q; }
+
   // ---- Mahalliy qator -> serverga yuboriladigan qator (user_id, created_at, updated_at, eski_id, balans YUBORILMAYDI) ----
   function serverQatori(jadval, x) {
     if (jadval === 'hisoblar') return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, nom: x.nom, tur: x.tur, belgi: x.belgi, rang: x.rang, oxirgi4: x.oxirgi4 || '', boshlangich_qoldiq: x.boshlangich_qoldiq === undefined ? 0 : x.boshlangich_qoldiq, arxivlangan: x.arxivlangan === true };
     if (jadval === 'kategoriyalar') return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, nom: x.nom, tur: x.tur, rang: x.rang, belgi: x.belgi, arxivlangan: x.arxivlangan === true };
-    if (jadval === 'yozuvlar') return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, tur: x.tur, summa: x.summa, sana: x.sana, vaqt: x.vaqt || '00:00', hisob_id: x.hisob_id, qabul_hisob_id: ayrim(x.qabul_hisob_id), kategoriya_id: ayrim(x.kategoriya_id), izoh: x.izoh || '' };
+    if (jadval === 'yozuvlar') return yozuvQatori({ id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, tur: x.tur, summa: x.summa, sana: x.sana, vaqt: x.vaqt || '00:00', hisob_id: x.hisob_id, qabul_hisob_id: ayrim(x.qabul_hisob_id), kategoriya_id: ayrim(x.kategoriya_id), izoh: x.izoh || '' }, x);
     if (jadval === 'byudjetlar') return { id: x.id, deleted: x.deleted === true, kategoriya_id: x.kategoriya_id === 'umumiy' ? null : ayrim(x.kategoriya_id), oylik_limit: x.oylik_limit };   // "umumiy" = serverda NULL
     if (jadval === 'qarzlar') return { id: x.id, deleted: x.deleted === true, yaratilgan: x.yaratilgan, yonalish: x.yonalish, shaxs: x.shaxs, summa: x.summa, hisob_id: x.hisob_id, sana: x.sana, vaqt: x.vaqt || '00:00', muddat: ayrim(x.muddat), izoh: x.izoh || '', yopilgan: x.yopilgan === true };
     if (jadval === 'sozlamalar') return { id: x.id, deleted: x.deleted === true, sxema_versiyasi: x.sxema_versiyasi, oxirgi_zaxira_sanasi: ayrim(x.oxirgi_zaxira_sanasi), balans_yashirin: x.balans_yashirin === true, tema: x.tema || 'qurilma' };
@@ -30,6 +34,7 @@ var SinxronSof = (function () {
     if (jadval === 'yozuvlar') {
       var y = { id: r.id, deleted: r.deleted === true, yaratilgan: iso(r.yaratilgan), tur: r.tur, summa: Number(r.summa), sana: r.sana, vaqt: hhmm(r.vaqt) || '00:00', hisob_id: r.hisob_id, izoh: r.izoh || '', updated_at: u };
       if (r.tur === 'otkazma') { y.qabul_hisob_id = r.qabul_hisob_id; y.kategoriya_id = null; } else y.kategoriya_id = r.kategoriya_id;
+      if (r.bog_id) y.bog_id = r.bog_id;   // sxema 8: komissiya -> o'tkazma (eski serverda/qatorda yo'q bo'lishi mumkin)
       return y;
     }
     if (jadval === 'byudjetlar') return { id: r.id, deleted: r.deleted === true, kategoriya_id: r.kategoriya_id === null || r.kategoriya_id === undefined ? 'umumiy' : r.kategoriya_id, oylik_limit: Number(r.oylik_limit), updated_at: u };
@@ -37,6 +42,14 @@ var SinxronSof = (function () {
     if (jadval === 'qarz_tolovlari') return { id: r.id, deleted: r.deleted === true, sana: r.sana, vaqt: hhmm(r.vaqt) || '00:00', summa: Number(r.summa), hisob_id: r.hisob_id, updated_at: u };
     if (jadval === 'sozlamalar') return { kalit: 'asosiy', id: r.id, deleted: r.deleted === true, sxema_versiyasi: r.sxema_versiyasi, oxirgi_zaxira_sanasi: r.oxirgi_zaxira_sanasi || null, balans_yashirin: r.balans_yashirin === true, tema: r.tema || 'qurilma', updated_at: u };
     return null;
+  }
+
+  // Bir jadval ichida tartib (TZ 40-band): `bog_id` si bor yozuv (komissiya) o'tkazmadan KEYIN yuboriladi. Barqaror: qolgan tartib saqlanadi.
+  // royxat elementi qator yoki { qator } bo'lishi mumkin (qatorOl berilsa).
+  function otaOldin(royxat, qatorOl) {
+    var ol = qatorOl || function (x) { return x; }, ota = [], bola = [];
+    (royxat || []).forEach(function (x) { (ol(x) && ol(x).bog_id ? bola : ota).push(x); });
+    return ota.concat(bola);
   }
 
   function kalitTartib(o) {
@@ -160,7 +173,7 @@ var SinxronSof = (function () {
 
   return {
     JADVALLAR: JADVALLAR, serverQatori: serverQatori, tolovQatori: tolovQatori, mahalliyQator: mahalliyQator, bir: bir,
-    tortilganniQollash: tortilganniQollash, serverdanMalumot: serverdanMalumot, mahalliyBoshmi: mahalliyBoshmi,
+    otaOldin: otaOldin, tortilganniQollash: tortilganniQollash, serverdanMalumot: serverdanMalumot, mahalliyBoshmi: mahalliyBoshmi,
     navbatSoni: navbatSoni, holatMatni: holatMatni, oldin: oldin, iso: iso
   };
 })();

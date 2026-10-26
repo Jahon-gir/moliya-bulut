@@ -3342,6 +3342,62 @@
     return k;
   }
 
+  // Qarzlar ro'yxati tartibi (44-band): faqat shu qurilmada (localStorage), serverga va zaxiraga kirmaydi; yaroqsiz qiymat -> "Qaytarish muddati"
+  var QARZ_TARTIB_KALITI = 'moliya-qarz-tartibi';
+  var QARZ_TARTIB_MATNI = {
+    sana: { nom: 'Sana bo\'yicha', variant: 'Olingan sana', izoh: 'Yangisi tepada', belgi: 'calendar-plus' },
+    muddat: { nom: 'Muddat bo\'yicha', variant: 'Qaytarish muddati', izoh: 'Yaqini tepada, muddatsizlar oxirida', belgi: 'calendar-due' },
+    summa: { nom: 'Summa bo\'yicha', variant: 'Summa', izoh: 'Kattadan kichikka', belgi: 'sort-descending-numbers' }
+  };
+  function qarzTartibiOl() {
+    try { return Calc.qarzTartibi(localStorage.getItem(QARZ_TARTIB_KALITI)); } catch (e) { return Calc.qarzTartibi(null); }
+  }
+  function qarzTartibiniSaqla(t) { try { localStorage.setItem(QARZ_TARTIB_KALITI, t); } catch (e) { /* xotira ishlamasa ham tartib shu ochilishda ishlaydi */ } }
+
+  function qarzTartibTugmasi(tartib) {
+    var qator = el('div', undefined, 'qarz-tartib-qator');
+    var t = tugma(undefined, 'qarz-tartib-tugma', function () { qarzTartibOynasi(); });
+    t.id = 'qarz-tartib';
+    t.setAttribute('aria-haspopup', 'dialog');
+    t.setAttribute('aria-label', 'Qarzlar tartibi: ' + QARZ_TARTIB_MATNI[tartib].nom);
+    t.appendChild(Ikonlar.chiz('arrows-sort', 16));
+    t.appendChild(el('span', QARZ_TARTIB_MATNI[tartib].nom, 'qarz-tartib-nom'));
+    qator.appendChild(t);
+    return qator;
+  }
+
+  function qarzTartibOynasi() {
+    var joriy = qarzTartibiOl();
+    pastkiOyna('Tartib', function (oyna, yop) {
+      var guruh = el('div', undefined, 'tartib-royxat');
+      guruh.setAttribute('role', 'radiogroup');
+      guruh.setAttribute('aria-label', 'Qarzlar tartibi');
+      Calc.QARZ_TARTIBLARI.forEach(function (kalit) {
+        var m = QARZ_TARTIB_MATNI[kalit], tanlangan = kalit === joriy;
+        var q = tugma(undefined, 'tanlov-qator tartib-qator' + (tanlangan ? ' tanlangan' : ''), function () {
+          qarzTartibiniSaqla(kalit);
+          yop(false);
+          chizish(bolimlar.qarzlar(), true);
+        });
+        q.setAttribute('role', 'radio');
+        q.setAttribute('aria-checked', String(tanlangan));
+        q.setAttribute('data-tartib', kalit);
+        var belgi = el('span', undefined, 'tanlov-belgi');
+        belgi.appendChild(Ikonlar.chiz(m.belgi, 22));
+        q.appendChild(belgi);
+        var matn = el('span', undefined, 'tanlov-matn');
+        matn.appendChild(el('strong', m.variant));
+        matn.appendChild(el('span', m.izoh, 'xira'));
+        q.appendChild(matn);
+        var radio = el('span', undefined, 'tartib-radio');
+        if (tanlangan) radio.appendChild(Ikonlar.chiz('check', 16));
+        q.appendChild(radio);
+        guruh.appendChild(q);
+      });
+      oyna.appendChild(guruh);
+    }, 'tanlov-oynasi tartib-oynasi');
+  }
+
   var qarzTanlov = 'berdim';   // Qarzlar bo'limida qaysi ro'yxat ochiq: 'berdim' (Berilgan qarzlar, boshlang'ich) yoki 'oldim' (Olingan qarzlar)
 
   // Qarzlar ro'yxatidagi qator: odam belgisi, ism, "Muddat: …", o'ngda qolgan summa. Bosilsa qarz tafsiloti ochiladi (qarzEkrani)
@@ -3382,8 +3438,10 @@
     qosh.id = 'qarz-qoshish';
     bloklar.push(qosh);
 
-    var ochiq = [];
-    g.ochiq.forEach(function (gr) { gr.qarzlar.forEach(function (q) { if (q.yonalish === qarzTanlov) ochiq.push(q); }); });   // tartib: muddati o'tganlar, keyin qolgani kattasi
+    var ochiq = [], tartib = qarzTartibiOl();
+    Calc.qarzlarniTartibla(malumot.qarzlar.filter(function (q) { return q.yonalish === qarzTanlov && !Calc.qarzYopilganmi(q); }), tartib, bugun)
+      .forEach(function (gr) { gr.qarzlar.forEach(function (q) { ochiq.push(q); }); });   // 44-band: shaxs guruhlari tanlangan tartibda
+    if (ochiq.length) bloklar.push(qarzTartibTugmasi(tartib));
     var royxat = karta();
     royxat.classList.add('qarz-royxat');
     royxat.id = 'qarz-royxat';

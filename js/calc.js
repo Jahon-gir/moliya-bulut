@@ -651,6 +651,63 @@
     return { ochiq: tartib, yopilgan: yopilgan };
   }
 
+  // ---- Qarzlar ro'yxati tartibi (TZ-sinxronlash.md 44-band) ----
+  var QARZ_TARTIBLARI = ['sana', 'muddat', 'summa'];
+  var QARZ_TARTIBI_BOSHI = 'muddat';
+  // Saqlangan matn yaroqsiz bo'lsa boshlang'ich tartib
+  function qarzTartibi(matn) { return QARZ_TARTIBLARI.indexOf(matn) !== -1 ? matn : QARZ_TARTIBI_BOSHI; }
+
+  function matnTaqqos(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
+  // Bitta qarzning tartib kaliti: sana — (yangisi tepada) teskari; muddat — yaqini tepada, muddatsiz/yopilgan oxirida; summa — kattasi tepada
+  function qarzTartibTaqqosi(tartib) {
+    return function (a, b) {
+      var r = 0;
+      if (tartib === 'sana') r = matnTaqqos(sanaVaqtKaliti(b.sana, b.vaqt), sanaVaqtKaliti(a.sana, a.vaqt));
+      else if (tartib === 'summa') r = qarzQolgan(b) - qarzQolgan(a);
+      else {
+        var ma = a.muddat && !qarzYopilganmi(a) ? a.muddat : '', mb = b.muddat && !qarzYopilganmi(b) ? b.muddat : '';
+        r = ma && mb ? matnTaqqos(ma, mb) : ma ? -1 : mb ? 1 : 0;
+      }
+      return r || matnTaqqos(sanaVaqtKaliti(b.sana, b.vaqt), sanaVaqtKaliti(a.sana, a.vaqt)) || matnTaqqos(String(a.id), String(b.id));
+    };
+  }
+
+  // Qarzlar shaxs va yo'nalish bo'yicha guruhlanadi (nom katta-kichik harf va apostrofga e'tiborsiz), guruhlar va ichidagi qarzlar
+  // tanlangan tartibda: 'sana' (guruhning eng oxirgi qarzi, yangisi tepada), 'muddat' (yopilmagan qarzlarning eng yaqin muddati,
+  // o'tib ketgani eng tepada, muddatsizlar oxirida), 'summa' (jami qolgan summa, kattasi tepada). Teng bo'lsa: ism, keyin id.
+  // Hammasi yopilgan guruhlar (qolgan 0) har doim oxirida. Sof funksiya (kiritilgan massivga tegmaydi).
+  // Guruh: { kalit, shaxs, yonalish, summa, tolangan, qolgan, yopilgan, muddat ('' bo'lsa yo'q), oxirgi, muddatiOtgan, qarzlar }.
+  function qarzlarniTartibla(qarzlar, tartib, bugunSana) {
+    tartib = qarzTartibi(tartib);
+    var xarita = {}, guruhlar = [];
+    (qarzlar || []).forEach(function (q) {
+      var kalit = nomKaliti(q.shaxs) + '|' + q.yonalish, g = xarita[kalit];
+      if (!g) {
+        g = xarita[kalit] = { kalit: kalit, shaxs: q.shaxs, yonalish: q.yonalish, summa: 0, tolangan: 0, qolgan: 0, yopilgan: true, muddat: '', oxirgi: '', muddatiOtgan: false, qarzlar: [], birinchiId: String(q.id) };
+        guruhlar.push(g);
+      }
+      g.summa += q.summa; g.tolangan += tolanganSumma(q); g.qolgan += qarzQolgan(q);
+      var yopiq = qarzYopilganmi(q), sv = sanaVaqtKaliti(q.sana, q.vaqt);
+      if (!yopiq) g.yopilgan = false;
+      if (sv > g.oxirgi) g.oxirgi = sv;
+      if (!yopiq && q.muddat && (!g.muddat || q.muddat < g.muddat)) g.muddat = q.muddat;
+      if (qarzMuddatiOtdimi(q, bugunSana)) g.muddatiOtgan = true;
+      if (String(q.id) < g.birinchiId) g.birinchiId = String(q.id);
+      g.qarzlar.push(q);
+    });
+    var qTaqqos = qarzTartibTaqqosi(tartib);
+    guruhlar.forEach(function (g) { g.qarzlar.sort(qTaqqos); });
+    guruhlar.sort(function (a, b) {
+      if (a.yopilgan !== b.yopilgan) return a.yopilgan ? 1 : -1;
+      var r = 0;
+      if (tartib === 'sana') r = matnTaqqos(b.oxirgi, a.oxirgi);
+      else if (tartib === 'summa') r = b.qolgan - a.qolgan;
+      else r = a.muddat && b.muddat ? matnTaqqos(a.muddat, b.muddat) : a.muddat ? -1 : b.muddat ? 1 : 0;
+      return r || matnTaqqos(nomKaliti(a.shaxs), nomKaliti(b.shaxs)) || matnTaqqos(a.birinchiId, b.birinchiId);
+    });
+    return guruhlar;
+  }
+
   // Hisobga bog'langan ochiq qarzlar (hisobni arxivlashdan oldin ogohlantirish uchun): shu hisobdan berilgan/olingan
   // yoki shu hisobga to'lov qilingan, hali yopilmagan qarzlar
   function hisobgaBogliqQarzlar(qarzlar, hisobId) {
@@ -1688,7 +1745,7 @@
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     tolanganSumma: tolanganSumma, qarzQolgan: qarzQolgan, qarzYopilganmi: qarzYopilganmi, qarzMuddatiOtdimi: qarzMuddatiOtdimi,
     QARZ_KATEGORIYALAR: QARZ_KATEGORIYALAR, qarzKategoriyami: qarzKategoriyami, qarzKirdimi: qarzKirdimi, qarzYozuvlari: qarzYozuvlari, qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
-    tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,
+    tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, qarzlarniTartibla: qarzlarniTartibla, qarzTartibi: qarzTartibi, QARZ_TARTIBLARI: QARZ_TARTIBLARI, QARZ_TARTIBI_BOSHI: QARZ_TARTIBI_BOSHI, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,
     davrChegarasi: davrChegarasi, davrniSur: davrniSur, davrNomi: davrNomi, kunQosh: kunQosh,
     foizlar: foizlar, hisobot: hisobot, taqqoslash: taqqoslash, belgiliSum: belgiliSum, belgiliFoiz: belgiliFoiz,
     qadamlar: qadamlar, wizardBoshlash: wizardBoshlash, wizardKeyingi: wizardKeyingi, wizardOrqaga: wizardOrqaga,

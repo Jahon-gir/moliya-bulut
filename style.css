@@ -848,6 +848,55 @@ select.oy-pill { min-height: 44px; padding: 6px 30px 6px 14px; }
 .qarz-tanlov-tugma.berdim[aria-pressed="true"] { background: var(--qarz-berdim-fon); border-color: var(--qarz-berdim-chegara); }
 .qarz-tanlov-tugma.oldim[aria-pressed="true"] { background: var(--qarz-oldim-fon); border-color: var(--qarz-oldim-chegara); }
 .qarz-tanlov-tugma[aria-pressed="true"] .qt-nom { color: var(--matn); }
+.odam-qator + .odam-qator, .odam-qarz + .odam-qarz { border-top: 1px solid var(--chiziq); }
+/* Qarzlar ekrani (45-band): jami kartasi, chiplar, odam qatori, odam ekrani */
+.qarz-jami { display: grid; grid-template-columns: 1fr 1fr; padding: 12px 0; margin: 12px 0; }
+.qj-ustun { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0 12px; }
+.qj-ustun + .qj-ustun { border-left: 1px solid var(--chiziq); }
+.qj-summa { font-size: 20px; font-weight: 800; line-height: 1.2; }
+.qj-summa.otgan { color: var(--xarajat); }
+.qj-summa.nol { color: var(--xira); }
+.qarz-jami > .qarz-chiziq, .qarz-jami > .odam-jami-matn { grid-column: 1 / -1; margin-left: 12px; margin-right: 12px; }
+.qarz-jami > .qarz-chiziq { margin-top: 12px; }
+.odam-jami-matn { margin-top: 6px; font-size: 14px; }
+.qarz-chip-qator { display: flex; align-items: center; gap: 0; margin-bottom: 4px; }
+.qarz-chip, .qarz-qidiruv-tugma, .qarz-qidiruv-yopish { min-height: 44px; padding: 4px 2px; min-width: 0; font: inherit; cursor: pointer; color: var(--matn); background: none; border: 0; }
+.qarz-chip-ich { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 36px; padding: 0 10px; font-size: 13px; white-space: nowrap; background: var(--karta); border: 1px solid var(--chiziq); border-radius: 18px; }
+.qarz-chip[aria-pressed="true"] .qarz-chip-ich { color: var(--asosiy-matn); background: var(--asosiy); border-color: var(--asosiy); font-weight: 600; }
+.qarz-chip-son { font-weight: 800; }
+.qarz-chip-son.otgan { color: var(--xarajat); }
+.qarz-chip[aria-pressed="true"] .qarz-chip-son.otgan { color: inherit; }
+.qarz-chip-ich.yumaloq { width: 36px; padding: 0; color: var(--asosiy); }
+.qarz-qidiruv-tugma { margin-left: auto; }
+.qarz-chip:focus-visible, .qarz-qidiruv-tugma:focus-visible, .qarz-qidiruv-yopish:focus-visible, .odam-qator:focus-visible, .odam-qarz:focus-visible { outline: 2px solid var(--asosiy); outline-offset: 2px; }
+.qarz-qidiruv { flex: 1; min-width: 0; min-height: 44px; padding: 0 14px; font: inherit; color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 22px; }
+.qarz-qidiruv-yopish { width: 44px; flex: none; }
+.odam-avatar { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%; font-weight: 700; color: #fff; }
+.odam-qator, .odam-qarz { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 0; font: inherit; text-align: left; color: var(--matn); background: none; border: 0; cursor: pointer; }
+.odam-orta, .odam-qarz-chap { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.odam-ism { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.odam-belgilar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; font-size: 13px; }
+.odam-soni, .odam-matn, .odam-kichik { color: var(--xira); font-size: 13px; }
+.odam-matn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.odam-pill { display: inline-block; flex: none; max-width: 100%; padding: 1px 8px; font-size: 12px; font-weight: 700; border-radius: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.odam-pill.qizil { color: var(--xarajat); background: rgba(229, 72, 61, .14); }
+.odam-pill.sariq { color: #8A5A00; background: rgba(224, 138, 0, .20); }
+@media (prefers-color-scheme: dark) { html:not([data-tema="yorug"]) .odam-pill.sariq { color: #FFC857; background: rgba(224, 138, 0, .22); } }
+html[data-tema="qorongi"] .odam-pill.sariq { color: #FFC857; background: rgba(224, 138, 0, .22); }
+.odam-ong { display: flex; align-items: center; flex: none; gap: 2px; max-width: 38%; color: var(--xira); }
+.odam-ong svg { flex: none; }
+.qarz-qidiruv::-webkit-search-cancel-button { display: none; }
+.odam-summa { font-size: 15px; font-weight: 700; text-align: right; }
+.odam-summa.plus { color: var(--oqim-daromad); }
+.odam-summa.minus { color: var(--oqim-xarajat); }
+.odam-bosh-holat { padding: 10px 0; text-align: center; }
+.odam-bosh-holat p { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0; }
+.odam-ekran-bosh { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.odam-ekran-matn { min-width: 0; }
+.odam-ekran-ism { margin: 0; font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.odam-qarzlar > h2 { margin: 10px 0 2px; font-size: 16px; }
+.odam-qarz-sana { font-size: 14px; }
+.odam-qarz-summa { display: flex; flex-direction: column; align-items: flex-end; }
 /* Qarzlar tartibi (44-band): ro'yxat ustidagi kichik tugma va pastdan chiqadigan tanlov oynasi */
 .qarz-tartib-qator { display: flex; justify-content: flex-end; margin-bottom: 4px; }
 .qarz-tartib-tugma {

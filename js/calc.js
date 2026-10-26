@@ -708,6 +708,88 @@
     return guruhlar;
   }
 
+  // ---- Qarzlar ekrani: odam qatorlari, jami, filtr, qidiruv (TZ-sinxronlash.md 45-band) ----
+  var QARZ_FILTRLARI = ['hammasi', 'otgan', 'hafta'];
+  var ODAM_RANGLARI = ['#0F8F6F', '#2F5DDB', '#B400D0', '#E08A00', '#E5483D', '#00A3A3'];
+  function kunFarqi(a, b) { return Math.round((sanaUTC(b) - sanaUTC(a)) / 86400000); }   // b - a, kunlarda
+  function qarzOchiqmi(q) { return !!q && q.deleted !== true && !qarzYopilganmi(q); }
+  function odamKaliti(q) { return nomKaliti(q.shaxs) + '|' + q.yonalish; }
+  // Ochiq qarzning muddat holati: 'otgan' (muddat < bugun), 'hafta' (bugun <= muddat <= bugun + 6; bugun kiradi), 'oddiy' (keyinroq), 'yoq'.
+  // kun = muddat - bugun (manfiy bo'lsa necha kun o'tgan).
+  function qarzMuddatHolati(q, bugunSana) {
+    if (!q.muddat) return { tur: 'yoq' };
+    var kun = kunFarqi(bugunSana, q.muddat);
+    return { tur: kun < 0 ? 'otgan' : kun <= 6 ? 'hafta' : 'oddiy', kun: kun, sana: q.muddat };
+  }
+  function qarzFiltrigaMosmi(q, filtr, bugunSana) {
+    if (filtr !== 'otgan' && filtr !== 'hafta') return true;
+    return qarzMuddatHolati(q, bugunSana).tur === filtr;
+  }
+  // Ism bo'yicha "ichida bor": katta-kichik harf, apostrof turlari va bo'shliqlarga befarq
+  function qarzQidiruvgaMosmi(shaxs, qidiruv) {
+    var k = nomKaliti(qidiruv);
+    return !k || nomKaliti(shaxs).indexOf(k) !== -1;
+  }
+  // Odam qatoridagi belgi (ustuvorlik bo'yicha BITTASI): muddati o'tgan soni, bo'lmasa shu haftadagi eng yaqini, bo'lmasa muddatli eng yaqini, bo'lmasa muddatsiz
+  function odamBelgisi(qarzlar, bugunSana) {
+    var otgan = 0, hafta = null, muddat = null;
+    qarzlar.forEach(function (q) {
+      var h = qarzMuddatHolati(q, bugunSana);
+      if (h.tur === 'otgan') otgan++;
+      else if (h.tur === 'hafta') { if (!hafta || h.kun < hafta.kun) hafta = h; }
+      else if (h.tur === 'oddiy') { if (!muddat || h.kun < muddat.kun) muddat = h; }
+    });
+    if (otgan) return { tur: 'otgan', soni: otgan };
+    if (hafta) return { tur: 'hafta', sana: hafta.sana, kun: hafta.kun };
+    if (muddat) return { tur: 'muddat', sana: muddat.sana, kun: muddat.kun };
+    return { tur: 'yoq' };
+  }
+  // Avatar: ism bosh harfi va ismdan barqaror aniqlanadigan rang
+  function odamHarfi(shaxs) { var c = Array.from(String(shaxs == null ? '' : shaxs).trim())[0]; return c ? c.toUpperCase() : '?'; }
+  function odamRangi(shaxs) {
+    var k = nomKaliti(shaxs), h = 0;
+    for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) % 1000003;
+    return ODAM_RANGLARI[h % ODAM_RANGLARI.length];
+  }
+  // Tab (Berilgan/Olingan) almashsa chip "Hammasi"ga va qidiruv bo'shga qaytadi; xuddi shu tab bosilsa holat o'zgarmaydi
+  function qarzHolatiniAlmashtir(holat, tur) {
+    if (holat.tur === tur) return holat;
+    return { tur: tur, filtr: 'hammasi', qidiruv: '', qidiruvOchiq: false };
+  }
+  // Ro'yxat ko'rinishi (faqat ochiq qarzlar). holat: { tur, filtr, qidiruv }. Jami va chip sonlari butun tur bo'yicha (filtr va qidiruvsiz).
+  // Odam qatori: filtr va qidiruvga mos qarzlar bo'yicha (qolgan, soni, belgi). togridan — odamning jami OCHIQ qarzi bitta: qator to'g'ri qarz tafsilotini ochadi.
+  // Tartib: 44-band (qarzlarniTartibla).
+  function qarzlarKorinishi(qarzlar, holat, bugunSana, tartib) {
+    var ochiq = (qarzlar || []).filter(function (q) { return q.yonalish === holat.tur && qarzOchiqmi(q); });
+    var jami = { qolgan: 0, otgan: 0 }, chip = { hammasi: ochiq.length, otgan: 0, hafta: 0 }, odamdaSoni = {};
+    ochiq.forEach(function (q) {
+      var h = qarzMuddatHolati(q, bugunSana), ql = qarzQolgan(q), k = odamKaliti(q);
+      jami.qolgan += ql;
+      if (h.tur === 'otgan') { jami.otgan += ql; chip.otgan++; } else if (h.tur === 'hafta') chip.hafta++;
+      odamdaSoni[k] = (odamdaSoni[k] || 0) + 1;
+    });
+    var mos = ochiq.filter(function (q) { return qarzFiltrigaMosmi(q, holat.filtr, bugunSana) && qarzQidiruvgaMosmi(q.shaxs, holat.qidiruv); });
+    var odamlar = qarzlarniTartibla(mos, tartib, bugunSana).map(function (g) {
+      return { kalit: g.kalit, shaxs: g.shaxs, yonalish: g.yonalish, qolgan: g.qolgan, soni: g.qarzlar.length, jamiOchiq: odamdaSoni[g.kalit],
+        togridan: odamdaSoni[g.kalit] === 1, qarzId: g.qarzlar[0].id, belgi: odamBelgisi(g.qarzlar, bugunSana), qarzlar: g.qarzlar };
+    });
+    return { jami: jami, chip: chip, odamlar: odamlar, ochiqSoni: ochiq.length };
+  }
+  // Odam ekrani: shu odamning (kalit = odamKaliti) HAMMA ochiq qarzlari tanlangan tartibda; ochiq qarz qolmasa null (ekran ro'yxatga qaytadi).
+  // Jami asosiy summa = qarz summalari (komissiyali qarzda qaytariladigan jami), qaytarilgan = to'lovlar yig'indisi.
+  function odamKorinishi(qarzlar, kalit, bugunSana, tartib) {
+    var ochiq = (qarzlar || []).filter(function (q) { return qarzOchiqmi(q) && odamKaliti(q) === kalit; });
+    if (!ochiq.length) return null;
+    var g = qarzlarniTartibla(ochiq, tartib, bugunSana)[0];
+    var r = { kalit: kalit, shaxs: g.shaxs, yonalish: g.yonalish, summa: g.summa, tolangan: g.tolangan, qolgan: g.qolgan, otgan: 0, otganSoni: 0, foiz: tolashFoizi(g.tolangan, g.summa), qarzlar: [] };
+    g.qarzlar.forEach(function (q) {
+      var h = qarzMuddatHolati(q, bugunSana), ql = qarzQolgan(q), t = tolanganSumma(q);
+      if (h.tur === 'otgan') { r.otgan += ql; r.otganSoni++; }
+      r.qarzlar.push({ qarz: q, qolgan: ql, tolangan: t, foiz: tolashFoizi(t, q.summa), holat: h });
+    });
+    return r;
+  }
+
   // Hisobga bog'langan ochiq qarzlar (hisobni arxivlashdan oldin ogohlantirish uchun): shu hisobdan berilgan/olingan
   // yoki shu hisobga to'lov qilingan, hali yopilmagan qarzlar
   function hisobgaBogliqQarzlar(qarzlar, hisobId) {
@@ -1745,7 +1827,7 @@
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
     tolanganSumma: tolanganSumma, qarzQolgan: qarzQolgan, qarzYopilganmi: qarzYopilganmi, qarzMuddatiOtdimi: qarzMuddatiOtdimi,
     QARZ_KATEGORIYALAR: QARZ_KATEGORIYALAR, qarzKategoriyami: qarzKategoriyami, qarzKirdimi: qarzKirdimi, qarzYozuvlari: qarzYozuvlari, qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
-    tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, qarzlarniTartibla: qarzlarniTartibla, qarzTartibi: qarzTartibi, QARZ_TARTIBLARI: QARZ_TARTIBLARI, QARZ_TARTIBI_BOSHI: QARZ_TARTIBI_BOSHI, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,
+    tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, qarzlarniTartibla: qarzlarniTartibla, qarzlarKorinishi: qarzlarKorinishi, odamKorinishi: odamKorinishi, odamKaliti: odamKaliti, qarzMuddatHolati: qarzMuddatHolati, qarzQidiruvgaMosmi: qarzQidiruvgaMosmi, odamBelgisi: odamBelgisi, odamHarfi: odamHarfi, odamRangi: odamRangi, qarzHolatiniAlmashtir: qarzHolatiniAlmashtir, kunFarqi: kunFarqi, QARZ_FILTRLARI: QARZ_FILTRLARI, ODAM_RANGLARI: ODAM_RANGLARI, qarzTartibi: qarzTartibi, QARZ_TARTIBLARI: QARZ_TARTIBLARI, QARZ_TARTIBI_BOSHI: QARZ_TARTIBI_BOSHI, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,
     davrChegarasi: davrChegarasi, davrniSur: davrniSur, davrNomi: davrNomi, kunQosh: kunQosh,
     foizlar: foizlar, hisobot: hisobot, taqqoslash: taqqoslash, belgiliSum: belgiliSum, belgiliFoiz: belgiliFoiz,
     qadamlar: qadamlar, wizardBoshlash: wizardBoshlash, wizardKeyingi: wizardKeyingi, wizardOrqaga: wizardOrqaga,

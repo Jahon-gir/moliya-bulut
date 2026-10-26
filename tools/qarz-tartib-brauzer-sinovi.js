@@ -19,7 +19,7 @@ async function senariy(brauzer, tema) {
   await p.waitForFunction(() => typeof Data !== 'undefined' && document.querySelector('#ekran h1'));
   if (await p.locator('#salom-davom').count()) { await p.click('#salom-davom'); await p.waitForSelector('#salom-ekran', { state: 'detached' }); }
   const rasm = (n) => p.screenshot({ path: path.join(RASMLAR, tema + '-' + n + '.png') });
-  const ismlar = () => p.evaluate(() => [...document.querySelectorAll('#qarz-royxat .qarz-qator')].map((b) => b.getAttribute('data-shaxs')));
+  const ismlar = () => p.evaluate(() => [...document.querySelectorAll('#qarz-royxat .odam-qator')].map((b) => b.getAttribute('data-shaxs')));
   const tugmaMatni = () => p.evaluate(() => (document.querySelector('#qarz-tartib') || { textContent: null }).textContent);
   const olchov = async (i) => teng(await p.evaluate(() => document.documentElement.scrollWidth <= 360), true, i + ': gorizontal aylanish yo\'q');
   const qarzlarga = async () => { await p.click('[data-bolim="qarzlar"]'); await p.waitForSelector('.qarz-tanlov'); };
@@ -49,8 +49,8 @@ async function senariy(brauzer, tema) {
   teng(await p.evaluate(() => { const t = document.querySelector('#qarz-tartib'), r = t.getBoundingClientRect(), kt = document.querySelector('.qarz-tanlov').getBoundingClientRect(), ry = document.querySelector('#qarz-royxat').getBoundingClientRect(); return [r.height >= 44, r.right > 360 / 2 && r.right <= 360, r.top >= kt.bottom, r.bottom <= ry.top, !!t.querySelector('svg'), t.querySelector('svg').getAttribute('width')]; }), [true, true, true, true, true, '16'], 'tugma joyi, balandligi va ikoni');
   teng(await p.evaluate(() => getComputedStyle(document.querySelector('#qarz-tartib')).position), 'static', 'sticky emas');
   // muddat: Zuhra (o'tib ketgan), Vali, Ali(2 ta: muddatlisi birinchi), Bek (muddatsiz), (Sardor yopilgan — ro'yxatda yo'q)
-  teng(await ismlar(), ['Zuhra', 'Vali', 'Ali', 'Ali', 'Bek'], 'muddat bo\'yicha ro\'yxat');
-  teng(await p.evaluate(() => [...document.querySelectorAll('#qarz-royxat .qarz-qator')].map((b) => !!b.querySelector('.muddat-otgan'))), [true, false, false, false, false], 'o\'tib ketgan muddat belgisi faqat Zuhrada');
+  teng(await ismlar(), ['Zuhra', 'Vali', 'Ali', 'Bek'], 'muddat bo\'yicha ro\'yxat (har odam bitta qator)');
+  teng(await p.evaluate(() => [...document.querySelectorAll('#qarz-royxat .odam-qator')].map((b) => !!b.querySelector('.odam-pill.qizil'))), [true, false, false, false], 'o\'tib ketgan muddat belgisi faqat Zuhrada');
   await olchov('ro\'yxat'); await rasm('1-royxat');
 
   // ---- 2) Oyna ochiladi ----
@@ -75,20 +75,20 @@ async function senariy(brauzer, tema) {
   await p.click('#qarz-tartib'); await p.click('.tartib-qator[data-tartib="sana"]');
   await p.waitForSelector('.tartib-oynasi', { state: 'detached' });
   teng(await tugmaMatni(), 'Sana bo\'yicha', 'tugma nomi yangilandi');
-  teng(await ismlar(), ['Bek', 'Ali', 'Ali', 'Vali', 'Zuhra'], 'sana bo\'yicha: yangisi tepada, Ali ichida ham yangisi (50 000) birinchi');
+  teng(await ismlar(), ['Bek', 'Ali', 'Vali', 'Zuhra'], 'sana bo\'yicha: guruhning eng oxirgi sanasi, yangisi tepada');
   await rasm('3-sana');
   // ---- 5) "Summa bo'yicha" ----
   await p.click('#qarz-tartib'); await p.click('.tartib-qator[data-tartib="summa"]');
   await p.waitForSelector('.tartib-oynasi', { state: 'detached' });
   teng(await tugmaMatni(), 'Summa bo\'yicha', 'tugma nomi (summa)');
-  teng(await ismlar(), ['Vali', 'Ali', 'Ali', 'Zuhra', 'Bek'], 'summa bo\'yicha');
+  teng(await ismlar(), ['Vali', 'Ali', 'Zuhra', 'Bek'], 'summa bo\'yicha');
   // ---- 6) Ikkala ro'yxatga bitta tanlov ----
   await p.click('[data-tanlov="oldim"]');
   teng(await ismlar(), ['Olim'], 'Olingan ro\'yxat'); teng(await tugmaMatni(), 'Summa bo\'yicha', 'Olingan ro\'yxatda ham shu tanlov');
   // ---- 7) Saqlanishi: qayta yuklash ----
   teng(await p.evaluate(() => localStorage.getItem('moliya-qarz-tartibi')), 'summa', 'localStorage');
   await p.reload(); await p.waitForFunction(() => document.querySelector('#ekran h1')); await qarzlarga();
-  teng(await tugmaMatni(), 'Summa bo\'yicha', 'qayta ochilganda saqlangan'); teng(await ismlar(), ['Vali', 'Ali', 'Ali', 'Zuhra', 'Bek'], 'saqlangan tartib qo\'llandi');
+  teng(await tugmaMatni(), 'Summa bo\'yicha', 'qayta ochilganda saqlangan'); teng(await ismlar(), ['Vali', 'Ali', 'Zuhra', 'Bek'], 'saqlangan tartib qo\'llandi');
   // ---- 8) Yaroqsiz qiymat -> boshlang'ich ----
   await p.evaluate(() => localStorage.setItem('moliya-qarz-tartibi', 'noto\'g\'ri'));
   await p.reload(); await p.waitForFunction(() => document.querySelector('#ekran h1')); await qarzlarga();

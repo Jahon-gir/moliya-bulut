@@ -36,6 +36,7 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 | `tools/kategoriya-birlashtirish-brauzer-sinovi.js` | Kategoriyalarni birlashtirish brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/kategoriya-birlashtirish-brauzer-sinovi.js`) |
 | `tools/qarz-komissiya-brauzer-sinovi.js` | Qarz komissiyasi brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/qarz-komissiya-brauzer-sinovi.js`) |
 | `tools/qarz-tartib-brauzer-sinovi.js` | Qarzlar tartibi brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/qarz-tartib-brauzer-sinovi.js`) |
+| `tools/qarz-odam-brauzer-sinovi.js` | Qarzlar ekrani (odam qatorlari, jami, filtr, qidiruv, odam ekrani) brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/qarz-odam-brauzer-sinovi.js`) |
 
 ## Ma'lum cheklovlar
 

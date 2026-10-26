@@ -848,6 +848,26 @@ select.oy-pill { min-height: 44px; padding: 6px 30px 6px 14px; }
 .qarz-tanlov-tugma.berdim[aria-pressed="true"] { background: var(--qarz-berdim-fon); border-color: var(--qarz-berdim-chegara); }
 .qarz-tanlov-tugma.oldim[aria-pressed="true"] { background: var(--qarz-oldim-fon); border-color: var(--qarz-oldim-chegara); }
 .qarz-tanlov-tugma[aria-pressed="true"] .qt-nom { color: var(--matn); }
+/* Qarzlar tartibi (44-band): ro'yxat ustidagi kichik tugma va pastdan chiqadigan tanlov oynasi */
+.qarz-tartib-qator { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+.qarz-tartib-tugma {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; min-height: 44px; padding: 0 8px;
+  font: inherit; font-weight: 600; color: var(--asosiy); background: none; border: 0; cursor: pointer;
+}
+.qarz-tartib-tugma svg { flex: none; }
+.qarz-tartib-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qarz-tartib-tugma:focus-visible { outline: 2px solid var(--asosiy); outline-offset: 2px; }
+.tartib-oynasi::before { content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 10px; border-radius: 2px; background: var(--chiziq); }
+.tartib-qator.tanlangan { background: rgba(15, 139, 109, .10); border: 2px solid var(--asosiy); }
+@media (prefers-color-scheme: dark) {
+  html:not([data-tema="yorug"]) .tartib-qator.tanlangan { background: rgba(43, 181, 143, .14); }
+}
+html[data-tema="qorongi"] .tartib-qator.tanlangan { background: rgba(43, 181, 143, .14); }
+.tartib-radio {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; box-sizing: border-box;
+  color: var(--asosiy-matn); border: 2px solid var(--chiziq); border-radius: 50%;
+}
+.tartib-qator.tanlangan .tartib-radio { background: var(--asosiy); border-color: var(--asosiy); }
 .qarz-royxat { padding-top: 4px; padding-bottom: 4px; }
 .qarz-royxat > p { margin: 10px 0; }
 .qarz-ism { overflow-wrap: anywhere; }

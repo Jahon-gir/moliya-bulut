@@ -77,6 +77,11 @@ var Ikonlar = (function () {
     'report-money': ['M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2', 'M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z', 'M14 11h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5', 'M12 17v1m0 -8v1'],
     'moneybag': ['M9.5 3h5a1.5 1.5 0 0 1 1.5 1.5a3.5 3.5 0 0 1 -3.5 3.5h-1a3.5 3.5 0 0 1 -3.5 -3.5a1.5 1.5 0 0 1 1.5 -1.5', 'M4 17v-1a8 8 0 1 1 16 0v1a4 4 0 0 1 -4 4h-8a4 4 0 0 1 -4 -4'],
     'arrows-exchange': ['M7 10h14l-4 -4', 'M17 14h-14l4 4'],
+    'arrows-sort': ['M3 9l4 -4l4 4m-4 -4v14', 'M21 15l-4 4l-4 -4m4 4v-14'],   // Qarzlar tartibi tugmasi (TZ 44-band)
+    'calendar-plus': ['M12.5 21h-6.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v5', 'M16 3v4', 'M8 3v4', 'M4 11h16', 'M16 19h6', 'M19 16v6'],
+    'calendar-due': ['M4 5m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z', 'M16 3v4', 'M8 3v4', 'M4 11h16', 'M12 15m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0'],
+    'sort-descending-numbers': ['M4 15l3 3l3 -3', 'M7 6v12', 'M17 14a2 2 0 0 1 2 2v2a2 2 0 1 1 -4 0v-2a2 2 0 0 1 2 -2z', 'M17 4a2 2 0 0 1 2 2v2a2 2 0 1 1 -4 0v-2a2 2 0 0 1 2 -2z'],
+    'check': ['M5 12l5 5l10 -10'],
     'arrow-merge': ['M8 7l4 -4l4 4', 'M12 3v8', 'M5 21c0 -5 3 -6 7 -10', 'M19 21c0 -5 -3 -6 -7 -10'],   // "Boshqa kategoriyaga birlashtirish" tugmasi (TZ 41-band)
     'corner-down-right': ['M6 6v6a3 3 0 0 0 3 3h10l-4 -4m0 8l4 -4'],   // Tarixda o'tkazma ostidagi komissiya qatori (TZ 40-band)
     'repeat': ['M4 12v-3a3 3 0 0 1 3 -3h13m-3 -3l3 3l-3 3', 'M20 12v3a3 3 0 0 1 -3 3h-13m3 3l-3 -3l3 -3'],

@@ -22,10 +22,16 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 | `013_bildirishnoma.sql` | Yangi jadval `bildirishnoma_qurilmalari` (qurilmaning Web Push obunasi va eslatma sozlamasi; sinxron tizimida emas) — RLS va ANIQ `grant` (authenticated ga 4 amal, anon ga hech narsa), cheklovlar, triggerlar (ilova 0.49.0). Supabase'da ishga tushiriladi |
 | `014_bildirishnoma_testi.sql` | 013 ni tekshiradi (43 tekshiruv: grant, RLS, A/B ajratish, cheklovlar, hisobni o'chirish, cascade). Supabase'da ishga tushiriladi |
 | `functions/bildirishnoma/index.ts`, `test.mjs` | Bildirishnoma Edge Function (kalit va "Sinab ko'rish"; bitta fayl, paketsiz) va uning sinovi (`node --test`, soxta push xizmati bilan). 9-bo'lim |
+| `015_eslatma_jurnali.sql` | Yangi jadval `eslatma_jurnali` (yuborilgan eslatmalar jurnali, takror yuborilmasligi uchun): RLS, siyosatsiz, anon/authenticated ga hech narsa, FAQAT `service_role` ga aniq grant; funksiya o'qiydigan jadvallarga `service_role` granti (ilova 0.50.0). Supabase'da ishga tushiriladi |
+| `015_eslatma_jurnali_testi.sql` | 015 ni tekshiradi (32 tekshiruv: grantlar, rad etish, unique, cascade, hisobni o'chirish). Supabase'da ishga tushiriladi |
+| `016_eslatma_kroni.sql` | pg_cron + pg_net: har 5 daqiqada `eslatma-yuborish` funksiyasini chaqiradigan topshiriq. **Ishga tushirishdan oldin ikkita o'rinbosarni almashtiring** (10.4) |
+| `016_eslatma_kroni_testi.sql` | FAQAT mahalliy (cron/net TAQLIDI bilan). Supabase'da ishga tushirmang |
+| `functions/eslatma-yuborish/index.ts`, `test.mjs` | Eslatmalarni vaqtida yuboruvchi Edge Function (Verify JWT o'chiq, `x-kron-sirri` bilan himoyalangan) va uning sinovi. 10-bo'lim |
+| `functions/_shared/push.ts` | Web Push umumiy moduli (MANBA). Funksiya papkalariga `bash tools/push-nusxa.sh` bilan nusxalanadi (`bildirishnoma/push.ts`, `eslatma-yuborish/push.ts`); qo'lda tahrirlamang |
 | `functions/yordamchi/index.ts` | AI yordamchi Edge Function (bitta fayl). Supabase Dashboard'ga nusxalab joylanadi (5-bo'lim) |
 | `functions/yordamchi/test.mjs` | Funksiya sinovi (kompyuterda, `node --test`). AI taqlid qilinadi, haqiqiy kalit kerak emas |
 | `../model-server/kopri.py`, `test_kopri.py` | "Ko'prik": uyingizdagi Ollama oldidagi kalit tekshiruvchi darvoza va uning sinovi (yozuv rejimi uchun, 6-bo'lim) |
-| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–014) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
+| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–016) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
 
@@ -403,7 +409,7 @@ Supabase → **Edge Functions** → **Secrets** → **Add new secret**. Bittadan
 |---|---|
 | `VAPID_PUBLIC_KEY` | 9.1 dagi **Ochiq kalit** |
 | `VAPID_PRIVATE_KEY` | 9.1 dagi **Maxfiy kalit** |
-| `VAPID_SUBJECT` | `mailto:` va sizning emailingiz, masalan `mailto:siz@gmail.com` |
+| `VAPID_SUBJECT` | `mailto:` va sizning emailingiz, masalan `mailto:<emailingiz>` (`<emailingiz>` o'rniga o'z emailingiz) |
 
 ### 9.3. Jadvalni yaratish (013 va 014)
 1. Supabase → **SQL Editor** → **New query**. `supabase/013_bildirishnoma.sql` matnini to'liq nusxalab qo'ying → **Run**. Natija: **"Success. No rows returned"** (qayta ishga tushirish xavfsiz).
@@ -413,7 +419,7 @@ Supabase → **Edge Functions** → **Secrets** → **Add new secret**. Bittadan
 ### 9.4. Funksiyani yaratish
 1. Supabase → **Edge Functions** → **Deploy a new function** → **Via Editor**.
 2. Funksiya nomi aynan: `bildirishnoma` (`yordamchi` EMAS: u alohida funksiya).
-3. Namuna matnni butunlay o'chirib, `supabase/functions/bildirishnoma/index.ts` faylining **hamma matnini** nusxalab qo'ying.
+3. Namuna matnni butunlay o'chirib, `supabase/functions/bildirishnoma/index.ts` faylining **hamma matnini** nusxalab qo'ying. (0.50.0 dan funksiya `./push.ts` ni ham import qiladi: muharrirda ikkinchi fayl qo'shib, nomi `push.ts`, ichiga `supabase/functions/bildirishnoma/push.ts` matnini joylang. Dashboard ikkinchi fayl bermasa: `node tools/edge-bitta-fayl.mjs bildirishnoma`, so'ng hosil bo'lgan `bitta-fayl.ts` matnini joylang. Allaqachon joylangan eski funksiya o'zgarmasdan ishlayveradi: qayta joylash shart emas.)
 4. **Deploy**. **"Verify JWT" YOQILGAN** holda qoldiring (odatiy).
 5. Secret keyin o'zgarsa qayta Deploy shart emas.
 
@@ -447,4 +453,81 @@ Serverga: qurilmaning push manzili (endpoint) va shifrlash kalitlari, vaqt zonas
     node --test supabase/functions/bildirishnoma/test.mjs     # funksiya (Node 22.18+, soxta push xizmati)
     bash supabase/mahalliy_sinov.sh                            # SQL (001–014), mahalliy PostgreSQL
     node tools/eslatma-brauzer-sinovi.js                       # brauzer, 360 px (python3 -m http.server 8000 kerak)
+
+## 10. Eslatmalarni vaqtida yuborish: cron va funksiya `eslatma-yuborish` (ilova 0.50.0)
+
+Server o'zi vaqtida yuboradi: kunlik eslatma (HAR KUNI, bugun yozuv kiritilgan-kiritilmaganidan qat'i nazar) va qarz muddati eslatmasi (muddat kuni, 1 yoki 3 kun oldin; Eslatmalar ekranidagi sozlamaga qarab). Oldin 9-bo'lim (kalitlar, 013, `bildirishnoma`) bajarilgan bo'lishi kerak. Tartib muhim.
+
+### 10.1. `CRON_SIRRI` yasash va Secrets'ga qo'yish
+Bu — cron funksiyani chaqirganda ko'rsatadigan uzun tasodifiy parol (funksiya JWT'ni tekshirmaydi, shuning uchun faqat shu sir himoya qiladi).
+1. Brauzerda istalgan sahifani oching, **F12** → **Console**. Quyidagini nusxalab yopishtiring va Enter bosing (brauzer "yopishtirishga ruxsat" so'rasa, `allow pasting` deb yozib Enter bosing). Ekranda 64 ta harf-raqam chiqadi — shu sirning o'zi:
+
+       Array.from(crypto.getRandomValues(new Uint8Array(32)), function (b) { return b.toString(16).padStart(2, '0'); }).join('')
+
+2. Chiqqan qiymatni belgilab nusxalang (**chatga, GitHub'ga, hech kimga yozmang**). Qiymat qo'shtirnoq ichida bo'lsa, qo'shtirnoqsiz nusxalang.
+3. Supabase → **Edge Functions** → **Secrets** → **Add new secret**: nomi `CRON_SIRRI`, qiymati — shu qiymat. Oynani hozircha yopmang: 10.4 da yana kerak bo'ladi (yopsangiz, yangisini yasab, Secrets'dagini almashtiring).
+
+### 10.2. Jurnal jadvali (015 va uning testi)
+1. SQL Editor → **New query**. `supabase/015_eslatma_jurnali.sql` matnini nusxalab qo'ying → **Run**. Natija: **"Success. No rows returned"** (qayta ishga tushirish xavfsiz).
+2. Yana **New query**. `supabase/015_eslatma_jurnali_testi.sql` → **Run**. Oxirgi qator: `JAMI: 32 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov hech narsa saqlamaydi.
+
+### 10.3. Funksiyani yaratish
+1. Supabase → **Edge Functions** → **Deploy a new function** → **Via Editor**. Nomi aynan: `eslatma-yuborish`.
+2. Muharrirdagi `index.ts` matnini butunlay o'chirib, `supabase/functions/eslatma-yuborish/index.ts` faylining **hamma matnini** joylang.
+3. Muharrirda yangi fayl qo'shing (**Add file**), nomi `push.ts`, ichiga `supabase/functions/eslatma-yuborish/push.ts` faylining **hamma matnini** joylang. Dashboard ikkinchi fayl qo'shishga imkon bermasa: kompyuterda `node tools/edge-bitta-fayl.mjs eslatma-yuborish` ni ishga tushiring, hosil bo'lgan `supabase/functions/eslatma-yuborish/bitta-fayl.ts` matnini `index.ts` o'rniga joylang (ikkinchi fayl kerak emas).
+4. **Verify JWT** ni **O'CHIRING** (OFF). Nima uchun xavfsiz: cron foydalanuvchi emas, shuning uchun JWT yo'q; funksiya har so'rovda `x-kron-sirri` sarlavhasini `CRON_SIRRI` bilan solishtiradi va mos kelmasa hech narsa qilmasdan 401 qaytaradi.
+5. **Deploy**. Funksiya ishlashi uchun 9.2 dagi `VAPID_*` Secrets ham turishi kerak; `SUPABASE_SERVICE_ROLE_KEY` va `SUPABASE_URL` ni Supabase o'zi beradi (qo'shmaysiz).
+
+### 10.4. Cronni ishga tushirish (016)
+1. SQL Editor → **New query**. `supabase/016_eslatma_kroni.sql` matnini nusxalab qo'ying.
+2. Matnda ikkita o'rinbosar bor. **Ctrl+H** (qidirish va almashtirish) yoki qo'lda almashtiring: `<<LOYIHA_MANZILI>>` → loyiha manzilingiz, masalan `https://abcdefgh.supabase.co` (oxirida `/` yo'q); `<<CRON_SIRRI>>` → 10.1 dagi sir (belgilarsiz, qo'shtirnoqsiz).
+3. **Run**. Natija: "Success. No rows returned". "O'rinbosarlar ... almashtirilmagan" xatosi chiqsa — almashtirishni takrorlang (hech narsa yaratilmaydi).
+4. **Almashtirilgan so'rovni SAQLAMANG**: Supabase so'rovni chap ro'yxatdagi "snippet" sifatida eslab qolishi mumkin — Run'dan keyin shu snippetni o'chiring (snippet nomi ustida ⋯ → **Delete query**) va hech qayerga nusxa qilmang.
+5. Qayta ishga tushirish xavfsiz: eski topshiriq o'chirilib, yangisi yaratiladi (bitta topshiriq qoladi).
+
+### 10.5. Tez sinash
+1. Telefonda ilovani oching, Google bilan kiring. Menyu → **Eslatmalar**: kunlik toggle'ni yoqing (agar yoqilmagan bo'lsa; ruxsat bering).
+2. **Kunlik:** "Vaqt" ni **hozirdan 3 daqiqa keyin**ga qo'ying (masalan hozir 14:07 bo'lsa 14:10). Ekranni yoping. Cron har 5 daqiqada ishlaydi, shuning uchun bildirishnoma o'sha vaqtdan keyin **5 daqiqagacha** kutishi mumkin: "Bugungi yozuvlarni kiriting" chiqadi. (Tezroq: vaqtni hozirdan 10 daqiqa OLDINGA qo'ysangiz ham bo'ladi — vaqt oynasi 2 soat, keyingi tikda keladi.)
+3. Bildirishnomani bossangiz yozuv qo'shish oynasi ochiladi.
+4. **Qarz:** ilovada test qarz qo'shing: muddati **ertaga**. Eslatmalar'da "Qarz muddati" toggle'ini yoqing, chiplardan **"1 kun oldin"** yoqiq bo'lsin, "Vaqt" ni hozirdan 3 daqiqa keyinga qo'ying. Natija: "Ertaga qarz muddati" va qarz haqida matn (ism va summa ko'rsatish yoqiq bo'lsa). Bossangiz Qarzlar bo'limi ochiladi. "Ism va summani ko'rsatish" ni o'chirsangiz, matn "Qarzlar ro'yxatini ilovada ko'ring" bo'ladi.
+5. Bir xil eslatma shu kunda BIR marta keladi. Qayta sinash uchun SQL Editor'da `delete from public.eslatma_jurnali;` ni ishga tushiring (faqat jurnal tozalanadi) va vaqtni yana oynaga qo'ying.
+6. Sinovdan keyin test qarzni o'chiring.
+
+### 10.6. Cron ishlayotganini qayerda ko'rish
+SQL Editor'da (**`command` ustunini tanlamang**: unda sir bor):
+
+    -- topshiriq bormi va faolmi
+    select jobid, jobname, schedule, active from cron.job where jobname = 'eslatma-yuborish';
+
+    -- oxirgi 10 ta ishga tushish (status: succeeded / failed)
+    select status, return_message, start_time, end_time from cron.job_run_details
+      where jobid = (select jobid from cron.job where jobname = 'eslatma-yuborish') order by start_time desc limit 10;
+
+    -- funksiya javoblari (200 = ishladi, 401 = sir mos kelmadi, 404 = funksiya yo'q, 503 = Secrets yetishmaydi)
+    select id, status_code, left(content, 120) as javob, created from net._http_response order by created desc limit 10;
+
+Funksiya jurnali: Edge Functions → `eslatma-yuborish` → **Logs**. Har chaqiruvda bitta qator: `eslatma-yuborish: qurilma=3 yuborildi=1 otkazildi=2 xato=0 ochirildi=0` (kalit, manzil, ism, summa yozilmaydi). `holatlar=410:1` kabi qo'shimcha — push xizmati javob kodlari.
+
+### 10.7. Topshiriqni o'chirish va qayta yaratish
+    select cron.unschedule('eslatma-yuborish');   -- to'xtatish (eslatmalar kelmaydi)
+
+Qayta yaratish: 016 ni 10.4 dagidek ishga tushiring. Sir almashtirilsa: Secrets'da `CRON_SIRRI` ni yangilab, 016 ni yangi sir bilan qayta ishga tushiring.
+
+### 10.8. Xato chiqsa
+| Belgi | Sababi va yechimi |
+|---|---|
+| `net._http_response` da 401 | `CRON_SIRRI` Secrets'dagi bilan 016 dagi bir xil emas yoki Secrets'da yo'q. Ikkalasini bir xil qiling, 016 ni qayta ishga tushiring |
+| 404 | Funksiya `eslatma-yuborish` nomi bilan deploy qilinmagan yoki manzil noto'g'ri |
+| 503 / `SOZLANMAGAN` | `VAPID_*` Secrets yetishmaydi yoki noto'g'ri (9.2) |
+| `cron.job_run_details` da `failed` | `pg_net` yoqilmagan yoki 016 ishga tushmagan: 016 ni qayta ishga tushiring |
+| `yuborildi=0 otkazildi=N` | Hozir hech kimning vaqti emas yoki shu kun yuborilgan (jurnal). Normal |
+| `holatlar=403` yoki `400` | Push xizmati so'rovni rad etdi: `VAPID_SUBJECT` shakli yoki kalit juftligi (9.6) |
+| `holatlar=410` | Obuna eskirgan: qator o'chirildi, foydalanuvchi toggle'ni qayta yoqadi |
+| Eslatma kelmayapti, log `yuborildi=1` | Telefonda ilova/brauzer bildirishnomalari o'chiq yoki "Bezovta qilmang" rejimi |
+| `qurilma=0` | Eslatmalar ekranida hech kim yoqmagan yoki 013 qatorlari yo'q |
+
+### 10.9. Kompyuterda sinash (dasturchi uchun)
+    node --test supabase/functions/eslatma-yuborish/test.mjs   # funksiya (soxta Supabase va push xizmati)
+    bash supabase/mahalliy_sinov.sh                             # SQL 001–016 (016 pg_cron/pg_net TAQLIDI bilan)
+    bash tools/push-nusxa.sh                                    # _shared/push.ts ni funksiya papkalariga nusxalash
 

@@ -51,7 +51,7 @@ function soxtaBrauzer(c) {
   }
 }
 
-async function yangiSahifa(brauzer, tema, c, serverJavoblari) {
+async function yangiSahifa(brauzer, tema, c, serverJavoblari, qidiruv) {
   const kontekst = await brauzer.newContext(Object.assign({ viewport: { width: 360, height: 780 }, colorScheme: tema, serviceWorkers: 'block', timezoneId: 'Asia/Tashkent' }, c.ua ? { userAgent: c.ua } : {}));
   const p = await kontekst.newPage();
   const iz = { rest: [], funksiya: [] };
@@ -74,7 +74,7 @@ async function yangiSahifa(brauzer, tema, c, serverJavoblari) {
     return r.fulfill({ status: 200, headers: Object.assign({ 'content-type': 'application/json' }, CORS), body: '[]' });
   });
   await p.addInitScript(soxtaBrauzer, Object.assign({ endpoint: ENDPOINT }, c));
-  await p.goto(MANZIL);
+  await p.goto(MANZIL + (qidiruv || ''));
   await p.waitForFunction(() => typeof Data !== 'undefined' && document.querySelector('#ekran h1'));
   if (await p.locator('#salom-davom').count()) { await p.click('#salom-davom'); await p.waitForSelector('#salom-ekran', { state: 'detached' }); }
   return { p, iz, yop: () => kontekst.close() };
@@ -345,6 +345,50 @@ async function senariy(brauzer, tema) {
     await p.waitForFunction(() => !Kirish.holat().kirgan, null, { timeout: 8000 });
     teng(await p.evaluate(() => JSON.parse(localStorage.getItem('moliya-eslatma-qolgan') || '[]')), [ENDPOINT], 'o\'chirib bo\'lmadi: manzil keyingi kirishda tozalash uchun eslab qolindi');
     teng(await p.evaluate(() => window.__izlar.unsub), 1, 'baribir brauzer obunasi bekor qilindi');
+    await yop();
+  }
+
+  // ---- H) Bildirishnomadan kelgan yo'nalish (TZ 47): ?yangi=1 va ?qarzlar=1 ----
+  const manzilQismi = (p) => p.evaluate(() => location.search);
+  {
+    const { p, yop } = await yangiSahifa(brauzer, tema, {}, {}, '?yangi=1');
+    await p.waitForSelector('#yy-tranzaksiya', { timeout: 5000 });
+    teng(await manzilQismi(p), '', '?yangi=1: parametr manzildan olib tashlandi');
+    teng(await p.evaluate(() => !!document.querySelector('#yy-qarz')), true, '?yangi=1: yozuv qo\'shish oynasi ("+" tugmasi bilan bir xil) ochildi');
+    await rasm(p, 'H1-yangi');
+    await p.reload(); await p.waitForFunction(() => document.querySelector('#ekran h1'));
+    if (await p.locator('#salom-davom').count()) { await p.click('#salom-davom'); await p.waitForSelector('#salom-ekran', { state: 'detached' }); }
+    await kut(300);
+    teng(await p.evaluate(() => !!document.querySelector('#yy-tranzaksiya')), false, 'qayta yuklaganda oyna takrorlanmadi');
+    await yop();
+  }
+  {
+    const { p, yop } = await yangiSahifa(brauzer, tema, {}, {}, '?qarzlar=1');
+    await p.waitForSelector('[data-bolim="qarzlar"].faol', { timeout: 5000 });
+    teng(await manzilQismi(p), '', '?qarzlar=1: parametr olib tashlandi');
+    teng(await p.evaluate(() => [!!document.querySelector('.qarz-tanlov'), document.querySelector('#yy-tranzaksiya') === null]), [true, true], '?qarzlar=1: Qarzlar bo\'limi ochildi, yozuv oynasi yo\'q');
+    await rasm(p, 'H2-qarzlar');
+    await p.reload(); await p.waitForFunction(() => document.querySelector('#ekran h1'));
+    await yop();
+  }
+  // PIN yoqiq: avval PIN so'raladi, keyin yo'naltiriladi; parametr PIN ochilguncha manzilda turadi
+  {
+    const { p, yop } = await yangiSahifa(brauzer, tema, {}, {});
+    await p.click('.menyu-tugma'); await p.click('#mn-xavfsizlik'); await p.click('#pin-almashtirgich');
+    const yoz = async (pin) => { for (const r of pin) await p.click('#pin-tugmalar .pin-raqam[aria-label="' + r + '"]'); await kut(250); };
+    await p.waitForSelector('#pin-ekran'); await yoz('1234'); await yoz('1234');
+    await p.waitForSelector('#pin-ekran', { state: 'detached', timeout: 5000 });
+    teng(await p.evaluate(() => Pin.yoqilgan()), true, 'PIN yoqildi');
+    await p.goto(MANZIL + '?yangi=1');
+    await p.waitForSelector('#pin-ekran');
+    teng(await p.evaluate(() => [location.search, !!document.querySelector('#yy-tranzaksiya')]), ['?yangi=1', false], 'PIN so\'ralmoqda: oyna hali ochilmagan, parametr manzilda');
+    await rasm(p, 'H3-pin');
+    await yoz('1234');
+    await p.waitForSelector('#yy-tranzaksiya', { timeout: 5000 });
+    teng(await manzilQismi(p), '', 'PIN ochilgach yozuv oynasi ochildi va parametr olib tashlandi');
+    await p.goto(MANZIL + '?qarzlar=1'); await p.waitForSelector('#pin-ekran'); await yoz('1234');
+    await p.waitForSelector('[data-bolim="qarzlar"].faol', { timeout: 5000 });
+    teng(await manzilQismi(p), '', 'PIN bilan ?qarzlar=1');
     await yop();
   }
 }

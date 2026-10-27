@@ -4690,6 +4690,12 @@
     var oxirgi = 'bosh';
     try { oxirgi = sessionStorage.getItem('bolim') || 'bosh'; } catch (e) { /* ahamiyatsiz */ }
     korsat(oxirgi);
+    // Bildirishnomadan kelgan yo'nalish (TZ 47). Bu yerga PIN ochilgach yetib keladi (Pin.boshlash zanjirda oldinda). Parametr darhol olib tashlanadi: qayta yuklashda takrorlanmaydi
+    var yon = EslatmaSof.manzilYonalishi(location.search);
+    if (yon) {
+      try { history.replaceState(history.state, '', EslatmaSof.yonalishsizManzil(location.pathname, location.search, location.hash)); } catch (e) { /* ahamiyatsiz */ }
+      if (yon === 'qarzlar') korsat('qarzlar'); else yangiYozuvOynasi();   // yangi: mavjud "+" tugmasi bilan bir xil yo'l
+    }
     // Google'dan qaytgan bo'lsa: natija (kirildi yoki xato) ko'rinadigan ekranni ochamiz
     Kirish.tayyor().then(function () {
       if (!Kirish.qaytishniOl()) { return salomniKorsat(Kirish.holat()).catch(function () { /* ekran chiqmasa ham ilova ishlayveradi */ }); }

@@ -38,12 +38,20 @@
 
   self.addEventListener('notificationclick', function (hodisa) {
     hodisa.notification.close();
-    var manzil = ochiladiganManzil(hodisa.notification.data && hodisa.notification.data.url);
+    var url = hodisa.notification.data && hodisa.notification.data.url;
+    var manzil = ochiladiganManzil(url);
     hodisa.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (oynalar) {
       for (var i = 0; i < oynalar.length; i++) {
-        if (oynalar[i].url.indexOf(self.registration.scope) === 0 && 'focus' in oynalar[i]) return oynalar[i].focus();   // ochiq oyna bor: shunga o'tiladi
+        if (oynalar[i].url.indexOf(self.registration.scope) === 0 && 'focus' in oynalar[i]) {
+          // Ochiq oyna bor: fokus beriladi va (manzil berilgan bo'lsa) shu manzilga yo'naltiriladi (masalan ./?yangi=1). navigate bajarilmasa ham fokus qoladi
+          var oyna = oynalar[i];
+          return Promise.resolve(oyna.focus()).then(function (f) {
+            var t = f && typeof f.navigate === 'function' ? f : oyna;
+            if (url && typeof t.navigate === 'function') return t.navigate(manzil).catch(function () { /* ahamiyatsiz */ });
+          });
+        }
       }
-      return self.clients.openWindow(manzil);
+      return self.clients.openWindow(manzil);   // ochiq oyna yo'q: yangi oyna
     }));
   });
 })();

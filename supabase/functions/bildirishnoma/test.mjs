@@ -314,7 +314,9 @@ test('base64url: aylanib to\'g\'ri qaytadi, noto\'g\'ri belgilar rad etiladi', (
   assert.throws(() => M.b64uOch('ab+/'));
   assert.throws(() => M.b64uOch('a b'));
 });
-test('fayl: bitta fayl, tashqi paket va boshqa fayldan import yo\'q', () => {
-  assert.ok(!/^\s*import\s/m.test(MANBA), 'import yo\'q');
+test('fayl: tashqi paket yo\'q; faqat ./push.ts import qilinadi va u _shared/push.ts ning aynan nusxasi', () => {
+  const importlar = (MANBA.match(/^\s*import\s[^\n]*$/gm) || []).filter((x) => !/^\s*import type/.test(x));
+  assert.ok(importlar.every((x) => /from "\.\/push\.ts"/.test(x)), 'import faqat ./push.ts dan');
+  assert.equal(readFileSync(join(BU, 'push.ts'), 'utf8'), readFileSync(join(BU, '..', '_shared', 'push.ts'), 'utf8'), 'push.ts nusxasi manbadan farq qiladi: bash tools/push-nusxa.sh');
   assert.ok(!/npm:|jsr:|esm\.sh|deno\.land/.test(MANBA), 'tashqi paket yo\'q');
 });

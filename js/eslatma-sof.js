@@ -153,7 +153,21 @@ var EslatmaSof = (function () {
     return boshlangich || 'PUSH_SERVER';
   }
 
+  // ---- Bildirishnomani bosganda ilova manzilidagi yo'nalish (TZ 47): ?yangi=1 -> yozuv qo'shish oynasi, ?qarzlar=1 -> Qarzlar bo'limi ----
+  function manzilYonalishi(search) {
+    var p = String(search || '').replace(/^\?/, '').split('&');
+    var yon = '';
+    p.forEach(function (j) { if (!yon && j === 'yangi=1') yon = 'yangi'; else if (!yon && j === 'qarzlar=1') yon = 'qarzlar'; });
+    return yon;
+  }
+  // Shu ikki parametr olib tashlangan manzil (yo'l + qolgan so'rov + #qism): history.replaceState uchun. Boshqa parametrlarga (masalan Google kirish kodi) tegilmaydi
+  function yonalishsizManzil(pathname, search, hash) {
+    var qolgan = String(search || '').replace(/^\?/, '').split('&').filter(function (j) { return j && j !== 'yangi=1' && j !== 'qarzlar=1'; });
+    return String(pathname || '/') + (qolgan.length ? '?' + qolgan.join('&') : '') + String(hash || '');
+  }
+
   return {
+    manzilYonalishi: manzilYonalishi, yonalishsizManzil: yonalishsizManzil,
     SAQLASH_KALITI: SAQLASH_KALITI, QOLGAN_KALIT: QOLGAN_KALIT, QARZ_KUNLAR: QARZ_KUNLAR, TZ_BOSHLANGICH: TZ_BOSHLANGICH, BOSHLANGICH: BOSHLANGICH, MATN: MATN,
     vaqtTogrimi: vaqtTogrimi, vaqtTozala: vaqtTozala, qarzKunlariniTozala: qarzKunlariniTozala, qarzKuniniAlmashtir: qarzKuniniAlmashtir,
     sozlamaTozala: sozlamaTozala, sozlamaOqi: sozlamaOqi, sozlamaYoz: sozlamaYoz, obunaKerakmi: obunaKerakmi,

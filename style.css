@@ -92,11 +92,11 @@ h2 { font-size: 16px; margin: 0 0 8px; color: var(--xira); font-weight: 600; }
 button:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
 
 /* --- 2-bosqich: shakl va yozuvlar ro'yxati --- */
-:root { --daromad: #1b7f3b; --xarajat: #c62828; }
+:root { --daromad: #1b7f3b; --xarajat: #c62828; --izoh-ogoh: #9a6700; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-tema="yorug"]) { --daromad: #5fd08a; --xarajat: #ff8a80; }
+  :root:not([data-tema="yorug"]) { --daromad: #5fd08a; --xarajat: #ff8a80; --izoh-ogoh: #fab219; }
 }
-:root[data-tema="qorongi"] { --daromad: #5fd08a; --xarajat: #ff8a80; }
+:root[data-tema="qorongi"] { --daromad: #5fd08a; --xarajat: #ff8a80; --izoh-ogoh: #fab219; }
 
 .plus { color: var(--daromad); }
 .minus { color: var(--xarajat); }
@@ -108,7 +108,7 @@ input, select {
   font: inherit; color: var(--matn); background: var(--karta);
   border: 1px solid var(--chiziq); border-radius: 10px;
 }
-input.xatoli, select.xatoli { border-color: var(--xarajat); }
+input.xatoli, select.xatoli, textarea.izoh-maydon.xatoli { border-color: var(--xarajat); }
 .xato-matn { color: var(--xarajat); font-size: 14px; margin-top: 4px; min-height: 0; }
 .summa-kiritish { font-size: 24px; font-weight: 700; }
 
@@ -849,6 +849,17 @@ select.oy-pill { min-height: 44px; padding: 6px 30px 6px 14px; }
 /* Yozuvlar (Tarix, ro'yxatlar): faqat kategoriya belgisi (40 px), sana sarlavhasi kartadan tashqarida */
 .yozuv-kv { gap: 12px; padding: 10px 0; }
 .yozuv-kv .yozuv-chap { flex: 1 1 0; }
+/* Ko'p qatorli izoh (TZ 48): qisqa izohda avvalgi bir qatorli maydondek (48 px, 12 px chekka) */
+textarea.izoh-maydon {
+  display: block; width: 100%; min-height: 48px; padding: 12px; font: inherit; line-height: 22px; resize: none; overflow-y: hidden;
+  color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 10px;
+}
+.izoh-pastki { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--xira); }
+.izoh-hisoblagich { font-variant-numeric: tabular-nums; }
+.izoh-hisoblagich.izoh-ogoh { color: var(--izoh-ogoh); font-weight: 600; }
+.izoh-hisoblagich.izoh-toldi { color: var(--xarajat); font-weight: 600; }
+button.izoh-bir.ochiq[data-toli-izoh] { white-space: pre-line; }
+.qator-izoh { white-space: pre-line; overflow-wrap: anywhere; }
 .yozuv-kv .yozuv-summa { flex: none; text-align: right; }
 .kun { padding-top: 4px; padding-bottom: 4px; margin-bottom: 4px; }
 .kun-sarlavha { margin: 16px 4px 6px; padding: 0; font-size: 15px; align-items: baseline; }

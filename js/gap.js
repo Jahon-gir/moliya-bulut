@@ -513,6 +513,15 @@ var Gap = (function () {
     quti.appendChild(belgi); quti.appendChild(i); quti.appendChild(xato);
     return { quti: quti, input: i, xato: xato };
   }
+  // Izoh maydoni ko'p qatorli (TZ 48): matnMaydoni bilan bir xil tuzilma, lekin <textarea> va hisoblagich bilan
+  function izohMaydoni(id, belgiMatn, qiymat, ozgarganda) {
+    var quti = e('div', undefined, 'maydon');
+    var belgi = e('label', belgiMatn); belgi.setAttribute('for', id);
+    var m = Sigdir.izohMaydoni(id, qiymat, ozgarganda);
+    var xato = e('div', undefined, 'xato-matn'); xato.setAttribute('role', 'alert');
+    quti.appendChild(belgi); quti.appendChild(m.quti); quti.appendChild(xato);
+    return { quti: quti, input: m.input, xato: xato };
+  }
   function summaMaydoni(k) {
     var m = matnMaydoni('gk-summa', 'Summa (so\'m)', k.summa, function (v) { k.summa = v; }, function (i) { i.inputMode = 'numeric'; i.placeholder = '0'; i.className = 'summa-kiritish summa-katta'; });
     var i = m.input;
@@ -621,7 +630,7 @@ var Gap = (function () {
     var qator = e('div', undefined, 'gp-qator');
     qosh('sana', sana); qosh('vaqt', soat);
     qator.appendChild(sana.quti); qator.appendChild(soat.quti); forma.appendChild(qator);
-    qosh('izoh', matnMaydoni('gk-izoh', 'Izoh', k.izoh, function (v) { k.izoh = v; }, function (i) { i.maxLength = GapSof.IZOH_MAX; }));
+    qosh('izoh', izohMaydoni('gk-izoh', 'Izoh', k.izoh, function (v) { k.izoh = v; }));
 
     var umumiy = e('div', k.xatolar.umumiy || '', 'xato-matn'); umumiy.setAttribute('role', 'alert'); forma.appendChild(umumiy);
     var saqla = e('button', 'Saqlash', 'asosiy-tugma'); saqla.type = 'submit'; saqla.id = 'gap-saqlash';

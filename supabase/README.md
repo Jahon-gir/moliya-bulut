@@ -19,10 +19,13 @@ Bu yerda **hech qanday maxfiy kalit yoki parol yo'q** va bo'lmasligi kerak (repo
 | `010_yozuv_bogi_testi.sql` | 009 ni tekshiradi (24 tekshiruv). Supabase'da ishga tushiriladi |
 | `011_qarz_bogi.sql` | Yozuvga ixtiyoriy `qarz_bog_id` ustuni (qarz komissiyasi qarzga bog'lanadi, ilova 0.45.0), tashqi kalit, indeks va yangilangan `tombstone_tozalash()`. Supabase'da ishga tushiriladi (009 dan keyin) |
 | `012_qarz_bogi_testi.sql` | 011 ni tekshiradi (19 tekshiruv). Supabase'da ishga tushiriladi |
+| `013_bildirishnoma.sql` | Yangi jadval `bildirishnoma_qurilmalari` (qurilmaning Web Push obunasi va eslatma sozlamasi; sinxron tizimida emas) — RLS va ANIQ `grant` (authenticated ga 4 amal, anon ga hech narsa), cheklovlar, triggerlar (ilova 0.49.0). Supabase'da ishga tushiriladi |
+| `014_bildirishnoma_testi.sql` | 013 ni tekshiradi (43 tekshiruv: grant, RLS, A/B ajratish, cheklovlar, hisobni o'chirish, cascade). Supabase'da ishga tushiriladi |
+| `functions/bildirishnoma/index.ts`, `test.mjs` | Bildirishnoma Edge Function (kalit va "Sinab ko'rish"; bitta fayl, paketsiz) va uning sinovi (`node --test`, soxta push xizmati bilan). 9-bo'lim |
 | `functions/yordamchi/index.ts` | AI yordamchi Edge Function (bitta fayl). Supabase Dashboard'ga nusxalab joylanadi (5-bo'lim) |
 | `functions/yordamchi/test.mjs` | Funksiya sinovi (kompyuterda, `node --test`). AI taqlid qilinadi, haqiqiy kalit kerak emas |
 | `../model-server/kopri.py`, `test_kopri.py` | "Ko'prik": uyingizdagi Ollama oldidagi kalit tekshiruvchi darvoza va uning sinovi (yozuv rejimi uchun, 6-bo'lim) |
-| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–012) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
+| `mahalliy_taqlid.sql`, `mahalliy_sinov.sh` | Faqat dasturchi uchun: kompyuterdagi PostgreSQL'da sinash (001–014) (haqiqiy Supabase emas). Supabase'da ishga tushirmang |
 
 ## 1. Ishga tushirish (qadamma-qadam)
 
@@ -382,3 +385,66 @@ Gemini 429/500/502/503/504 qaytarsa funksiya bir marta ~1,8 s kutib qayta urinad
 
 ### 8.5. Chek aniqligi (0.43.3)
 Gemini endi rasmdan tuzilgan JSON (do'kon, sana, vaqt, jami, mahsulotlar) qaytaradi; summa, sana va izoh server tekshiruvidan o'tgan maydonlardan olinadi. `GEMINI_MODEL` strukturali JSON (`responseSchema`) qo'llaydigan model bo'lishi kerak (standart `gemini-2.5-flash`). Model sxemani rad etsa Logs da `rasm: gemini_400 …` chiqadi. **Funksiyani qayta joylash shart** (8.2 qadamlari).
+
+## 9. Bildirishnoma (Web Push): 013, 014 va funksiya `bildirishnoma` (ilova 0.49.0)
+
+Menyu → **Eslatmalar** ekrani shu qismga tayanadi. Bu bosqichda faqat sozlash, qurilmani ulash va **"Sinab ko'rish"** ishlaydi; eslatmalarni vaqtida yuborish keyingi bosqichda. Bu qadamlarni bajarmaguncha ilova baribir ishlayveradi, faqat Eslatmalar ekranida yoqishda xato ko'rinadi (`SOZLANMAGAN` yoki `PUSH_SERVER`). Tartib muhim.
+
+### 9.1. Kalit juftligini yasash (kompyuterda, internetsiz)
+1. `tools/vapid-kalit-yasash.html` faylini kompyuteringizda ikki marta bosib brauzerda oching.
+2. **"Yangi juftlik yasash"** tugmasini bosing. Ikkita qiymat chiqadi: **Ochiq kalit** va **Maxfiy kalit**. Har birining yonida **"Nusxalash"** tugmasi bor.
+3. Sahifani YOPMANG, 9.2-qadamni shu oynada bajaring (yopsangiz kalitlar yo'qoladi; kerak bo'lsa qaytadan yasang, faqat eski juftlik bilan qilingan obunalar eskiradi).
+4. **Maxfiy kalitni faqat Supabase Secrets'ga qo'ying, hech kimga, chatga va repozitoriyga yubormang.** Sahifa hech qayerga so'rov yubormaydi.
+
+### 9.2. Secrets'ni kiritish
+Supabase → **Edge Functions** → **Secrets** → **Add new secret**. Bittadan kiriting:
+
+| Nom | Qiymat |
+|---|---|
+| `VAPID_PUBLIC_KEY` | 9.1 dagi **Ochiq kalit** |
+| `VAPID_PRIVATE_KEY` | 9.1 dagi **Maxfiy kalit** |
+| `VAPID_SUBJECT` | `mailto:` va sizning emailingiz, masalan `mailto:siz@gmail.com` |
+
+### 9.3. Jadvalni yaratish (013 va 014)
+1. Supabase → **SQL Editor** → **New query**. `supabase/013_bildirishnoma.sql` matnini to'liq nusxalab qo'ying → **Run**. Natija: **"Success. No rows returned"** (qayta ishga tushirish xavfsiz).
+2. Yana **New query**. `supabase/014_bildirishnoma_testi.sql` → **Run**. Oxirgi qator: `JAMI: 43 ta o'tdi, 0 ta o'tmadi | HAMMASI O'TDI`. Sinov hech narsa saqlamaydi.
+3. Oldindan 001, 003 va 005 ishga tushirilgan bo'lishi kerak (ular allaqachon bor).
+
+### 9.4. Funksiyani yaratish
+1. Supabase → **Edge Functions** → **Deploy a new function** → **Via Editor**.
+2. Funksiya nomi aynan: `bildirishnoma` (`yordamchi` EMAS: u alohida funksiya).
+3. Namuna matnni butunlay o'chirib, `supabase/functions/bildirishnoma/index.ts` faylining **hamma matnini** nusxalab qo'ying.
+4. **Deploy**. **"Verify JWT" YOQILGAN** holda qoldiring (odatiy).
+5. Secret keyin o'zgarsa qayta Deploy shart emas.
+
+### 9.5. Telefonda sinash
+1. Ilovani GitHub Pages manzilida oching, Google bilan kiring. **iPhone/iPad:** avval Safari → Ulashish → **Bosh ekranga** qo'shing va ilovani shu belgidan oching (iOS 16.4 yoki yangisi). **Android:** Chrome'da oching (o'rnatish shart emas).
+2. Menyu → **Eslatmalar**. Tepada karta chiqmasligi kerak. Kunlik eslatma toggle'ini bosing: brauzer bildirishnoma ruxsatini so'raydi → **Ruxsat berish**. Toggle yoqiladi.
+3. **"Sinab ko'rish"** bosing: bir necha soniyada "Eslatmalar ishlayapti — Bu sinov bildirishnomasi." chiqishi kerak. Bildirishnomani bossangiz ilova ochiladi.
+4. 30 soniya ichida yana "Sinab ko'rish": "Sinov juda tez-tez" (kod: PUSH_TEZ) chiqadi — bu to'g'ri.
+5. Ikkala toggle'ni o'chiring, so'ng Sinab ko'rishni bosing: "Avval ... yoqing" chiqadi; Supabase → Table Editor → `bildirishnoma_qurilmalari` dan qator o'chganini ko'rasiz.
+6. Profil → **Chiqish**: qator Table Editor'dan yo'qoladi.
+7. Boshqa Google akkaunt bilan kirib, Eslatmalar'da toggle'lar o'chiq turishini tekshiring.
+
+### 9.6. Xato chiqsa
+| Ekrandagi kod | Sababi va yechimi |
+|---|---|
+| `SOZLANMAGAN` | 9.2 (Secrets) yoki 9.3 (013) bajarilmagan yoki `VAPID_*` noto'g'ri nusxalangan (bo'sh joy, uzilgan matn). Funksiya jurnalida (Edge Functions → bildirishnoma → Logs) qisqa kod ko'rinadi |
+| `PUSH_SERVER` | Serverga yozib bo'lmadi: 013 ishga tushirilmagan yoki jadvalga ruxsat yo'q. SQL Editor'da `014` ni ishga tushiring |
+| `PUSH_RUXSAT` | Ruxsat berilmadi. Brauzer sozlamalaridan sayt uchun bildirishnomaga ruxsat bering |
+| `PUSH_OBUNA` | Brauzer obunani yaratolmadi (iPhone'da ilova bosh ekranga o'rnatilmagan bo'lishi mumkin) yoki obuna ma'lumoti noto'g'ri |
+| `NETWORK` | Internet yo'q yoki funksiya deploy qilinmagan (Edge Functions ro'yxatida `bildirishnoma` bormi?) |
+| `NOT_SIGNED_IN` | Kirmagansiz yoki sessiya tugagan: qayta kiring |
+| `PUSH_TEZ` | Sinov 30 soniyada bir martadan ko'p bosildi |
+| `PUSH_ESKIRGAN` | Obuna eskirgan (qurilma bildirishnomalarni o'chirgan yoki kalit almashgan). Server qatorni o'chirdi: toggle'ni qayta yoqing |
+| `PUSH_XIZMAT` (`push_403`, `push_400`) | Push xizmati (Google/Apple/Mozilla) so'rovni qabul qilmadi: odatda `VAPID_SUBJECT` shakli noto'g'ri (`mailto:` kerak) yoki ochiq va maxfiy kalit bir juftlikdan emas |
+| `PUSH_YOQ` | Bu qurilma serverda yozilmagan: eslatmani o'chirib, qayta yoqing |
+
+### 9.7. Nima saqlanadi va nima yuborilmaydi
+Serverga: qurilmaning push manzili (endpoint) va shifrlash kalitlari, vaqt zonasi, eslatma sozlamasi. Funksiya jurnaliga kalit, manzil va token YOZILMAYDI (faqat qisqa kod). Jadval sinxron tizimida emas: "Zaxira", Excel va boshqa qurilmalarga tushmaydi. Hisobni o'chirsangiz qatorlar ham o'chadi.
+
+### 9.8. Kompyuterda sinash (dasturchi uchun)
+    node --test supabase/functions/bildirishnoma/test.mjs     # funksiya (Node 22.18+, soxta push xizmati)
+    bash supabase/mahalliy_sinov.sh                            # SQL (001–014), mahalliy PostgreSQL
+    node tools/eslatma-brauzer-sinovi.js                       # brauzer, 360 px (python3 -m http.server 8000 kerak)
+

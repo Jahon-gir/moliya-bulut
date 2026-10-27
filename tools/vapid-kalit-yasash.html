@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <!-- Tarmoqqa chiqish butunlay yopilgan: sahifa hech qayerga so'rov yubora olmaydi (kalit sahifadan tashqariga chiqmaydi) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+  <title>VAPID kalit yasash</title>
+  <style>
+    :root { --fon: #f4f6f5; --karta: #ffffff; --matn: #17201c; --xira: #5b6760; --chiziq: #d5ddd9; --asosiy: #0f8f6f; --asosiy-matn: #ffffff; --ogoh: #fff3cd; --ogoh-matn: #5c4400; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fon: #101614; --karta: #19211e; --matn: #e8eeeb; --xira: #9aa7a0; --chiziq: #2c3833; --asosiy: #2bbd97; --asosiy-matn: #06241c; --ogoh: #3a2f0a; --ogoh-matn: #ffe08a; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--fon); color: var(--matn); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    p { margin: 0 0 12px; }
+    .karta { background: var(--karta); border: 1px solid var(--chiziq); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .ogoh { background: var(--ogoh); color: var(--ogoh-matn); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-weight: 600; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; }
+    .qiymat { width: 100%; min-height: 72px; padding: 8px; border: 1px solid var(--chiziq); border-radius: 8px; background: var(--fon); color: var(--matn); font: 14px/1.4 ui-monospace, monospace; word-break: break-all; resize: vertical; }
+    button { min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--asosiy); background: var(--asosiy); color: var(--asosiy-matn); font: inherit; font-weight: 600; cursor: pointer; }
+    button.ikkinchi { background: transparent; color: var(--matn); border-color: var(--chiziq); }
+    .qator { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+    .xira { color: var(--xira); font-size: 14px; }
+    #xato { color: #c62828; font-weight: 600; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>VAPID kalit juftligi</h1>
+  <p class="xira">Bu sahifa internetsiz ishlaydi: kalitlar faqat shu brauzer oynasida yasaladi, hech qayerga yuborilmaydi va saqlanmaydi. Sahifani yopsangiz, ular yo'qoladi.</p>
+  <div class="ogoh" role="note">Maxfiy kalitni faqat Supabase Secrets'ga qo'ying, hech kimga va hech qayerga yubormang.</div>
+
+  <div class="karta">
+    <button type="button" id="yasash">Yangi juftlik yasash</button>
+    <p id="xato" role="alert"></p>
+  </div>
+
+  <div class="karta" id="natija" hidden>
+    <label for="ochiq">Ochiq kalit (VAPID_PUBLIC_KEY)</label>
+    <textarea id="ochiq" class="qiymat" readonly rows="3" aria-label="Ochiq kalit"></textarea>
+    <div class="qator"><button type="button" class="ikkinchi" data-nusxa="ochiq" aria-label="Ochiq kalitni nusxalash">Nusxalash</button><span class="xira" id="ochiq-holat" role="status"></span></div>
+
+    <label for="maxfiy" style="margin-top:16px">Maxfiy kalit (VAPID_PRIVATE_KEY)</label>
+    <textarea id="maxfiy" class="qiymat" readonly rows="2" aria-label="Maxfiy kalit"></textarea>
+    <div class="qator"><button type="button" class="ikkinchi" data-nusxa="maxfiy" aria-label="Maxfiy kalitni nusxalash">Nusxalash</button><span class="xira" id="maxfiy-holat" role="status"></span></div>
+    <p class="xira" style="margin-top:12px">Ochiq kalit — 65 bayt (siqilmagan nuqta, base64url). Maxfiy kalit — 32 bayt (d, base64url).</p>
+  </div>
+</main>
+<script>
+  // P-256 juftligini brauzerning WebCrypto'si bilan yasaydi. Tarmoq so'rovi yo'q.
+  function base64url(baytlar) {
+    var s = '';
+    for (var i = 0; i < baytlar.length; i++) s += String.fromCharCode(baytlar[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function yasash() {
+    var xato = document.getElementById('xato');
+    xato.textContent = '';
+    if (!window.crypto || !window.crypto.subtle) { xato.textContent = 'Bu brauzerda WebCrypto yo\'q. Zamonaviy brauzerda oching.'; return; }
+    window.crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']).then(function (juft) {
+      return Promise.all([window.crypto.subtle.exportKey('raw', juft.publicKey), window.crypto.subtle.exportKey('jwk', juft.privateKey)]);
+    }).then(function (q) {
+      var ochiq = new Uint8Array(q[0]);                    // 0x04 || x || y  (65 bayt)
+      var d = q[1].d;                                      // 32 baytli maxfiy son, allaqachon base64url
+      document.getElementById('ochiq').value = base64url(ochiq);
+      document.getElementById('maxfiy').value = d;
+      document.getElementById('natija').hidden = false;
+      document.getElementById('ochiq-holat').textContent = '';
+      document.getElementById('maxfiy-holat').textContent = '';
+    }).catch(function () {
+      xato.textContent = 'Kalit yasab bo\'lmadi. Boshqa brauzerda urinib ko\'ring.';
+    });
+  }
+
+  function nusxala(id) {
+    var maydon = document.getElementById(id);
+    var holat = document.getElementById(id + '-holat');
+    function tayyor(ok) { holat.textContent = ok ? 'Nusxalandi' : 'Nusxalanmadi: matnni qo\'lda belgilab nusxalang'; }
+    maydon.focus();
+    maydon.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(maydon.value).then(function () { tayyor(true); }, function () { tayyor(document.execCommand('copy')); });
+    } else {
+      tayyor(document.execCommand('copy'));
+    }
+  }
+
+  document.getElementById('yasash').addEventListener('click', yasash);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-nusxa]'), function (b) {
+    b.addEventListener('click', function () { nusxala(b.getAttribute('data-nusxa')); });
+  });
+</script>
+</body>
+</html>

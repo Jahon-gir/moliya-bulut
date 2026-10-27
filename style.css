@@ -675,6 +675,38 @@ html.pin-qulf #ekran, html.pin-qulf .pastki { visibility: hidden; }
 .almashtirgich:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; border-radius: 14px; }
 .pin-karta .yozuv { margin-top: 8px; border-top: 1px solid var(--chiziq); }
 
+/* Eslatmalar ekrani (TZ 46-band) */
+.almashtirgich:disabled { opacity: .5; cursor: default; }
+.menyu-ikon { vertical-align: -4px; margin-right: 8px; color: var(--asosiy); }
+.eslatma-holat { border-color: var(--asosiy); }
+.eslatma-holat p { margin: 0 0 8px; }
+.eslatma-holat .asosiy-tugma { margin-top: 4px; }
+.eslatma-karta { transition: opacity .15s; }
+.eslatma-ochiq-emas { opacity: .55; }
+.eslatma-qator { align-items: center; }
+.eslatma-chap { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.eslatma-belgi { flex: none; width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: #ffffff; }
+.eslatma-vaqt-qator .yozuv-nom { flex: none; white-space: nowrap; }
+.eslatma-vaqt-qator { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--chiziq); }
+.eslatma-vaqt {
+  min-height: 44px; flex: 1; min-width: 0; max-width: 220px; padding: 0 12px; font: inherit; font-size: 17px; font-weight: 600; color: var(--matn);
+  background: var(--karta); border: 1px solid var(--chiziq); border-radius: 12px; box-sizing: border-box;
+}
+.eslatma-vaqt:disabled { opacity: .6; }
+.eslatma-chiplar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.eslatma-chip { min-height: 44px; padding: 4px 0; font: inherit; color: var(--matn); background: none; border: 0; cursor: pointer; }
+.eslatma-chip:disabled { cursor: default; }
+.eslatma-chip-ich { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; font-size: 14px; white-space: nowrap; background: var(--karta); border: 1px solid var(--chiziq); border-radius: 18px; }
+.eslatma-chip-belgi { display: none; }
+.eslatma-chip[aria-pressed="true"] .eslatma-chip-ich { color: var(--asosiy-matn); background: var(--asosiy); border-color: var(--asosiy); font-weight: 600; }
+.eslatma-chip[aria-pressed="true"] .eslatma-chip-belgi { display: inline-flex; }
+.eslatma-chip:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; border-radius: 22px; }
+.eslatma-sinov-blok { margin-top: 4px; }
+.eslatma-sinov { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; }
+.eslatma-sinov:disabled { opacity: .5; cursor: default; }
+.eslatma-xato { white-space: pre-line; }
+.eslatma-natija { margin-top: 4px; }
+
 /* Profil va sinxronlash (S2) */
 .profil-karta .profil-asosiy { font-weight: 600; margin: 0 0 8px; }
 .profil-bosh { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }

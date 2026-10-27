@@ -15,33 +15,35 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.48.0"></script>
-  <script src="js/tema.js?v=0.48.0"></script>
-  <script src="js/ikonlar.js?v=0.48.0"></script>
-  <script src="js/belgilar.js?v=0.48.0"></script>
-  <script src="js/calc.js?v=0.48.0"></script>
-  <script src="js/xlsx.js?v=0.48.0"></script>
-  <script src="js/xlsx-oqi.js?v=0.48.0"></script>
-  <script src="js/import-sof.js?v=0.48.0"></script>
-  <script src="js/sinxron-sof.js?v=0.48.0"></script>
-  <script src="js/data.js?v=0.48.0"></script>
-  <script src="js/sigdir.js?v=0.48.0"></script>
-  <script src="js/diagramma.js?v=0.48.0"></script>
-  <script src="js/pin.js?v=0.48.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.48.0"></script>
-  <script src="js/kirish.js?v=0.48.0"></script>
-  <script src="js/yuklash.js?v=0.48.0"></script>
-  <script src="js/salom.js?v=0.48.0"></script>
-  <script src="js/sinxron.js?v=0.48.0"></script>
-  <script src="js/pwa.js?v=0.48.0"></script>
-  <script src="js/stat-sof.js?v=0.48.0"></script>
-  <script src="js/stat.js?v=0.48.0"></script>
-  <script src="js/chat-sof.js?v=0.48.0"></script>
-  <script src="js/yordamchi-sof.js?v=0.48.0"></script>
-  <script src="js/yordamchi-karta.js?v=0.48.0"></script>
-  <script src="js/yordamchi.js?v=0.48.0"></script>
-  <script src="js/gap-sof.js?v=0.48.0"></script>
-  <script src="js/gap.js?v=0.48.0"></script>
+  <script src="js/ilova.js?v=0.49.0"></script>
+  <script src="js/tema.js?v=0.49.0"></script>
+  <script src="js/ikonlar.js?v=0.49.0"></script>
+  <script src="js/belgilar.js?v=0.49.0"></script>
+  <script src="js/calc.js?v=0.49.0"></script>
+  <script src="js/xlsx.js?v=0.49.0"></script>
+  <script src="js/xlsx-oqi.js?v=0.49.0"></script>
+  <script src="js/import-sof.js?v=0.49.0"></script>
+  <script src="js/sinxron-sof.js?v=0.49.0"></script>
+  <script src="js/data.js?v=0.49.0"></script>
+  <script src="js/sigdir.js?v=0.49.0"></script>
+  <script src="js/diagramma.js?v=0.49.0"></script>
+  <script src="js/pin.js?v=0.49.0"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.49.0"></script>
+  <script src="js/kirish.js?v=0.49.0"></script>
+  <script src="js/yuklash.js?v=0.49.0"></script>
+  <script src="js/salom.js?v=0.49.0"></script>
+  <script src="js/sinxron.js?v=0.49.0"></script>
+  <script src="js/pwa.js?v=0.49.0"></script>
+  <script src="js/eslatma-sof.js?v=0.49.0"></script>
+  <script src="js/eslatma.js?v=0.49.0"></script>
+  <script src="js/stat-sof.js?v=0.49.0"></script>
+  <script src="js/stat.js?v=0.49.0"></script>
+  <script src="js/chat-sof.js?v=0.49.0"></script>
+  <script src="js/yordamchi-sof.js?v=0.49.0"></script>
+  <script src="js/yordamchi-karta.js?v=0.49.0"></script>
+  <script src="js/yordamchi.js?v=0.49.0"></script>
+  <script src="js/gap-sof.js?v=0.49.0"></script>
+  <script src="js/gap.js?v=0.49.0"></script>
   <script>
     (function () {
       var testlar = [];
@@ -2224,7 +2226,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.48.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.49.0', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -6542,7 +6544,7 @@ function xfix(opts) {
           teng(/localStorage\.setItem\(KOM_ESLAB_KALITI/.test(ui) && /Shu hisob uchun oxirgi tanlov eslab qolinadi/.test(ui), true);
           teng(/tahrir\.bog_id && tahrir\.tur === 'xarajat'/.test(ui), true, 'komissiya qatorini bosish o\'tkazma tahririni ochadi');
           teng(/\['bog_id', 'yozuvlar'\]/.test(t[2]) && /otaTartib = \['hisoblar', 'kategoriyalar', 'qarzlar', 'yozuvlar'\]/.test(t[2]), true, 'bog\'liqlik (FK) xatosi ota yozuvni ham yuboradi');
-          teng(/\.kom-ichki/.test(t[3]) && /\.kom-jami/.test(t[3]), true); teng(/<meta name="versiya" content="0\.48\.0">/.test(t[1]), true);
+          teng(/\.kom-ichki/.test(t[3]) && /\.kom-jami/.test(t[3]), true); teng(/<meta name="versiya" content="0\.49\.0">/.test(t[1]), true);
         });
       });
       // ---- 0.46.1: kategoriyalarni birlashtirish va komissiya kategoriyasini topish (TZ-sinxronlash.md 41-band) ----
@@ -6663,7 +6665,7 @@ function xfix(opts) {
           teng(/x\.tur === k\.tur && !x\.arxivlangan && x\.id !== k\.id/.test(ui), true, 'nomzodlar');
           teng(/ta yozuv "' \+ nishon\.nom \+ '" ga o\\'tadi, "' \+ k\.nom \+ '" kategoriyasi o\\'chiriladi\./.test(ui) && /Bu amalni qaytarib bo\\'lmaydi\./.test(ui) && /Natija kategoriya nomi/.test(ui), true);
           var blok = ui.slice(ui.indexOf('function kategoriyaBirlashtirishTasdiq'), ui.indexOf('function kategoriyaniSaqlash')); teng(/Bekor qilish/.test(blok) && !/fn: function/.test(blok), true, 'undo (xabar tugmasi) yo\'q');
-          teng(/\.birlashtirish-tugma \{[^}]*min-height: 44px/.test(t[1]), true); teng(/<meta name="versiya" content="0\.48\.0">/.test(t[2]), true);
+          teng(/\.birlashtirish-tugma \{[^}]*min-height: 44px/.test(t[1]), true); teng(/<meta name="versiya" content="0\.49\.0">/.test(t[2]), true);
         });
       });
       // ---- 0.46.1: Qarz komissiyasi (TZ-sinxronlash.md 42-band) ----
@@ -6809,7 +6811,7 @@ function xfix(opts) {
           teng(/yonalish === 'oldim' && komHolat\.chip !== 'yoq'/.test(ui) && /Data\.qarzniKomissiyaBilanSaqlash\(yangi, kom\)/.test(ui), true, 'faqat oldim, bitta tranzaksiya');
           teng(/e\.turi === 'qarz' \? e\.satr\.qarz_id : null/.test(ui) && /'q:' \+ qarzOl\(e\)/.test(ui), true, 'tarix ichki qator'); teng(/'Hisobga tushgan'/.test(ui) && /'Qaytariladigan jami'/.test(ui) && /'Komissiya \(' \+/.test(ui), true, 'tafsilot');
           teng(/Data\.qarzniKomissiyasiBilanOchirish\(q\.id\)/.test(ui) && /Data\.qarzniKomissiyasiBilanQaytarish\(q, o\.komissiyalar\)/.test(ui), true, 'o\'chirish va bekor qilish'); teng(/tahrir\.qarz_bog_id && tahrir\.tur === 'xarajat'/.test(ui) && /return qarzShakli\(bogliQarz\)/.test(ui), true);
-          teng(/\.kom-juft \{/.test(t[1]), true); teng(/<meta name="versiya" content="0\.48\.0">/.test(t[2]), true);
+          teng(/\.kom-juft \{/.test(t[1]), true); teng(/<meta name="versiya" content="0\.49\.0">/.test(t[2]), true);
         });
       });
       // ---- 0.47.0: Qarzlar tartibi (TZ-sinxronlash.md 44-band) ----
@@ -6876,10 +6878,10 @@ function xfix(opts) {
           ['arrows-sort', 'calendar-plus', 'calendar-due', 'sort-descending-numbers', 'check'].forEach(function (k) { teng(Ikonlar.yollar(k) !== null && Ikonlar.yollar(k).length > 0, true, k); });
           teng(Calc.yerelKalitmi({ kalit: 'qarz-tartibi' }), false, 'sozlamalar to\'plamiga yozilmaydi');
           teng(/qarz-tartibi|QARZ_TARTIB/.test(t[4]) || /moliya-qarz-tartibi/.test(t[5]), false, 'baza, zaxira va sinxron kodi unga tegmaydi');
-          teng(/<meta name="versiya" content="0\.48\.0">/.test(t[3]), true);
+          teng(/<meta name="versiya" content="0\.49\.0">/.test(t[3]), true);
         });
       });
-      // ---- 0.48.0: Qarzlar ekrani — odam qatorlari, jami, filtr, qidiruv (TZ-sinxronlash.md 45-band) ----
+      // ---- 0.49.0: Qarzlar ekrani — odam qatorlari, jami, filtr, qidiruv (TZ-sinxronlash.md 45-band) ----
       var OQ = [
         qtZ('a1', 'berdim', 'Ali', 100000, '2026-10-01', '2026-10-09'), qtZ('a2', 'berdim', 'Ali', 50000, '2026-10-08', '2026-10-10'),
         qtZ('v1', 'berdim', 'Vali', 300000, '2026-10-05', '2026-10-16'), qtZ('b1', 'berdim', 'Bek', 10000, '2026-10-09', '2026-10-17'),
@@ -6978,7 +6980,336 @@ function xfix(opts) {
           teng(/Calc\.qarzHolatiniAlmashtir\(qarzHolati, x\[0\]\)/.test(ui) && /if \(o\.togridan\) ochish\(function \(\) \{ return qarzEkrani\(o\.qarzId\)/.test(ui) && /return odamEkrani\(o\.kalit\)/.test(ui), true, 'tab va qator');
           teng(/if \(!o\) \{ stek\.pop\(\); return bolimlar\.qarzlar\(\); \}/.test(ui) && /qarzShakli\(null, null, o\.yonalish, o\.shaxs\)/.test(ui) && /'Yangi qarz', 'asosiy-tugma'/.test(ui) && /'Qarzlar \(' \+ QARZ_TARTIB_MATNI\[tartib\]/.test(ui), true, 'odam ekrani');
           teng(/\.qarz-chip, [^{]*\{[^}]*min-height: 44px/.test(t[1]) && /\.qarz-chip-ich \{[^}]*height: 36px/.test(t[1]) && /\.odam-avatar \{/.test(t[1]) && /\.qj-summa \{ font-size: 20px/.test(t[1]), true, 'uslub');
-          teng(/<meta name="versiya" content="0\.48\.0">/.test(t[2]), true);
+          teng(/<meta name="versiya" content="0\.49\.0">/.test(t[2]), true);
+        });
+      });
+      // ---- Eslatmalar (TZ 46-band): sof funksiyalar ----
+      function tjE(a, b, izoh) { teng(JSON.stringify(a), JSON.stringify(b), izoh); }
+      test('eslatma: vaqt "HH:MM" tekshiruvi va tozalash (soniya tashlanadi, noto\'g\'ri bo\'lsa boshlang\'ich)', function () {
+        ['00:00', '09:30', '21:00', '23:59'].forEach(function (v) { teng(EslatmaSof.vaqtTogrimi(v), true, v); });
+        ['24:00', '9:30', '12:60', '', '12:30:00', '12-30', null, 930, '1230'].forEach(function (v) { teng(EslatmaSof.vaqtTogrimi(v), false, String(v)); });
+        teng(EslatmaSof.vaqtTozala('09:05:00', '21:00'), '09:05'); teng(EslatmaSof.vaqtTozala('21:00', '09:00'), '21:00');
+        teng(EslatmaSof.vaqtTozala('25:00', '21:00'), '21:00'); teng(EslatmaSof.vaqtTozala(undefined, '09:00'), '09:00'); teng(EslatmaSof.vaqtTozala('7:00', '09:00'), '09:00');
+      });
+      test('eslatma: qarz kunlari faqat 0/1/3, takrorsiz, tartiblangan; chip almashtirish', function () {
+        tjE(EslatmaSof.QARZ_KUNLAR, [0, 1, 3]);
+        tjE(EslatmaSof.qarzKunlariniTozala([3, 1, 0, 1, 7, 2, '3', -1, null, 'x']), [0, 1, 3]);
+        tjE(EslatmaSof.qarzKunlariniTozala([]), []); tjE(EslatmaSof.qarzKunlariniTozala(null), [0, 1]); tjE(EslatmaSof.qarzKunlariniTozala('0,1'), [0, 1]);
+        tjE(EslatmaSof.qarzKuniniAlmashtir([0, 1], 3), [0, 1, 3]); tjE(EslatmaSof.qarzKuniniAlmashtir([0, 1, 3], 1), [0, 3]);
+        tjE(EslatmaSof.qarzKuniniAlmashtir([0], 0), []); tjE(EslatmaSof.qarzKuniniAlmashtir([0, 1], 2), [0, 1], 'boshqa kun e\'tiborsiz');
+        var a = [0, 1]; EslatmaSof.qarzKuniniAlmashtir(a, 3); tjE(a, [0, 1], 'asl massiv o\'zgarmaydi');
+      });
+      test('eslatma: sozlamani normallashtirish — boshlang\'ich qiymatlar, qat\'iy turlar, buzuq JSON', function () {
+        var b = EslatmaSof.sozlamaTozala(null);
+        tjE(b, { kunlikYoqiq: false, kunlikVaqt: '21:00', qarzYoqiq: false, qarzKunlar: [0, 1], qarzVaqt: '09:00', korsatish: true, egasi: '', serverda: true });
+        var s = EslatmaSof.sozlamaTozala({ kunlikYoqiq: 'true', qarzYoqiq: 1, korsatish: 0, kunlikVaqt: '8:00', qarzVaqt: '10:15:30', qarzKunlar: [3], egasi: 5, serverda: false });
+        tjE(s, { kunlikYoqiq: false, kunlikVaqt: '21:00', qarzYoqiq: false, qarzKunlar: [3], qarzVaqt: '10:15', korsatish: true, egasi: '', serverda: false });
+        teng(EslatmaSof.sozlamaTozala({ korsatish: false }).korsatish, false);
+        tjE(EslatmaSof.sozlamaOqi('{buzuq'), b); tjE(EslatmaSof.sozlamaOqi(''), b); tjE(EslatmaSof.sozlamaOqi('[1]'), b); tjE(EslatmaSof.sozlamaOqi(JSON.stringify(s)), s);
+        tjE(EslatmaSof.sozlamaOqi(EslatmaSof.sozlamaYoz({ kunlikYoqiq: true, kunlikVaqt: '07:30' })).kunlikVaqt, '07:30');
+        teng(EslatmaSof.SAQLASH_KALITI.indexOf('moliya-'), 0, '"PINni unutdim" tozalashi bilan o\'chadi');
+        teng(EslatmaSof.QOLGAN_KALIT.indexOf('moliya-'), 0);
+      });
+      test('eslatma: obuna kerakmi — kunlik yoki qarz yoqiq bo\'lsa; ikkalasi o\'chsa kerak emas ("ism va summa" hisobga kirmaydi)', function () {
+        teng(EslatmaSof.obunaKerakmi({}), false); teng(EslatmaSof.obunaKerakmi({ kunlikYoqiq: true }), true); teng(EslatmaSof.obunaKerakmi({ qarzYoqiq: true }), true);
+        teng(EslatmaSof.obunaKerakmi({ korsatish: true, kunlikVaqt: '10:00' }), false);
+      });
+      test('eslatma: serverga yoziladigan qator (user_id YO\'Q), obuna ma\'lumotini tekshirish, tz', function () {
+        var sub = { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys: { p256dh: 'PPP', auth: 'AAA' } };
+        var q = EslatmaSof.serverQatori({ kunlikYoqiq: true, kunlikVaqt: '20:30', qarzYoqiq: true, qarzKunlar: [3, 0], qarzVaqt: '08:15', korsatish: false }, sub, 'Asia/Samarkand');
+        tjE(q, { endpoint: sub.endpoint, p256dh: 'PPP', auth_kaliti: 'AAA', tz: 'Asia/Samarkand', kunlik_yoqiq: true, kunlik_vaqt: '20:30', qarz_yoqiq: true, qarz_kunlar: [0, 3], qarz_vaqt: '08:15', korsatish: false });
+        teng('user_id' in q || 'id' in q || 'egasi' in q || 'serverda' in q, false);
+        teng(EslatmaSof.serverQatori({}, null, 'Asia/Tashkent'), null); teng(EslatmaSof.serverQatori({}, { endpoint: 'http://x.invalid/a', keys: { p256dh: 'P', auth: 'A' } }, ''), null, 'http rad');
+        teng(EslatmaSof.serverQatori({}, { endpoint: sub.endpoint, keys: { p256dh: 'P' } }, ''), null, 'auth yo\'q');
+        teng(EslatmaSof.serverQatori({}, { endpoint: 'https://a.example/' + new Array(2100).join('x'), keys: { p256dh: 'P', auth: 'A' } }, ''), null, 'juda uzun endpoint');
+        teng(EslatmaSof.tzTozala('Asia/Tashkent'), 'Asia/Tashkent'); teng(EslatmaSof.tzTozala('America/Argentina/Buenos_Aires'), 'America/Argentina/Buenos_Aires');
+        teng(EslatmaSof.tzTozala(''), 'Asia/Tashkent'); teng(EslatmaSof.tzTozala(undefined), 'Asia/Tashkent'); teng(EslatmaSof.tzTozala('drop table;'), 'Asia/Tashkent');
+        teng(EslatmaSof.serverQatori({}, sub, '').tz, 'Asia/Tashkent');
+      });
+      test('eslatma: base64url -> bayt (VAPID ochiq kalit uchun)', function () {
+        tjE(Array.prototype.slice.call(EslatmaSof.base64urlBayt('-__-')), [251, 255, 254]); tjE(Array.prototype.slice.call(EslatmaSof.base64urlBayt('AQID')), [1, 2, 3]);
+        tjE(Array.prototype.slice.call(EslatmaSof.base64urlBayt('AQI')), [1, 2]); teng(EslatmaSof.base64urlBayt('a+/='), null); teng(EslatmaSof.base64urlBayt(''), null); teng(EslatmaSof.base64urlBayt(5), null);
+        teng(EslatmaSof.baytlarTengmi(new Uint8Array([1, 2]), new Uint8Array([1, 2])), true); teng(EslatmaSof.baytlarTengmi(new Uint8Array([1, 2]), new Uint8Array([1, 3])), false); teng(EslatmaSof.baytlarTengmi(null, new Uint8Array(1)), false);
+      });
+      test('eslatma: iPhone/iPad va o\'rnatilgan (standalone) holatini aniqlash', function () {
+        teng(EslatmaSof.iosmi('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)', 'iPhone', 5), true);
+        teng(EslatmaSof.iosmi('Mozilla/5.0 (iPad; CPU OS 16_4 like Mac OS X)', 'iPad', 5), true);
+        teng(EslatmaSof.iosmi('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 'MacIntel', 5), true, 'iPadOS 13+ o\'zini Mac deb ataydi');
+        teng(EslatmaSof.iosmi('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 'MacIntel', 0), false, 'haqiqiy Mac');
+        teng(EslatmaSof.iosmi('Mozilla/5.0 (Linux; Android 14; Pixel 8)', 'Linux armv8l', 5), false); teng(EslatmaSof.iosmi(undefined, undefined, undefined), false);
+        teng(EslatmaSof.ornatilganmi(true, false), true); teng(EslatmaSof.ornatilganmi(false, true), true); teng(EslatmaSof.ornatilganmi(false, false), false); teng(EslatmaSof.ornatilganmi(undefined, undefined), false); teng(EslatmaSof.ornatilganmi('yes', 1), false);
+      });
+      test('eslatma: ekran holati qarori — kirmagan, iOS o\'rnatilmagan, qo\'llamaydi, bloklangan, tayyor (tartib bilan)', function () {
+        var T = { kirgan: true, notification: true, pushManager: true, serviceWorker: true, ios: false, ornatilgan: false, ruxsat: 'default' };
+        function h(ust) { return EslatmaSof.ekranHolati(Object.assign({}, T, ust)); }
+        var k = h({ kirgan: false });
+        tjE([k.tur, k.matn, k.boshqaruv, k.profilTugma], ['kirmagan', 'Eslatmalar uchun Google bilan kiring', false, true]);
+        teng(h({ kirgan: false, ios: true, notification: false }).tur, 'kirmagan', 'kirmagan hammasidan oldin');
+        var i = h({ ios: true, ornatilgan: false, notification: false, pushManager: false });
+        tjE([i.tur, i.matn, i.boshqaruv], ['ios', 'Bildirishnoma uchun ilovani bosh ekranga o\'rnating (Safari → Ulashish → Bosh ekranga). iOS 16.4 yoki yangisi kerak', false]);
+        teng(h({ ios: true, ornatilgan: true }).tur, 'tayyor', 'iOS\'da o\'rnatilgan va API bor');
+        teng(h({ ios: true, ornatilgan: true, notification: false }).tur, 'qollanmaydi');
+        ['notification', 'pushManager', 'serviceWorker'].forEach(function (a) {
+          var x = h({}); x = h((function () { var o = {}; o[a] = false; return o; })());
+          tjE([x.tur, x.matn, x.boshqaruv], ['qollanmaydi', 'Bu qurilmada bildirishnoma qo\'llab-quvvatlanmaydi', false], a);
+        });
+        var d = h({ ruxsat: 'denied' });
+        tjE([d.tur, d.matn, d.boshqaruv], ['bloklangan', 'Bildirishnomalar bloklangan. Brauzer sozlamalaridan saytga ruxsat bering', false]);
+        teng(h({ ruxsat: 'denied', notification: false }).tur, 'qollanmaydi');
+        ['default', 'granted'].forEach(function (r) { var t = h({ ruxsat: r }); tjE([t.tur, t.matn, t.boshqaruv, t.profilTugma], ['tayyor', '', true, false], r); });
+        teng(EslatmaSof.ekranHolati(undefined).tur, 'kirmagan');
+      });
+      test('eslatma: xato kodi va matni (PUSH_RUXSAT, PUSH_OBUNA, PUSH_SERVER, NETWORK, NOT_SIGNED_IN)', function () {
+        ['PUSH_RUXSAT', 'PUSH_OBUNA', 'PUSH_SERVER', 'NETWORK', 'NOT_SIGNED_IN', 'PUSH_TEZ', 'PUSH_ESKIRGAN'].forEach(function (k) { teng(EslatmaSof.xatoMatni(k).length > 10, true, k); teng(/[a-z]/.test(EslatmaSof.xatoMatni(k)), true); });
+        teng(EslatmaSof.xatoMatni('PUSH_ESKIRGAN'), 'Obuna eskirgan, qayta yoqing.');
+        teng(EslatmaSof.xatoKodi({ kod: 'PUSH_RUXSAT' }), 'PUSH_RUXSAT'); teng(EslatmaSof.xatoKodi(new Error('Failed to fetch')), 'NETWORK'); teng(EslatmaSof.xatoKodi({ message: 'Load failed' }), 'NETWORK');
+        teng(EslatmaSof.xatoKodi({ message: 'Kirish muddati tugagan (jwt)' }), 'NOT_SIGNED_IN'); teng(EslatmaSof.xatoKodi({ status: 401 }), 'NOT_SIGNED_IN'); teng(EslatmaSof.xatoKodi({ code: 'PGRST301' }), 'NOT_SIGNED_IN');
+        teng(EslatmaSof.xatoKodi(new Error('boshqa')), 'PUSH_SERVER'); teng(EslatmaSof.xatoKodi(new Error('boshqa'), 'PUSH_OBUNA'), 'PUSH_OBUNA'); teng(EslatmaSof.xatoKodi(undefined), 'PUSH_SERVER');
+        teng(/ruxsat/i.test(EslatmaSof.xatoMatni('PUSH_RUXSAT')), true); teng(/Internet/.test(EslatmaSof.xatoMatni('NETWORK')), true);
+      });
+
+      // ---- Eslatmalar: oqim soxta brauzer va soxta server bilan (HAQIQIY push ISHLATILMAYDI) ----
+      function eslatmaOchiqKalit() { var b = new Uint8Array(65); b[0] = 4; for (var i = 1; i < 65; i++) b[i] = i; var s = ''; for (var j = 0; j < b.length; j++) s += String.fromCharCode(b[j]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+      function eslatmaStend(o) {
+        o = o || {};
+        var st = { izlar: [], upsert: [], ochir: [], fetchlar: [], subscribe: null, sub: null, javoblar: o.javoblar || {}, xotira: {}, kirgan: o.kirgan !== false, id: o.id || 'u-1' };
+        var N = { permission: o.ruxsat || 'default', requestPermission: function () { st.izlar.push('ruxsat'); N.permission = o.javob || 'granted'; return Promise.resolve(N.permission); } };
+        function yangiSub() {
+          var s = { endpoint: 'https://fcm.googleapis.com/fcm/send/sinov-' + (st.soni = (st.soni || 0) + 1), options: { applicationServerKey: o.eskiKalit || EslatmaSof.base64urlBayt(eslatmaOchiqKalit()).buffer },
+            toJSON: function () { return { endpoint: s.endpoint, keys: { p256dh: 'P-' + s.endpoint.slice(-2), auth: 'A-' + s.endpoint.slice(-2) } }; },
+            unsubscribe: function () { st.izlar.push('unsub'); if (st.sub === s) st.sub = null; return Promise.resolve(true); } };
+          return s;
+        }
+        if (o.bormiSub) st.sub = yangiSub();
+        var reg = { pushManager: { getSubscription: function () { return Promise.resolve(st.sub); },
+          subscribe: function (a) { st.izlar.push('subscribe'); st.subscribe = a; if (o.subscribeXato) return Promise.reject(new Error('push yo\'q')); st.sub = yangiSub(); return Promise.resolve(st.sub); } } };
+        var mijoz = { from: function (j) { return {
+          upsert: function (q, op) { st.izlar.push('upsert'); st.upsert.push({ j: j, q: q, op: op }); return Promise.resolve(o.upsertXato ? { error: o.upsertXato, status: o.upsertXato.status || 400 } : { error: null }); },
+          delete: function () { return { eq: function (k, v) { st.izlar.push('ochir'); st.ochir.push([j, k, v]); return Promise.resolve(o.ochirXato ? { error: { message: 'Failed to fetch' } } : { error: null }); } }; } }; } };
+        Eslatma.sozla({
+          xotira: function () { return { getItem: function (k) { return k in st.xotira ? st.xotira[k] : null; }, setItem: function (k, v) { st.xotira[k] = String(v); }, removeItem: function (k) { delete st.xotira[k]; } }; },
+          kirgan: function () { return st.kirgan; }, foydalanuvchiId: function () { return st.id; }, mijoz: function () { return mijoz; },
+          fetch: function (u, i) {
+            var tana = JSON.parse(i.body); st.fetchlar.push({ u: u, tana: tana, h: i.headers });
+            if (o.fetchTarmoq) return Promise.reject(new TypeError('Failed to fetch'));
+            var j = st.javoblar[tana.amal] || (tana.amal === 'kalit' ? { holat: 200, j: { ok: true, kalit: eslatmaOchiqKalit() } } : { holat: 200, j: { ok: true } });
+            return Promise.resolve(new Response(JSON.stringify(j.j), { status: j.holat }));
+          },
+          tokenOl: function () { return Promise.resolve('tok-1'); }, tokenYangila: function () { return Promise.resolve('tok-2'); },
+          manzil: function () { return 'https://x.invalid'; }, kalit: function () { return 'anon-1'; },
+          notification: function () { return o.notificationYoq ? null : N; }, pushManagerBor: function () { return !o.pushYoq; },
+          serviceWorker: function () { return o.swYoq ? null : { ready: Promise.resolve(reg) }; },
+          ios: function () { return !!o.ios; }, ornatilgan: function () { return o.ornatilgan !== false; }, tz: function () { return o.tz || 'Asia/Tashkent'; }
+        });
+        st.N = N;
+        return st;
+      }
+      function eslatmaKut(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
+      test('eslatma: yoqish oqimi — ruxsat BOSISH ichida so\'raladi, keyin kalit, subscribe(userVisibleOnly + kalit), serverga upsert (on_conflict user_id,endpoint)', function () {
+        var st = eslatmaStend();
+        var vaqtdaSorovMi = false;
+        var p = Eslatma.yoq({ kunlikYoqiq: true });
+        vaqtdaSorovMi = st.izlar.join() === 'ruxsat';   // yoq() qaytmasdan OLDIN ruxsat so'ralgan bo'lishi shart (sinxron)
+        teng(vaqtdaSorovMi, true, 'ruxsat so\'rovi sinxron');
+        return p.then(function (n) {
+          teng(n.ok, true);
+          tjE(st.izlar, ['ruxsat', 'subscribe', 'upsert']);
+          teng(st.fetchlar.length, 1); teng(st.fetchlar[0].u, 'https://x.invalid/functions/v1/bildirishnoma'); tjE(st.fetchlar[0].tana, { amal: 'kalit' });
+          teng(st.fetchlar[0].h.Authorization, 'Bearer tok-1'); teng(st.fetchlar[0].h.apikey, 'anon-1');
+          teng(st.subscribe.userVisibleOnly, true); teng(st.subscribe.applicationServerKey instanceof Uint8Array, true); teng(st.subscribe.applicationServerKey.length, 65);
+          teng(st.subscribe.applicationServerKey[1], 1);
+          var u = st.upsert[0]; teng(u.j, 'bildirishnoma_qurilmalari'); tjE(u.op, { onConflict: 'user_id,endpoint' });
+          tjE(u.q, { endpoint: st.sub.endpoint, p256dh: 'P-' + st.sub.endpoint.slice(-2), auth_kaliti: 'A-' + st.sub.endpoint.slice(-2), tz: 'Asia/Tashkent', kunlik_yoqiq: true, kunlik_vaqt: '21:00', qarz_yoqiq: false, qarz_kunlar: [0, 1], qarz_vaqt: '09:00', korsatish: true });
+          var s = Eslatma.sozlama(); teng(s.kunlikYoqiq, true); teng(s.egasi, 'u-1'); teng(s.serverda, true);
+          teng(Eslatma.holat().xato, null); teng(Eslatma.menyuIzohi(), 'yoqiq');
+        });
+      });
+      test('eslatma: ruxsat rad etilsa (denied) toggle yoqilmaydi, PUSH_RUXSAT, obuna va server so\'rovi yo\'q', function () {
+        var st = eslatmaStend({ javob: 'denied' });
+        return Eslatma.yoq({ qarzYoqiq: true }).then(function (n) {
+          teng(n.ok, false); teng(Eslatma.sozlama().qarzYoqiq, false); tjE(st.izlar, ['ruxsat']); teng(st.fetchlar.length, 0);
+          teng(Eslatma.holat().xato.kod, 'PUSH_RUXSAT'); teng(Eslatma.holat().xato.matn, EslatmaSof.xatoMatni('PUSH_RUXSAT'));
+          teng(Eslatma.holat().ekran.tur, 'bloklangan', 'ekran "bloklangan" kartasiga o\'tadi');
+        });
+      });
+      test('eslatma: ruxsat berilgan bo\'lsa qayta so\'ralmaydi; obuna xatosi — PUSH_OBUNA, server xatosi — PUSH_SERVER, internet — NETWORK, kirmagan — NOT_SIGNED_IN', function () {
+        var st = eslatmaStend({ ruxsat: 'granted', subscribeXato: true });
+        return Eslatma.yoq({ kunlikYoqiq: true }).then(function () {
+          tjE(st.izlar, ['subscribe']); teng(Eslatma.holat().xato.kod, 'PUSH_OBUNA'); teng(Eslatma.sozlama().kunlikYoqiq, false);
+          st = eslatmaStend({ ruxsat: 'granted', upsertXato: { message: 'row-level security', code: '42501' } });
+          return Eslatma.yoq({ kunlikYoqiq: true });
+        }).then(function () {
+          teng(Eslatma.holat().xato.kod, 'PUSH_SERVER'); teng(Eslatma.sozlama().kunlikYoqiq, false);
+          teng(Eslatma.holat().band, false);
+          st = eslatmaStend({ ruxsat: 'granted', upsertXato: { message: 'TypeError: Failed to fetch' } });
+          return Eslatma.yoq({ kunlikYoqiq: true }).then(function () { teng(Eslatma.holat().xato.kod, 'NETWORK'); tjE(st.izlar, ['subscribe', 'upsert', 'unsub'], 'serverga yozilmagan obuna qaytarib olinadi'); });
+        }).then(function () {
+          eslatmaStend({ ruxsat: 'granted', kirgan: false });
+          return Eslatma.yoq({ kunlikYoqiq: true }).then(function () { teng(Eslatma.holat().xato.kod, 'NOT_SIGNED_IN'); });
+        });
+      });
+      test('eslatma: kalit boshqa bo\'lsa eski obuna bekor qilinib yangisi yaratiladi', function () {
+        var st = eslatmaStend({ ruxsat: 'granted', bormiSub: true, eskiKalit: new Uint8Array(65).buffer });
+        return Eslatma.yoq({ qarzYoqiq: true }).then(function (n) {
+          teng(n.ok, true); tjE(st.izlar, ['unsub', 'subscribe', 'upsert']); teng(Eslatma.sozlama().qarzYoqiq, true);
+        });
+      });
+      test('eslatma: sozlama o\'zgarsa 600 ms kutib BIR marta yangilanadi (debounce), qurilmada darhol saqlanadi', function () {
+        var st = eslatmaStend({ ruxsat: 'granted', bormiSub: true });
+        Eslatma.ozgartir({ kunlikYoqiq: true, qarzYoqiq: true });
+        Eslatma.ozgartir({ kunlikVaqt: '07:45' });
+        Eslatma.ozgartir({ qarzKunlar: [1, 3] });
+        Eslatma.ozgartir({ qarzVaqt: '10:00', korsatish: false });
+        tjE([Eslatma.sozlama().kunlikVaqt, Eslatma.sozlama().qarzKunlar, Eslatma.sozlama().korsatish, Eslatma.sozlama().serverda], ['07:45', [1, 3], false, false], 'darhol saqlandi');
+        return eslatmaKut(300).then(function () {
+          teng(st.upsert.length, 0, '300 ms da hali yozilmagan');
+          return eslatmaKut(500);
+        }).then(function () {
+          teng(st.upsert.length, 1, 'faqat bitta so\'rov');
+          var q = st.upsert[0].q;
+          tjE([q.kunlik_yoqiq, q.kunlik_vaqt, q.qarz_yoqiq, q.qarz_kunlar, q.qarz_vaqt, q.korsatish], [true, '07:45', true, [1, 3], '10:00', false]);
+          teng(Eslatma.sozlama().serverda, true);
+        });
+      });
+      test('eslatma: ikkala asosiy toggle o\'chsa obuna ham o\'chiriladi (server qatori + brauzer obunasi); "ism va summa" bunga ta\'sir qilmaydi', function () {
+        var st = eslatmaStend({ ruxsat: 'granted' });
+        return Eslatma.yoq({ kunlikYoqiq: true }).then(function () {
+          var ep = st.sub.endpoint;
+          Eslatma.ozgartir({ kunlikYoqiq: false });
+          return eslatmaKut(800).then(function () {
+            tjE(st.ochir, [['bildirishnoma_qurilmalari', 'endpoint', ep]]); teng(st.sub, null); teng(st.izlar.slice(-2).join(), 'ochir,unsub');
+            teng(Eslatma.sozlama().serverda, true); teng(Eslatma.menyuIzohi(), 'o\'chiq');
+          });
+        });
+      });
+      test('eslatma: bitta toggle o\'chsa ikkinchisi yoqiq qolsa obuna QOLADI (faqat qator yangilanadi)', function () {
+        var st = eslatmaStend({ ruxsat: 'granted' });
+        return Eslatma.yoq({ kunlikYoqiq: true }).then(function () { return Eslatma.yoq({ qarzYoqiq: true }); }).then(function () {
+          var soni = st.upsert.length; Eslatma.ozgartir({ kunlikYoqiq: false });
+          return eslatmaKut(800).then(function () { teng(st.upsert.length, soni + 1); teng(st.ochir.length, 0); teng(!!st.sub, true); teng(st.upsert[soni].q.kunlik_yoqiq, false); teng(st.upsert[soni].q.qarz_yoqiq, true); });
+        });
+      });
+      test('eslatma: "Sinab ko\'rish" — avval qator yoziladi, keyin funksiya shu qurilma endpointi bilan chaqiriladi; yoqilmagan bo\'lsa chaqirilmaydi', function () {
+        var st = eslatmaStend({ ruxsat: 'granted' });
+        return Eslatma.sinov().then(function (n) {
+          teng(n.ok, false); teng(st.fetchlar.length, 0); teng(/yoqing/.test(Eslatma.holat().xato.matn), true);
+          return Eslatma.yoq({ kunlikYoqiq: true });
+        }).then(function () {
+          st.fetchlar.length = 0; var u = st.upsert.length;
+          return Eslatma.sinov().then(function (n) {
+            teng(n.ok, true); teng(st.upsert.length, u + 1, 'avval qator yangilandi');
+            teng(st.fetchlar.length, 1); tjE(st.fetchlar[0].tana, { amal: 'sinov', endpoint: st.sub.endpoint });
+            teng(Eslatma.holat().natija, 'Sinov yuborildi. Bir necha soniyada bildirishnoma keladi.'); teng(Eslatma.holat().sinovBand, false);
+          });
+        });
+      });
+      test('eslatma: "Sinab ko\'rish" xatolari — 429 PUSH_TEZ, 410 PUSH_ESKIRGAN (qurilma tozalanadi), tarmoq NETWORK, push xizmati xatosi kodi ko\'rinadi', function () {
+        var st = eslatmaStend({ ruxsat: 'granted', javoblar: { sinov: { holat: 429, j: { xato: { kod: 'PUSH_TEZ' } } } } });
+        return Eslatma.yoq({ kunlikYoqiq: true }).then(function () { return Eslatma.sinov(); }).then(function (n) {
+          teng(n.ok, false); teng(Eslatma.holat().xato.kod, 'PUSH_TEZ'); teng(Eslatma.sozlama().kunlikYoqiq, true);
+          st.javoblar.sinov = { holat: 502, j: { xato: { kod: 'PUSH_XIZMAT', debug: 'push_500' } } };
+          return Eslatma.sinov();
+        }).then(function () {
+          teng(Eslatma.holat().xato.kod, 'PUSH_XIZMAT, push_500');
+          st.javoblar.sinov = { holat: 410, j: { xato: { kod: 'PUSH_ESKIRGAN' } } };
+          return Eslatma.sinov();
+        }).then(function () {
+          teng(Eslatma.holat().xato.kod, 'PUSH_ESKIRGAN'); teng(Eslatma.holat().xato.matn, 'Obuna eskirgan, qayta yoqing.');
+          teng(Eslatma.sozlama().kunlikYoqiq, false, 'toggle o\'chdi: foydalanuvchi qayta yoqadi'); teng(st.sub, null);
+        });
+      });
+      test('eslatma: chiqishda shu qurilmaning serverdagi qatori o\'chiriladi; xato chiqishni to\'xtatmaydi va keyingi kirishda tozalanadi', function () {
+        var st = eslatmaStend({ ruxsat: 'granted' });
+        return Eslatma.yoq({ kunlikYoqiq: true }).then(function () {
+          var ep = st.sub.endpoint;
+          return Eslatma.chiqishdan().then(function (ok) {
+            teng(ok, true); tjE(st.ochir, [['bildirishnoma_qurilmalari', 'endpoint', ep]]); teng(st.xotira[EslatmaSof.QOLGAN_KALIT], undefined, 'o\'chdi, eslab qolinmaydi');
+          });
+        }).then(function () {
+          var st2 = eslatmaStend({ ruxsat: 'granted', ochirXato: true });
+          return Eslatma.yoq({ kunlikYoqiq: true }).then(function () {
+            var ep = st2.sub.endpoint;
+            return Eslatma.chiqishdan().then(function (ok) {
+              teng(ok, true, 'rad etilmaydi'); tjE(JSON.parse(st2.xotira[EslatmaSof.QOLGAN_KALIT]), [ep]);
+              st2.id = 'u-2'; Eslatma.sozla({ mijoz: function () { return { from: function () { return { delete: function () { return { eq: function (k, v) { st2.ochir.push([v]); return Promise.resolve({ error: null }); } }; } }; } }; } });
+              st2.ochir.length = 0;
+              return Eslatma.qolganlarniTozala().then(function () { tjE(st2.ochir, [[ep]]); teng(st2.xotira[EslatmaSof.QOLGAN_KALIT], undefined, 'tozalandi'); });
+            });
+          });
+        });
+      });
+      test('eslatma: chiqqach qurilma tozalanadi (toggle\'lar o\'chiq, brauzer obunasi bekor); boshqa akkaunt bilan kirilsa eski sozlama o\'tkazilmaydi', function () {
+        var st = eslatmaStend({ ruxsat: 'granted' });
+        return Eslatma.yoq({ kunlikYoqiq: true, qarzYoqiq: true }).then(function () {
+          Eslatma.ozgartir({ kunlikVaqt: '06:30' });
+          return Eslatma.localTozala();
+        }).then(function () {
+          var s = Eslatma.sozlama(); teng(s.kunlikYoqiq, false); teng(s.qarzYoqiq, false); teng(s.egasi, ''); teng(s.kunlikVaqt, '06:30', 'vaqt saqlanadi'); teng(st.sub, null);
+          st = eslatmaStend({ ruxsat: 'granted', id: 'u-1' });
+          return Eslatma.yoq({ kunlikYoqiq: true });
+        }).then(function () {
+          st.id = 'u-2';   // boshqa akkaunt shu qurilmada (sessiya almashgan, "Chiqish" bosilmagan)
+          return Eslatma.ekranOchildi().then(function () {
+            teng(Eslatma.sozlama().kunlikYoqiq, false, 'u-1 ning sozlamasi u-2 ga o\'tmadi'); teng(Eslatma.sozlama().egasi, ''); teng(st.sub, null);
+          });
+        });
+      });
+      test('eslatma: qo\'llab-quvvatlanmaydigan qurilma (API yo\'q) — hech narsa chaqirilmaydi; iPhone o\'rnatilmagan holati', function () {
+        var st = eslatmaStend({ pushYoq: true, notificationYoq: true });
+        teng(Eslatma.holat().ekran.tur, 'qollanmaydi');
+        st = eslatmaStend({ ios: true, ornatilgan: false, pushYoq: true });
+        teng(Eslatma.holat().ekran.tur, 'ios');
+        st = eslatmaStend({ ios: true, ornatilgan: true, ruxsat: 'denied' });
+        teng(Eslatma.holat().ekran.tur, 'bloklangan');
+        st = eslatmaStend({ kirgan: false });
+        teng(Eslatma.holat().ekran.tur, 'kirmagan'); tjE(st.izlar, []);
+      });
+      test('eslatma: service worker push va notificationclick (sw-push.js soxta self bilan)', function () {
+        return matnOl('sw-push.js').then(function (kod) {
+          var h = {}, korsatilgan = [], ochilgan = [], fokus = [];
+          var oynalar = [];
+          var fakeSelf = {
+            location: { origin: 'https://ilova.example.invalid' },
+            registration: { scope: 'https://ilova.example.invalid/moliya/', showNotification: function (t, o) { korsatilgan.push({ t: t, o: o }); return Promise.resolve(); } },
+            clients: { matchAll: function () { return Promise.resolve(oynalar); }, openWindow: function (u) { ochilgan.push(u); return Promise.resolve(); } },
+            addEventListener: function (n, f) { h[n] = f; }
+          };
+          new Function('self', kod)(fakeSelf);
+          teng(typeof h.push, 'function'); teng(typeof h.notificationclick, 'function');
+          function pushHodisasi(data) { var ish = null; h.push({ data: data === undefined ? null : { json: function () { if (data === 'buzuq') throw new Error('json'); return data; } }, waitUntil: function (p) { ish = p; } }); return ish; }
+          return pushHodisasi({ title: 'Eslatmalar ishlayapti', body: 'Bu sinov bildirishnomasi.', tag: 'sinov', data: { url: 'https://ilova.example.invalid/moliya/' } }).then(function () {
+            var k = korsatilgan[0];
+            teng(k.t, 'Eslatmalar ishlayapti'); teng(k.o.body, 'Bu sinov bildirishnomasi.'); teng(k.o.tag, 'sinov'); teng(k.o.data.url, 'https://ilova.example.invalid/moliya/');
+            teng(k.o.icon, 'https://ilova.example.invalid/moliya/icons/icon-192.png', 'mavjud ilova ikoni');
+            return pushHodisasi({});
+          }).then(function () {
+            teng(korsatilgan[1].t, 'Chuntak AI'); teng(korsatilgan[1].o.tag, 'chuntak-eslatma', 'tag takrorlanishni oldini oladi'); return pushHodisasi('buzuq');
+          }).then(function () { teng(korsatilgan.length, 3, 'buzuq xabarda ham bildirishnoma ko\'rsatiladi'); return pushHodisasi(undefined); }).then(function () {
+            teng(korsatilgan.length, 4, 'bo\'sh xabarda ham');
+            function bosish(url) { var yopildi = false, ish; h.notificationclick({ notification: { close: function () { yopildi = true; }, data: { url: url } }, waitUntil: function (p) { ish = p; } }); return ish.then(function () { return yopildi; }); }
+            return bosish('https://ilova.example.invalid/moliya/').then(function (y) {
+              teng(y, true); tjE(ochilgan, ['https://ilova.example.invalid/moliya/'], 'ochiq oyna yo\'q: yangi oyna');
+              oynalar.push({ url: 'https://ilova.example.invalid/moliya/index.html', focus: function () { fokus.push(1); return Promise.resolve(); } });
+              return bosish('https://ilova.example.invalid/moliya/');
+            }).then(function () { teng(fokus.length, 1, 'ochiq oyna fokuslandi'); teng(ochilgan.length, 1, 'yangi oyna ochilmadi'); oynalar.length = 0; return bosish('https://boshqa.example.invalid/x'); })
+              .then(function () { teng(ochilgan[1], 'https://ilova.example.invalid/moliya/', 'boshqa sayt ochilmaydi'); return bosish(''); })
+              .then(function () { teng(ochilgan[2], 'https://ilova.example.invalid/moliya/'); });
+          });
+        });
+      });
+      test('eslatma: kod tekshiruvi — ui.js (menyu qatori, ekran, chiqish), sw.js (bir qator + royxat), sw-push.js (IndexedDB yo\'q), uslub (44 px), versiya, IndexedDB ga tegmaslik', function () {
+        return Promise.all(['js/ui.js', 'sw.js', 'sw-push.js', 'style.css', 'index.html', 'js/eslatma.js', 'js/eslatma-sof.js'].map(matnOl)).then(function (t) {
+          var ui = t[0], sw = t[1], swp = t[2].replace(/\/\/[^\n]*/g, '');
+          teng(/'mn-eslatma', 'Eslatmalar', Eslatma\.menyuIzohi\(\)[^\n]*'bell'/.test(ui) && /function eslatmalarEkrani\(\)/.test(ui) && /Eslatma\.bloklar\(\{/.test(ui) && /Eslatma\.chiqishdan\(\)\.then\(function \(\) \{ return Kirish\.chiqish\(\)/.test(ui), true, 'ui.js');
+          teng((sw.match(/importScripts\(/g) || []).length, 1); teng(/try \{ importScripts\('sw-push\.js\?v=' \+ VERSIYA\); \}/.test(sw), true);
+          teng(/'js\/eslatma-sof\.js' \+ v/.test(sw) && /'js\/eslatma\.js' \+ v/.test(sw) && /'sw-push\.js' \+ v/.test(sw), true, 'royxat');
+          teng(/indexedDB|IDBDatabase|IDBFactory|openDatabase|localStorage|fetch\(/i.test(swp), false, 'sw-push.js bazaga/tarmoqqa tegmaydi');
+          teng(/\.eslatma-vaqt \{[^}]*min-height: 44px/.test(t[3]) && /\.eslatma-chip \{[^}]*min-height: 44px/.test(t[3]) && /\.eslatma-sinov \{[^}]*min-height: 48px/.test(t[3]) && /\.almashtirgich \{[^}]*height: 44px/.test(t[3]), true, 'tugmalar >= 44 px');
+          teng(/<meta name="versiya" content="0\.49\.0">/.test(t[4]) && /js\/eslatma-sof\.js\?v=0\.49\.0/.test(t[4]) && /js\/eslatma\.js\?v=0\.49\.0/.test(t[4]), true, 'index.html');
+          teng(t[4].indexOf('eslatma-sof.js') < t[4].indexOf('eslatma.js') && t[4].indexOf('kirish.js') < t[4].indexOf('eslatma-sof.js') && t[4].indexOf('yuklash.js') < t[4].indexOf('eslatma-sof.js') && t[4].indexOf('ikonlar.js') < t[4].indexOf('eslatma-sof.js') && t[4].indexOf('eslatma.js') < t[4].indexOf('js/ui.js'), true, 'tartib');
+          var kod = (t[5] + t[6]).replace(/\/\/[^\n]*/g, '');
+          teng(/indexedDB|Data\.saqlash|Data\.hammasi/.test(kod), false, 'IndexedDB ga tegmaydi'); teng(/service_role|console\./.test(kod), false);
+          teng(/aria-label/.test(t[5]) && /role', 'switch'/.test(t[5]) && /aria-pressed/.test(t[5]), true, 'aria');
         });
       });
       // ?faqat=so'z: nomida shu so'z bor testlargina ishlaydi (ishlab chiqish vaqtida tezlik uchun; to'liq yurgizish uchun ?faqat= berilmaydi)

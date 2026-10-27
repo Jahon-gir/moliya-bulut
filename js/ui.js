@@ -1913,10 +1913,17 @@
   }
 
   // ---- "Menyu" ekrani (Asosiy sahifadagi ☰ tugmasi): sozlamalar va boshqa ----
-  function menyuQatori(id, nom, izoh, bosilganda) {
+  function menyuQatori(id, nom, izoh, bosilganda, ikon) {
     var q = tugma(undefined, 'yozuv', bosilganda);
     q.id = id;
-    q.appendChild(el('div', nom, 'yozuv-nom'));
+    var n = el('div', ikon ? undefined : nom, 'yozuv-nom');
+    if (ikon) {   // faqat "Eslatmalar" qatorida (TZ 46): nom oldida kichik ikon
+      var ik = Ikonlar.chiz(ikon, 20);
+      ik.classList.add('menyu-ikon');
+      n.appendChild(ik);
+      n.appendChild(document.createTextNode(nom));
+    }
+    q.appendChild(n);
     q.appendChild(el('div', (izoh ? izoh + ' ' : '') + '›', 'yozuv-izoh'));
     return q;
   }
@@ -1934,6 +1941,7 @@
     var kh = Kirish.holat();
     s.appendChild(menyuQatori('mn-profil', 'Profil va sinxronlash', profilQatoriIzohi(), function () { ochish(profilEkrani, false); }));
     s.appendChild(menyuQatori('mn-xavfsizlik', 'Xavfsizlik', Pin.yoqilgan() ? 'PIN-kod yoqilgan' : 'PIN-kod o\'chiq', function () { ochish(xavfsizlikEkrani, false); }));
+    s.appendChild(menyuQatori('mn-eslatma', 'Eslatmalar', Eslatma.menyuIzohi(), function () { ochish(eslatmalarEkrani, false); }, 'bell'));
     var m = el('div', undefined, 'mavzu-karta');
     m.appendChild(el('div', 'Mavzu', 'yozuv-nom mavzu-sarlavha'));
     var tanlov = el('div', undefined, 'tanlov mavzu-tanlov');
@@ -1959,6 +1967,14 @@
     ver.id = 'versiya-qatori';
     bloklar.push(ver);
     return bloklar;
+  }
+
+  // "Eslatmalar" (TZ 46): kunlik va qarz muddati eslatmalari, shu qurilmani Web Push obunasi sifatida serverga ulash, "Sinab ko'rish" (js/eslatma.js)
+  function eslatmalarEkrani() {
+    return [orqagaTugmasi(), el('h1', 'Eslatmalar')].concat(Eslatma.bloklar({
+      el: el, tugma: tugma, karta: karta, qisqaXabar: qisqaXabar, xatoKodBilan: xatoKodBilan,
+      profilgaOt: function () { ochish(profilEkrani, false); }
+    }));
   }
 
   // "Profil va sinxronlash" (S2): Google bilan kirish/chiqish. Kirish ixtiyoriy; ma'lumot hali serverga yuborilmaydi.
@@ -1994,7 +2010,8 @@
         var kutayotgan = Sinxron.kutayotgan();
         if (kutayotgan > 0 && !window.confirm('Serverga hali yuborilmagan ' + kutayotgan + ' ta o\'zgarish bor. Chiqsangiz ular shu qurilmada saqlanadi (o\'chmaydi), lekin qayta kirib sinxronlaguncha serverga o\'tmaydi.\n\nChiqilsinmi?')) return;
         chiq.disabled = true;
-        Kirish.chiqish().then(function (n) { qisqaXabar(n.serverdaQolgan ? 'Chiqdingiz (internet yo\'q edi: server tomonda sessiya qolishi mumkin)' : 'Chiqdingiz'); });
+        // Avval shu qurilmaning serverdagi bildirishnoma qatori o'chiriladi (token hali bor; ko'pi bilan 4 soniya, chiqishni to'xtatmaydi)
+        Eslatma.chiqishdan().then(function () { return Kirish.chiqish(); }).then(function (n) { qisqaXabar(n.serverdaQolgan ? 'Chiqdingiz (internet yo\'q edi: server tomonda sessiya qolishi mumkin)' : 'Chiqdingiz'); });
       });
       chiq.id = 'chiqish';
       k.appendChild(chiq);

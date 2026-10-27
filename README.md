@@ -15,7 +15,8 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
    "Kutilmoqda (N ta o'zgarish)", "Internet yo'q", "Xato" (sabab "(kod: ...)" bilan va "Qayta urinish").
 4. **Chiqish** faqat shu qurilmadan chiqadi (ma'lumot qoladi). **Hisobni o'chirish** serverdagi akkaunt va hamma ma'lumotni o'chiradi (shu qurilmadagi ma'lumot qoladi).
 5. **Excelga yuklab olish** (Menyu) — daromad, xarajat va o'tkazmalar chiroyli .xlsx faylga. **Fayldan yuklash** (Menyu → Profil) — Excel (.xlsx) fayldan yozuvlarni oldindan ko'rib, tasdiqlab yuklash; "Oxirgi yuklashni bekor qilish" bor (TZ-sinxronlash.md, 18-band).
-6. **Telefon yo'qolsa / almashsa:** yangi qurilmada ilovani oching, shu Google bilan kiring: serverdagi ma'lumot o'zi qaytadi.
+6. **Eslatmalar** (Menyu → Eslatmalar): kunlik va qarz muddati eslatmalarini sozlash, qurilmani bildirishnomaga ulash, "Sinab ko'rish". Serverda bir martalik sozlash kerak: `supabase/README.md`, 9-bo'lim. Eslatmalarning o'zi vaqtida yuborilishi keyingi bosqichda (`TZ-sinxronlash.md`, 46-band).
+7. **Telefon yo'qolsa / almashsa:** yangi qurilmada ilovani oching, shu Google bilan kiring: serverdagi ma'lumot o'zi qaytadi.
 
 ## Tuzilma
 
@@ -28,9 +29,12 @@ ma'lumot Supabase serveriga nusxalanadi va boshqa qurilmalarda ko'rinadi (sinxro
 | `js/yordamchi*.js`, `js/chat-sof.js`, `js/stat-sof.js`, `js/stat.js`, `js/gap-sof.js`, `js/gap.js` | AI yordamchi (chat, kartalar) va "Gap bilan qo'shish" (sof mantiq va ekran; `TZ-sinxronlash.md` 24–29, 33 va 34-bandlar) |
 | `js/vendor/` | Ichki kutubxonalar (`@supabase/auth-js`, `@supabase/postgrest-js`, MIT); CDN yo'q |
 | `js/ikonlar.js` | Kategoriya ikonlari: [Tabler Icons](https://tabler.io/icons) (MIT litsenziya, © Paweł Kuna) dan faqat kerakli outline SVG yo'llari; internet kerak emas |
-| `supabase/` | Serverdagi baza: SQL fayllar (001–012), testlar, `README.md` (qadamma-qadam) |
+| `js/eslatma-sof.js`, `js/eslatma.js`, `sw-push.js` | Eslatmalar (Web Push): sof mantiq, ekran va qurilmani ulash, service worker'dagi `push`/`notificationclick` (`TZ-sinxronlash.md` 46-band) |
+| `supabase/` | Serverdagi baza: SQL fayllar (001–014), Edge Function'lar (`yordamchi`, `bildirishnoma`), testlar, `README.md` (qadamma-qadam) |
 | `maxfiylik.html` | Maxfiylik va foydalanish shartlari (alohida ochiq sahifa) |
 | `tests.html` | Avtomatik birlik testlari (brauzerda). Faqat tegishlilari: `tests.html?faqat=komissiya` (nomida shu so'z bor testlar) |
+| `tools/vapid-kalit-yasash.html` | VAPID kalit juftligini yasash (internetsiz, faqat brauzer WebCrypto'si; maxfiy kalitni faqat Supabase Secrets'ga qo'ying) |
+| `tools/eslatma-brauzer-sinovi.js` | Eslatmalar brauzer sinovi: haqiqiy ilova, soxta Notification/PushManager va soxta server, 360 px yorug'/qorong'i (`node tools/eslatma-brauzer-sinovi.js`) |
 | `tools/gap-brauzer-sinovi.js` | "Gap bilan qo'shish" brauzer sinovi: haqiqiy ilova, soxta server javobi, 360 px yorug'/qorong'i (`python3 -m http.server 8000`, so'ng `node tools/gap-brauzer-sinovi.js`; Playwright kerak) |
 | `tools/komissiya-brauzer-sinovi.js` | O'tkazma komissiyasi brauzer sinovi: haqiqiy ilova va IndexedDB, uydirma ma'lumot, 360 px yorug'/qorong'i (`python3 -m http.server 8000`, so'ng `node tools/komissiya-brauzer-sinovi.js`) |
 | `tools/kategoriya-birlashtirish-brauzer-sinovi.js` | Kategoriyalarni birlashtirish brauzer sinovi: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (`node tools/kategoriya-birlashtirish-brauzer-sinovi.js`) |

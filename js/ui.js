@@ -975,8 +975,118 @@
     boshqa: 'Boshqa turdagi hisob'
   };
 
+  // Sana bo'yicha qoldiq (TZ 49): tanlangan sana FAQAT ekran ochiq paytida xotirada (null = "Bugun"); localStorage'ga yozilmaydi.
+  // Ekran menyudan/Asosiydan qayta ochilsa yana "Bugun"; hisob tahriridan orqaga qaytilganda sana saqlanadi (qoldiq qayta hisoblanadi).
+  var hisobSana = null;
+  function hisoblarniOchish() { hisobSana = null; ochish(hisoblarEkrani, false); }
+
+  function sanaTugmasi() {
+    var matn = Calc.sanaTugmaMatni(hisobSana, Calc.bugun());
+    var t = tugma(undefined, 'sana-pill', function () { sanaOynasi(); });
+    t.id = 'hisob-sana';
+    t.setAttribute('aria-haspopup', 'dialog');
+    t.setAttribute('aria-label', hisobSana ? 'Sana: ' + matn + '. Boshqa sanani tanlash' : 'Sana: bugun. Boshqa sanani tanlash');
+    var ich = el('span', undefined, 'sana-pill-ich' + (hisobSana ? ' tanlangan' : ''));
+    ich.appendChild(Ikonlar.chiz('calendar', 16));
+    ich.appendChild(el('span', matn, 'sana-pill-matn'));
+    ich.appendChild(Ikonlar.chiz('chevron-down', 14));
+    t.appendChild(ich);
+    return t;
+  }
+
+  // Sana oynasi: tezkor chiplar (tanlov "Ko'rsatish" bilan tasdiqlanadi, chip darhol qo'llanmaydi) va kalendar
+  function sanaOynasi() {
+    var bugun = Calc.bugun(), tez = Calc.tezkorSanalar(bugun), eski = Calc.eskiAmalSanasi(malumot.yozuvlar, malumot.qarzlar);
+    var tanlov = hisobSana || bugun, p = tanlov.split('-'), korinish = { yil: +p[0], oy: +p[1] };
+    pastkiOyna('Sanani tanlang', function (oyna, yop) {
+      var chipQator = el('div', undefined, 'sana-chiplar');
+      var kalendar = el('div', undefined, 'sana-kalendar');
+      var chipTugmalari = [];
+      [['bugun', 'Bugun'], ['kecha', 'Kecha'], ['oyBoshi', 'Oy boshi'], ['otganOyOxiri', 'O\'tgan oy oxiri']].forEach(function (c) {
+        var b = tugma(c[1], 'chip', function () {
+          tanlov = tez[c[0]]; var q = tanlov.split('-'); korinish = { yil: +q[0], oy: +q[1] }; chiz();
+        });
+        b.setAttribute('data-chip', c[0]);
+        chipTugmalari.push([c[0], b]);
+        chipQator.appendChild(b);
+      });
+      oyna.appendChild(chipQator);
+      oyna.appendChild(kalendar);
+      var kor = tugma('Ko\'rsatish', 'asosiy-tugma', function () {
+        hisobSana = tanlov === bugun ? null : tanlov;
+        yop(false);
+        chizish(hisoblarEkrani(), true);
+      });
+      kor.id = 'sana-korsatish';
+      oyna.appendChild(kor);
+
+      function oyTugmasi(qadam, belgi, nom) {
+        var kelasi = Calc.oyniSurish(korinish.yil, korinish.oy, qadam, eski, bugun);
+        var b = tugma(undefined, 'sana-oy-tugma', function () { if (kelasi) { korinish = kelasi; chiz(); } });
+        b.appendChild(Ikonlar.chiz(belgi, 22)); b.setAttribute('aria-label', nom); b.disabled = !kelasi;
+        b.setAttribute('data-oy', qadam < 0 ? 'oldingi' : 'keyingi');
+        return b;
+      }
+      function chiz() {
+        chipTugmalari.forEach(function (c) { var f = tez[c[0]] === tanlov; c[1].setAttribute('aria-pressed', String(f)); c[1].classList.toggle('sana-chip-faol', f); });
+        kalendar.textContent = '';
+        var oy = Calc.kalendarOyi(korinish.yil, korinish.oy, bugun);
+        var bosh = el('div', undefined, 'sana-oy-bosh');
+        bosh.appendChild(oyTugmasi(-1, 'chevron-left', 'Oldingi oy'));
+        var nom = el('div', oy.nom, 'sana-oy-nom'); nom.setAttribute('aria-live', 'polite');
+        bosh.appendChild(nom);
+        bosh.appendChild(oyTugmasi(1, 'chevron-right', 'Keyingi oy'));
+        kalendar.appendChild(bosh);
+        var setka = el('div', undefined, 'sana-setka'); setka.setAttribute('role', 'grid');
+        ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'].forEach(function (h) { setka.appendChild(el('div', h, 'sana-hafta')); });
+        for (var i = 0; i < oy.bosh; i++) setka.appendChild(el('span', undefined, 'sana-bosh'));
+        var nuqtalar = {};
+        Calc.amalKunlari(malumot.yozuvlar, malumot.qarzlar, korinish.yil + '-' + ('0' + korinish.oy).slice(-2)).forEach(function (d) { nuqtalar[d] = true; });
+        oy.kunlar.forEach(function (k) {
+          var b = tugma(undefined, 'sana-kun' + (k.sana === tanlov ? ' tanlangan' : '') + (k.sana === bugun ? ' bugun' : '') + (k.kelajak ? ' kelajak' : ''), function () { tanlov = k.sana; chiz(); });
+          b.setAttribute('data-sana', k.sana);
+          b.setAttribute('aria-label', k.kun + '-' + oy.nom.toLowerCase() + (nuqtalar[k.sana] ? ', yozuv bor' : ''));
+          b.setAttribute('aria-pressed', String(k.sana === tanlov));
+          b.disabled = k.kelajak;
+          b.appendChild(el('span', String(k.kun)));
+          if (nuqtalar[k.sana]) b.appendChild(el('span', undefined, 'sana-nuqta'));
+          setka.appendChild(b);
+        });
+        kalendar.appendChild(setka);
+      }
+      chiz();
+    }, 'tanlov-oynasi sana-oynasi');
+  }
+
   function hisoblarEkrani() {
-    var bloklar = [orqagaTugmasi(), el('h1', 'Hisoblar')];
+    var bugunSana = Calc.bugun();
+    if (hisobSana && hisobSana >= bugunSana) hisobSana = null;   // kun almashgan bo'lsa ham kelajak sana qolmasin
+    var sarlavhaQator = el('div', undefined, 'hisob-sarlavha');
+    sarlavhaQator.appendChild(el('h1', 'Hisoblar'));
+    sarlavhaQator.appendChild(sanaTugmasi());
+    var bloklar = [orqagaTugmasi(), sarlavhaQator];
+    var royxat = Calc.hisoblarniSuz(malumot.hisoblar, hisobFiltri);
+    var sanada = hisobSana ? Calc.hisoblarSanada(royxat, malumot.yozuvlar, malumot.qarzlar, hisobSana, bugunSana) : null;
+    var sanadaOl = {};
+    if (sanada) sanada.royxat.forEach(function (x) { sanadaOl[x.id] = x; });
+    if (sanada) {
+      var tasma = el('div', undefined, 'sana-tasma');
+      tasma.id = 'sana-tasma';
+      tasma.appendChild(Ikonlar.chiz('history', 18));
+      tasma.appendChild(el('span', Calc.sanaTugmaMatni(hisobSana, bugunSana) + ' kun oxiridagi holat', 'sana-tasma-matn'));
+      tasma.appendChild(tugma('Bugunga qaytish', 'sana-qaytish', function () { hisobSana = null; chizish(hisoblarEkrani(), true); }));
+      bloklar.push(tasma);
+      var jk = karta(); jk.id = 'sana-jami';
+      jk.appendChild(el('div', 'Jami qoldiq', 'xira'));
+      var qator = el('div', undefined, 'sana-jami-qator');
+      var katta = el('div', Calc.sumFormat(sanada.jami), 'sana-jami-katta sig');
+      katta.setAttribute('data-qiymat', String(sanada.jami));
+      qator.appendChild(katta);
+      qator.appendChild(farqPill(sanada.farq, ' hozirdan'));
+      jk.appendChild(qator);
+      jk.appendChild(el('div', 'Hozir ' + Calc.raqamFormat(String(sanada.hozirJami)), 'xira sana-hozir'));
+      bloklar.push(jk);
+    }
     // tur bo'yicha filtr yorliqlari (yon tomonga suriladi)
     var yorliqlar = el('div', undefined, 'oy-yorliqlar hisob-yorliqlar');
     yorliqlar.setAttribute('role', 'tablist');
@@ -990,7 +1100,6 @@
     });
     bloklar.push(yorliqlar);
     var k = karta();
-    var royxat = Calc.hisoblarniSuz(malumot.hisoblar, hisobFiltri);
     if (!royxat.length) k.appendChild(el('p', 'Bu turda hisob yo\'q.', 'xira'));
     royxat.forEach(function (h) {
       var q = tugma(undefined, 'yozuv hisob-qatori', function () { ochish(function () { return hisobShakli(h); }, true); });
@@ -998,11 +1107,20 @@
       q.appendChild(hisobBadge(h, 38));
       var chap = el('div', undefined, 'yozuv-chap');
       chap.appendChild(el('div', h.nom, 'yozuv-nom'));
-      var mask = Calc.hisobMaskasi(h);
-      chap.appendChild(el('div', hisobTuriNomi(h.tur) + (mask ? ' · ' : ''), 'yozuv-izoh'));
-      if (mask) chap.lastChild.appendChild(el('span', mask, 'hisob-maska'));
-      q.appendChild(chap);
-      q.appendChild(el('div', Calc.sumFormat(Calc.hisobQoldigi(h, malumot.yozuvlar, malumot.qarzlar)), 'yozuv-summa'));
+      var mask = Calc.hisobMaskasi(h), sx = sanadaOl[h.id];
+      if (sx) {   // sana tanlangan: chapda "Hozir …", o'ngda shu kun oxiridagi qoldiq va farq
+        chap.appendChild(el('div', 'Hozir ' + Calc.raqamFormat(String(sx.hozir)), 'yozuv-izoh sana-hozir-qator'));
+        q.appendChild(chap);
+        var o = el('div', undefined, 'hisob-sana-o');
+        o.appendChild(el('div', Calc.sumFormat(sx.qoldiq), 'hisob-sana-qoldiq'));
+        o.appendChild(farqPill(sx.farq, ''));
+        q.appendChild(o);
+      } else {
+        chap.appendChild(el('div', hisobTuriNomi(h.tur) + (mask ? ' · ' : ''), 'yozuv-izoh'));
+        if (mask) chap.lastChild.appendChild(el('span', mask, 'hisob-maska'));
+        q.appendChild(chap);
+        q.appendChild(el('div', Calc.sumFormat(Calc.hisobQoldigi(h, malumot.yozuvlar, malumot.qarzlar)), 'yozuv-summa'));
+      }
       k.appendChild(q);
     });
     bloklar.push(k);
@@ -1012,7 +1130,14 @@
     var soxta = tugma('Soxta/bo\'sh hisoblarni tozalash', 'matn-tugma', function () { soxtaHolat.royxat = null; soxtaHolat.xabar = ''; ochish(soxtaHisoblarEkrani, false); });
     soxta.id = 'soxta-hisoblar';
     bloklar.push(soxta);
+    if (sanada) bloklar.push(el('p', 'Hozirgi yozuvlarga ko\'ra hisoblangan. O\'tgan yozuvni keyin tahrirlasangiz, natija ham o\'zgaradi.', 'xira sana-izoh'));
     return bloklar;
+  }
+
+  // Farq belgisi: kamaygan — qizil, oshgan — yashil, 0 — kichik kulrang "o'zgarmagan"
+  function farqPill(farq, qosh) {
+    if (!farq) return el('span', 'o\'zgarmagan', 'sana-ozgarmagan');
+    return el('span', Calc.farqMatni(farq) + qosh, 'odam-pill ' + (farq < 0 ? 'qizil' : 'yashil') + ' sana-farq');
   }
 
 
@@ -1881,7 +2006,7 @@
       ['kp-hisoblar', 'Hisoblar', faolHisoblar().length + ' ta', hisoblarEkrani],
       ['kp-kategoriyalar', 'Kategoriyalar', malumot.kategoriyalar.filter(function (x) { return !x.arxivlangan; }).length + ' ta', kategoriyalarEkrani]
     ].forEach(function (m) {
-      var q = tugma(undefined, 'yozuv', function () { if (m[0] === 'kp-statistika') Stat.boshlash(Calc.bugun()); ochish(m[3], false); });   // Statistika har ochilganda bugundan boshlanadi
+      var q = tugma(undefined, 'yozuv', function () { if (m[0] === 'kp-statistika') Stat.boshlash(Calc.bugun()); if (m[0] === 'kp-hisoblar') hisobSana = null; ochish(m[3], false); });   // Statistika har ochilganda bugundan boshlanadi
       q.id = m[0];
       q.appendChild(el('div', m[1], 'yozuv-nom'));
       q.appendChild(el('div', m[2] + ' ›', 'yozuv-izoh'));
@@ -4235,7 +4360,7 @@
     var son = el('span', faolHisoblar().length + ' ta hisob', 'xira hisob-soni');
     son.id = 'hisob-soni';
     past.appendChild(son);
-    var bosh = tugma('Boshqarish ›', 'matn-tugma', function () { ochish(hisoblarEkrani, false); });
+    var bosh = tugma('Boshqarish ›', 'matn-tugma', function () { hisoblarniOchish(); });
     bosh.id = 'hisoblarni-boshqarish';
     past.appendChild(bosh);
     k.appendChild(past);
@@ -4336,7 +4461,7 @@
     var k = karta();
     k.classList.add('hisoblar-karta');
     var faol = faolHisoblar();
-    var bosh = bolimSarlavhasi('Hisoblar (' + faol.length + ')', null, 'Hammasi', function () { ochish(hisoblarEkrani, false); }, 'hisoblar-hammasi');
+    var bosh = bolimSarlavhasi('Hisoblar (' + faol.length + ')', null, 'Hammasi', function () { hisoblarniOchish(); }, 'hisoblar-hammasi');
     bosh.querySelector('h2').id = 'hisoblar-sarlavha';
     k.appendChild(bosh);
     var surma = el('div', undefined, 'surma');
@@ -4523,7 +4648,7 @@
       else { hisobotHolat.tur = 'davr'; hisobotHolat.dan = p.dan; hisobotHolat.gacha = p.gacha; hisobotHolat.sana = p.dan; }
       ochish(hisobotEkrani, false);
     } else if (nom === 'qarzlar') korsat('qarzlar');
-    else if (nom === 'hisoblar') ochish(hisoblarEkrani, false);
+    else if (nom === 'hisoblar') hisoblarniOchish();
     else if (nom === 'byudjet') ochish(byudjetEkrani, false);
     else if (nom === 'yozuv') {
       var y = malumot.yozuvlar.filter(function (x) { return x.id === p.id; })[0];

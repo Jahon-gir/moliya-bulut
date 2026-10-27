@@ -92,7 +92,7 @@ h2 { font-size: 16px; margin: 0 0 8px; color: var(--xira); font-weight: 600; }
 button:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
 
 /* --- 2-bosqich: shakl va yozuvlar ro'yxati --- */
-:root { --daromad: #1b7f3b; --xarajat: #c62828; --izoh-ogoh: #9a6700; }
+:root { --daromad: #1b7f3b; --xarajat: #c62828; --izoh-ogoh: #9a6700; --sana-yashil: #0F8F6F; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="yorug"]) { --daromad: #5fd08a; --xarajat: #ff8a80; --izoh-ogoh: #fab219; }
 }
@@ -1607,3 +1607,45 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 .kom-juft > .maydon { flex: 1 1 0; min-width: 0; }
 .juft-ikki .kom-juft-kiritish, .kom-juft .kom-juft-kiritish { font-size: 18px; }
 .kom-juft input { min-width: 0; }
+
+/* --- Sana bo'yicha hisob qoldig'i (TZ 49) --- */
+.hisob-sarlavha { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.hisob-sarlavha h1 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sana-pill { flex: none; min-height: 44px; max-width: 60%; padding: 4px 0; font: inherit; cursor: pointer; color: var(--matn); background: none; border: 0; }
+.sana-pill-ich { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; font-size: 14px; font-weight: 600; border: 1px solid var(--chiziq); border-radius: 18px; }
+.sana-pill-ich.tanlangan { color: #fff; background: var(--sana-yashil); border-color: var(--sana-yashil); }
+.sana-pill-ich svg { flex: none; }
+.sana-pill-matn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sana-pill:focus-visible, .sana-qaytish:focus-visible, .sana-kun:focus-visible, .sana-oy-tugma:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.sana-tasma { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 4px 8px 4px 12px; color: var(--asosiy); background: rgba(15, 139, 109, .12); border-radius: 12px; }
+@media (prefers-color-scheme: dark) { html:not([data-tema="yorug"]) .sana-tasma { background: rgba(43, 181, 143, .16); } }
+html[data-tema="qorongi"] .sana-tasma { background: rgba(43, 181, 143, .16); }
+.sana-tasma svg { flex: none; }
+.sana-tasma-matn { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.sana-qaytish { flex: none; min-height: 44px; padding: 0 6px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--asosiy); background: none; border: 0; }
+.sana-jami-qator { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 2px 0; }
+.sana-jami-katta { font-size: 24px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sana-hozir { font-size: 13px; font-variant-numeric: tabular-nums; }
+.odam-pill.yashil { color: var(--daromad); background: rgba(31, 163, 90, .16); }
+.sana-farq { font-variant-numeric: tabular-nums; }
+.sana-ozgarmagan { font-size: 12px; color: var(--xira); }
+.hisob-sana-o { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 55%; }
+.hisob-sana-qoldiq { font-size: 17px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sana-izoh { margin: 12px 0 0; font-size: 12px; }
+.sana-oynasi::before { content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 10px; border-radius: 2px; background: var(--chiziq); }
+.sana-chiplar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sana-chiplar .chip { min-height: 44px; }
+.sana-chiplar .chip.sana-chip-faol { color: #fff; background: var(--sana-yashil); border-color: var(--sana-yashil); }
+.sana-oy-bosh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.sana-oy-nom { flex: 1; min-width: 0; text-align: center; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sana-oy-tugma { flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--matn); background: none; border: 0; border-radius: 22px; }
+.sana-oy-tugma:disabled { opacity: .35; cursor: default; }
+.sana-setka { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 14px; }
+.sana-hafta { padding: 4px 0; text-align: center; font-size: 12px; color: var(--xira); }
+.sana-kun { position: relative; min-height: 40px; padding: 0; font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; color: var(--matn); background: none; border: 1px solid transparent; border-radius: 20px; }
+.sana-kun.bugun { border-color: var(--matn); }
+.sana-kun.tanlangan { color: #fff; background: var(--sana-yashil); border-color: var(--sana-yashil); font-weight: 700; }
+.sana-kun.kelajak { opacity: .35; cursor: default; }
+.sana-nuqta { position: absolute; left: 50%; bottom: 3px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--sana-yashil); }
+.sana-kun.tanlangan .sana-nuqta { background: #fff; }
+.sana-hozir-qator { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }

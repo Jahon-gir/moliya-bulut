@@ -1541,9 +1541,13 @@
   // Hisob qoldig'i = boshlang'ich qoldiq + daromadlar - xarajatlar + kirgan o'tkazmalar - chiqqan o'tkazmalar
   // - bergan qarzlarim + menga qaytarilganlar + olgan qarzlarim - men qaytarganlarim (TZ 8-band, 1-qoida).
   // qarzlar ixtiyoriy. Qarz amallari faqat qoldiqqa ta'sir qiladi: hisobot(), byudjet va diagrammalar ularni ko'rmaydi.
-  function hisobQoldigi(hisob, yozuvlar, qarzlar) {
+  // sanagacha (ixtiyoriy, "YYYY-MM-DD", TZ 49): faqat sanasi shu kunga TENG yoki undan oldingi yozuv, qarz va to'lovlar hisobga olinadi
+  // (vaqtidan qat'i nazar); boshlang'ich qoldiq har doim kiradi. Berilmasa — hozirgi qoldiq. Mantiq ikki joyda takrorlanmaydi.
+  function hisobQoldigi(hisob, yozuvlar, qarzlar, sanagacha) {
     var q = hisob.boshlangich_qoldiq;
+    function kiradi(x) { return x.deleted !== true && (!sanagacha || String(x.sana) <= sanagacha); }
     yozuvlar.forEach(function (y) {
+      if (!kiradi(y)) return;
       if (y.tur === 'daromad' && y.hisob_id === hisob.id) q += y.summa;
       else if (y.tur === 'xarajat' && y.hisob_id === hisob.id) q -= y.summa;
       else if (y.tur === 'otkazma') {
@@ -1552,13 +1556,85 @@
       }
     });
     (qarzlar || []).forEach(function (z) {
+      if (z.deleted === true) return;
       var berdim = z.yonalish === 'berdim';
-      if (z.hisob_id === hisob.id) q += berdim ? -z.summa : z.summa;   // bergan qarz hisobdan chiqadi, olgani kiradi
+      if (z.hisob_id === hisob.id && kiradi(z)) q += berdim ? -z.summa : z.summa;   // bergan qarz hisobdan chiqadi, olgani kiradi
       (z.tolovlar || []).forEach(function (t) {
-        if (t.hisob_id === hisob.id) q += berdim ? t.summa : -t.summa;   // qaytarilgani teskari yo'nalishda
+        if (t.hisob_id === hisob.id && kiradi(t)) q += berdim ? t.summa : -t.summa;   // qaytarilgani teskari yo'nalishda
       });
     });
     return q;
+  }
+
+  // ---- Sana bo'yicha hisob qoldig'i (TZ-sinxronlash.md 49-band) ----
+  // sana bugun yoki undan keyin (yoki bo'sh) bo'lsa — hozirgi qoldiq bilan AYNAN bir xil
+  function hisobQoldigiSanada(hisob, yozuvlar, qarzlar, sana, bugunSana) {
+    return hisobQoldigi(hisob, yozuvlar, qarzlar, sana && sana < bugunSana ? sana : undefined);
+  }
+  // hisoblar — ekranda ko'rsatiladigan hisoblar. Natija: { royxat: [{ id, qoldiq, hozir, farq }], jami, hozirJami, farq }; farq = sanadagi − hozirgi
+  function hisoblarSanada(hisoblar, yozuvlar, qarzlar, sana, bugunSana) {
+    var jami = 0, hozirJami = 0;
+    var royxat = hisoblar.map(function (h) {
+      var q = hisobQoldigiSanada(h, yozuvlar, qarzlar, sana, bugunSana), hz = hisobQoldigi(h, yozuvlar, qarzlar);
+      jami += q; hozirJami += hz;
+      return { id: h.id, qoldiq: q, hozir: hz, farq: q - hz };
+    });
+    return { royxat: royxat, jami: jami, hozirJami: hozirJami, farq: jami - hozirJami };
+  }
+  // "+1 280 000" / "−1 280 000" / "0" (so'msiz, pill uchun)
+  function farqMatni(n) {
+    var a = String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return n > 0 ? '+' + a : n < 0 ? '−' + a : '0';
+  }
+  // Faol (o'chirilmagan) yozuv, qarz va to'lovlarning sanalari
+  function amalSanalari(yozuvlar, qarzlar) {
+    var r = [];
+    yozuvlar.forEach(function (y) { if (y.deleted !== true && y.sana) r.push(y.sana); });
+    (qarzlar || []).forEach(function (z) {
+      if (z.deleted === true) return;
+      if (z.sana) r.push(z.sana);
+      (z.tolovlar || []).forEach(function (t) { if (t.deleted !== true && t.sana) r.push(t.sana); });
+    });
+    return r;
+  }
+  // Berilgan oyda ("YYYY-MM") kamida bitta amal bor kunlar (saralangan, takrorlanmaydi) — kalendar nuqtalari uchun
+  function amalKunlari(yozuvlar, qarzlar, oyKalit) {
+    var set = {};
+    amalSanalari(yozuvlar, qarzlar).forEach(function (d) { if (d.slice(0, 7) === oyKalit) set[d] = true; });
+    return Object.keys(set).sort();
+  }
+  // Eng eski yozuv/qarz/to'lov sanasi (yo'q bo'lsa null)
+  function eskiAmalSanasi(yozuvlar, qarzlar) {
+    var r = amalSanalari(yozuvlar, qarzlar).sort();
+    return r.length ? r[0] : null;
+  }
+  function sanaYasash(y, m, d) { return y + '-' + ('0' + m).slice(-2) + '-' + ('0' + d).slice(-2); }
+  function oyKunlari(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }   // m: 1..12; kabisa yil hisobga olinadi
+  // Tezkor sanalar: bugun, kecha, oy boshi (joriy oyning 1-kuni), o'tgan oy oxiri
+  function tezkorSanalar(bugunSana) {
+    var p = sanaQismlari(bugunSana), kecha = new Date(Date.UTC(p.y, p.m - 1, p.d - 1)), otgan = new Date(Date.UTC(p.y, p.m - 1, 0));
+    return { bugun: bugunSana, kecha: sanaYasash(kecha.getUTCFullYear(), kecha.getUTCMonth() + 1, kecha.getUTCDate()),
+      oyBoshi: sanaYasash(p.y, p.m, 1), otganOyOxiri: sanaYasash(otgan.getUTCFullYear(), otgan.getUTCMonth() + 1, otgan.getUTCDate()) };
+  }
+  // Kalendar oyi: { yil, oy, nom ("Oktabr 2026"), bosh (1-kun oldidagi bo'sh kataklar soni, hafta Dushanbadan), kunlar: [{ kun, sana, kelajak }] }
+  function kalendarOyi(y, m, bugunSana) {
+    var bosh = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7, n = oyKunlari(y, m), kunlar = [];
+    for (var d = 1; d <= n; d++) { var s = sanaYasash(y, m, d); kunlar.push({ kun: d, sana: s, kelajak: s > bugunSana }); }
+    return { yil: y, oy: m, nom: OY_NOMLARI[m - 1] + ' ' + y, bosh: bosh, kunlar: kunlar };
+  }
+  // Oyga o'tish: { yil, oy } yoki null (joriy oydan keyingi oy; eng eski amal oyidan oldingi oy — amal yo'q bo'lsa faqat joriy oy)
+  function oyniSurish(y, m, qadam, eskiSana, bugunSana) {
+    var t = m - 1 + qadam, yy = y + Math.floor(t / 12), mm = ((t % 12) + 12) % 12 + 1;
+    var b = sanaQismlari(bugunSana), boshOy = eskiSana ? sanaQismlari(eskiSana) : b;
+    var kalit = yy * 12 + mm, eng = (boshOy.y < b.y || (boshOy.y === b.y && boshOy.m < b.m) ? boshOy.y * 12 + boshOy.m : b.y * 12 + b.m);
+    if (kalit > b.y * 12 + b.m || kalit < eng) return null;
+    return { yil: yy, oy: mm };
+  }
+  // Sana tugmasidagi matn: "15-oktabr" (yil joriy yilga teng bo'lmasa "15-oktabr 2025"); sana yo'q — "Bugun"
+  function sanaTugmaMatni(sana, bugunSana) {
+    if (!sana) return 'Bugun';
+    var p = sanaQismlari(sana), b = sanaQismlari(bugunSana);
+    return p.d + '-' + OY_NOMLARI[p.m - 1].toLowerCase() + (p.y === b.y ? '' : ' ' + p.y);
   }
 
   // Arxivlanmagan hisoblardagi pulning yig'indisi
@@ -1872,6 +1948,8 @@
     vaqtFormatiTogrimi: vaqtFormatiTogrimi, yozuvniYangilash: yozuvniYangilash,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId,
     KOMISSIYA: KOMISSIYA, komissiyaFoiziniTekshir: komissiyaFoiziniTekshir, komissiyaHisobla: komissiyaHisobla, komissiyaTekshir: komissiyaTekshir,
+    hisobQoldigiSanada: hisobQoldigiSanada, hisoblarSanada: hisoblarSanada, farqMatni: farqMatni, amalKunlari: amalKunlari, eskiAmalSanasi: eskiAmalSanasi,
+    tezkorSanalar: tezkorSanalar, kalendarOyi: kalendarOyi, oyniSurish: oyniSurish, sanaTugmaMatni: sanaTugmaMatni,
     IZOH_MAX: IZOH_MAX, izohTozala: izohTozala, izohQisqasi: izohQisqasi, izohQidiruvMatni: izohQidiruvMatni,
     komissiyaFoiziIzohdan: komissiyaFoiziIzohdan, komissiyaYorligi: komissiyaYorligi, komissiyaHolatiYozuvdan: komissiyaHolatiYozuvdan,
     komissiyaHolatiEslabqolingandan: komissiyaHolatiEslabqolingandan, komissiyaEslabQolish: komissiyaEslabQolish,

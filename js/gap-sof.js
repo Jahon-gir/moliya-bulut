@@ -380,7 +380,7 @@ var GapSof = (function () {
     if (Object.keys(xatolar).length) return { xatolar: xatolar };
     // Soat kiritilgan bo'lsa shu, bo'sh bo'lsa eskicha: sana bugun bo'lsa hozirgi soat, aks holda 00:00
     var vaqt = soatYaroqli(k.vaqt) ? k.vaqt : k.sana === hozir.sana ? hozir.vaqt : '00:00';
-    var izoh = birQator(k.izoh).slice(0, IZOH_MAX);
+    var izoh = Calc.izohTozala(k.izoh);   // foydalanuvchi yozgan izoh: ko'p qatorli, 500 belgigacha (TZ 48); AI/chek izohi (IZOH_MAX) alohida
     var xato = function (maydon, matn) { var e = {}; e[maydon] = matn; return { xatolar: e }; };
     if (k.tur === 'qarz' && (k.qarzAmal === 'qaytardim' || k.qarzAmal === 'qaytarildi')) {
       var q = ochiqQarzTop(m, k.qarzAmal, k.shaxs);

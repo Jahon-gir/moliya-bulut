@@ -385,7 +385,9 @@
   // Izoh: bir qatorga sig'adigan qismi, oxiri "…". Qisqartirilgan bo'lsa bosilganda to'liq ochiladi, yana bossa yig'iladi (qator tahrirlashga o'tmaydi).
   // Izoh qisqa bo'lsa (qisqartirilmagan) bosish qatorning o'ziga o'tadi: hech narsa o'zgarmaydi.
   function izohElementi(matn) {
-    var b = el('button', matn, 'yozuv-izoh izoh-bir');
+    var q = Calc.izohQisqasi(matn);   // ko'p qatorli izoh: birinchi qator + " …", bosilsa to'liq (qatorlar bilan) ochiladi (TZ 48)
+    var b = el('button', q.kop ? q.qisqa : matn, 'yozuv-izoh izoh-bir');
+    if (q.kop) { b.setAttribute('data-toli-izoh', Calc.izohTozala(matn, Infinity)); b.setAttribute('data-qisqa-izoh', q.qisqa); }
     b.type = 'button';
     b.setAttribute('aria-expanded', 'false');
     b.addEventListener('click', function (e) {
@@ -563,13 +565,9 @@
     var izohMaydon = el('div', undefined, 'maydon');
     var izohBelgi = el('label', 'Izoh (ixtiyoriy)');
     izohBelgi.setAttribute('for', 'f-izoh');
-    var izoh = document.createElement('input');
-    izoh.id = 'f-izoh';
-    izoh.type = 'text';
-    izoh.autocomplete = 'off';
-    izoh.value = tahrir.izoh || '';
+    var izoh = Sigdir.izohMaydoni('f-izoh', tahrir.izoh || '');
     izohMaydon.appendChild(izohBelgi);
-    izohMaydon.appendChild(izoh);
+    izohMaydon.appendChild(izoh.quti);
     forma.appendChild(izohMaydon);
 
     var saqla = el('button', 'Saqlash', 'asosiy-tugma');
@@ -637,7 +635,7 @@
         tur: holat.tur, summa: t.summa, sana: tanlangan.sana, vaqt: tanlangan.vaqt,
         hisob_id: hisob.value,
         kategoriya_id: otkazma ? null : holat.kategoriya,
-        izoh: izoh.value.trim()
+        izoh: izoh.saqlanadigan()
       };
       if (otkazma) yozuv.qabul_hisob_id = qabul.value;
       if (tahrir.bog_id) yozuv.bog_id = tahrir.bog_id;   // bog'langan (o'tkazmasi topilmagan) komissiya bog'i yo'qolmasin
@@ -850,16 +848,11 @@
     var maydon = el('div', undefined, 'maydon');
     var belgi = el('label', 'Izoh (ixtiyoriy)');
     belgi.setAttribute('for', 'w-izoh');
-    var izoh = document.createElement('input');
-    izoh.id = 'w-izoh';
-    izoh.type = 'text';
-    izoh.autocomplete = 'off';
-    izoh.value = wiz.izoh;
-    izoh.addEventListener('input', function () { wiz.izoh = izoh.value; });
+    var izoh = Sigdir.izohMaydoni('w-izoh', wiz.izoh, function (v) { wiz.izoh = v; });
     maydon.appendChild(belgi);
-    maydon.appendChild(izoh);
+    maydon.appendChild(izoh.quti);
     forma.appendChild(maydon);
-    forma.addEventListener('submit', function (e) { e.preventDefault(); wizardSaqlash(); });   // klaviaturadagi "Enter" ham saqlaydi
+    forma.addEventListener('submit', function (e) { e.preventDefault(); wizardSaqlash(); });   // izohda Enter yangi qator ochadi (TZ 48), shuning uchun saqlash faqat tugma bilan
     return komBlok ? [k, komBlok.quti, forma, qadamXatosi('izoh')] : [k, forma, qadamXatosi('izoh')];
   }
 
@@ -1677,7 +1670,7 @@
     nom.appendChild(document.createTextNode((x.turi === 'qarz' ? (berdim ? 'Qarz berdim' : 'Qarz oldim') : (berdim ? 'Qaytarildi' : 'Qaytardim')) + ' · ' + x.shaxs));
     nom.appendChild(el('span', 'Qarz', 'qarz-belgi-tarix'));
     chap.appendChild(nom);
-    chap.appendChild(el('div', x.vaqt + ' · ' + hisobNomi(x.hisob_id) + (x.izoh ? ' · ' + x.izoh : ''), 'yozuv-izoh'));
+    chap.appendChild(el('div', x.vaqt + ' · ' + hisobNomi(x.hisob_id) + (x.izoh ? ' · ' + Calc.izohQisqasi(x.izoh).qisqa : ''), 'yozuv-izoh'));
     q.appendChild(chap);
     q.appendChild(el('div', (kirim ? '+' : '−') + Calc.sumFormat(x.summa), 'yozuv-summa ' + (kirim ? 'plus' : 'minus')));
     return q;
@@ -3687,7 +3680,7 @@
       if (Calc.qarzMuddatiOtdimi(q, bugun)) { m.appendChild(document.createTextNode(' ')); m.appendChild(muddatBelgisi()); }
       qator('Qaytarish muddati', m);
     }
-    if (q.izoh) qator('Izoh', q.izoh);
+    if (q.izoh) qator('Izoh', q.izoh, 'qator-izoh');   // qatorlar saqlanadi (TZ 48)
     if (hisob && hisob.arxivlangan && !yopilgan) k.appendChild(el('div', '⚠ Bu qarz arxivlangan hisobga bog\'langan. To\'lovni boshqa hisobga yozishingiz mumkin.', 'ogohlantirish'));
     bloklar.push(k);
 
@@ -3858,13 +3851,9 @@
     var izMaydon = el('div', undefined, 'maydon');
     var izBelgi = el('label', 'Izoh (ixtiyoriy)');
     izBelgi.setAttribute('for', 'q-izoh');
-    var izoh = document.createElement('input');
-    izoh.id = 'q-izoh';
-    izoh.type = 'text';
-    izoh.autocomplete = 'off';
-    izoh.value = q ? q.izoh || '' : '';
+    var izoh = Sigdir.izohMaydoni('q-izoh', q ? q.izoh || '' : '');
     izMaydon.appendChild(izBelgi);
-    izMaydon.appendChild(izoh);
+    izMaydon.appendChild(izoh.quti);
     forma.appendChild(izMaydon);
 
     var saqla = el('button', 'Saqlash', 'asosiy-tugma');
@@ -3885,7 +3874,7 @@
         if (kr.kutish) kr = { yoq: true };
       }
       var r = Calc.qarzniTekshir({ yonalish: yonalish, shaxs: shaxs.value, summa: kr.yoq ? summa.input.value : String(kr.qaytarasiz), hisob: hisob.value,
-        sana: vaqt.holat.sana, vaqt: vaqt.holat.vaqt, muddat: muddat.value, izoh: izoh.value }, Calc.hozir(), q || undefined);
+        sana: vaqt.holat.sana, vaqt: vaqt.holat.vaqt, muddat: muddat.value, izoh: izoh.input.value }, Calc.hozir(), q || undefined);
       if (r.xato) {
         var maydon = { shaxs: [shaxsXato, shaxs], summa: [summa.xato, summa.input], hisob: [hisobXato, hisob], vaqt: [vaqt.xato, vaqt.tugma], muddat: [muddatXato, muddat] }[r.maydon];
         if (maydon) { maydon[0].textContent = r.xato; maydon[1].classList.add('xatoli'); maydon[1].focus(); }

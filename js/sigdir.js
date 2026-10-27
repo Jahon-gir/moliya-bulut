@@ -58,13 +58,65 @@ var Sigdir = (function () {
   }
 
   // Izoh (TZ 22.4): bir qator, oxiri "…". Qisqartirilgan bo'lsa bosish to'liq ochadi, yana bossa yig'adi. Qisqa (qisqartirilmagan) izohda hech narsa o'zgarmaydi.
+  // Ko'p qatorli izoh (TZ 48): element data-toli-izoh (to'liq matn) va data-qisqa-izoh (birinchi qator + " …") bilan keladi; har doim ochiladi/yig'iladi,
+  // matn textContent orqali qo'yiladi (HTML emas), qatorlar CSS (white-space: pre-line) bilan saqlanadi.
   // Natija: 'ochildi' | 'yopildi' | 'qisqa' (qisqa izoh: o'zgarmadi, bosish qatorning o'ziga o'tadi)
   function izohAlmashtir(e) {
-    var ochiq = e.classList.contains('ochiq');
-    if (!ochiq && e.scrollWidth <= e.clientWidth + 1) return 'qisqa';
+    var ochiq = e.classList.contains('ochiq'), toli = e.getAttribute('data-toli-izoh');
+    if (toli === null && !ochiq && e.scrollWidth <= e.clientWidth + 1) return 'qisqa';
+    if (toli !== null) e.textContent = ochiq ? e.getAttribute('data-qisqa-izoh') : toli;
     e.classList.toggle('ochiq', !ochiq);
     e.setAttribute('aria-expanded', String(!ochiq));
     return ochiq ? 'yopildi' : 'ochildi';
+  }
+
+  // Izoh maydoni (TZ 48): <textarea rows="1">, balandligi matnga qarab o'sadi (ko'pi bilan 5 qator, keyin maydon ichida aylanadi).
+  // Enter yangi qator ochadi: formani saqlamaydi va keyingi qadamga o'tkazmaydi (Enter hodisasi tashqariga chiqmaydi).
+  // Ostida: chapda "Enter: yangi qator", o'ngda "38 / 500" (chegaraga 50 belgi qolganda sariq, to'lganda qizil).
+  var IZOH_QATOR_KOP = 5, IZOH_OGOH_QOLDI = 50;
+  function avtoBalandlik(ta) {
+    var cs = window.getComputedStyle(ta);
+    var qator = parseFloat(cs.lineHeight) || (parseFloat(cs.fontSize) || 16) * 1.4;
+    var chet = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    var eng = qator * IZOH_QATOR_KOP + chet;
+    ta.style.height = 'auto';
+    var kerak = ta.scrollHeight + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    ta.style.height = Math.min(kerak, eng) + 'px';
+    ta.style.overflowY = kerak > eng + 0.5 ? 'auto' : 'hidden';
+    return Math.min(kerak, eng);
+  }
+  function hisoblagichniYangila(ta, h, max) {
+    var n = ta.value.length;
+    h.textContent = n + ' / ' + max;
+    h.classList.toggle('izoh-ogoh', n < max && max - n <= IZOH_OGOH_QOLDI);
+    h.classList.toggle('izoh-toldi', n >= max);
+  }
+  // id — maydon id si; qiymat — boshlang'ich matn; ozgarganda(matn) — ixtiyoriy. Natija: { quti, input, saqlanadigan() }
+  // Boshlang'ich matn chegaradan uzun bo'lsa (import qilingan izoh) chegara shu uzunlikka teng: tahrirlashda matn kesilmaydi.
+  function izohMaydoni(id, qiymat, ozgarganda) {
+    var boshlangich = String(qiymat == null ? '' : qiymat), max = Math.max(Calc.IZOH_MAX, boshlangich.length);
+    var quti = document.createElement('div');
+    quti.className = 'izoh-quti';
+    var ta = document.createElement('textarea');
+    ta.id = id; ta.className = 'izoh-maydon'; ta.rows = 1; ta.maxLength = max; ta.autocomplete = 'off';
+    ta.enterKeyHint = 'enter'; ta.setAttribute('enterkeyhint', 'enter');
+    ta.value = boshlangich;
+    var pastki = document.createElement('div');
+    pastki.className = 'izoh-pastki';
+    var chap = document.createElement('span'); chap.textContent = 'Enter: yangi qator';
+    var h = document.createElement('span'); h.className = 'izoh-hisoblagich'; h.setAttribute('aria-live', 'off');
+    pastki.appendChild(chap); pastki.appendChild(h);
+    quti.appendChild(ta); quti.appendChild(pastki);
+    function yangila() { avtoBalandlik(ta); hisoblagichniYangila(ta, h, max); }
+    ta.addEventListener('input', function () { yangila(); if (ozgarganda) ozgarganda(ta.value); });
+    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.stopPropagation(); });   // forma/oyna Enter ishlovchilari ishlamasin; standart xatti-harakat (yangi qator) qoladi
+    ta.addEventListener('focus', function () {   // telefon klaviaturasi ochilganda maydon ko'rinib tursin
+      setTimeout(function () { if (ta.isConnected && document.activeElement === ta && ta.scrollIntoView) ta.scrollIntoView({ block: 'center' }); }, 300);
+    });
+    hisoblagichniYangila(ta, h, max);
+    // Maydon hali ekranga qo'shilmagan bo'lishi mumkin (o'lchab bo'lmaydi): qo'shilgach balandlik moslanadi
+    (window.requestAnimationFrame || setTimeout)(function () { if (ta.isConnected) yangila(); });
+    return { quti: quti, input: ta, yangila: yangila, saqlanadigan: function () { return Calc.izohTozala(ta.value, Infinity); } };
   }
 
   function hammasi(ildiz) {
@@ -89,5 +141,5 @@ var Sigdir = (function () {
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { keyinroq(ildiz); });
   }
 
-  return { sigdir: sigdir, kunQatori: kunQatori, izohAlmashtir: izohAlmashtir, hammasi: hammasi, keyinroq: keyinroq, kuzat: kuzat, MIN_SHRIFT: MIN_SHRIFT };
+  return { sigdir: sigdir, kunQatori: kunQatori, izohAlmashtir: izohAlmashtir, izohMaydoni: izohMaydoni, avtoBalandlik: avtoBalandlik, hammasi: hammasi, keyinroq: keyinroq, kuzat: kuzat, MIN_SHRIFT: MIN_SHRIFT };
 })();

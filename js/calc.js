@@ -127,7 +127,7 @@
     var vt = vaqtTekshir(v.sana, v.vaqt, hozirgi);
     if (vt.xato) return { xato: vt.xato, qadam: 'vaqt' };
     var y = { tur: h.tur, summa: t.summa, sana: v.sana, vaqt: v.vaqt, hisob_id: h.hisob,
-      kategoriya_id: otkazma ? null : h.kategoriya, izoh: String(h.izoh || '').trim() };
+      kategoriya_id: otkazma ? null : h.kategoriya, izoh: izohTozala(h.izoh, Infinity) };
     if (otkazma) y.qabul_hisob_id = h.qabul;
     return { yozuv: y };
   }
@@ -591,7 +591,7 @@
       if (oldin) return { xato: 'Qarz vaqti to\'lovlardan (' + sanaKorsat(oldin.sana) + ' ' + oldin.vaqt + ') keyin bo\'lmasin', maydon: 'vaqt' };
     }
     return { qarz: { yonalish: h.yonalish, shaxs: shaxs, summa: t.summa, hisob_id: h.hisob, sana: h.sana, vaqt: h.vaqt,
-      muddat: muddat, izoh: String(h.izoh || '').trim() } };
+      muddat: muddat, izoh: izohTozala(h.izoh, Infinity) } };
   }
 
   // To'lovni tekshiradi. h: { summa (matn), hisob, sana, vaqt }. istisnoId — tahrirlanayotgan to'lovning o'zi.
@@ -1115,6 +1115,25 @@
   function csvFayl(sarlavha, qatorlar) {
     return '﻿' + [csvQator(sarlavha)].concat(qatorlar.map(csvQator)).join('\r\n') + '\r\n';
   }
+  // ---- Ko'p qatorli izoh (TZ-sinxronlash.md 48-band) ----
+  var IZOH_MAX = 500;   // izoh maydonining chegarasi (Gap/chek izohi 200 belgi bo'lib qoladi: GapSof.IZOH_MAX)
+  // Saqlash uchun: \r\n va \r -> \n, qator oxiridagi bo'shliq olinadi, boshi/oxiri trim, ketma-ket 3 va undan ko'p bo'sh qator 2 tagacha qisqaradi.
+  // max — uzunlik chegarasi (boshlang'ich IZOH_MAX); forma o'zi maxlength bilan cheklaydi, shuning uchun saqlashda Infinity beriladi
+  // (import qilingan 500 dan uzun izoh tahrirlanganda kesilib ma'lumot yo'qolmasin).
+  function izohTozala(s, max) {
+    var t = String(s == null ? '' : s).replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
+    var m = max === undefined ? IZOH_MAX : max;
+    return t.length > m ? t.slice(0, m).trim() : t;
+  }
+  // Tarix qatori uchun: { qisqa: birinchi qator (+ " …" ko'p qatorli bo'lsa), kop: izoh bir nechta qatordan iboratmi }
+  function izohQisqasi(s) {
+    var t = izohTozala(s, Infinity), qatorlar = t.split('\n').map(function (q) { return q.trim(); }).filter(Boolean);
+    var kop = qatorlar.length > 1;
+    return { qisqa: (qatorlar[0] || '') + (kop ? ' …' : ''), kop: kop };
+  }
+  // Qidiruv uchun: yangi qator va ketma-ket bo'shliqlar bitta bo'shliq, kichik harf
+  function izohQidiruvMatni(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase(); }
+
   function sanaDMY(iso) { var p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; }
 
   // Eksport davri: { tur: 'hammasi' } | { tur: 'oy', yil, oy } | { tur: 'yil', yil } -> { dan, gacha } yoki null (hammasi)
@@ -1224,14 +1243,14 @@
   // qatorlari chiqmaydi; hisob — shu hisobdagi amal; qidiruv — izoh yoki shaxs ismi. oyKalit berilsa, faqat shu oy.
   function qarzSatrlariniSuz(satrlar, f, oyKalit) {
     f = f || {};
-    var q = String(f.qidiruv || '').trim().toLowerCase();
+    var q = izohQidiruvMatni(f.qidiruv);
     return satrlar.filter(function (x) {
       if (oyKalit && x.sana.slice(0, 7) !== oyKalit) return false;
       if (f.tur || f.kategoriya || (f.kategoriyalar && f.kategoriyalar.length)) return false;
       if (f.hisob && x.hisob_id !== f.hisob) return false;
       if (f.dan && x.sana < f.dan) return false;
       if (f.gacha && x.sana > f.gacha) return false;
-      if (q && (String(x.izoh || '') + ' ' + String(x.shaxs || '')).toLowerCase().indexOf(q) === -1) return false;
+      if (q && (izohQidiruvMatni(x.izoh) + ' ' + String(x.shaxs || '').toLowerCase()).indexOf(q) === -1) return false;
       return true;
     });
   }
@@ -1616,7 +1635,7 @@
   // dan / gacha (sana oralig'i, chegaralari bilan), qidiruv (izoh ichidan, harf kattaligiga qaramay).
   function yozuvlarniSuz(yozuvlar, f) {
     f = f || {};
-    var q = String(f.qidiruv || '').trim().toLowerCase();
+    var q = izohQidiruvMatni(f.qidiruv);
     return yozuvlar.filter(function (y) {
       if (f.tur && y.tur !== f.tur) return false;
       if (f.hisob && y.hisob_id !== f.hisob && y.qabul_hisob_id !== f.hisob) return false;
@@ -1624,7 +1643,7 @@
       if (f.kategoriyalar && f.kategoriyalar.length && f.kategoriyalar.indexOf(y.kategoriya_id) === -1) return false;
       if (f.dan && y.sana < f.dan) return false;
       if (f.gacha && y.sana > f.gacha) return false;
-      if (q && String(y.izoh || '').toLowerCase().indexOf(q) === -1) return false;
+      if (q && izohQidiruvMatni(y.izoh).indexOf(q) === -1) return false;
       return true;
     });
   }
@@ -1853,6 +1872,7 @@
     vaqtFormatiTogrimi: vaqtFormatiTogrimi, yozuvniYangilash: yozuvniYangilash,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId,
     KOMISSIYA: KOMISSIYA, komissiyaFoiziniTekshir: komissiyaFoiziniTekshir, komissiyaHisobla: komissiyaHisobla, komissiyaTekshir: komissiyaTekshir,
+    IZOH_MAX: IZOH_MAX, izohTozala: izohTozala, izohQisqasi: izohQisqasi, izohQidiruvMatni: izohQidiruvMatni,
     komissiyaFoiziIzohdan: komissiyaFoiziIzohdan, komissiyaYorligi: komissiyaYorligi, komissiyaHolatiYozuvdan: komissiyaHolatiYozuvdan,
     komissiyaHolatiEslabqolingandan: komissiyaHolatiEslabqolingandan, komissiyaEslabQolish: komissiyaEslabQolish,
     komissiyaKategoriyasiniTop: komissiyaKategoriyasiniTop, komissiyaNomimi: komissiyaNomimi, nomLotinga: nomLotinga, otkazmaKomissiyalari: otkazmaKomissiyalari, komissiyaniOtkazmagaBogla: komissiyaniOtkazmagaBogla, qarzKomissiyasiHisobla: qarzKomissiyasiHisobla, qarzKomissiyaHolatiYozuvdan: qarzKomissiyaHolatiYozuvdan, qarzKomissiyalari: qarzKomissiyalari, foizKorsat: foizKorsat, QARZ_KOMISSIYA: QARZ_KOMISSIYA

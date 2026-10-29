@@ -1649,3 +1649,25 @@ html[data-tema="qorongi"] .sana-tasma { background: rgba(43, 181, 143, .16); }
 .sana-nuqta { position: absolute; left: 50%; bottom: 3px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--sana-yashil); }
 .sana-kun.tanlangan .sana-nuqta { background: #fff; }
 .sana-hozir-qator { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ===== 0.53.0: hisobda pul yetmasa (TZ-sinxronlash.md 50-band) ===== */
+.manfiy-qator.tanlangan .manfiy-radio { color: #fff; background: var(--sana-yashil); border-color: var(--sana-yashil); }
+.manfiy-oyna::before { content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 10px; border-radius: 2px; background: var(--chiziq); }
+.manfiy-sarlavha { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.manfiy-sarlavha h2 { flex: 1; min-width: 0; margin: 0; font-size: 20px; }
+.manfiy-ikon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; border-radius: 10px; }
+.manfiy-ikon.ogoh { color: #9a6700; background: #fff1c2; }
+.manfiy-ikon.taqiq { color: #c62828; background: #fde3e3; }
+@media (prefers-color-scheme: dark) {
+  html:not([data-tema="yorug"]) .manfiy-ikon.ogoh { color: #f5c542; background: rgba(245, 197, 66, .18); }
+  html:not([data-tema="yorug"]) .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(255, 138, 128, .18); }
+}
+html[data-tema="qorongi"] .manfiy-ikon.ogoh { color: #f5c542; background: rgba(245, 197, 66, .18); }
+html[data-tema="qorongi"] .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(255, 138, 128, .18); }
+.manfiy-matn { margin: 0 0 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.manfiy-qizil { color: var(--xarajat); }
+.manfiy-tugmalar { display: flex; gap: 8px; }
+.manfiy-tugmalar button { flex: 1 1 0; min-width: 0; min-height: 48px; margin: 0; padding: 0 8px; }
+.manfiy-havola { display: block; width: 100%; min-height: 44px; margin-top: 6px; text-align: center; }
+.sheet-parda.manfiy-parda { z-index: 150; }
+.manfiy-sarlavha h2 { color: var(--matn); }

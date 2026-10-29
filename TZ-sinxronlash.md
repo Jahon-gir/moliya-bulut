@@ -1609,3 +1609,64 @@ Mavjud pastdan chiqadigan oyna uslubi (`pastkiOyna`, 44-band): tutqich chizig'i,
 - `tests.html?faqat=sana bo'yicha` (9 ta): aralash yozuvlar (barcha tur va chegaralar), invariant (bugun/kelajak/bo'sh, mavjud fixturalar bilan), jami va farq, kalendar nuqtalari va eng eski sana, tezkor sanalar (yanvar, kabisa yil), kalendar (Dushanba, 28/29/30/31, kelajak), oyga o'tish chegaralari, tugma matni, ilova kodi. To'liq `tests.html` o'tgan.
 - `tools/hisob-sana-brauzer-sinovi.js`: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (oyna ochilishi, chip, kalendar kuni, "Ko'rsatish", tasma, jami karta, farq pill ranglari, "o'zgarmagan", filtr, tahrirdan qaytish, "Bugunga qaytish", qayta ochilsa Bugun, eng eski oy chegarasi).
 - **Tekshirilmagan:** haqiqiy telefon.
+
+## 50. Hisobda pul yetmasa: manfiy qoldiq qoidasi (0.53.0)
+
+Foydalanuvchi HAR HISOB uchun tanlaydi: hisobda pul yetmasa amal **ruxsat** etiladimi, **ogohlantirish** bilan saqlanadimi yoki **taqiqlanadi**. **Server va sxema o'zgarmaydi (SQL kerak emas):** sozlama faqat shu qurilmada (localStorage), balans esa avvalgidek yozuvlardan hisoblanadi (5-band).
+
+### 50.1. Qaror: boshlang'ich holat = "Taqiqlash" (foydalanuvchi qarori)
+- Sozlama tanlanmagan hisob (**yangi ham, mavjud ham**) — "Taqiqlash". Yaroqsiz yoki yo'q qiymat ham "Taqiqlash".
+- **Oqibati:** yangilanishdan keyin mavjud hisoblarda pul yetmaydigan xarajat, o'tkazma, qarz berish va olingan qarzni qaytarish **saqlanmaydi**. **Kredit karta, overdraft yoki ataylab manfiy yuradigan hisob uchun "Ruxsat" ni qo'lda qo'yish kerak** (Hisoblar → hisobni bosing → "Hisobda pul yetmasa" → "Ruxsat" → "Saqlash"; yoki taqiq oynasidagi "Bu hisob uchun sozlamani o'zgartirish" havolasi orqali).
+- Hisob qoldig'i hozir manfiy bo'lgan eski hisoblar ham shu qoidaga tushadi (qoldiqni yana kamaytiradigan amal bloklanadi; oshiradigani — yo'q).
+
+### 50.2. Sozlama (faqat shu qurilmada)
+- **Saqlash:** `localStorage`, kalit `moliya-hisob-manfiy`, qiymat JSON `{ hisob_id: "ruxsat" | "ogohlantirish" | "taqiqlash" }`. **Serverga, sinxronga, Excel eksportga va zaxiraga TUSHMAYDI** (zaxiradan tiklash yoki boshqa qurilmada sozlama kelmaydi: u yerda yana "Taqiqlash").
+- O'chirilgan yoki yo'q hisob kaliti e'tiborsiz (`Calc.manfiyRejimlar`: yaroqsiz matn, yaroqsiz qiymat, yo'q hisob tashlanadi), keyingi yozishda tozalanadi.
+- **Hisob shakli** (yangi hisob va tahrir): "Hisobda pul yetmasa" bo'limi, uchta radio qator (har biri kamida 44 px, `role="radio"`, `aria-checked`): **Ruxsat** ("Kredit karta yoki overdraft uchun"), **Ogohlantirish** ("Saqlashdan oldin so'raydi"), **Taqiqlash** ("Pul yetmasa saqlab bo'lmaydi"). Tanlangani — to'ldirilgan yashil doira (`#0F8F6F`, ichida check) va accent fonli qator. Boshlang'ich tanlov: Taqiqlash (mavjud hisobda — saqlangani). Tanlov hisob "Saqlash" bilan saqlanganda yoziladi.
+
+### 50.3. Qaysi amallar tekshiriladi (faqat hisobga NET CHIQIM bo'lganlar)
+| Amal | Tekshiriladi | Hisobga net ta'sir (`Calc.amalTasiri`) |
+|---|---|---|
+| Xarajat | ha | −summa |
+| O'tkazma (faqat pul CHIQAYOTGAN hisob) | ha | −(summa + komissiya) — jami 101 000 (40-band) |
+| O'tkazma, qabul qiluvchi tomon | yo'q | +summa |
+| Qarz berdim | ha | −qarz summasi |
+| Qarz to'lovi: olingan qarzni qaytarish (chiqim) | ha | −to'lov |
+| Qarz to'lovi: berilgan qarzni qaytarib olish (kirim) | yo'q | +to'lov |
+| Qarz oldim (komissiyali ham) | yo'q | +(qarz − komissiya) — net musbat (42-band) |
+| Daromad | yo'q | +summa |
+
+- **Hisoblash (sof funksiya `Calc.manfiyTekshir`):** `hozir` — shu hisobning HOZIRGI qoldig'i (`Calc.hisobQoldigi`, bugungi, sanasiz); `delta` — amalning hisobga net ta'siri; `keyin = hozir + delta`. **Shart: `delta < 0` VA `keyin < 0`.** Hozir allaqachon manfiy bo'lsa va amal uni yana kamaytirsa — tekshiriladi; amal qoldiqni oshirsa yoki o'zgartirmasa — tekshirilmaydi. Aniq nolga tushish (`keyin = 0`) — manfiy emas, ruxsat.
+- **Natija:** `{ holat: "ok" | "ogohlantirish" | "taqiqlash", hisob, hozir, keyin, kerak }`; `kerak` — faqat chiqim miqdori (`−delta`). Rejim "ruxsat" bo'lsa holat doim "ok".
+- **O'tgan sanaga yozilgan amalda ham BUGUNGI qoldiq** hisobga olinadi (amal sanasi tekshiruvga ta'sir qilmaydi; 49-banddagi "sana bo'yicha qoldiq" ishlatilmaydi). Sabab: foydalanuvchi uchun "hozir hisobda pul bor/yo'q" muhim.
+- **Tahrirlashda eski versiya ta'siri avval olib tashlanadi** (`Calc.eskiniOlibTashla`): qoldiq eski yozuvsiz hisoblanadi (o'tkazmada uning bog'langan komissiyasi, qarzda uning to'lovlari va komissiyasi, to'lovda eski to'lov ham), keyin yangi versiya qo'llanadi. Shunda qoldig'i 100 000 bo'lgan hisobdagi 100 000 lik xarajatni 80 000 ga kamaytirish bloklanmaydi, 150 000 ga oshirish bloklanadi. **Qabul qilingan aniqlik:** tahrirda haqiqiy qoldiq oshsa yoki o'zgarmasa (yangi ta'sir − eski ta'sir ≥ 0) ham tekshirilmaydi (masalan ruxsat bilan manfiyga tushgan xarajatni kamaytirish yoki faqat izohni o'zgartirish bloklanmasin).
+
+### 50.4. Qayerda tekshiriladi (foydalanuvchi qo'lda SAQLAYDIGAN yo'llar)
+Bitta umumiy funksiya (`manfiyTekshiruvi`, js/ui.js), saqlashdan OLDIN, yozishdan oldin; bloklansa hech narsa yozilmaydi (yarim saqlangan holat bo'lmaydi):
+1. yozuv qo'shish (wizard: "Saqlash" va tezkor saqlash);
+2. yozuvni tahrirlash formasi;
+3. qarz qo'shish/tahrirlash formasi;
+4. qarz to'lovi qo'shish/tahrirlash;
+5. "Gap bilan qo'shish", ovoz va chek natija kartasidagi "Saqlash" (`gapSaqlash`; bloklansa `{ saqlanmadi: true }` qaytadi, karta ochiq qoladi).
+
+**Tekshirilmaydi:** Excel import, sinxron tortish, birlashtirish, zaxiradan tiklash, "Bekor qilish" (undo), o'chirish, daromadni tahrirlab kamaytirish (tarixiy manfiy bloklanmasin).
+
+### 50.5. Oynalar (mavjud pastdan chiqadigan oyna uslubi, 360 px, yorug' va qorong'i)
+- **Ogohlantirish:** ikon katagi (36 px, sariq fon, `alert-triangle`), sarlavha "Hisobda mablag' yetmaydi", matn «Naqd pul» hisobida hozir **0 so'm** bor. Bu amaldan keyin **−16 000 so'm** (qalin, qizil) bo'ladi. Tugmalar (48 px): "Hisobni o'zgartirish" (outline) va "Baribir saqlash" (yashil, to'ldirilgan; bosilsa shu amal saqlanadi).
+- **Taqiqlash:** ikon katagi (qizil fon, `lock`), sarlavha "Hisobda mablag' yetarli emas", matn «Naqd pul» hisobida **0 so'm** bor, bu amal uchun **16 000 so'm** kerak. Boshqa hisobni tanlang yoki avval shu hisobga kirim yozing. Tugmalar: "Yopish" (outline) va "Hisobni o'zgartirish" (yashil). "Baribir saqlash" YO'Q. "bor" — hozirgi qoldiq (manfiy bo'lsa minus bilan), "kerak" — amalning chiqim miqdori.
+- **"Hisobni o'zgartirish":** oynani yopadi va formani hisob tanlash joyiga qaytaradi: wizardda hisob qadamiga ("Qayerdan" — o'tkazmada), tahrir, qarz va to'lov formalarida hisob maydoniga fokus, Gap kartasida "Hisob" maydoniga fokus. Kiritilgan boshqa ma'lumot (summa, sana, izoh) saqlanib turadi; amal saqlanmaydi.
+- **Oyna tashqariga bosilsa, Esc yoki "Orqaga" bilan yopilsa:** amal saqlanmaydi, forma ochiq qoladi.
+- **"Bu hisob uchun sozlamani o'zgartirish"** (ikkala oynada, accent matn-havola, bosish maydoni ≥ 44 px). **Qabul qilingan yechim:** havola bosilganda ogohlantirish/taqiq oynasi yopiladi (amal saqlanmaydi) va sozlama JOYIDA kichik tanlov oynasi sifatida ochiladi ("Hisobda pul yetmasa", shu hisobning uch qatori). Tanlov darhol saqlanadi ("Sozlama saqlandi: …"), oyna yopiladi va foydalanuvchi o'sha ochiq formada "Saqlash"ni qayta bosadi. Hisob sozlamasi ekraniga o'tilmaydi: bu forma ma'lumotini (wizard, tahrir, qarz, Gap kartasi) yo'qotardi. "Gap bilan qo'shish" ekrani ustida ham ko'rinishi uchun oyna `z-index: 150` oladi.
+
+### 50.6. Ikonlar va fayllar
+- Yangi Tabler ikonlari (`js/ikonlar.js`): `alert-triangle`, `lock`. `check` mavjud.
+- `js/calc.js`: `MANFIY_REJIMLAR`, `manfiyRejimlar`, `manfiyRejimi`, `amalTasiri`, `eskiniOlibTashla`, `manfiyTekshir` (hammasi sof). `js/ui.js`: sozlama (`manfiyOqi`, `manfiyYoz`), qatorlar (`manfiyTanlov`), oynalar (`manfiyTekshiruvi`, `manfiySozlamaOynasi`), 5 yo'lga ulash; `pastkiOyna` ga ixtiyoriy 4-parametr (yopilganda chaqiriladi). `js/gap.js`: `{ saqlanmadi: true }` natijasi. `style.css`: `.manfiy-*`. Yangi fayl yo'q (`sw.js` ga tegilmadi).
+
+### 50.7. Sinovlar
+- `tests.html?faqat=manfiy` (11 ta): sozlama (yo'q/yaroqsiz/o'chirilgan hisob), xarajat (hozir 0, yetarli, aniq nol, yetmaydi), uchala rejim, o'tkazma (+komissiya jami, qabul tomoni), qarz (berdim, oldim, komissiyali, daromad), to'lov (chiqim va kirim), allaqachon manfiy hisob (kamaytirish va oshirish), tahrirda eski ta'sir (kamaytirish bloklanmaydi, oshirish bloklanadi, hisob almashtirish, o'tkazma komissiyasi, qarz, to'lov), o'tgan sanali amal, ilova kodi (5 yo'l, tekshirilmaydigan yo'llarda yo'q, sozlama faqat `ui.js` da). To'liq `tests.html` o'tgan.
+- `tools/manfiy-brauzer-sinovi.js`: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (130 tekshiruv): sozlama qatorlari va boshlang'ich tanlov, ikkala oyna matni va tugmalari, "Baribir saqlash" faqat ogohlantirishda, bloklangan amal bazaga hech narsa yozmasligi, forma ma'lumoti saqlanishi, tashqariga bosish/Esc, "Hisobni o'zgartirish" (wizard, tahrir, qarz, to'lov, Gap), "sozlamani o'zgartirish" havolasi, o'chirish va "Bekor qilish" tekshirilmasligi.
+- Mavjud `tools/gap-brauzer-sinovi.js` fixturasida hisoblar "Ruxsat" ga qo'yildi (sabab: u saqlash oqimini sinaydi, yangi standart "Taqiqlash" 0 qoldiqli hisobga xarajatni to'sardi).
+- **Tekshirilmagan:** haqiqiy telefon.
+
+### 50.8. Bu PR'da YO'Q (keyingi PR'lar)
+O'chirilganlar ekrani va qarz to'lovini bekor qilish.

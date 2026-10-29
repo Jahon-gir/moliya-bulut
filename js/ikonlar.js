@@ -85,6 +85,8 @@ var Ikonlar = (function () {
     'calendar-due': ['M4 5m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z', 'M16 3v4', 'M8 3v4', 'M4 11h16', 'M12 15m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0'],
     'sort-descending-numbers': ['M4 15l3 3l3 -3', 'M7 6v12', 'M17 14a2 2 0 0 1 2 2v2a2 2 0 1 1 -4 0v-2a2 2 0 0 1 2 -2z', 'M17 4a2 2 0 0 1 2 2v2a2 2 0 1 1 -4 0v-2a2 2 0 0 1 2 -2z'],
     'check': ['M5 12l5 5l10 -10'],
+    'alert-triangle': ['M12 9v4', 'M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z', 'M12 16h.01'],   // Hisobda pul yetmasa oynasi (TZ 50)
+    'lock': ['M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z', 'M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0', 'M8 11v-4a4 4 0 1 1 8 0v4'],   // xuddi shunday (TZ 50)
     'arrow-merge': ['M8 7l4 -4l4 4', 'M12 3v8', 'M5 21c0 -5 3 -6 7 -10', 'M19 21c0 -5 -3 -6 -7 -10'],   // "Boshqa kategoriyaga birlashtirish" tugmasi (TZ 41-band)
     'corner-down-right': ['M6 6v6a3 3 0 0 0 3 3h10l-4 -4m0 8l4 -4'],   // Tarixda o'tkazma ostidagi komissiya qatori (TZ 40-band)
     'repeat': ['M4 12v-3a3 3 0 0 1 3 -3h13m-3 -3l3 3l-3 3', 'M20 12v3a3 3 0 0 1 -3 3h-13m3 3l-3 -3l3 -3'],

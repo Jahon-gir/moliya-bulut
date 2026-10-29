@@ -2145,7 +2145,120 @@
       q.appendChild(el('div', m[2] + ' ›', 'yozuv-izoh'));
       k.appendChild(q);
     });
+    // O'chirilganlar (TZ 52): o'ngda soni kichik belgi (0 bo'lsa belgi yo'q); soni bazadan o'qiladi
+    var oq = tugma(undefined, 'yozuv', function () { ochirilganlarniOchish(); });
+    oq.id = 'kp-ochirilganlar';
+    var onom = el('div', undefined, 'yozuv-nom och-kirish-nom');
+    onom.appendChild(Ikonlar.chiz('trash', 18));
+    onom.appendChild(el('span', 'O\'chirilganlar'));
+    oq.appendChild(onom);
+    var oson = el('span', undefined, 'och-soni');
+    oson.hidden = true;
+    var oyon = el('div', undefined, 'yozuv-izoh och-kirish-yon');
+    oyon.appendChild(oson);
+    oyon.appendChild(document.createTextNode('›'));
+    oq.appendChild(oyon);
+    k.appendChild(oq);
+    Data.hammasiniOqish().then(function (m) {
+      var n = Calc.ochirilganlarRoyxati(m, new Date().toISOString()).length;
+      if (oq.isConnected && n > 0) { oson.textContent = String(n); oson.hidden = false; oq.setAttribute('aria-label', 'O\'chirilganlar: ' + n + ' ta'); }
+    }).catch(function () { /* belgi ixtiyoriy */ });
     bloklar.push(k);
+    return bloklar;
+  }
+
+  // ---- O'chirilganlar (TZ-sinxronlash.md 52-band): 90 kun ichida o'chirilgan yozuv va qarzlarni qaytarish ----
+  // Holat faqat ekran ochiq paytida xotirada. m — bazadan o'chirilganlari bilan o'qilgan ma'lumot (null: yuklanmoqda).
+  var ochirilganHolat = { filtr: 'hammasi', soni: Calc.OCHIRILGAN_SAHIFA, m: null };
+  function ochirilganlarniYukla() {
+    return Data.hammasiniOqish().then(function (m) { ochirilganHolat.m = { yozuvlar: m.yozuvlar, qarzlar: m.qarzlar, hisoblar: m.hisoblar, kategoriyalar: m.kategoriyalar }; });
+  }
+  function ochirilganlarniOchish() {
+    ochirilganHolat = { filtr: 'hammasi', soni: Calc.OCHIRILGAN_SAHIFA, m: null };
+    ochish(ochirilganlarEkrani, false);
+    ochirilganlarniYukla().then(function () { var t = stek[stek.length - 1]; if (t && t.yasash === ochirilganlarEkrani) yangilash(); })
+      .catch(function (xato) { qisqaXabar(xatoKodBilan('O\'chirilganlarni o\'qib bo\'lmadi: ' + (xato && xato.message ? xato.message : xato), 'TIKLASH_OQISH')); });
+  }
+  function ochirilganSanaMatni(iso) { var s = Calc.ochirilganSana(iso); return s ? kunNomi(s) : ''; }
+  function ochirilganniQaytarishBos(it, d) {
+    d.disabled = true;
+    Data.ochirilganniQaytarish(it.tur, it.obj.id).then(function () { return yuklash(); }).then(function () { return ochirilganlarniYukla(); }).then(function () {
+      qisqaXabar('Qaytarildi');
+      yangilash();
+    }).catch(function (xato) {
+      d.disabled = false;
+      qisqaXabar(xatoKodBilan('Qaytarib bo\'lmadi: ' + (xato && xato.message ? xato.message : xato), 'TIKLASH_YOZISH'), undefined, 6000);
+    });
+  }
+  function ochirilganQatori(it) {
+    var m = ochirilganHolat.m, x = it.obj, q = el('div', undefined, 'yozuv och-qator');
+    q.setAttribute('data-' + it.tur, x.id);
+    var chap = el('div', undefined, 'yozuv-chap');
+    var son;
+    if (it.tur === 'qarz') {
+      var av = el('span', undefined, 'och-odam');
+      av.appendChild(Ikonlar.chiz('user', 22));
+      q.appendChild(av);
+      var nq = el('div', undefined, 'och-nom');
+      nq.appendChild(el('span', x.shaxs));
+      nq.appendChild(el('span', ' · ' + (x.yonalish === 'berdim' ? 'Berilgan qarz' : 'Olingan qarz'), 'och-tur'));
+      chap.appendChild(nq);
+      chap.appendChild(el('div', 'O\'chirilgan: ' + ochirilganSanaMatni(it.vaqt), 'och-meta'));
+      son = el('div', raqam(x.summa), 'yozuv-summa och-summa');
+    } else {
+      var otk = x.tur === 'otkazma', k = otk ? null : m.kategoriyalar.filter(function (c) { return c.id === x.kategoriya_id; })[0];
+      q.appendChild(otk ? belgiKatak(Ikonlar.OTKAZMA.belgi, Ikonlar.OTKAZMA.rang, 40) : kategBadge(k));
+      var nz = el('div', undefined, 'och-nom');
+      nz.appendChild(el('span', otk ? 'O\'tkazma' : (k ? k.nom : 'Kategoriyasiz')));
+      if (!otk) nz.appendChild(el('span', ' · ' + (x.tur === 'daromad' ? 'Daromad' : 'Xarajat'), 'och-tur'));
+      chap.appendChild(nz);
+      var birinchi = String(x.izoh || '').split('\n')[0].trim();
+      var meta = el('div', undefined, 'och-meta och-meta-qator');   // izoh qisqaradi (ellipsis), sana doim ko'rinadi
+      if (birinchi) meta.appendChild(el('span', birinchi, 'och-izoh1'));
+      meta.appendChild(el('span', (birinchi ? ' · ' : '') + 'o\'chirilgan: ' + ochirilganSanaMatni(it.vaqt), 'och-sana'));
+      chap.appendChild(meta);
+      son = el('div', otk ? raqam(x.summa) : raqam(x.tur === 'daromad' ? x.summa : -x.summa, true), 'yozuv-summa och-summa' + (otk ? '' : x.tur === 'daromad' ? ' plus' : ' minus'));
+    }
+    if (it.tosiq) chap.appendChild(el('div', it.tosiq, 'och-tosiq'));
+    q.appendChild(chap);
+    var on = el('div', undefined, 'och-on');
+    on.appendChild(son);
+    var d = tugma('Qaytarish', 'matn-tugma och-qaytar', function () { ochirilganniQaytarishBos(it, d); });
+    d.disabled = !!it.tosiq;
+    d.setAttribute('aria-label', 'Qaytarish: ' + (it.tur === 'qarz' ? x.shaxs : Calc.sumFormat(x.summa)) + (it.tosiq ? ' (' + it.tosiq + ')' : ''));
+    on.appendChild(d);
+    q.appendChild(on);
+    return q;
+  }
+  function ochirilganlarEkrani() {
+    var h = ochirilganHolat, bloklar = [orqagaTugmasi(), el('h1', 'O\'chirilganlar')];
+    var hammasi = h.m ? Calc.ochirilganlarRoyxati(h.m, new Date().toISOString()) : [];
+    var qator = el('div', undefined, 'qarz-chip-qator och-chiplar');
+    [['hammasi', 'Hammasi'], ['yozuv', 'Yozuvlar'], ['qarz', 'Qarzlar']].forEach(function (c) {
+      var b = tugma(undefined, 'qarz-chip', function () { h.filtr = c[0]; h.soni = Calc.OCHIRILGAN_SAHIFA; yangilash(); });
+      b.setAttribute('aria-pressed', String(h.filtr === c[0]));
+      b.setAttribute('data-filtr', c[0]);
+      b.appendChild(el('span', c[1], 'qarz-chip-ich'));
+      qator.appendChild(b);
+    });
+    bloklar.push(qator);
+    var royxat = hammasi.filter(function (it) { return h.filtr === 'hammasi' || it.tur === h.filtr; });
+    var k = karta();
+    if (!h.m) k.appendChild(el('p', 'Yuklanmoqda…', 'xira'));
+    else if (!royxat.length) {
+      var bos = el('div', undefined, 'och-bosh');
+      bos.appendChild(Ikonlar.chiz('trash', 32));
+      bos.appendChild(el('p', 'O\'chirilgan narsa yo\'q', 'xira'));
+      k.appendChild(bos);
+    }
+    royxat.slice(0, h.soni).forEach(function (it) { k.appendChild(ochirilganQatori(it)); });
+    bloklar.push(k);
+    if (royxat.length > h.soni) {
+      var yana = tugma('Yana ko\'rsatish', 'ikkinchi-tugma', function () { h.soni += Calc.OCHIRILGAN_SAHIFA; yangilash(); });
+      yana.id = 'och-yana';
+      bloklar.push(yana);
+    }
+    bloklar.push(el('p', 'O\'chirilgandan keyin 90 kun ichida qaytarish mumkin, keyin avtomatik tozalanadi.', 'xira och-izoh'));
     return bloklar;
   }
 

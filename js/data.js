@@ -294,6 +294,30 @@
     });
   }
 
+  // ---- O'chirilganni qaytarish (TZ-sinxronlash.md 52-band) ----
+  // Rejani (Calc.qaytarishRejasi) BITTA tranzaksiyada yozadi: ota birinchi (yozuv yoki qarz), keyin bog'langan komissiya; hammasi deleted = false,
+  // updated_at yangilanadi, sinxron navbatiga oddiy o'zgarish sifatida tushadi. Reja tranzaksiya ichida yangidan hisoblanadi (ma'lumot orada
+  // o'zgargan bo'lishi mumkin); xato (masalan hisobi o'chirilgan) bo'lsa hech narsa yozilmaydi. tur: 'yozuv' | 'qarz'. Natija: { yozuvlar, qarz }
+  function ochirilganniQaytarish(tur, id) {
+    return new Promise(function (resolve, reject) {
+      var xato = null, natija = { yozuvlar: [], qarz: null };
+      var tx = db.transaction(['yozuvlar', 'qarzlar', 'hisoblar', 'kategoriyalar', 'sozlamalar'], 'readwrite');
+      tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
+      tx.onerror = function () { reject(xato || tx.error); };
+      tx.onabort = function () { reject(xato || tx.error || new Error('Bekor qilindi')); };
+      var m = {}, qoldi = 4, hozir = new Date().toISOString();
+      function yoz() {
+        var reja = Calc.qaytarishRejasi(m, tur, id);
+        if (reja.xato) { xato = new Error(reja.xato); tx.abort(); return; }
+        if (reja.qarz) natija.qarz = qarzniYoz(tx, reja.qarz, (m.qarzlar || []).filter(function (q) { return q.id === id; })[0], hozir);
+        reja.yozuvlar.forEach(function (y) { natija.yozuvlar.push(qatorniYoz(tx, 'yozuvlar', Object.assign({}, y, { deleted: false }), y, hozir)); });
+      }
+      ['yozuvlar', 'qarzlar', 'hisoblar', 'kategoriyalar'].forEach(function (t) {
+        tx.objectStore(t).getAll().onsuccess = function (e) { m[t] = e.target.result; if (--qoldi === 0) yoz(); };
+      });
+    });
+  }
+
   // ---- Kategoriyalarni birlashtirish (TZ-sinxronlash.md 41-band) ----
   // eskiId kategoriyasidagi HAMMA yozuv (o'chirilganlari ham) nishonId ga ko'chadi; byudjet: ikkalasida bo'lsa nishonniki qoladi, eskisi mantiqiy o'chadi,
   // faqat eskisida bo'lsa nishonga ko'chadi; nishon nomi yangiNom ga o'zgaradi (farq qilsa); eski kategoriya mantiqiy o'chadi. Hammasi BITTA tranzaksiyada
@@ -886,7 +910,7 @@
     SXEMA_VERSIYASI: SXEMA_VERSIYASI, sxemaniYangilash: sxemaniYangilash,
     yangiId: yangiId, boshlash: boshlash, yopish: yopish,
     hammasi: hammasi, olish: olish, saqlash: saqlash, ochirish: ochirish,
-    otkazmaniSaqlash: otkazmaniSaqlash, qarzniKomissiyaBilanSaqlash: qarzniKomissiyaBilanSaqlash, qarzniKomissiyasiBilanOchirish: qarzniKomissiyasiBilanOchirish, qarzniKomissiyasiBilanQaytarish: qarzniKomissiyasiBilanQaytarish, kategoriyalarniBirlashtirish: kategoriyalarniBirlashtirish, yozuvniKomissiyasiBilanOchirish: yozuvniKomissiyasiBilanOchirish, yozuvlarniQaytarish: yozuvlarniQaytarish,
+    otkazmaniSaqlash: otkazmaniSaqlash, ochirilganniQaytarish: ochirilganniQaytarish, qarzniKomissiyaBilanSaqlash: qarzniKomissiyaBilanSaqlash, qarzniKomissiyasiBilanOchirish: qarzniKomissiyasiBilanOchirish, qarzniKomissiyasiBilanQaytarish: qarzniKomissiyasiBilanQaytarish, kategoriyalarniBirlashtirish: kategoriyalarniBirlashtirish, yozuvniKomissiyasiBilanOchirish: yozuvniKomissiyasiBilanOchirish, yozuvlarniQaytarish: yozuvlarniQaytarish,
     ozgarishKuzat: ozgarishKuzat, navbatniOl: navbatniOl, navbatgaQoshish: navbatgaQoshish, qatorlarniOqish: qatorlarniOqish, navbatdanOlish: navbatdanOlish, navbatdanTashlash: navbatdanTashlash,
     tortilganlarniYozish: tortilganlarniYozish, hammasiniNavbatga: hammasiniNavbatga, tayyorKategoriyalar: tayyorKategoriyalar, SINXRON_KALITI: SINXRON_KALITI, NAVBAT_KALITI: NAVBAT_KALITI,
     hammasiniOqish: hammasiniOqish, almashtirish: almashtirish, bazaniOchirish: bazaniOchirish, haqiqiyOchirish: haqiqiyOchirish, PIN_KALITI: PIN_KALITI, ICHKI_NUSXA_KALITI: ICHKI_NUSXA_KALITI,

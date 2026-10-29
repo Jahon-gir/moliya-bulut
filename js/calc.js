@@ -1233,15 +1233,15 @@
     (malumot.hisoblar || []).forEach(function (x) { hn[x.id] = x.nom; });
     (malumot.kategoriyalar || []).forEach(function (x) { kn[x.id] = x.nom; });
     var yozuvlar = (malumot.yozuvlar || []).slice().sort(function (a, b) { return eksportTartib(eksportKaliti(a), eksportKaliti(b)); });
-    var yozuvRaqami = {}, qarzRaqami = {};   // komissiya izohida o'tkazma/qarzning ID si ko'rinishi uchun (40, 42-band)
+    var yozuvRaqami = {}, qarzRaqami = {}, yozuvTuri = {};   // komissiya izohida o'tkazma/xarajat/qarzning ID si ko'rinishi uchun (40, 42, 53-band)
     (malumot.qarzlar || []).slice().sort(function (a, b) { return eksportTartib(eksportKaliti(a), eksportKaliti(b)); }).forEach(function (z, i) { qarzRaqami[z.id] = eksportRaqam('Q', i + 1); });
-    yozuvlar.forEach(function (y, i) { yozuvRaqami[y.id] = eksportRaqam('Y', i + 1); });
+    yozuvlar.forEach(function (y, i) { yozuvRaqami[y.id] = eksportRaqam('Y', i + 1); yozuvTuri[y.id] = y.tur; });
     yozuvlar.forEach(function (y, i) {
       if (!davrdami(y.sana, c)) return;
       var o = y.tur === 'otkazma';
       qatorlar.push({ sana: y.sana, vaqt: yozuvVaqti(y), ord: eksportKaliti(y), id: eksportRaqam('Y', i + 1), tur: EKSPORT_TURI[y.tur] || y.tur,
         hisob: hn[y.hisob_id] || '', qayerga: o ? (hn[y.qabul_hisob_id] || '') : '', kategoriya: o ? '' : (kn[y.kategoriya_id] || ''),
-        summa: y.summa, valyuta: 'UZS', qarzNomi: '', qarzTuri: '', izoh: (y.izoh || '') + (y.bog_id && yozuvRaqami[y.bog_id] ? ((y.izoh ? ' · ' : '') + yozuvRaqami[y.bog_id] + ' o\'tkazmasiga bog\'langan') : '') + (y.qarz_bog_id && qarzRaqami[y.qarz_bog_id] ? ((y.izoh ? ' · ' : '') + qarzRaqami[y.qarz_bog_id] + ' qarziga bog\'langan') : '') });
+        summa: y.summa, valyuta: 'UZS', qarzNomi: '', qarzTuri: '', izoh: (y.izoh || '') + (y.bog_id && yozuvRaqami[y.bog_id] ? ((y.izoh ? ' · ' : '') + yozuvRaqami[y.bog_id] + (yozuvTuri[y.bog_id] === 'xarajat' ? ' xarajatiga bog\'langan' : ' o\'tkazmasiga bog\'langan')) : '') + (y.qarz_bog_id && qarzRaqami[y.qarz_bog_id] ? ((y.izoh ? ' · ' : '') + qarzRaqami[y.qarz_bog_id] + ' qarziga bog\'langan') : '') });
     });
     var qarzlar = (malumot.qarzlar || []).slice().sort(function (a, b) { return eksportTartib(eksportKaliti(a), eksportKaliti(b)); }), tn = 0;
     qarzlar.forEach(function (z, i) {
@@ -1438,7 +1438,9 @@
 
   // ---- O'tkazma komissiyasi (TZ-sinxronlash.md 40-band) ----
   // Komissiya — o'tkazmaga `bog_id` bilan bog'langan oddiy XARAJAT yozuvi ("Komissiya" kategoriyasi). Bu bo'limdagi hammasi sof funksiya.
-  var KOMISSIYA = { nom: 'Komissiya', belgi: 'percentage', rang: '#5C6BC0', izoh: 'O\'tkazma komissiyasi', foizEngKam: 0.01, foizEngKop: 20, tezkorFoizlar: { p05: '0,5', p1: '1' } };
+  var KOMISSIYA = { nom: 'Komissiya', belgi: 'percentage', rang: '#5C6BC0', izoh: 'O\'tkazma komissiyasi', xarajatIzohi: 'Xarajat komissiyasi', foizEngKam: 0.01, foizEngKop: 20, tezkorFoizlar: { p05: '0,5', p1: '1' } };
+  // Komissiya izohining boshi: o'tkazma (40-band) yoki xarajat (53-band) komissiyasi; qolgan mantiq (foiz, yaxlitlash, bog'lash) bir xil
+  function komissiyaIzohBoshi(tur) { return tur === 'xarajat' ? KOMISSIYA.xarajatIzohi : KOMISSIYA.izoh; }
 
   // Foiz matni ("0,5", "1.25", "1%") -> { foiz: 0.5, matn: "0,5" } yoki { xato }. Oraliq 0,01–20 (ikkala chegara ham mumkin).
   function komissiyaFoiziniTekshir(matn, eng) {
@@ -1462,20 +1464,21 @@
   }
   // Forma holati: { chip: 'yoq' | 'p05' | 'p1' | 'foiz' | 'summa', foizMatn, summaMatn }. Natija:
   // { yoq: true } (komissiya yo'q) | { summa, foiz (matn yoki null), izoh, jami } | { xato, maydon: 'foiz' | 'summa' }
-  function komissiyaTekshir(holat, otkazmaSumma) {
+  // tur (ixtiyoriy): 'xarajat' — izoh "Xarajat komissiyasi (1%)"; berilmasa o'tkazma. otkazmaSumma — komissiyasi hisoblanadigan yozuvning summasi.
+  function komissiyaTekshir(holat, otkazmaSumma, tur) {
     var chip = holat && holat.chip ? holat.chip : 'yoq';
     if (chip === 'yoq') return { yoq: true };
     if (chip === 'summa') {
       var t = summaTekshir(holat.summaMatn);
       if (t.xato) return { xato: 'Komissiya summasi: ' + t.xato.charAt(0).toLowerCase() + t.xato.slice(1), maydon: 'summa' };
       if (t.summa > 999999999999999) return { xato: 'Komissiya summasi juda katta', maydon: 'summa' };
-      return { summa: t.summa, foiz: null, izoh: KOMISSIYA.izoh, jami: (otkazmaSumma || 0) + t.summa };
+      return { summa: t.summa, foiz: null, izoh: komissiyaIzohBoshi(tur), jami: (otkazmaSumma || 0) + t.summa };
     }
     var f = komissiyaFoiziniTekshir(chip === 'foiz' ? holat.foizMatn : KOMISSIYA.tezkorFoizlar[chip]);
     if (f.xato) return { xato: f.xato, maydon: 'foiz' };
     var k = komissiyaHisobla(otkazmaSumma, f.matn);
     if (k < 1) return { xato: 'Komissiya 1 so\'mdan kam chiqdi. Foizni oshiring yoki "Yo\'q" ni tanlang', maydon: 'foiz' };
-    return { summa: k, foiz: f.matn, izoh: KOMISSIYA.izoh + ' (' + f.matn + '%)', jami: (otkazmaSumma || 0) + k };
+    return { summa: k, foiz: f.matn, izoh: komissiyaIzohBoshi(tur) + ' (' + f.matn + '%)', jami: (otkazmaSumma || 0) + k };
   }
   // Komissiya yozuvidagi foiz (izohdan): "O'tkazma komissiyasi (1%)" -> "1"; foiz bo'lmasa null
   function komissiyaFoiziIzohdan(izoh) {
@@ -1600,7 +1603,7 @@
   // bog'langan o'tkazmasi topilmagan komissiya oddiy xarajat qatori sifatida qoladi. Natija: { asosiy: [yozuv], ichki: { otkazmaId: [komissiya] } }
   function komissiyaniOtkazmagaBogla(yozuvlar, qarzIdlar) {
     var otkazma = {}, qarz = {}, ichki = {}, asosiy = [];
-    (yozuvlar || []).forEach(function (y) { if (y && y.tur === 'otkazma') otkazma[y.id] = true; });
+    (yozuvlar || []).forEach(function (y) { if (y && (y.tur === 'otkazma' || y.tur === 'xarajat')) otkazma[y.id] = true; });   // ota: o'tkazma (40) yoki xarajat (53)
     (qarzIdlar || []).forEach(function (id) { qarz[id] = true; });   // shu ro'yxatda qarz qatori bor qarzlar (Tarix)
     (yozuvlar || []).forEach(function (y) {
       var kalit = y && y.tur === 'xarajat' ? (y.bog_id && otkazma[y.bog_id] ? y.bog_id : (y.qarz_bog_id && qarz[y.qarz_bog_id] ? 'q:' + y.qarz_bog_id : null)) : null;
@@ -1667,7 +1670,7 @@
   function amalTasiri(hisobId, amal) {
     var d = 0, s = amal.summa || 0;
     if (amal.tur === 'daromad') { if (amal.hisob_id === hisobId) d += s; }
-    else if (amal.tur === 'xarajat') { if (amal.hisob_id === hisobId) d -= s; }
+    else if (amal.tur === 'xarajat') { if (amal.hisob_id === hisobId) d -= s + (amal.komissiya || 0); }   // komissiya (53-band) xuddi shu hisobdan chiqadi
     else if (amal.tur === 'otkazma') {
       if (amal.hisob_id === hisobId) d -= s + (amal.komissiya || 0);
       if (amal.qabul_hisob_id === hisobId) d += s;
@@ -2100,7 +2103,7 @@
     hozir: hozir, kelajakmi: kelajakmi, vaqtTekshir: vaqtTekshir, yozuvVaqti: yozuvVaqti,
     vaqtFormatiTogrimi: vaqtFormatiTogrimi, yozuvniYangilash: yozuvniYangilash,
     oxirgiYozuvlar: oxirgiYozuvlar, kunlarBoyicha: kunlarBoyicha, oxirgiHisobId: oxirgiHisobId,
-    KOMISSIYA: KOMISSIYA, komissiyaFoiziniTekshir: komissiyaFoiziniTekshir, komissiyaHisobla: komissiyaHisobla, komissiyaTekshir: komissiyaTekshir,
+    KOMISSIYA: KOMISSIYA, komissiyaIzohBoshi: komissiyaIzohBoshi, komissiyaFoiziniTekshir: komissiyaFoiziniTekshir, komissiyaHisobla: komissiyaHisobla, komissiyaTekshir: komissiyaTekshir,
     hisobQoldigiSanada: hisobQoldigiSanada, hisoblarSanada: hisoblarSanada, farqMatni: farqMatni, amalKunlari: amalKunlari, eskiAmalSanasi: eskiAmalSanasi,
     tezkorSanalar: tezkorSanalar, kalendarOyi: kalendarOyi, oyniSurish: oyniSurish, sanaTugmaMatni: sanaTugmaMatni,
     IZOH_MAX: IZOH_MAX, izohTozala: izohTozala, izohQisqasi: izohQisqasi, izohQidiruvMatni: izohQidiruvMatni,

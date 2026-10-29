@@ -1742,3 +1742,47 @@ Foydalanuvchi o'chirgan yozuv va qarzlarni 90 kun ichida qaytara oladi. **Server
 - `tests.html?faqat=o'chirilgan` (10 ta): 90 kunlik chegara va tartib, komissiya ota bilan, qaytarib bo'lmaydigan holatlar (arxivlangan to'siq emas), reja (to'lovlar qoidasi), sana matni, Data: yozuv + komissiya qaytishi va qoldiq, qarz + komissiya + to'lovlar (bekor qilingani qaytmaydi), hisobi o'chirilgan yozuv rad etiladi (hech narsa yozilmaydi), ilova kodi (§50 yo'q), sinxron (soxta server, ikki qurilma: qarz o'chirilib, qaytarilib `deleted = false` bo'lib navbatga tushadi, serverda tirik, B da ham qaytgan). To'liq `tests.html` o'tgan.
 - `tools/ochirilgan-brauzer-sinovi.js`: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (84 tekshiruv): Ko'proq qatori va belgi, chiplar, qatorlar, qaytarib bo'lmaydiganlar, qaytarish (qarz, yozuv, o'tkazma+komissiya, §50 qo'llanmasligi), qoldiq va Tarix, "Yana ko'rsatish", bo'sh holat.
 - **Tekshirilmagan:** haqiqiy telefon.
+
+## 53. Xarajat komissiyasi (0.56.0)
+
+Xarajat yozishda ham komissiya kiritiladi (masalan do'kon egasining kartasiga pul tashlaganda bank komissiya oladi). Xarajat (50 000) o'z kategoriyasida qoladi, unga BOG'LANGAN alohida xarajat yozuvi ("Komissiya" kategoriyasida, 500) yaratiladi; hisobdan jami 50 500 chiqadi. **Yangi mantiq yozilmadi: 40-bandagi o'tkazma komissiyasi mexanizmi AYNAN qayta ishlatildi.** **Server va sxema o'zgarmaydi (SQL kerak emas):** yozuvlardagi mavjud `bog_id` ustuni (40-band) xarajat uchun ham ishlatiladi. Daromadga komissiya bu PR'da YO'Q; qarz (42) va o'tkazma (40) o'zgarmagan.
+
+### 53.1. 40-bandning nimalari qayta ishlatildi
+| Qism | Qayta ishlatilgan | Xarajat uchun o'zgarishi |
+|---|---|---|
+| Komissiya hisobi | `Calc.komissiyaTekshir`, `komissiyaHisobla`, `komissiyaFoiziniTekshir` (foiz 0,01–20, vergul/nuqta, `round(summa × foiz / 100)`, butun so'm, kasr xatosiz; < 1 so'm — xato) | faqat izoh boshi: `komissiyaTekshir(holat, summa, tur)` — `tur = 'xarajat'` bo'lsa "Xarajat komissiyasi (1%)" (yangi uchinchi parametr; berilmasa o'tkazma) |
+| Forma qismi | `komissiyaQismi` (28 px `percentage` #5C6BC0 katak, chiplar Yo'q / 0,5% / 1% / Foiz… / Summa…, "Komissiya: 500", qalin qizil "Hisobdan jami chiqadi: 50 500", eslatma) | yangi ixtiyoriy parametr `turOl()` |
+| Saqlash | `Data.otkazmaniSaqlash(yozuv, kom)` (kodda allaqachon har qanday yozuv turi uchun ishlaydi: yozuv + komissiya + kerak bo'lsa kategoriya BITTA tranzaksiyada, navbatga avval ota, keyin komissiya) | o'zgarmadi |
+| Kategoriya | §41: `komissiyaKategoriyasiniTop` ("Komissiyalar", "Kommissiya"… topiladi; arxivlangani arxivdan chiqarilmaydi; yo'q bo'lsa "Komissiya" yaratiladi) | o'zgarmadi |
+| O'chirish va "Bekor qilish" | `Data.yozuvniKomissiyasiBilanOchirish`, `yozuvlarniQaytarish` | UI endi o'tkazma bilan bir qatorda xarajat uchun ham shu yo'lni chaqiradi |
+| Tarix ichki qatori | `komissiyaQatori` (`corner-down-right`, 28 px #5C6BC0, "Komissiya · 1%", qizil "−500 so'm") va `Calc.komissiyaniOtkazmagaBogla` | ota sifatida xarajat ham tan olinadi (avval faqat o'tkazma) |
+| Sinxron | `SinxronSof.otaOldin` (`bog_id` si borlar keyin yuboriladi) va `bog_id` ustuni | o'zgarmadi |
+| O'chirilganlar (52) | `Calc.qaytarishRejasi` (`bog_id` bo'yicha bola) | o'zgarmadi: xarajat uchun ham ishlashi tekshirildi |
+| Excel | komissiya oddiy "Xarajat" qatori, izohida bog'lanish | otasi xarajat bo'lsa "· Y-000123 xarajatiga bog'langan" (o'tkazma: "o'tkazmasiga") |
+
+### 53.2. Forma
+- **Joyi:** xarajat turida (a) yozuv wizardining oxirgi qadami "Izoh va saqlash" — xulosa kartasi ostida; (b) yozuvni tahrirlash formasida (tur "Xarajat" bo'lganda; tur o'zgarsa qism ko'rinadi/yashiriladi). Gap, ovoz va chek kartasidagi "Tahrirlash" ham shu wizardni ochadi, demak ularda komissiya qismi bor; kartaning o'zida komissiya yo'q (AI komissiyani aniqlamaydi).
+- **Tezkor saqlash** (oxirgi qadamga kirmasdan) komissiyasiz saqlaydi. Oxirgi qadamga kirib, orqaga qaytib saqlansa, ko'rilgan tanlov qo'llanadi (40-banddagi kabi).
+- **O'zi komissiya bo'lgan yozuvda** (`bog_id` yoki `qarz_bog_id` bor) komissiya qismi ko'rsatilmaydi (komissiyaning komissiyasi bo'lmaydi); uni bosish o'z otasini (xarajat/o'tkazma yoki qarz) tahrirlashga olib boradi.
+- Wizardda tur o'zgarsa (xarajat ↔ o'tkazma) komissiya holati qayta qo'yiladi (boshqa turning tanlovi ko'chmaydi).
+
+### 53.3. Oxirgi tanlovni eslab qolish — qaror
+- **Alohida kalit:** `moliya-xarajat-komissiya-oxirgi` (o'tkazma: `moliya-komissiya-oxirgi`, o'zgarmagan). Sabab: o'tkazmadagi (kartadan kartaga, odatda 0,5–1%) va do'kon xarajatidagi foiz boshqa; umumiy kalit bir-birining tanlovini buzardi. Qiymat shakli, qoidalari 40.3 bilan bir xil: `{ "<hisob id>": foiz }` (0 = "Yo'q"), faqat "Yo'q" yoki foiz ("Summa…" eslab qolinmaydi), faqat shu qurilmada, serverga, sinxronga va zaxiraga tushmaydi, `localStorage` bo'lmasa hech narsa buzilmaydi.
+- Yangi xarajat wizardining oxirgi qadami ochilganda shu HISOB uchun tanlov oldindan tanlanadi; saqlangach yangilanadi.
+- **Tahrirda qo'llanmaydi:** saqlangan xarajatni ochganda shakl uning haqiqiy komissiyasini ko'rsatadi (yo'q bo'lsa "Yo'q"). Saqlangach shu hisob uchun xarajat tanlovi yangilanadi.
+
+### 53.4. Ma'lumot
+Komissiya — oddiy `xarajat` yozuvi: xarajatning sana, vaqt va hisobi bilan, kategoriya = §41 qoidasi bilan topilgan yoki yaratilgan "Komissiya", izoh "Xarajat komissiyasi (1%)" (summa rejimida foizsiz "Xarajat komissiyasi"), `bog_id` = xarajatning id si. Tahrirda summa, foiz, hisob, sana o'zgarsa o'sha komissiya yozuvi (o'sha id) yangilanadi; "Yo'q" tanlansa mantiqiy o'chadi (qayta tanlansa o'sha qator tiriladi); komissiya yo'q edi va qo'shilsa yangi yozuv; xarajat daromadga aylantirilsa komissiya mantiqiy o'chadi. Xarajatning kategoriyasi o'zgartirilsa komissiya "Komissiya"da qoladi. Xarajat o'chirilsa komissiya ham (bitta tranzaksiya); "Bekor qilish" ikkalasini qaytaradi; O'chirilganlar ekrani (52) ularni bitta qator qilib ko'rsatadi va birga qaytaradi. Eski xarajatlarda `bog_id` yo'q: ular o'zgarmaydi.
+
+### 53.5. Hisob-kitob, §50
+- Hisob qoldig'i komissiyani oddiy xarajat sifatida hisoblaydi: 50 000 + 500 = 50 500, ikki marta emas. Tarix kun/oy jami, hisobot, diagramma va byudjet: xarajatning o'zi o'z kategoriyasida (50 000), komissiya "Komissiya"da (500).
+- **§50:** tekshiruv xarajat + komissiya JAMI bo'yicha (`Calc.amalTasiri`: `xarajat` amalida `komissiya` maydoni; oynada "kerak" = jami 50 500). Tahrirda eski ta'sir (xarajat + eski komissiya, `bog_id` bo'yicha) avval olib tashlanadi.
+
+### 53.6. Sinov
+- `tests.html?faqat=xarajat komissiyasi` (7 ta): hisob (foiz, yaxlitlash, chegaralar, summa), saqlash (bog'lash, yaratish, "Komissiyalar" topilishi, tahrir, "Yo'q" va qayta tirilish), o'chirish, undo, O'chirilganlar, kategoriya jamlari, qoldiq aniq 50 500, §50 jami, Tarix bog'lash, Excel izohi, eslab qolish kaliti, sinxron (xarajat komissiyadan oldin). Sinxron taqlid serveri (`taqlidServer`) ustunlar ro'yxatiga `bog_id`, `qarz_bog_id` qo'shildi (haqiqiy server 009/011 dan keyin shunday). O'tkazma (40) va qarz (42) komissiyasi testlari o'zgarmay o'tdi. To'liq `tests.html` o'tgan.
+- `tools/xarajat-komissiya-brauzer-sinovi.js`: haqiqiy ilova, 360 px yorug'/qorong'i (78 tekshiruv): wizard qismi, chiplar, jami, noto'g'ri foiz, saqlash, Tarix ichki qatori va kun jami, eslab qolish va tezkor saqlash, tahrir, "Yo'q", §50 oynasi, o'chirish/"Bekor qilish", O'chirilganlar.
+- **Tekshirilmagan:** haqiqiy telefon, haqiqiy Supabase, haqiqiy Excel.
+
+### 53.7. Qabul qilingan taxminlar
+- O'tkazma tahririda komissiyani "Yo'q" qilib saqlash kabi, xarajat tahririda "Yo'q" qilingan komissiya O'chirilganlar ro'yxatida o'z qatori bilan ko'rinadi (otasi tirik; 52.2).
+- Xarajatning kategoriyasi o'zgarishi komissiyaga ta'sir qilmaydi.

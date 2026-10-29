@@ -1690,3 +1690,25 @@ html[data-tema="qorongi"] .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(
 .tolov-tasdiq-matn { margin: 8px 0 14px; white-space: pre-line; overflow-wrap: anywhere; }
 .tolov-oynasi::before, .sheet:has(.manfiy-tugmalar)::before { content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 10px; border-radius: 2px; background: var(--chiziq); }
 .manfiy-tugmalar .qizil-tugma { min-height: 48px; }
+
+/* ===== 0.55.0: O'chirilganlar ekrani (TZ-sinxronlash.md 52-band) ===== */
+.och-kirish-nom { display: flex; align-items: center; gap: 8px; }
+.och-kirish-yon { display: flex; align-items: center; gap: 8px; }
+.och-soni { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; font-size: 12px; font-weight: 700; color: var(--asosiy-matn); background: var(--asosiy); border-radius: 11px; }
+.och-chiplar .qarz-chip { flex: none; }
+.och-qator { align-items: center; gap: 12px; min-height: 72px; }
+.och-qator .yozuv-chap { flex: 1; min-width: 0; }
+.och-nom { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.och-tur { font-weight: 400; font-size: 12px; color: var(--xira); }
+.och-meta { font-size: 12px; color: var(--xira); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.och-tosiq { font-size: 12px; color: var(--xarajat); }
+.och-odam { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 40px; height: 40px; border-radius: 50%; color: var(--asosiy-matn); background: var(--asosiy); }
+.och-on { flex: none; display: flex; flex-direction: column; align-items: flex-end; max-width: 45%; }
+.och-summa { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.och-qaytar { min-height: 44px; min-width: 44px; padding: 0 4px; }
+.och-qaytar:disabled { color: var(--xira); opacity: .55; cursor: not-allowed; }
+.och-bosh { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 24px 0; color: var(--xira); }
+.och-izoh { margin: 12px 0 0; font-size: 13px; text-align: center; }
+.och-meta-qator { display: flex; }
+.och-izoh1 { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
+.och-sana { flex: none; white-space: pre; }

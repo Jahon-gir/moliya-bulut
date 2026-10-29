@@ -544,6 +544,54 @@
   }
   function qarzQolgan(q) { return Math.max(0, q.summa - tolanganSumma(q)); }
   function qarzYopilganmi(q) { return tolanganSumma(q) >= q.summa; }
+  // ---- O'chirilganlar ekrani (TZ-sinxronlash.md 52-band) ----
+  var OCHIRILGAN_KUN = 90, OCHIRILGAN_SAHIFA = 50;
+  // O'chirilgan paytning (updated_at, ISO) mahalliy sanasi "YYYY-MM-DD"
+  function ochirilganSana(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  // Qaytarib bo'lmaydigan sabab (null — mumkin). m: { hisoblar, kategoriyalar } (o'chirilganlari bilan). Arxivlangan hisob/kategoriya to'siq EMAS.
+  function qaytarishTosigi(tur, x, m) {
+    function oladi(royxat, id) { return (royxat || []).filter(function (r) { return r.id === id; })[0]; }
+    function yoq(royxat, id) { var r = oladi(royxat, id); return !r || r.deleted === true; }
+    if (yoq(m.hisoblar, x.hisob_id) || (tur === 'yozuv' && x.tur === 'otkazma' && yoq(m.hisoblar, x.qabul_hisob_id))) return 'Hisobi o\'chirilgan';
+    if (tur === 'yozuv' && x.tur !== 'otkazma' && yoq(m.kategoriyalar, x.kategoriya_id)) return 'Kategoriyasi o\'chirilgan';
+    return null;
+  }
+  // Ro'yxat. m: { yozuvlar, qarzlar, hisoblar, kategoriyalar } — o'chirilganlari bilan (Data.hammasiniOqish). hozirISO — hozirgi vaqt.
+  // Faqat deleted = true va updated_at oxirgi 90 kun ichida (90 kunning o'zi kiradi); yangisi tepada. Alohida ko'rsatilmaydi: ota yozuvi/qarzi ham
+  // shu ro'yxatda bo'lgan komissiya (ular ota bilan birga qaytadi), qarz to'lovlari (ular qarz ichida), hisob va kategoriya.
+  // Element: { tur: 'yozuv' | 'qarz', obj, vaqt (o'chirilgan paytdagi updated_at), tosiq }
+  function ochirilganlarRoyxati(m, hozirISO) {
+    var chegara = new Date(hozirISO).getTime() - OCHIRILGAN_KUN * 86400000;
+    function oynada(x) { var t = new Date(x.updated_at).getTime(); return x.deleted === true && !isNaN(t) && t >= chegara; }
+    var yozuvlar = (m.yozuvlar || []).filter(oynada), qarzlar = (m.qarzlar || []).filter(oynada), yid = {}, qid = {};
+    yozuvlar.forEach(function (y) { yid[y.id] = true; });
+    qarzlar.forEach(function (q) { qid[q.id] = true; });
+    var r = [];
+    yozuvlar.forEach(function (y) {
+      if ((y.bog_id && yid[y.bog_id]) || (y.qarz_bog_id && qid[y.qarz_bog_id])) return;
+      r.push({ tur: 'yozuv', obj: y, vaqt: y.updated_at, tosiq: qaytarishTosigi('yozuv', y, m) });
+    });
+    qarzlar.forEach(function (q) { r.push({ tur: 'qarz', obj: q, vaqt: q.updated_at, tosiq: qaytarishTosigi('qarz', q, m) }); });
+    return r.sort(function (a, b) { return a.vaqt < b.vaqt ? 1 : a.vaqt > b.vaqt ? -1 : (a.obj.id < b.obj.id ? 1 : -1); });
+  }
+  // Qaytarish rejasi (sof; Data shuni bitta tranzaksiyada yozadi). Yozuv: o'zi + unga bog'langan (bog_id) o'chirilgan komissiya. Qarz: o'zi
+  // (to'lovlari: faqat HOZIR TIRIK bo'lganlari beriladi — qarz o'chirilganda to'lovlarga tegilmaydi, avval bekor qilingan (51-band) to'lovlar
+  // deleted bo'lib qoladi) + unga bog'langan (qarz_bog_id) o'chirilgan komissiya. Natija: { yozuvlar: [qaytariladigan yozuvlar, ota birinchi], qarz | null }
+  // yoki { xato }. §50 (manfiy qoldiq) qaytarishda tekshirilmaydi.
+  function qaytarishRejasi(m, tur, id) {
+    var x = ((tur === 'qarz' ? m.qarzlar : m.yozuvlar) || []).filter(function (r) { return r.id === id; })[0];
+    if (!x || x.deleted !== true) return { xato: 'Bu o\'chirilgan narsa topilmadi' };
+    var tosiq = qaytarishTosigi(tur, x, m);
+    if (tosiq) return { xato: tosiq };
+    var bolalar = (m.yozuvlar || []).filter(function (y) { return y.tur === 'xarajat' && y.deleted === true && (tur === 'qarz' ? y.qarz_bog_id === id : y.bog_id === id); });
+    if (tur === 'qarz') return { qarz: Object.assign({}, x, { deleted: false, tolovlar: (x.tolovlar || []).filter(function (t) { return t.deleted !== true; }) }), yozuvlar: bolalar };
+    return { qarz: null, yozuvlar: [x].concat(bolalar) };
+  }
+
   // ---- Qarz to'lovini bekor qilish va tahrirlash (TZ-sinxronlash.md 51-band) ----
   // Ko'rinadigan (o'chirilmagan) to'lovlar: yangisi tepada (sana, vaqt; teng bo'lsa id bo'yicha barqaror)
   function tolovlarRoyxati(q) {
@@ -2037,6 +2085,7 @@
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraniTekshir: zaxiraniTekshir,
     TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
+    OCHIRILGAN_KUN: OCHIRILGAN_KUN, OCHIRILGAN_SAHIFA: OCHIRILGAN_SAHIFA, ochirilganSana: ochirilganSana, qaytarishTosigi: qaytarishTosigi, ochirilganlarRoyxati: ochirilganlarRoyxati, qaytarishRejasi: qaytarishRejasi,
     tolovlarRoyxati: tolovlarRoyxati, tolovniBekorQil: tolovniBekorQil, tolovniQaytar: tolovniQaytar, tolovBekorMatni: tolovBekorMatni,
     uuidYarat: uuidYarat, uuidTogrimi: uuidTogrimi, uuidgaOtkazish: uuidgaOtkazish, malumotniYangilash: malumotniYangilash, tolovlarniBirlashtir: tolovlarniBirlashtir,
     yerelKalitmi: yerelKalitmi, jonliQarz: jonliQarz, jonlilar: jonlilar, YEREL_KALITLAR: YEREL_KALITLAR,

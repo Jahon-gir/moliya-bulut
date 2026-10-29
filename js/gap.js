@@ -665,8 +665,14 @@ var Gap = (function () {
     k.saqlanmoqda = true; k.xatolar = {};
     var tugma_ = document.getElementById('gap-saqlash'); if (tugma_) tugma_.setAttribute('aria-disabled', 'true');
     var sessiya = holat.sessiya, h = holat;
-    Promise.resolve().then(function () { return ui.saqla(r); }).then(function () {
+    Promise.resolve().then(function () { return ui.saqla(r); }).then(function (natija) {
       if (!holat || holat.sessiya !== sessiya) return;
+      if (natija && natija.saqlanmadi) {   // hisobda pul yetmaydi (TZ 50): hech narsa yozilmadi, karta ochiq qoladi
+        k.saqlanmoqda = false; chiz();
+        var h2 = natija.hisob && document.getElementById('gk-hisob');
+        if (h2) h2.focus();
+        return;
+      }
       h.saqlangan++;
       try { if (ui.oxirgiYoz) ui.oxirgiYoz(GapSof.oxirgiYangila(oxirgiOl(), k)); } catch (x) { /* eslab qolish ixtiyoriy */ }
       keyingi();

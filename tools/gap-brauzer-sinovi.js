@@ -39,6 +39,8 @@ async function senariy(brauzer, tema) {
     await Data.saqlash('hisoblar', { id: Data.yangiId(), yaratilgan: new Date().toISOString(), nom: 'Uzum', tur: 'karta', belgi: 'karta', rang: '#2F5DDB', oxirgi4: '', boshlangich_qoldiq: 5000000, arxivlangan: false });
     await Data.saqlash('qarzlar', { id: Data.yangiId(), yaratilgan: new Date().toISOString(), yonalish: 'berdim', shaxs: 'Karim', summa: 400000, hisob_id: his.id, sana: '2026-10-01', vaqt: '10:00', muddat: '', izoh: '', tolovlar: [], yopilgan: false });
     await Data.saqlash('yozuvlar', { id: Data.yangiId(), yaratilgan: new Date().toISOString(), tur: 'xarajat', summa: 9000, sana: '2026-10-05', vaqt: '10:00', hisob_id: his.id, kategoriya_id: xar[0].id, izoh: 'Non' });
+    // Hisobda pul yetmasa (TZ 50): standart "Taqiqlash" bo'lgani uchun bu sinovda hamma hisob "Ruxsat" ga qo'yiladi (kartalar saqlash oqimini sinaydi, pul yetishini emas)
+    const o = {}; (await Data.hammasi('hisoblar')).forEach((h) => { o[h.id] = 'ruxsat'; }); localStorage.setItem('moliya-hisob-manfiy', JSON.stringify(o));
   });
   await p.reload();
   await p.waitForFunction(() => document.querySelector('#ekran h1'));

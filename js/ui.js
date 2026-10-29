@@ -86,7 +86,7 @@
 
   // ---- Pastdan chiqadigan oyna (umumiy): sarlavha, "Orqaga" va yopish belgisi; Esc, tashqariga bosish, Tab oyna ichida aylanadi ----
   // qur(oyna, yop) tanasini to'ldiradi. Natija: { yop }. Yopilganda fokus oldingi elementga qaytadi.
-  function pastkiOyna(sarlavha, qur, klass) {
+  function pastkiOyna(sarlavha, qur, klass, yopilganda) {
     var oldingiFokus = document.activeElement, oldingiOverflow = document.body.style.overflow;
     var parda = el('div', undefined, 'sheet-parda');
     var oyna = el('div', undefined, 'sheet ' + (klass || ''));
@@ -99,6 +99,7 @@
       document.removeEventListener('keydown', tugmaBosildi, true);
       if (parda.parentNode) parda.parentNode.removeChild(parda);
       document.body.style.overflow = oldingiOverflow;
+      if (yopilganda) { var f = yopilganda; yopilganda = null; f(); }   // har qanday yopilishda (tugma, tashqariga bosish, Esc) bir marta
       if (fokus !== false && oldingiFokus && oldingiFokus.focus && oldingiFokus.isConnected) oldingiFokus.focus();
     }
     function tugmaBosildi(e) {
@@ -159,6 +160,116 @@
   }
   function faolHisoblar() {
     return malumot.hisoblar.filter(function (h) { return !h.arxivlangan; });
+  }
+
+  // ---- Hisobda pul yetmasa (TZ-sinxronlash.md 50-band) ----
+  // Sozlama faqat shu qurilmada (localStorage): { hisob_id: 'ruxsat' | 'ogohlantirish' | 'taqiqlash' }. Serverga, sinxronga, eksportga va zaxiraga tushmaydi.
+  var MANFIY_KALIT = 'moliya-hisob-manfiy';
+  var MANFIY_MATNI = { ruxsat: ['Ruxsat', 'Kredit karta yoki overdraft uchun'], ogohlantirish: ['Ogohlantirish', 'Saqlashdan oldin so\'raydi'],
+    taqiqlash: ['Taqiqlash', 'Pul yetmasa saqlab bo\'lmaydi'] };
+  function manfiyOqi() {
+    try { return Calc.manfiyRejimlar(localStorage.getItem(MANFIY_KALIT), malumot.hisoblar); } catch (e) { return {}; }
+  }
+  function manfiyRejimiOl(hisobId) { return Calc.manfiyRejimi(manfiyOqi(), hisobId); }
+  function manfiyYoz(hisobId, rejim) {
+    try { var o = manfiyOqi(); o[hisobId] = rejim; localStorage.setItem(MANFIY_KALIT, JSON.stringify(o)); return true; } catch (e) { return false; }
+  }
+  // Uch qatorli tanlov (radio): hisob shaklida ham, "sozlamani o'zgartirish" oynasida ham shu. Natija: { quti, qiymat() }
+  function manfiyTanlov(boshlangich, ozgarganda) {
+    var holat = { qiymat: boshlangich };
+    var guruh = el('div', undefined, 'manfiy-royxat');
+    guruh.setAttribute('role', 'radiogroup');
+    guruh.setAttribute('aria-label', 'Hisobda pul yetmasa');
+    var qatorlar = Calc.MANFIY_REJIMLAR.map(function (kalit) {
+      var m = MANFIY_MATNI[kalit];
+      var q = tugma(undefined, 'tanlov-qator tartib-qator manfiy-qator', function () { holat.qiymat = kalit; chiz(); if (ozgarganda) ozgarganda(kalit); });
+      q.setAttribute('role', 'radio');
+      q.setAttribute('data-manfiy', kalit);
+      q.setAttribute('aria-label', m[0] + '. ' + m[1]);
+      var matn = el('span', undefined, 'tanlov-matn');
+      matn.appendChild(el('strong', m[0]));
+      matn.appendChild(el('span', m[1], 'xira'));
+      q.appendChild(matn);
+      q.appendChild(el('span', undefined, 'tartib-radio manfiy-radio'));
+      guruh.appendChild(q);
+      return { kalit: kalit, el: q };
+    });
+    function chiz() {
+      qatorlar.forEach(function (x) {
+        var t = x.kalit === holat.qiymat, r = x.el.querySelector('.manfiy-radio');
+        x.el.classList.toggle('tanlangan', t);
+        x.el.setAttribute('aria-checked', String(t));
+        r.textContent = '';
+        if (t) r.appendChild(Ikonlar.chiz('check', 16));
+      });
+    }
+    chiz();
+    return { quti: guruh, qiymat: function () { return holat.qiymat; } };
+  }
+  // "Bu hisob uchun sozlamani o'zgartirish": sozlamani joyida kichik tanlov oynasi sifatida ko'rsatadi. Forma ochiq qoladi (hech narsa yo'qolmaydi);
+  // tanlov darhol saqlanadi, foydalanuvchi "Saqlash" ni qayta bosadi.
+  function manfiySozlamaOynasi(h) {
+    pastkiOyna('Hisobda pul yetmasa', function (oyna, yop) {
+      oyna.parentNode.classList.add('manfiy-parda');   // "Gap bilan qo'shish" ekrani (z-index 100) ustida ham ko'rinsin
+      oyna.appendChild(el('p', '«' + h.nom + '» hisobi uchun qoida', 'xira'));
+      oyna.appendChild(manfiyTanlov(manfiyRejimiOl(h.id), function (k) {
+        manfiyYoz(h.id, k);
+        yop(false);
+        qisqaXabar('Sozlama saqlandi: ' + MANFIY_MATNI[k][0]);
+      }).quti);
+    }, 'tanlov-oynasi manfiy-sozlama-oynasi');
+  }
+  // Saqlashdan OLDIN, hamma yo'lda bitta: net chiqim hisobdagi pulga yetmasa sozlamaga qarab so'raydi yoki to'xtatadi. Hech narsa yozmaydi.
+  // amal, eski: Calc.manfiyTekshir (amal ta'siri, tahrirdagi eski versiya). Natija (Promise): 'saqla' | 'hisob' (hisobni o'zgartirish) | 'bekor' (saqlanmaydi)
+  function manfiyTekshiruvi(amal, eski) {
+    var h = hisobOl(amal.hisob_id);
+    if (!h) return Promise.resolve('saqla');
+    var t = Calc.manfiyTekshir({ hisob: h, rejim: manfiyRejimiOl(h.id), yozuvlar: malumot.yozuvlar, qarzlar: malumot.qarzlar, amal: amal, eski: eski || null });
+    if (t.holat === 'ok') return Promise.resolve('saqla');
+    return new Promise(function (resolve) {
+      var tugadi = false;
+      function bitir(natija) { if (tugadi) return; tugadi = true; resolve(natija); }
+      var ogoh = t.holat === 'ogohlantirish';
+      pastkiOyna(ogoh ? 'Hisobda mablag\' yetmaydi' : 'Hisobda mablag\' yetarli emas', function (oyna, yop) {
+        oyna.parentNode.classList.add('manfiy-parda');   // "Gap bilan qo'shish" ekrani (z-index 100) ustida ham ko'rinsin
+        var sarlavha = oyna.querySelector('h2'), qator = el('div', undefined, 'manfiy-sarlavha');
+        var katak = el('span', undefined, 'manfiy-ikon ' + (ogoh ? 'ogoh' : 'taqiq'));
+        katak.appendChild(Ikonlar.chiz(ogoh ? 'alert-triangle' : 'lock', 20));
+        oyna.insertBefore(qator, sarlavha);
+        qator.appendChild(katak);
+        qator.appendChild(sarlavha);
+        var matn = el('p', undefined, 'manfiy-matn');
+        function qalin(m, klass) { return el('strong', m, klass); }
+        matn.appendChild(document.createTextNode('«' + t.hisob.nom + '» hisobida ' + (ogoh ? 'hozir ' : '')));
+        matn.appendChild(qalin(Calc.sumFormat(t.hozir)));
+        if (ogoh) {
+          matn.appendChild(document.createTextNode(' bor. Bu amaldan keyin '));
+          matn.appendChild(qalin(Calc.sumFormat(t.keyin), 'manfiy-qizil'));
+          matn.appendChild(document.createTextNode(' bo\'ladi.'));
+        } else {
+          matn.appendChild(document.createTextNode(' bor, bu amal uchun '));
+          matn.appendChild(qalin(Calc.sumFormat(t.kerak)));
+          matn.appendChild(document.createTextNode(' kerak. Boshqa hisobni tanlang yoki avval shu hisobga kirim yozing.'));
+        }
+        oyna.appendChild(matn);
+        var qatorT = el('div', undefined, 'manfiy-tugmalar');
+        var uzgartir = tugma('Hisobni o\'zgartirish', ogoh ? 'ikkinchi-tugma' : 'asosiy-tugma', function () { bitir('hisob'); yop(false); });
+        uzgartir.id = 'manfiy-hisob';
+        if (ogoh) {
+          var baribir = tugma('Baribir saqlash', 'asosiy-tugma', function () { bitir('saqla'); yop(false); });
+          baribir.id = 'manfiy-baribir';
+          qatorT.appendChild(uzgartir); qatorT.appendChild(baribir);
+        } else {
+          var yopT = tugma('Yopish', 'ikkinchi-tugma', function () { bitir('bekor'); yop(); });
+          yopT.id = 'manfiy-yopish';
+          qatorT.appendChild(yopT); qatorT.appendChild(uzgartir);
+        }
+        oyna.appendChild(qatorT);
+        var havola = tugma('Bu hisob uchun sozlamani o\'zgartirish', 'matn-tugma manfiy-havola', function () { bitir('bekor'); yop(false); manfiySozlamaOynasi(t.hisob); });
+        havola.id = 'manfiy-sozlama';
+        oyna.appendChild(havola);
+      }, 'manfiy-oyna', function () { bitir('bekor'); });
+    });
   }
 
   // ---- Qisqa xabar (pastda), ixtiyoriy tugma bilan: masalan "Bekor qilish" ----
@@ -641,19 +752,24 @@
       if (tahrir.bog_id) yozuv.bog_id = tahrir.bog_id;   // bog'langan (o'tkazmasi topilmagan) komissiya bog'i yo'qolmasin
       if (tahrir.qarz_bog_id) yozuv.qarz_bog_id = tahrir.qarz_bog_id;   // xuddi shunday qarz komissiyasi (qarzi topilmagan)
       saqla.disabled = true;
-      // O'tkazma (yoki o'tkazma bo'lgan yozuv) komissiyasi bilan BITTA tranzaksiyada saqlanadi: summa, hisob, sana o'zgarsa komissiya yangilanadi,
-      // "Yo'q" tanlansa yoki tur o'zgarsa komissiya mantiqiy o'chadi
-      var saqlash = otkazma || tahrir.tur === 'otkazma'
-        ? Data.otkazmaniSaqlash(yozuv, kt.yoq ? null : { summa: kt.summa, izoh: kt.izoh }).then(function (n) {
-          otkazmaNatijasi(n);
-          if (otkazma) { var e = Calc.komissiyaEslabQolish(kt, komHolat); if (e !== null) komEslabYoz(yozuv.hisob_id, e); }
-        })
-        : Data.saqlash('yozuvlar', yozuv).then(function () {
-          malumot.yozuvlar = malumot.yozuvlar.map(function (x) { return x.id === yozuv.id ? yozuv : x; });
+      // Hisobda pul yetmasa (TZ 50): eski versiya ta'siri olib tashlanib tekshiriladi; bloklansa hech narsa yozilmaydi, forma ochiq qoladi
+      manfiyTekshiruvi({ tur: yozuv.tur, hisob_id: yozuv.hisob_id, qabul_hisob_id: yozuv.qabul_hisob_id, summa: yozuv.summa, komissiya: otkazma && !kt.yoq ? kt.summa : 0 },
+        { yozuv: tahrir }).then(function (q) {
+        if (q !== 'saqla') { saqla.disabled = false; if (q === 'hisob') hisob.focus(); return; }
+        // O'tkazma (yoki o'tkazma bo'lgan yozuv) komissiyasi bilan BITTA tranzaksiyada saqlanadi: summa, hisob, sana o'zgarsa komissiya yangilanadi,
+        // "Yo'q" tanlansa yoki tur o'zgarsa komissiya mantiqiy o'chadi
+        var saqlash = otkazma || tahrir.tur === 'otkazma'
+          ? Data.otkazmaniSaqlash(yozuv, kt.yoq ? null : { summa: kt.summa, izoh: kt.izoh }).then(function (n) {
+            otkazmaNatijasi(n);
+            if (otkazma) { var e = Calc.komissiyaEslabQolish(kt, komHolat); if (e !== null) komEslabYoz(yozuv.hisob_id, e); }
+          })
+          : Data.saqlash('yozuvlar', yozuv).then(function () {
+            malumot.yozuvlar = malumot.yozuvlar.map(function (x) { return x.id === yozuv.id ? yozuv : x; });
+          });
+        return saqlash.then(function () {
+          qisqaXabar('Yozuv yangilandi');
+          orqaga();
         });
-      saqlash.then(function () {
-        qisqaXabar('Yozuv yangilandi');
-        orqaga();
       }).catch(function (xato) {
         saqla.disabled = false;
         summa.xato.textContent = 'Saqlab bo\'lmadi: ' + xato;
@@ -891,14 +1007,23 @@
     }
     var eslash = wiz.tur === 'otkazma' && wiz.komissiya ? Calc.komissiyaEslabQolish(kt, wiz.komissiya) : null;
     wiz.saqlanmoqda = true;
-    yozuvniSaqlash(natija.yozuv, kt.yoq ? null : { summa: kt.summa, izoh: kt.izoh }).then(function (yozuv) {
-      if (eslash !== null) komEslabYoz(yozuv.hisob_id, eslash);
-      wiz = null;            // saqlangach shakl tozalanadi
-      qoshishRejimi = 'yozuv';
-      tarixOy = yozuv.sana.slice(0, 7);   // Tarixda yangi yozuvning oyi ochiladi
-      tarixFiltr = bosFiltr();            // eski qidiruv yoki filtr yangi yozuvni yashirib qo'ymasin
-      korsat('tarix');       // forma yopiladi, Tarixga o'tiladi (TZ-sinxronlash.md 20.5)
-      qisqaXabar('Saqlandi: ' + (yozuv.tur === 'daromad' ? '+' : yozuv.tur === 'xarajat' ? '−' : '') + Calc.sumFormat(yozuv.summa) + (kt.yoq ? '' : ' (komissiya ' + raqam(kt.summa) + ')'));
+    var tayyor = natija.yozuv;
+    // Hisobda pul yetmasa (TZ 50): saqlashdan oldin; bloklansa hech narsa yozilmaydi, forma (wiz) saqlanib qoladi
+    manfiyTekshiruvi({ tur: tayyor.tur, hisob_id: tayyor.hisob_id, qabul_hisob_id: tayyor.qabul_hisob_id, summa: tayyor.summa, komissiya: kt.yoq ? 0 : kt.summa }).then(function (q) {
+      if (q !== 'saqla') {
+        wiz.saqlanmoqda = false;
+        if (q === 'hisob') { wiz.qadam = Calc.qadamlar(wiz.tur).indexOf(wiz.tur === 'otkazma' ? 'qayerdan' : 'hisob'); wizardChiz(); }   // hisob qadamiga qaytadi
+        return;
+      }
+      return yozuvniSaqlash(tayyor, kt.yoq ? null : { summa: kt.summa, izoh: kt.izoh }).then(function (yozuv) {
+        if (eslash !== null) komEslabYoz(yozuv.hisob_id, eslash);
+        wiz = null;            // saqlangach shakl tozalanadi
+        qoshishRejimi = 'yozuv';
+        tarixOy = yozuv.sana.slice(0, 7);   // Tarixda yangi yozuvning oyi ochiladi
+        tarixFiltr = bosFiltr();            // eski qidiruv yoki filtr yangi yozuvni yashirib qo'ymasin
+        korsat('tarix');       // forma yopiladi, Tarixga o'tiladi (TZ-sinxronlash.md 20.5)
+        qisqaXabar('Saqlandi: ' + (yozuv.tur === 'daromad' ? '+' : yozuv.tur === 'xarajat' ? '−' : '') + Calc.sumFormat(yozuv.summa) + (kt.yoq ? '' : ' (komissiya ' + raqam(kt.summa) + ')'));
+      });
     }).catch(function (xato) {
       wiz.saqlanmoqda = false;
       qisqaXabar('Saqlab bo\'lmadi: ' + xato);
@@ -1279,6 +1404,13 @@
     forma.appendChild(belgiTanlagich(holat, ['hisob'], 'Belgi'));
     onizlash();
 
+    // Hisobda pul yetmasa (TZ 50): tanlov hisob saqlanganda saqlanadi, faqat shu qurilmada. Boshlang'ich: "Taqiqlash".
+    var manfiyMaydon = el('div', undefined, 'maydon');
+    manfiyMaydon.appendChild(el('span', 'Hisobda pul yetmasa', 'belgi'));
+    var manfiy = manfiyTanlov(h ? manfiyRejimiOl(h.id) : 'taqiqlash');
+    manfiyMaydon.appendChild(manfiy.quti);
+    forma.appendChild(manfiyMaydon);
+
     var saqla = el('button', 'Saqlash', 'asosiy-tugma');
     saqla.type = 'submit';
     forma.appendChild(saqla);
@@ -1298,7 +1430,7 @@
         : { id: Data.yangiId(), yaratilgan: new Date().toISOString(), nom: n.nom, tur: tur, belgi: holat.belgi, rang: holat.rang, oxirgi4: o.oxirgi4,
             boshlangich_qoldiq: b.summa, arxivlangan: false };
       saqla.disabled = true;
-      hisobniSaqlash(yangi, h ? 'Hisob yangilandi' : 'Hisob qo\'shildi');
+      hisobniSaqlash(yangi, h ? 'Hisob yangilandi' : 'Hisob qo\'shildi', function () { manfiyYoz(yangi.id, manfiy.qiymat()); });
     });
     bloklar.push(forma);
 
@@ -1323,12 +1455,13 @@
     return bloklar;
   }
 
-  function hisobniSaqlash(hisob, xabarMatni) {
+  function hisobniSaqlash(hisob, xabarMatni, keyin) {
     Data.saqlash('hisoblar', hisob).then(function () {
       var bor = malumot.hisoblar.some(function (x) { return x.id === hisob.id; });
       malumot.hisoblar = bor
         ? malumot.hisoblar.map(function (x) { return x.id === hisob.id ? hisob : x; })
         : malumot.hisoblar.concat([hisob]);
+      if (keyin) keyin();
       qisqaXabar(xabarMatni);
       orqaga();
     }).catch(function (xato) {
@@ -4009,12 +4142,17 @@
       var yangi = Calc.qarzniYangilash(q ? Object.assign({}, q, r.qarz) : yangiQarzObyekti(r.qarz));
       saqla.disabled = true;
       var kom = kr.yoq ? null : { summa: kr.kom, izoh: kr.izoh };
-      // Komissiyali (yoki komissiyasi bor edi) qarz: qarz + komissiya yozuvi + kategoriya BITTA tranzaksiyada. Oddiy qarz avvalgidek.
-      (kom || (q && Calc.qarzKomissiyalari(malumot.yozuvlar, q.id).length)
-        ? Data.qarzniKomissiyaBilanSaqlash(yangi, kom).then(function (n) { qarzNatijasi(n); })
-        : qarzniSaqlash(yangi)).then(function () {
-        qisqaXabar(q ? 'Qarz yangilandi' : 'Qarz qo\'shildi');
-        if (rejim) rejim.saqlandi(); else orqaga();
+      // Hisobda pul yetmasa (TZ 50): "men berdim" hisobdan chiqadi; "men oldim" (komissiyali ham) kirim. Bloklansa hech narsa yozilmaydi.
+      manfiyTekshiruvi({ tur: 'qarz', yonalish: yangi.yonalish, hisob_id: yangi.hisob_id, summa: yangi.summa, komissiya: kom ? kom.summa : 0, tolovlar: yangi.tolovlar },
+        q ? { qarz: q } : null).then(function (m) {
+        if (m !== 'saqla') { saqla.disabled = false; if (m === 'hisob') hisob.focus(); return; }
+        // Komissiyali (yoki komissiyasi bor edi) qarz: qarz + komissiya yozuvi + kategoriya BITTA tranzaksiyada. Oddiy qarz avvalgidek.
+        return (kom || (q && Calc.qarzKomissiyalari(malumot.yozuvlar, q.id).length)
+          ? Data.qarzniKomissiyaBilanSaqlash(yangi, kom).then(function (n) { qarzNatijasi(n); })
+          : qarzniSaqlash(yangi)).then(function () {
+          qisqaXabar(q ? 'Qarz yangilandi' : 'Qarz qo\'shildi');
+          if (rejim) rejim.saqlandi(); else orqaga();
+        });
       }).catch(function (xato) {
         saqla.disabled = false;
         summa.xato.textContent = 'Saqlab bo\'lmadi: ' + xato;
@@ -4086,9 +4224,14 @@
       var yangiTolov = Object.assign({ id: Data.yangiId(), yaratilgan: new Date().toISOString() }, t || {}, r.tolov);
       var yangi = t ? Object.assign({}, q, { tolovlar: q.tolovlar.map(function (x) { return x.id === t.id ? yangiTolov : x; }) }) : tolovQoshilganQarz(q, r.tolov);
       saqla.disabled = true;
-      qarzniSaqlash(yangi).then(function (s) {
-        qisqaXabar(Calc.qarzYopilganmi(s) ? 'Qarz to\'liq yopildi' : (t ? 'To\'lov yangilandi' : 'To\'lov qo\'shildi'));
-        orqaga();
+      // Hisobda pul yetmasa (TZ 50): olingan qarzni qaytarish hisobdan chiqadi; berilgan qarzning qaytarilishi kirim (tekshirilmaydi)
+      manfiyTekshiruvi({ tur: 'tolov', yonalish: q.yonalish, hisob_id: yangiTolov.hisob_id, summa: yangiTolov.summa },
+        t ? { tolov: { qarzId: q.id, tolovId: t.id } } : null).then(function (m) {
+        if (m !== 'saqla') { saqla.disabled = false; if (m === 'hisob') hisob.focus(); return; }
+        return qarzniSaqlash(yangi).then(function (s) {
+          qisqaXabar(Calc.qarzYopilganmi(s) ? 'Qarz to\'liq yopildi' : (t ? 'To\'lov yangilandi' : 'To\'lov qo\'shildi'));
+          orqaga();
+        });
       }).catch(function (xato) {
         saqla.disabled = false;
         summa.xato.textContent = 'Saqlab bo\'lmadi: ' + xato;
@@ -4667,12 +4810,20 @@
 
   // "Gap bilan qo'shish" (29-band): js/gap.js. Saqlash AYNAN mavjud funksiyalar bilan: yozuv — yozuvniSaqlash (yozuv qo'shish shakli bilan bir xil),
   // qarz va to'lov — qarzniSaqlash (qarz va to'lov shakllari bilan bir xil). Tekshiruv Calc funksiyalarida (js/gap-sof.js ularni chaqiradi).
+  // Hisobda pul yetmasa (TZ 50) shu yerda ham, saqlashdan oldin: bloklansa hech narsa yozilmaydi va { saqlanmadi: true, hisob: true|false } qaytadi
+  // (karta ochiq qoladi; hisob: true — "Hisobni o'zgartirish" bosilgan).
   function gapSaqlash(r) {
-    if (r.amal === 'yozuv') return yozuvniSaqlash(r.yozuv);
-    if (r.amal === 'qarz') return qarzniSaqlash(yangiQarzObyekti(r.qarz));
-    var q = qarzniOl(r.qarzId);
-    if (!q) return Promise.reject(new Error('Qarz topilmadi'));
-    return qarzniSaqlash(tolovQoshilganQarz(q, r.tolov));
+    var q = r.amal === 'tolov' ? qarzniOl(r.qarzId) : null;
+    if (r.amal === 'tolov' && !q) return Promise.reject(new Error('Qarz topilmadi'));
+    var amal = r.amal === 'yozuv' ? { tur: r.yozuv.tur, hisob_id: r.yozuv.hisob_id, qabul_hisob_id: r.yozuv.qabul_hisob_id, summa: r.yozuv.summa }
+      : r.amal === 'qarz' ? { tur: 'qarz', yonalish: r.qarz.yonalish, hisob_id: r.qarz.hisob_id, summa: r.qarz.summa }
+      : { tur: 'tolov', yonalish: q.yonalish, hisob_id: r.tolov.hisob_id, summa: r.tolov.summa };
+    return manfiyTekshiruvi(amal).then(function (m) {
+      if (m !== 'saqla') return { saqlanmadi: true, hisob: m === 'hisob' };
+      if (r.amal === 'yozuv') return yozuvniSaqlash(r.yozuv);
+      if (r.amal === 'qarz') return qarzniSaqlash(yangiQarzObyekti(r.qarz));
+      return qarzniSaqlash(tolovQoshilganQarz(q, r.tolov));
+    });
   }
   Gap.boshlash({
     malumot: function () { return malumot; },

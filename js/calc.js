@@ -1566,6 +1566,84 @@
     return q;
   }
 
+  // ---- Hisobda pul yetmasa: manfiy qoldiq qoidasi (TZ-sinxronlash.md 50-band) ----
+  var MANFIY_REJIMLAR = ['ruxsat', 'ogohlantirish', 'taqiqlash'];
+  var MANFIY_BOSHLANGICH = 'taqiqlash';   // sozlama tanlanmagan (yangi va mavjud) hisoblar uchun
+  // Saqlangan matndan (localStorage JSON) { hisob_id: rejim }. Yaroqsiz matn va yaroqsiz qiymat tashlanadi; hisoblar berilsa,
+  // o'chirilgan yoki yo'q hisob kaliti e'tiborsiz qoldiriladi.
+  function manfiyRejimlar(matn, hisoblar) {
+    var j;
+    try { j = typeof matn === 'string' ? JSON.parse(matn) : matn; } catch (e) { return {}; }
+    if (!j || typeof j !== 'object' || Array.isArray(j)) return {};
+    var mavjud = null;
+    if (hisoblar) { mavjud = {}; hisoblar.forEach(function (h) { if (h && h.deleted !== true) mavjud[h.id] = true; }); }
+    var n = {};
+    Object.keys(j).forEach(function (k) {
+      if (MANFIY_REJIMLAR.indexOf(j[k]) >= 0 && (!mavjud || mavjud[k] === true)) n[k] = j[k];
+    });
+    return n;
+  }
+  // Hisobning rejimi; yo'q yoki yaroqsiz bo'lsa "taqiqlash" (foydalanuvchi qarori)
+  function manfiyRejimi(rejimlar, hisobId) {
+    var r = rejimlar && Object.prototype.hasOwnProperty.call(rejimlar, hisobId) ? rejimlar[hisobId] : null;
+    return MANFIY_REJIMLAR.indexOf(r) >= 0 ? r : MANFIY_BOSHLANGICH;
+  }
+  // Amalning hisobga NET ta'siri (so'mda; chiqim manfiy). amal:
+  //  { tur: 'daromad' | 'xarajat', hisob_id, summa } | { tur: 'otkazma', hisob_id, qabul_hisob_id, summa, komissiya? }
+  //  | { tur: 'qarz', yonalish, hisob_id, summa, komissiya?, tolovlar? } | { tur: 'tolov', yonalish, hisob_id, summa }
+  // Qarz: "berdim" — summa hisobdan chiqadi; "oldim" — summa tushadi, komissiya (42-band) shu hisobdan chiqadi. To'lov: "berdim" — kirim, "oldim" — chiqim.
+  function amalTasiri(hisobId, amal) {
+    var d = 0, s = amal.summa || 0;
+    if (amal.tur === 'daromad') { if (amal.hisob_id === hisobId) d += s; }
+    else if (amal.tur === 'xarajat') { if (amal.hisob_id === hisobId) d -= s; }
+    else if (amal.tur === 'otkazma') {
+      if (amal.hisob_id === hisobId) d -= s + (amal.komissiya || 0);
+      if (amal.qabul_hisob_id === hisobId) d += s;
+    } else if (amal.tur === 'qarz') {
+      var b = amal.yonalish === 'berdim';
+      if (amal.hisob_id === hisobId) d += b ? -s : s - (amal.komissiya || 0);
+      (amal.tolovlar || []).forEach(function (t) { if (t.hisob_id === hisobId) d += b ? t.summa : -t.summa; });
+    } else if (amal.tur === 'tolov') {
+      if (amal.hisob_id === hisobId) d += amal.yonalish === 'berdim' ? s : -s;
+    }
+    return d;
+  }
+  // Tahrirlanayotgan eski versiyani ro'yxatlardan olib tashlaydi. eski: { yozuv } (o'tkazmaning bog'langan komissiyasi ham ketadi) |
+  // { qarz } (qarz, uning to'lovlari va komissiyasi ketadi) | { tolov: { qarzId, tolovId } }. Berilmasa — ro'yxatlar o'zgarmaydi.
+  function eskiniOlibTashla(yozuvlar, qarzlar, eski) {
+    yozuvlar = yozuvlar || []; qarzlar = qarzlar || [];
+    if (!eski) return { yozuvlar: yozuvlar, qarzlar: qarzlar };
+    if (eski.yozuv) {
+      var id = eski.yozuv.id;
+      return { yozuvlar: yozuvlar.filter(function (y) { return y.id !== id && !(y.bog_id && y.bog_id === id); }), qarzlar: qarzlar };
+    }
+    if (eski.qarz) {
+      var qid = eski.qarz.id;
+      return { yozuvlar: yozuvlar.filter(function (y) { return !(y.qarz_bog_id && y.qarz_bog_id === qid); }), qarzlar: qarzlar.filter(function (z) { return z.id !== qid; }) };
+    }
+    if (eski.tolov) {
+      return { yozuvlar: yozuvlar, qarzlar: qarzlar.map(function (z) {
+        return z.id === eski.tolov.qarzId ? Object.assign({}, z, { tolovlar: (z.tolovlar || []).filter(function (t) { return t.id !== eski.tolov.tolovId; }) }) : z;
+      }) };
+    }
+    return { yozuvlar: yozuvlar, qarzlar: qarzlar };
+  }
+  // Saqlashdan OLDINGI tekshiruv (sof). p: { hisob, rejim, yozuvlar, qarzlar, amal, eski? }.
+  // hozir — shu hisobning HOZIRGI (bugungi, sanasiz) qoldig'i, tahrirda eski versiya ta'siri olib tashlangan holda; keyin = hozir + delta.
+  // Shart: delta < 0 VA keyin < 0. Tahrirda amal haqiqiy qoldiqni oshirsa yoki o'zgartirmasa (yangi ta'sir − eski ta'sir >= 0) — tekshirilmaydi.
+  // Natija: { holat: 'ok' | 'ogohlantirish' | 'taqiqlash', hisob, hozir, keyin, kerak }; kerak = faqat chiqim miqdori. Rejim "ruxsat" — doim "ok".
+  function manfiyTekshir(p) {
+    var hisob = p.hisob, rejim = MANFIY_REJIMLAR.indexOf(p.rejim) >= 0 ? p.rejim : MANFIY_BOSHLANGICH;
+    var yozuvlar = p.yozuvlar || [], qarzlar = p.qarzlar || [];
+    var tozalangan = eskiniOlibTashla(yozuvlar, qarzlar, p.eski);
+    var hozir = hisobQoldigi(hisob, tozalangan.yozuvlar, tozalangan.qarzlar);
+    var delta = amalTasiri(hisob.id, p.amal);
+    var eskiTasir = p.eski ? hisobQoldigi(hisob, yozuvlar, qarzlar) - hozir : 0;
+    var keyin = hozir + delta;
+    var buziladi = delta < 0 && keyin < 0 && delta - eskiTasir < 0;
+    return { holat: rejim === 'ruxsat' || !buziladi ? 'ok' : rejim, hisob: hisob, hozir: hozir, keyin: keyin, kerak: delta < 0 ? -delta : 0 };
+  }
+
   // ---- Sana bo'yicha hisob qoldig'i (TZ-sinxronlash.md 49-band) ----
   // sana bugun yoki undan keyin (yoki bo'sh) bo'lsa — hozirgi qoldiq bilan AYNAN bir xil
   function hisobQoldigiSanada(hisob, yozuvlar, qarzlar, sana, bugunSana) {
@@ -1920,6 +1998,7 @@
     qoldiqTekshir: qoldiqTekshir, yangiBoshlangichQoldiq: yangiBoshlangichQoldiq, nomKaliti: nomKaliti, kategoriyaNomTekshir: kategoriyaNomTekshir,
     yozuvlarniSuz: yozuvlarniSuz, filtrFaolmi: filtrFaolmi, hisobNomTekshir: hisobNomTekshir, otkazmaTekshir: otkazmaTekshir,
     hisobQoldigi: hisobQoldigi, umumiyBalans: umumiyBalans,
+    MANFIY_REJIMLAR: MANFIY_REJIMLAR, manfiyRejimlar: manfiyRejimlar, manfiyRejimi: manfiyRejimi, amalTasiri: amalTasiri, eskiniOlibTashla: eskiniOlibTashla, manfiyTekshir: manfiyTekshir,
     tolanganSumma: tolanganSumma, qarzQolgan: qarzQolgan, qarzYopilganmi: qarzYopilganmi, qarzMuddatiOtdimi: qarzMuddatiOtdimi,
     QARZ_KATEGORIYALAR: QARZ_KATEGORIYALAR, qarzKategoriyami: qarzKategoriyami, qarzKirdimi: qarzKirdimi, qarzYozuvlari: qarzYozuvlari, qarzniYangilash: qarzniYangilash, qarzniTekshir: qarzniTekshir, tolovniTekshir: tolovniTekshir, qarzlarJami: qarzlarJami,
     tolashFoizi: tolashFoizi, qarzlarShaxsBoyicha: qarzlarShaxsBoyicha, qarzlarniTartibla: qarzlarniTartibla, qarzlarKorinishi: qarzlarKorinishi, odamKorinishi: odamKorinishi, odamKaliti: odamKaliti, qarzMuddatHolati: qarzMuddatHolati, qarzQidiruvgaMosmi: qarzQidiruvgaMosmi, odamBelgisi: odamBelgisi, odamHarfi: odamHarfi, odamRangi: odamRangi, qarzHolatiniAlmashtir: qarzHolatiniAlmashtir, kunFarqi: kunFarqi, QARZ_FILTRLARI: QARZ_FILTRLARI, ODAM_RANGLARI: ODAM_RANGLARI, qarzTartibi: qarzTartibi, QARZ_TARTIBLARI: QARZ_TARTIBLARI, QARZ_TARTIBI_BOSHI: QARZ_TARTIBI_BOSHI, hisobgaBogliqQarzlar: hisobgaBogliqQarzlar,

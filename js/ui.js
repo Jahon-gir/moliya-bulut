@@ -3541,7 +3541,12 @@
       o.value = h.id;
       s.appendChild(o);
     });
-    if (tanlangan) s.value = tanlangan;
+    if (tanlangan && !malumot.hisoblar.some(function (h) { return h.id === tanlangan; })) {   // hisob o'chirilgan: tushunarli qator, saqlashda "Hisobni tanlang"
+      var yoq = el('option', 'Hisob topilmadi: boshqasini tanlang');
+      yoq.value = '';
+      s.insertBefore(yoq, s.firstChild);
+      s.value = '';
+    } else if (tanlangan) s.value = tanlangan;
     return s;
   }
 
@@ -3944,14 +3949,20 @@
 
     var tk = karta();
     tk.appendChild(el('h2', 'To\'lovlar'));
-    if (!q.tolovlar.length) tk.appendChild(el('p', 'Hali to\'lov yo\'q.', 'xira'));
-    q.tolovlar.slice().sort(function (a, b) { return (a.sana + a.vaqt) < (b.sana + b.vaqt) ? 1 : -1; }).forEach(function (t) {
-      var r = tugma(undefined, 'yozuv tolov-qator', function () { ochish(function () { return tolovShakli(q.id, t.id); }, true); });
+    var tolovlar = Calc.tolovlarRoyxati(q);
+    if (!tolovlar.length) tk.appendChild(el('p', 'Hali to\'lov yo\'q.', 'xira'));
+    tolovlar.forEach(function (t) {   // TZ 51: chapda sana va hisob, o'ngda summa va "⋯" (tahrirlash / bekor qilish)
+      var r = el('div', undefined, 'yozuv tolov-qator');
+      r.setAttribute('data-tolov', t.id);
       var chap = el('div', undefined, 'yozuv-chap');
-      chap.appendChild(el('div', Calc.sanaKorsat(t.sana) + ' · ' + (t.vaqt || '00:00'), 'yozuv-nom'));
-      chap.appendChild(el('div', hisobNomi(t.hisob_id), 'yozuv-izoh'));
+      chap.appendChild(el('div', Calc.sanaKorsat(t.sana) + ' · ' + (t.vaqt || '00:00'), 'tolov-sana'));
+      chap.appendChild(el('div', tolovHisobMatni(t.hisob_id), 'tolov-hisob'));
       r.appendChild(chap);
-      r.appendChild(el('div', Calc.sumFormat(t.summa), 'yozuv-summa ' + (q.yonalish === 'berdim' ? 'plus' : 'minus')));
+      r.appendChild(el('div', Calc.sumFormat(t.summa), 'yozuv-summa tolov-summa ' + (q.yonalish === 'berdim' ? 'plus' : 'minus')));
+      var d = tugma(undefined, 'tolov-menyu', function () { tolovAmallariOynasi(q.id, t.id); });
+      d.setAttribute('aria-label', 'To\'lov amallari: ' + Calc.sanaKorsat(t.sana) + ', ' + Calc.sumFormat(t.summa));
+      d.appendChild(Ikonlar.chiz('dots-vertical', 20));
+      r.appendChild(d);
       tk.appendChild(r);
     });
     bloklar.push(tk);
@@ -4172,7 +4183,7 @@
     if (n.kategoriya) malumot.kategoriyalar.push(n.kategoriya);
   }
 
-  // To'lov qo'shish yoki tahrirlash (tolovId bo'lsa); tahrirda "To'lovni o'chirish" ham bor
+  // To'lov qo'shish yoki tahrirlash (tolovId bo'lsa); tahrirda "To'lovni bekor qilish" ham bor (TZ 51)
   function tolovShakli(qarzId, tolovId) {
     var q = qarzniOl(qarzId);
     if (!q) return [orqagaTugmasi(), el('h1', 'To\'lov'), el('p', 'Qarz topilmadi.', 'xira')];
@@ -4238,8 +4249,62 @@
       });
     });
     bloklar.push(forma);
-    if (t) bloklar.push(tugma('To\'lovni o\'chirish', 'xavfli-tugma', function () { tolovniOchirish(q, t); }));
+    if (t) bloklar.push(tugma('To\'lovni bekor qilish', 'xavfli-tugma', function () { tolovBekorTasdigi(q.id, t.id, true); }));
     return bloklar;
+  }
+
+  // To'lov qatori va tahrir shaklida hisob nomi: arxivlangan "(arxiv)", topilmasa tushunarli matn
+  function tolovHisobMatni(id) {
+    var h = hisobOl(id);
+    return h ? h.nom + (h.arxivlangan ? ' (arxiv)' : '') : 'Hisob topilmadi';
+  }
+
+  // "⋯": to'lovni tahrirlash yoki bekor qilish (TZ 51)
+  function tolovAmallariOynasi(qarzId, tolovId) {
+    var q = qarzniOl(qarzId), t = q && q.tolovlar.filter(function (x) { return x.id === tolovId; })[0];
+    if (!t) return;
+    pastkiOyna('To\'lov', function (oyna, yop) {
+      oyna.appendChild(el('p', Calc.sanaKorsat(t.sana) + ' · ' + Calc.sumFormat(t.summa) + ' · ' + tolovHisobMatni(t.hisob_id), 'xira tolov-oyna-qator'));
+      var a = tugma(undefined, 'tolov-amal tolov-tahrir', function () { yop(false); ochish(function () { return tolovShakli(qarzId, tolovId); }, true); });
+      a.appendChild(el('span', undefined, 'tolov-amal-belgi')).appendChild(Ikonlar.chiz('pencil', 22));
+      a.appendChild(el('strong', 'To\'lovni tahrirlash'));
+      oyna.appendChild(a);
+      var b = tugma(undefined, 'tolov-amal tolov-bekor', function () { yop(false); tolovBekorTasdigi(qarzId, tolovId, false); });
+      b.appendChild(el('span', undefined, 'tolov-amal-belgi qizil')).appendChild(Ikonlar.chiz('arrow-back-up', 22));
+      var m = el('span', undefined, 'tolov-amal-matn');
+      m.appendChild(el('strong', 'To\'lovni bekor qilish'));
+      m.appendChild(el('span', Calc.tolovBekorMatni(q.yonalish), 'xira'));
+      b.appendChild(m);
+      oyna.appendChild(b);
+    }, 'tanlov-oynasi tolov-oynasi');
+  }
+  function tolovBekorTasdigi(qarzId, tolovId, formadan) {
+    pastkiOyna('Bu to\'lovni bekor qilasizmi?', function (oyna, yop) {
+      var q = qarzniOl(qarzId), t = q && q.tolovlar.filter(function (x) { return x.id === tolovId; })[0];
+      if (t) oyna.appendChild(el('p', Calc.sanaKorsat(t.sana) + ' · ' + Calc.sumFormat(t.summa) + ' · ' + tolovHisobMatni(t.hisob_id) + '\n' + Calc.tolovBekorMatni(q.yonalish), 'tolov-tasdiq-matn'));
+      var qator = el('div', undefined, 'manfiy-tugmalar');
+      var yoq = tugma('Yo\'q', 'ikkinchi-tugma', function () { yop(); });
+      yoq.id = 'tolov-bekor-yoq';
+      var ha = tugma('Ha, bekor qilish', 'qizil-tugma', function () { yop(false); tolovniBekorQilish(qarzId, tolovId, formadan); });
+      ha.id = 'tolov-bekor-ha';
+      qator.appendChild(yoq); qator.appendChild(ha);
+      oyna.appendChild(qator);
+    });
+  }
+
+  // To'lovni MANTIQIY o'chiradi (qarz saqlanganda to'lov deleted = true bo'ladi, qator o'chmaydi) va 10 soniya "Bekor qilish" beradi.
+  // §50 (manfiy qoldiq) bu yerda tekshirilmaydi. Qarz komissiyasiga tegilmaydi. formadan — tahrir shaklidan chaqirilsa, ro'yxatga qaytiladi.
+  function tolovniBekorQilish(qarzId, tolovId, formadan) {
+    var q = qarzniOl(qarzId), t = q && q.tolovlar.filter(function (x) { return x.id === tolovId; })[0];
+    if (!t) return;
+    qarzniSaqlash(Calc.tolovniBekorQil(q, tolovId)).then(function () {
+      if (formadan) orqaga(); else yangilash();
+      qisqaXabar('To\'lov bekor qilindi', { nom: 'Bekor qilish', fn: function () {
+        var joriy = qarzniOl(qarzId), qaytgan = joriy && Calc.tolovniQaytar(joriy, t);
+        if (!qaytgan) { qisqaXabar(joriy ? 'Qaytarib bo\'lmadi: to\'lovlar yig\'indisi qarzdan oshib ketadi' : 'Qarz topilmadi'); return; }
+        qarzniSaqlash(qaytgan).then(function () { qisqaXabar('To\'lov qaytarildi'); yangilash(); });
+      } }, 10000);
+    }).catch(function (xato) { qisqaXabar('Bekor qilib bo\'lmadi: ' + xato); });
   }
 
   // O'chiradi va 10 soniya davomida "Bekor qilish" imkonini beradi
@@ -4261,15 +4326,6 @@
     }).catch(function (xato) { qisqaXabar('O\'chirib bo\'lmadi: ' + xato); });
   }
 
-  function tolovniOchirish(q, t) {
-    var eski = q;
-    qarzniSaqlash(Object.assign({}, q, { tolovlar: q.tolovlar.filter(function (x) { return x.id !== t.id; }) })).then(function () {
-      orqaga();
-      qisqaXabar('To\'lov o\'chirildi', { nom: 'Bekor qilish', fn: function () {
-        qarzniSaqlash(eski).then(function () { qisqaXabar('To\'lov qaytarildi'); yangilash(); });
-      } }, 10000);
-    }).catch(function (xato) { qisqaXabar('O\'chirib bo\'lmadi: ' + xato); });
-  }
 
   // ---- "+" tugmasi: pastdan chiqadigan tanlov oynasi ("Yangi yozuv yaratish") ----
   var qoshishRejimi = 'yozuv';   // "qoshish" bo'limida nima ko'rinadi: yozuv shakli (wizard) yoki qarz shakli

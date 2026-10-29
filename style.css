@@ -1671,3 +1671,22 @@ html[data-tema="qorongi"] .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(
 .manfiy-havola { display: block; width: 100%; min-height: 44px; margin-top: 6px; text-align: center; }
 .sheet-parda.manfiy-parda { z-index: 150; }
 .manfiy-sarlavha h2 { color: var(--matn); }
+
+/* ===== 0.54.0: qarz to'lovini tahrirlash va bekor qilish (TZ-sinxronlash.md 51-band) ===== */
+.tolov-qator { align-items: center; gap: 4px; min-height: 56px; }
+.tolov-qator .yozuv-chap { flex: 1; min-width: 0; }
+.tolov-sana { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tolov-hisob { font-size: 12px; color: var(--xira); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tolov-summa { flex: none; font-weight: 800; }
+.tolov-menyu { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; color: var(--xira); background: none; border: 0; border-radius: 22px; cursor: pointer; }
+.tolov-menyu:focus-visible { outline: 2px solid var(--asosiy); outline-offset: 2px; }
+.tolov-oyna-qator { margin: 0 0 8px; overflow-wrap: anywhere; }
+.tolov-amal { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; margin-bottom: 8px; padding: 8px 12px; font: inherit; text-align: left; color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 14px; cursor: pointer; }
+.tolov-amal:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.tolov-amal-belgi { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; border-radius: 10px; color: var(--asosiy); background: var(--fon); }
+.tolov-amal-belgi.qizil { color: var(--xarajat); }
+.tolov-amal-matn { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tolov-amal-matn .xira { font-size: 13px; line-height: 1.35; }
+.tolov-tasdiq-matn { margin: 8px 0 14px; white-space: pre-line; overflow-wrap: anywhere; }
+.tolov-oynasi::before, .sheet:has(.manfiy-tugmalar)::before { content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 10px; border-radius: 2px; background: var(--chiziq); }
+.manfiy-tugmalar .qizil-tugma { min-height: 48px; }

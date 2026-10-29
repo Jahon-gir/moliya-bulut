@@ -544,6 +544,30 @@
   }
   function qarzQolgan(q) { return Math.max(0, q.summa - tolanganSumma(q)); }
   function qarzYopilganmi(q) { return tolanganSumma(q) >= q.summa; }
+  // ---- Qarz to'lovini bekor qilish va tahrirlash (TZ-sinxronlash.md 51-band) ----
+  // Ko'rinadigan (o'chirilmagan) to'lovlar: yangisi tepada (sana, vaqt; teng bo'lsa id bo'yicha barqaror)
+  function tolovlarRoyxati(q) {
+    function kalit(t) { return (t.sana || '') + ' ' + (t.vaqt || '00:00') + ' ' + (t.id || ''); }
+    return (q.tolovlar || []).filter(function (t) { return t && t.deleted !== true; }).sort(function (a, b) { return kalit(a) < kalit(b) ? 1 : kalit(a) > kalit(b) ? -1 : 0; });
+  }
+  // To'lovni bekor qiladi: to'lov ro'yxatdan olinadi (Data.saqlash uni deleted = true qiladi, qator o'chmaydi), `yopilgan` qolgan summadan qayta
+  // hisoblanadi (qarzniYangilash). Qarzning o'zi, komissiyasi va boshqa to'lovlari o'zgarmaydi. To'lov topilmasa — o'sha qarz.
+  function tolovniBekorQil(q, tolovId) {
+    if (!(q.tolovlar || []).some(function (t) { return t.id === tolovId; })) return q;
+    return qarzniYangilash(Object.assign({}, q, { tolovlar: q.tolovlar.filter(function (t) { return t.id !== tolovId; }) }));
+  }
+  // "Bekor qilish" (undo): bekor qilingan to'lovni qaytaradi. To'lovlar yig'indisi qarzdan oshib ketadigan bo'lsa (orada boshqa to'lov yozilgan) — null.
+  function tolovniQaytar(q, tolov) {
+    if ((q.tolovlar || []).some(function (t) { return t.id === tolov.id; })) return q;
+    if (tolanganSumma(q) + tolov.summa > q.summa) return null;
+    return qarzniYangilash(Object.assign({}, q, { tolovlar: (q.tolovlar || []).concat([tolov]) }));
+  }
+  // Bekor qilish izohi: pul qaysi tomonga qaytishi qarz yo'nalishiga bog'liq. "oldim" — to'lov hisobdan chiqqan edi (pul hisobga qaytadi);
+  // "berdim" — to'lov hisobga tushgan edi (pul hisobdan chiqadi).
+  function tolovBekorMatni(yonalish) {
+    return 'Qarz yana ochiq bo\'ladi, pul ' + (yonalish === 'berdim' ? 'hisobdan chiqadi' : 'hisobga qaytadi');
+  }
+
   // Muddati o'tgan: muddat bor, qarz yopilmagan va muddat sanasi bugundan oldin (muddat kuni o'zi hali o'tmagan)
   function qarzMuddatiOtdimi(q, bugunSana) { return !!q.muddat && !qarzYopilganmi(q) && q.muddat < bugunSana; }
 
@@ -2013,6 +2037,7 @@
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraniTekshir: zaxiraniTekshir,
     TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
+    tolovlarRoyxati: tolovlarRoyxati, tolovniBekorQil: tolovniBekorQil, tolovniQaytar: tolovniQaytar, tolovBekorMatni: tolovBekorMatni,
     uuidYarat: uuidYarat, uuidTogrimi: uuidTogrimi, uuidgaOtkazish: uuidgaOtkazish, malumotniYangilash: malumotniYangilash, tolovlarniBirlashtir: tolovlarniBirlashtir,
     yerelKalitmi: yerelKalitmi, jonliQarz: jonliQarz, jonlilar: jonlilar, YEREL_KALITLAR: YEREL_KALITLAR,
     csvMatn: csvMatn, csvFayl: csvFayl, eksportDavri: eksportDavri, eksport: eksport, eksportCSV: eksportCSV, EKSPORT_SARLAVHA: EKSPORT_SARLAVHA,

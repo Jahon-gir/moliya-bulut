@@ -1670,3 +1670,46 @@ Bitta umumiy funksiya (`manfiyTekshiruvi`, js/ui.js), saqlashdan OLDIN, yozishda
 
 ### 50.8. Bu PR'da YO'Q (keyingi PR'lar)
 O'chirilganlar ekrani va qarz to'lovini bekor qilish.
+
+## 51. Qarz to'lovini tahrirlash va bekor qilish (0.54.0)
+
+Foydalanuvchi qarzga "qaytardim" deb xato to'lov yozgan (yoki qarzni to'liq qaytarib "yopgan") bo'lsa, to'lovni tuzatishi yoki bekor qilishi mumkin. **Server va sxema o'zgarmaydi (SQL kerak emas).**
+
+### 51.1. Kodda nima bor edi, nima yo'q edi
+| Narsa | Holat (0.53.0 gacha) | Bu PR'da |
+|---|---|---|
+| To'lovni tahrirlash (summa, sana, vaqt, hisob) | **Bor edi**: to'lov qatorini bosish `tolovShakli` ni to'ldirilgan holda ochardi; qoidalar (18.3) va §50 tekshiruvi (`eski: { tolov }`) shu yerda | **Qayta ishlatildi**, o'zgarmadi; "⋯" oynasidan ham ochiladi |
+| To'lovni o'chirish | **Bor edi**: tahrir shaklidagi "To'lovni o'chirish" tugmasi (tasdiqsiz) + 10 soniyalik "Bekor qilish" | Almashtirildi: tasdiq oynasi bilan "To'lovni bekor qilish" (ro'yxatdan va tahrir shaklidan) |
+| To'lovlar ro'yxatida "⋯" va amallar oynasi | **Yo'q edi** (qator butunlay tugma edi) | Qo'shildi (51.2) |
+| Yopilgan qarzda to'lovlar | Bor edi (yopilgan qarzni bosish tafsilotni ochardi) | Shu tafsilotda ham xuddi shu "⋯" |
+| "Qarzni yopish" tugmasi | **Yo'q.** Faqat to'lov shaklidagi "Hammasi (qolgan summa)" tugmasi bor: u faqat summa maydonini to'ldiradi, saqlansa ODDIY to'lov yoziladi | Yangi tugma qo'shilmadi: u yozgan to'lov oddiy to'lov sifatida ro'yxatda ko'rinadi va bekor qilinadi |
+| To'lovni mantiqiy o'chirish (`deleted`) | Bor edi (`Calc.tolovlarniBirlashtir`: ro'yxatdan olingan to'lov `deleted = true` + `updated_at` oladi, qator o'chmaydi) va sinxron (`qarz_tolovlari.deleted`, 15-band) | Qayta ishlatildi |
+| `yopilgan` belgisi | Bor: `Calc.qarzniYangilash` har saqlashda uni to'lovlardan qayta hisoblaydi | Qayta ishlatildi (51.4) |
+
+### 51.2. Ekran
+- **"To'lovlar" bo'limi** (qarz tafsiloti, ochiq va yopilgan qarzda bir xil): faqat o'chirilmagan to'lovlar, sana-vaqt bo'yicha YANGISI TEPADA (`Calc.tolovlarRoyxati`). Qator: chapda sana va vaqt (14 px, qalin), ostida hisob nomi (12 px, kulrang; arxivlangan hisob "(arxiv)", topilmasa "Hisob topilmadi"), o'ngda summa (qalin) va "⋯" tugmasi (Tabler `dots-vertical`, 44 × 44 px, `aria-label` "To'lov amallari: sana, summa"). Uzun hisob nomi ellipsis bilan qisqaradi. Qatorning o'zi bosilmaydi.
+- **"⋯" oynasi** (pastdan chiqadigan oyna, tutqich chizig'i; tashqariga bosish, Esc va "Orqaga" bilan yopiladi): to'lov qisqacha (sana · summa · hisob), ikki qator (≥ 56 px): `pencil` + "To'lovni tahrirlash"; `arrow-back-up` (qizil) + "To'lovni bekor qilish" va kulrang izoh. **Izoh pul yo'nalishiga mos (`Calc.tolovBekorMatni`):** olingan qarz ("oldim", to'lov hisobdan chiqqan edi) — "Qarz yana ochiq bo'ladi, pul hisobga qaytadi"; berilgan qarz ("berdim", to'lov hisobga tushgan edi) — "Qarz yana ochiq bo'ladi, pul hisobdan chiqadi".
+- **Tasdiq oynasi:** "Bu to'lovni bekor qilasizmi?" (to'lov va izoh matni ostida), tugmalar "Yo'q" (outline) va "Ha, bekor qilish" (qizil), 48 px. "Yo'q", tashqariga bosish va Esc — hech narsa o'zgarmaydi.
+
+### 51.3. Bekor qilish
+- To'lov MANTIQIY o'chadi (`Calc.tolovniBekorQil`: to'lov ro'yxatdan olinadi, saqlashda `deleted = true` va yangi `updated_at`; qator bazada va serverda qoladi). Qarzning summasi, komissiyasi (42-band) va boshqa to'lovlari o'zgarmaydi.
+- Qolgan summa, qarz holati, hisob qoldig'i, qarzlar ro'yxati va jami, hisobot (19–20) va Tarix hammasi `malumot.qarzlar` dan hisoblanadi, shuning uchun darhol yangilanadi (ekran qayta chiziladi).
+- **"Bekor qilish" (undo, 10 soniya):** o'chirgandan keyin pastda "To'lov bekor qilindi" + "Bekor qilish"; bosilsa shu to'lov qaytadi (`Calc.tolovniQaytar`, o'sha id, `deleted = false`). Orada boshqa to'lov yozilib yig'indi qarzdan oshib ketsa — "Qaytarib bo'lmadi: to'lovlar yig'indisi qarzdan oshib ketadi" (hech narsa o'zgarmaydi).
+- **§50 (manfiy qoldiq) bekor qilishda TEKSHIRILMAYDI** (to'lov tahriri esa avvalgidek tekshiriladi: eski to'lov ta'siri olib tashlanadi, hisobdan pul chiqadigan to'lov — olingan qarzni qaytarish — tekshiriladi).
+
+### 51.4. Yopilgan qarz qayta ochiladi: "ikki joyda ikki xil holat" bo'lmasligi
+`yopilgan` maydoni saqlanadi (sinxron va zaxira uchun), lekin ekranlar uni O'QIMAYDI: ro'yxat guruhlash (`Calc.qarzlarShaxsBoyicha`), "Yopilgan qarzlar", tafsilot, "+ Qaytardim" tugmasi, muddat belgisi — hammasi `Calc.qarzYopilganmi` (to'lovlardan hisoblanadi) orqali. Bekor qilishda `Calc.tolovniBekorQil` ham maydonni `qarzniYangilash` bilan qayta yozadi. Shunday qilib qolgan summa > 0 bo'lgan qarz avtomatik ochiq ro'yxatga (Qarzlar ekrani, shaxs qatori) qaytadi va yopilgan ekranda ko'rinmaydi; boshqa qurilmada tortilgan to'lov o'zgarishi ham `yopilgan` ni qayta hisoblaydi (`SinxronSof.tortilganniQollash`).
+
+### 51.5. Sinxron
+To'lov o'zgarishi/bekor qilinishi qarz bilan birga navbatga tushadi (yuborish tartibi 15-band: qarzlar, keyin `qarz_tolovlari`), serverga `deleted = true` bilan yuboriladi; boshqa qurilma uni tortib olganda to'lov o'sha yerda ham ko'rinmaydi va qarz ochiq bo'ladi. Ikki qurilmada bir to'lov turlicha o'zgarsa "oxirgi yuborgan yutadi" qoidasi o'zgarmadi. **Eski versiyali qurilma:** `deleted` to'lov qatori sinxron boshlanganidan beri (S3) sinxronning bir qismi, shuning uchun eski qurilma ham bekor qilingan to'lovni yashiradi (yangi ekran bo'lmagani uchun uni o'zi bekor qila olmaydi, xolos).
+
+### 51.6. Qabul qilingan taxminlar
+- Tahrir shaklidagi eski "To'lovni o'chirish" tugmasi nomi "To'lovni bekor qilish" bo'ldi va bir xil tasdiq oynasidan o'tadi.
+- Izoh "Qarz yana ochiq bo'ladi…" hamma holatda ko'rsatiladi (qarz hali yopilmagan bo'lsa ham), maket shunday.
+- Hisob o'chirilgan to'lovni tahrirlaganda hisob maydonida "Hisob topilmadi: boshqasini tanlang" ko'rinadi, saqlashda "Hisobni tanlang" xatosi chiqadi.
+- O'chirilganlar ekrani bu PR'da YO'Q (keyingi PR).
+
+### 51.7. Sinovlar
+- `tests.html?faqat=to'lov bekor` (+ `?faqat=bekor`): yopilgan → ochiq, bir nechta to'lovdan birini bekor qilish, qoldiq (oldim/berdim), undo (va yig'indi oshganda rad), ro'yxat tartibi, yo'nalish matni, komissiyali qarz (komissiyaga tegilmaydi), tahrir chegaralari (eski summa chiqarib olinadi, vaqt qoidalari), §50 bilan o'zaro ta'sir, ilova kodi, sinxron (soxta server, ikki qurilma: deleted navbatga tushadi, B da ham o'chgan va qarz ochiq). To'liq `tests.html` o'tgan.
+- `tools/tolov-brauzer-sinovi.js`: haqiqiy ilova, uydirma ma'lumot, 360 px yorug'/qorong'i (74 tekshiruv): yopilgan qarzdagi ro'yxat va "⋯", oyna, tahrir chegaralari, tasdiq ("Yo'q"/"Ha"), undo, yopilgan → ochiq ro'yxat, hisob qoldig'i, §50 (tahrirda tekshiriladi, bekor qilishda yo'q), berdim matni.
+- **Tekshirilmagan:** haqiqiy telefon.

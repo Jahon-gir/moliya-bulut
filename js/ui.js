@@ -395,7 +395,7 @@
   // summaOl() — o'tkazma summasi matni. Natija: { quti, yangila(), tekshir() }; tekshir() xatoni qismning ichida ko'rsatadi va Calc.komissiyaTekshir natijasini qaytaradi.
   var KOM_CHIPLAR = [['yoq', 'Yo\'q'], ['p05', '0,5%'], ['p1', '1%'], ['foiz', 'Foiz…'], ['summa', 'Summa…']];
   // turOl() (ixtiyoriy): 'xarajat' bo'lsa izoh "Xarajat komissiyasi (…)" (53-band), aks holda o'tkazma.
-  function komissiyaQismi(holat, summaOl, turOl) {
+  function komissiyaQismi(holat, summaOl, turOl, ozgarganda) {
     var quti = el('div', undefined, 'maydon kom-qism');
     quti.setAttribute('role', 'group');
     quti.setAttribute('aria-label', 'Komissiya');
@@ -441,6 +441,7 @@
     quti.appendChild(el('div', 'Shu hisob uchun oxirgi tanlov eslab qolinadi', 'kom-eslatma'));
 
     function yangila() {
+      if (ozgarganda) ozgarganda();   // bo'lib to'lash xulosasi (54-band) komissiya bilan birga yangilanadi
       var chip = holat.chip || 'yoq';
       KOM_CHIPLAR.forEach(function (c) { tugmalar[c[0]].setAttribute('aria-pressed', String(chip === c[0])); });
       foizQuti.hidden = chip !== 'foiz';
@@ -932,6 +933,158 @@
   }
 
   // Izoh va qisqa xulosa
+  // ---- Bo'lib to'lash (TZ-sinxronlash.md 54-band): faqat YANGI xarajatning oxirgi qadamida ----
+  // Holat wizard bilan birga xotirada (wiz.bolish); saqlanganda wizard tozalanadi, shuning uchun keyingi safar yana o'chiq.
+  function bolishHolati() {
+    if (!wiz.bolish) wiz.bolish = { yoq: false, n: 2, rejim: 'teng', sizMatn: '', ismlar: [], summalar: [], xato: null };
+    return wiz.bolish;
+  }
+  function bolishFaolmi() {
+    return wiz && wiz.tur === 'xarajat' && !!wiz.bolish && wiz.bolish.yoq && Calc.qadamlar(wiz.tur)[wiz.qadam] === 'izoh';
+  }
+  function bolishParametrlari() {
+    var b = wiz.bolish;
+    return { jami: wiz.summa, n: b.n, rejim: b.rejim, sizMatn: b.sizMatn, ismlar: b.ismlar, summalar: b.summalar };
+  }
+  // Qo'lda rejimda yig'indi jamiga teng bo'lmaguncha "Saqlash" faol emas (sababi blok ichida yozilgan)
+  function bolishBloklanganmi() {
+    if (!bolishFaolmi() || wiz.bolish.rejim !== 'qolda') return false;
+    var q = Calc.bolishQoldi(bolishParametrlari());
+    return q === null || q !== 0;
+  }
+  function bolishQismi(komOl) {
+    var b = bolishHolati(), quti = el('div', undefined, 'maydon bolish-qism');
+    quti.setAttribute('role', 'group');
+    quti.setAttribute('aria-label', 'Bo\'lib to\'lash');
+    var tavsiya = Calc.bolishTavsiyalari(malumot.qarzlar, 5);
+    var qoldiEl, xatoEl, xulosaEl, sababEl, sizEl, summaInputlar = [], ismInputlar = [], tengEl = [];
+    function jamiSon() { return Calc.summaTekshir(wiz.summa).summa || 0; }
+    function render() {
+      quti.textContent = '';
+      summaInputlar = []; ismInputlar = []; tengEl = []; qoldiEl = sizEl = null;
+      // "Boshqalar uchun ham to'ladim" toggle
+      var tog = tugma(undefined, 'bolish-toggle', function () { b.yoq = !b.yoq; b.xato = null; render(); });
+      tog.id = 'bolish-toggle';
+      tog.setAttribute('role', 'switch'); tog.setAttribute('aria-checked', String(b.yoq));
+      var tm = el('span', undefined, 'bolish-toggle-matn');
+      tm.appendChild(el('strong', 'Boshqalar uchun ham to\'ladim'));
+      tm.appendChild(el('span', 'Ularning ulushi qarz bo\'lib yoziladi', 'xira'));
+      tog.appendChild(tm);
+      tog.appendChild(el('span', undefined, 'bolish-switch'));
+      quti.appendChild(tog);
+      if (!b.yoq) return;
+      var ich = el('div', undefined, 'bolish-ich');
+      var jq = el('div', undefined, 'qator bolish-jami');
+      jq.appendChild(el('span', 'Jami summa', 'xira'));
+      jq.appendChild(el('strong', Calc.sumFormat(jamiSon())));
+      ich.appendChild(jq);
+      // stepper: Siz bilan nechta kishi (2..11)
+      var sq = el('div', undefined, 'bolish-stepper-qator');
+      sq.appendChild(el('span', 'Siz bilan nechta kishi'));
+      var st = el('div', undefined, 'bolish-stepper');
+      var kam = tugma(undefined, 'bolish-st-tugma', function () { if (b.n > Calc.BOLISH.engKam) { b.n--; b.xato = null; render(); } });
+      kam.id = 'bolish-kam'; kam.setAttribute('aria-label', 'Kishilar sonini kamaytirish'); kam.appendChild(svgBelgi('minus', 20)); kam.disabled = b.n <= Calc.BOLISH.engKam;
+      var son = el('strong', String(b.n), 'bolish-son'); son.id = 'bolish-son'; son.setAttribute('aria-live', 'polite');
+      var kop = tugma(undefined, 'bolish-st-tugma', function () { if (b.n < Calc.BOLISH.eng) { b.n++; b.xato = null; render(); } });
+      kop.id = 'bolish-kop'; kop.setAttribute('aria-label', 'Kishilar sonini oshirish'); kop.appendChild(svgBelgi('plus', 20)); kop.disabled = b.n >= Calc.BOLISH.eng;
+      st.appendChild(kam); st.appendChild(son); st.appendChild(kop);
+      sq.appendChild(st);
+      ich.appendChild(sq);
+      // rejim chiplari
+      var cq = el('div', undefined, 'chiplar bolish-chiplar');
+      [['teng', 'Teng bo\'lish'], ['qolda', 'Qo\'lda']].forEach(function (c) {
+        var ch = tugma(c[1], 'chip', function () {
+          if (c[0] === 'qolda' && b.rejim !== 'qolda') {   // teng ulushlar boshlang'ich qiymat bo'ladi
+            var tg = Calc.bolishTeng(jamiSon(), b.n);
+            b.sizMatn = Calc.raqamFormat(String(tg.siz)); b.summalar = []; for (var i = 0; i < b.n - 1; i++) b.summalar.push(Calc.raqamFormat(String(tg.boshqa)));
+          }
+          b.rejim = c[0]; b.xato = null; render();
+        });
+        ch.setAttribute('data-bolish', c[0]); ch.setAttribute('aria-pressed', String(b.rejim === c[0]));
+        cq.appendChild(ch);
+      });
+      ich.appendChild(cq);
+      // oxirgi ishlatilgan qarz ismlari (mavjud qarzlardan)
+      var tq = null;
+      if (tavsiya.length) {
+        tq = el('div', undefined, 'chiplar bolish-tavsiya');
+        tq.setAttribute('aria-label', 'Oxirgi qarz ismlari');
+        tavsiya.forEach(function (nom) {
+          var ch = tugma(nom, 'chip bolish-ism-chip', function () {
+            for (var i = 0; i < b.n - 1; i++) { if (!Calc.bolishIsmi(b.ismlar[i])) { b.ismlar[i] = nom; ismInputlar[i].value = nom; b.xato = null; xatoYangila(); yangila(); return; } }
+          });
+          ch.setAttribute('data-ism', nom);
+          tq.appendChild(ch);
+        });
+        ich.appendChild(tq);
+      }
+      // jadval: siz + boshqalar
+      var jad = el('div', undefined, 'bolish-jadval');
+      var teng = b.rejim === 'teng', tg = Calc.bolishTeng(jamiSon(), b.n);
+      var sr = el('div', undefined, 'bolish-qator bolish-siz');
+      sr.appendChild(el('span', 'Siz (xarajatingiz)', 'bolish-nom'));
+      if (teng) { sizEl = el('strong', Calc.raqamFormat(String(tg.siz)), 'bolish-summa'); sr.appendChild(sizEl); }
+      else {
+        var ss = summaMaydoni('bolish-siz', 'Sizning ulushingiz (so\'m)', b.sizMatn);
+        ss.quti.className = 'bolish-maydon'; ss.input.classList.remove('summa-kiritish'); ss.quti.querySelector('label').className = 'yashirin-belgi';
+        ss.input.addEventListener('input', function () { b.sizMatn = ss.input.value; b.xato = null; xatoYangila(); yangila(); });
+        sr.appendChild(ss.quti);
+      }
+      jad.appendChild(sr);
+      for (var i = 0; i < b.n - 1; i++) (function (i) {
+        var r = el('div', undefined, 'bolish-qator');
+        var ism = document.createElement('input');
+        ism.type = 'text'; ism.id = 'bolish-ism-' + i; ism.className = 'bolish-ism'; ism.placeholder = 'Ismi'; ism.autocomplete = 'off'; ism.maxLength = 60;
+        ism.setAttribute('aria-label', (i + 1) + '-odam ismi'); ism.value = b.ismlar[i] || '';
+        ism.addEventListener('input', function () { b.ismlar[i] = ism.value; b.xato = null; xatoYangila(); yangila(); });
+        ismInputlar.push(ism); r.appendChild(ism);
+        if (teng) { var te = el('strong', Calc.raqamFormat(String(tg.boshqa)), 'bolish-summa'); tengEl.push(te); r.appendChild(te); }
+        else {
+          var sm = summaMaydoni('bolish-summa-' + i, (i + 1) + '-odam summasi (so\'m)', b.summalar[i] || '');
+          sm.quti.className = 'bolish-maydon'; sm.input.classList.remove('summa-kiritish'); sm.quti.querySelector('label').className = 'yashirin-belgi';
+          sm.input.addEventListener('input', function () { b.summalar[i] = sm.input.value; b.xato = null; xatoYangila(); yangila(); });
+          summaInputlar.push(sm.input); r.appendChild(sm.quti);
+        }
+        jad.appendChild(r);
+      })(i);
+      ich.appendChild(jad);
+      if (!teng) { qoldiEl = el('div', undefined, 'bolish-qoldi'); qoldiEl.setAttribute('aria-live', 'polite'); ich.appendChild(qoldiEl); }
+      xatoEl = el('div', undefined, 'xato-matn bolish-xato'); ich.appendChild(xatoEl);
+      sababEl = el('div', undefined, 'bolish-sabab'); ich.appendChild(sababEl);
+      xulosaEl = el('div', undefined, 'xira bolish-xulosa'); ich.appendChild(xulosaEl);
+      quti.appendChild(ich);
+      xatoYangila(); yangila();
+    }
+    function xatoYangila() {
+      if (!xatoEl) return;
+      xatoEl.textContent = b.xato ? b.xato.matn : '';
+      ismInputlar.forEach(function (x, i) { x.classList.toggle('xatoli', !!b.xato && b.xato.maydon === 'ism' + i); });
+      summaInputlar.forEach(function (x, i) { x.classList.toggle('xatoli', !!b.xato && b.xato.maydon === 'summa' + i); });
+    }
+    // Hisoblagich, "Saqlash" holati va xulosa matni (komissiya bilan birga)
+    function yangila() {
+      if (!b.yoq || !xulosaEl) return;
+      var jami = jamiSon(), kom = komOl ? komOl() : null, qoldi = null;
+      if (b.rejim === 'qolda') {
+        qoldi = Calc.bolishQoldi(bolishParametrlari());
+        qoldiEl.textContent = qoldi === 0 ? 'Qoldi: 0 ✓' : 'Qoldi: ' + raqam(qoldi === null ? 0 : qoldi);
+        qoldiEl.className = 'bolish-qoldi ' + (qoldi === 0 ? 'toliq' : qoldi !== null && qoldi < 0 ? 'ortiq' : 'kam');
+        sababEl.textContent = qoldi === 0 ? '' : 'Saqlash uchun yig\'indi jami summaga teng bo\'lsin';
+      } else {
+        var tg = Calc.bolishTeng(jami, b.n);
+        if (sizEl) sizEl.textContent = Calc.raqamFormat(String(tg.siz));
+        tengEl.forEach(function (e) { e.textContent = Calc.raqamFormat(String(tg.boshqa)); });
+        sababEl.textContent = '';
+      }
+      var siz = b.rejim === 'qolda' ? (Calc.summaTekshir(b.sizMatn).summa || 0) : Calc.bolishTeng(jami, b.n).siz;
+      xulosaEl.textContent = Calc.bolishXulosa(siz, b.n - 1, jami + (kom && kom.summa ? kom.summa : 0));
+      var sb = document.getElementById('w-saqlash');
+      if (sb) { sb.disabled = bolishBloklanganmi(); sb.setAttribute('aria-disabled', String(sb.disabled)); }
+    }
+    render();
+    return { quti: quti, yangila: yangila, xatoYangila: xatoYangila };
+  }
+
   function izohQadami() {
     var h = Calc.hozir(), v = wiz.vaqt || h, otkazma = wiz.tur === 'otkazma';
     var k = karta();
@@ -964,8 +1117,11 @@
         wiz.komissiya.hisob = wiz.hisob;
         wiz.komissiya.tur = wiz.tur;
       }
-      komBlok = komissiyaQismi(wiz.komissiya, function () { return wiz.summa; }, function () { return wiz.tur; });
+      komBlok = komissiyaQismi(wiz.komissiya, function () { return wiz.summa; }, function () { return wiz.tur; }, function () { if (bolBlok) bolBlok.yangila(); });
     }
+    // Xarajat: "Boshqalar uchun ham to'ladim" (54-band) komissiya ostida; faqat yangi yozuvda (tahrir formasida yo'q)
+    var bolBlok = null;
+    if (wiz.tur === 'xarajat') bolBlok = bolishQismi(function () { return wiz.komissiya && wiz.komissiya.tur === 'xarajat' ? Calc.komissiyaTekshir(wiz.komissiya, Calc.summaTekshir(wiz.summa).summa || 0, 'xarajat') : null; });
 
     var forma = document.createElement('form');
     forma.noValidate = true;
@@ -977,13 +1133,25 @@
     maydon.appendChild(izoh.quti);
     forma.appendChild(maydon);
     forma.addEventListener('submit', function (e) { e.preventDefault(); wizardSaqlash(); });   // izohda Enter yangi qator ochadi (TZ 48), shuning uchun saqlash faqat tugma bilan
-    return komBlok ? [k, komBlok.quti, forma, qadamXatosi('izoh')] : [k, forma, qadamXatosi('izoh')];
+    var chiq = [k];
+    if (komBlok) chiq.push(komBlok.quti);
+    if (bolBlok) chiq.push(bolBlok.quti);
+    chiq.push(forma, qadamXatosi('izoh'));
+    return chiq;
   }
 
   // Tekshirilgan yozuvni (Calc.yozuvniTayyorlash natijasi) bazaga yozadi va xotiraga qo'shadi. Yozuv qo'shish shakli ham, "Gap bilan qo'shish" ham shuni ishlatadi.
   // kom (ixtiyoriy, faqat o'tkazma): { summa, izoh } — komissiya yozuvi o'tkazma bilan BITTA tranzaksiyada saqlanadi (40-band)
-  function yozuvniSaqlash(tayyor, kom) {
+  // qarzlar (ixtiyoriy, 54-band "Bo'lib to'lash"): xarajat bilan BITTA tranzaksiyada yoziladigan yangi qarzlar
+  function yozuvniSaqlash(tayyor, kom, qarzlar) {
     var yozuv = Object.assign({ id: Data.yangiId(), yaratilgan: new Date().toISOString() }, tayyor);
+    if (qarzlar && qarzlar.length) {
+      return Data.otkazmaniSaqlash(yozuv, kom || null, qarzlar).then(function (n) {
+        otkazmaNatijasi(n);
+        malumot.qarzlar = malumot.qarzlar.concat(n.qarzlar.map(Calc.jonliQarz));
+        return n.otkazma;
+      });
+    }
     if ((yozuv.tur === 'otkazma' || yozuv.tur === 'xarajat') && kom) return Data.otkazmaniSaqlash(yozuv, kom).then(function (n) { otkazmaNatijasi(n); return n.otkazma; });
     return Data.saqlash('yozuvlar', yozuv).then(function () {
       malumot.yozuvlar.push(yozuv);
@@ -995,6 +1163,7 @@
   // sana va vaqt — hozirgi). Tekshiruvlar avvalgidek, vaqt tekshiruvi esa saqlash paytidagi hozirgi vaqt bilan.
   function wizardSaqlash() {
     if (wiz.saqlanmoqda) return;
+    if (bolishBloklanganmi()) return;   // qo'lda bo'lib to'lash: yig'indi jamiga teng emas
     var natija = wiz.tur === 'otkazma' && faolHisoblar().length < 2
       ? { xato: 'O\'tkazma uchun kamida ikkita hisob kerak. "Yana" bo\'limida hisob qo\'shing', qadam: 'qayerga' }
       : Calc.yozuvniTayyorlash(wiz, Calc.hozir());
@@ -1015,23 +1184,41 @@
       return;
     }
     var eslash = komBor ? Calc.komissiyaEslabQolish(kt, wiz.komissiya) : null;
+    var tayyor = natija.yozuv, qarzlar = null, jamiTolangan = tayyor.summa;
+    // Bo'lib to'lash (54-band): xarajat = sizning ulush, har boshqa odam uchun alohida "Men berdim" qarz (§18.3 tekshiruvi), hammasi bitta tranzaksiyada
+    if (bolishFaolmi()) {
+      var bt = Calc.bolishTekshir(bolishParametrlari()), bx = null;
+      if (bt.xato) bx = { matn: bt.xato, maydon: bt.maydon };
+      else {
+        var iz = Calc.bolishIzohlari(tayyor.izoh, wiz.bolish.n);
+        qarzlar = [];
+        for (var bi = 0; bi < bt.boshqalar.length && !bx; bi++) {
+          var qr = Calc.qarzniTekshir({ yonalish: 'berdim', shaxs: bt.boshqalar[bi].shaxs, summa: String(bt.boshqalar[bi].summa), hisob: tayyor.hisob_id, sana: tayyor.sana, vaqt: tayyor.vaqt, muddat: '', izoh: iz.qarz }, Calc.hozir());
+          if (qr.xato) bx = { matn: bt.boshqalar[bi].shaxs + ': ' + qr.xato, maydon: 'ism' + bi };
+          else qarzlar.push(yangiQarzObyekti(qr.qarz));
+        }
+        if (!bx) { tayyor = Object.assign({}, tayyor, { summa: bt.siz, izoh: iz.xarajat }); jamiTolangan = bt.jami; }
+      }
+      if (bx) { wiz.bolish.xato = bx; wizardChiz(); return; }
+    }
     wiz.saqlanmoqda = true;
-    var tayyor = natija.yozuv;
     // Hisobda pul yetmasa (TZ 50): saqlashdan oldin; bloklansa hech narsa yozilmaydi, forma (wiz) saqlanib qoladi
-    manfiyTekshiruvi({ tur: tayyor.tur, hisob_id: tayyor.hisob_id, qabul_hisob_id: tayyor.qabul_hisob_id, summa: tayyor.summa, komissiya: kt.yoq ? 0 : kt.summa }).then(function (q) {
+    // §50: hisobdan JAMI chiqadigan summa (xarajat ulushi + qarzlar + komissiya) bo'yicha, bitta tekshiruv
+    manfiyTekshiruvi({ tur: tayyor.tur, hisob_id: tayyor.hisob_id, qabul_hisob_id: tayyor.qabul_hisob_id, summa: jamiTolangan, komissiya: kt.yoq ? 0 : kt.summa }).then(function (q) {
       if (q !== 'saqla') {
         wiz.saqlanmoqda = false;
         if (q === 'hisob') { wiz.qadam = Calc.qadamlar(wiz.tur).indexOf(wiz.tur === 'otkazma' ? 'qayerdan' : 'hisob'); wizardChiz(); }   // hisob qadamiga qaytadi
         return;
       }
-      return yozuvniSaqlash(tayyor, kt.yoq ? null : { summa: kt.summa, izoh: kt.izoh }).then(function (yozuv) {
+      return yozuvniSaqlash(tayyor, kt.yoq ? null : { summa: kt.summa, izoh: kt.izoh }, qarzlar).then(function (yozuv) {
         if (eslash !== null) komEslabYoz(yozuv.hisob_id, eslash, yozuv.tur);
         wiz = null;            // saqlangach shakl tozalanadi
         qoshishRejimi = 'yozuv';
         tarixOy = yozuv.sana.slice(0, 7);   // Tarixda yangi yozuvning oyi ochiladi
         tarixFiltr = bosFiltr();            // eski qidiruv yoki filtr yangi yozuvni yashirib qo'ymasin
         korsat('tarix');       // forma yopiladi, Tarixga o'tiladi (TZ-sinxronlash.md 20.5)
-        qisqaXabar('Saqlandi: ' + (yozuv.tur === 'daromad' ? '+' : yozuv.tur === 'xarajat' ? '−' : '') + Calc.sumFormat(yozuv.summa) + (kt.yoq ? '' : ' (komissiya ' + raqam(kt.summa) + ')'));
+        if (qarzlar) qisqaXabar('1 xarajat va ' + qarzlar.length + ' ta qarz yozildi' + (kt.yoq ? '' : ' (komissiya ' + raqam(kt.summa) + ')'));
+        else qisqaXabar('Saqlandi: ' + (yozuv.tur === 'daromad' ? '+' : yozuv.tur === 'xarajat' ? '−' : '') + Calc.sumFormat(yozuv.summa) + (kt.yoq ? '' : ' (komissiya ' + raqam(kt.summa) + ')'));
       });
     }).catch(function (xato) {
       wiz.saqlanmoqda = false;
@@ -1067,6 +1254,7 @@
       var pastki = el('div', undefined, 'qadam-pastki');
       var saqla = tugma('Saqlash', 'asosiy-tugma', wizardSaqlash);
       saqla.id = 'w-saqlash';
+      saqla.disabled = bolishBloklanganmi();   // bo'lib to'lash, qo'lda: yig'indi jamiga teng bo'lmaguncha faol emas (54-band)
       pastki.appendChild(saqla);
       bloklar.push(pastki);
     }

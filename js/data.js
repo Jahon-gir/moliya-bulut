@@ -140,10 +140,11 @@
   // otkazma — to'liq yozuv obyekti (tur "otkazma", bo'lmasa id beriladi). kom — null (komissiya yo'q: mavjud komissiya mantiqiy o'chiriladi)
   // yoki { summa, izoh }. Komissiya o'tkazmaning sana, vaqt va "Qayerdan" hisobi bilan yoziladi. Natija: { otkazma, komissiya|null, kategoriya|null (yangi yaratilgan) }.
   // Boshqa turdagi yozuv (xarajat, daromad) uchun ham ishlaydi (kom = null): o'tkazma xarajatga aylantirilsa, komissiyasi o'chadi.
-  function otkazmaniSaqlash(otkazma, kom) {
+  // qarzlar (ixtiyoriy, 54-band "Bo'lib to'lash"): xuddi shu tranzaksiyada yoziladigan YANGI qarzlar (qarzniYoz; alohida saqlangandek, bog'lanmaydi).
+  function otkazmaniSaqlash(otkazma, kom, qarzlar) {
     return new Promise(function (resolve, reject) {
-      var natija = { otkazma: null, komissiya: null, kategoriya: null };
-      var tx = db.transaction(['yozuvlar', 'kategoriyalar', 'sozlamalar'], 'readwrite');
+      var natija = { otkazma: null, komissiya: null, kategoriya: null, qarzlar: [] };
+      var tx = db.transaction(qarzlar && qarzlar.length ? ['yozuvlar', 'kategoriyalar', 'qarzlar', 'sozlamalar'] : ['yozuvlar', 'kategoriyalar', 'sozlamalar'], 'readwrite');
       tx.oncomplete = function () { resolve(natija); ozgarishXabari(); };
       tx.onerror = function () { reject(tx.error); };
       tx.onabort = function () { reject(tx.error || new Error('Bekor qilindi')); };
@@ -152,6 +153,7 @@
       if (!q.id) q.id = yangiId();
       yz.get(q.id).onsuccess = function (e) {
         natija.otkazma = qatorniYoz(tx, 'yozuvlar', q, e.target.result, hozir);
+        (qarzlar || []).forEach(function (z) { natija.qarzlar.push(qarzniYoz(tx, Object.assign({}, z, { id: z.id || yangiId() }), null, hozir)); });
         yz.getAll().onsuccess = function (e2) {
           var bolalar = e2.target.result.filter(function (y) { return y.bog_id === q.id && y.tur === 'xarajat'; });
           var tirik = bolalar.filter(function (y) { return y.deleted !== true; }), ochirilgan = bolalar.filter(function (y) { return y.deleted === true; });

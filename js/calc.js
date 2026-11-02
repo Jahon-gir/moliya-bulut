@@ -544,6 +544,82 @@
   }
   function qarzQolgan(q) { return Math.max(0, q.summa - tolanganSumma(q)); }
   function qarzYopilganmi(q) { return tolanganSumma(q) >= q.summa; }
+  // ---- Bo'lib to'lash (TZ-sinxronlash.md 54-band) ----
+  // Bir saqlashda: foydalanuvchi ulushi — oddiy xarajat, har boshqa odam ulushi — alohida "Men berdim" qarz. Hammasi sof funksiya.
+  var BOLISH = { eng: 11, engKam: 2, izohXarajat: 'Bo\'lib to\'langan', izohQarz: 'Bo\'lib to\'lash', izohBelgi: ' (bo\'lib to\'lash)' };
+  // Teng bo'lish: har boshqa odamga floor(jami / n); qoldiq yaxlitlash foydalanuvchiga tushadi (siz = jami − boshqalar yig'indisi)
+  function bolishTeng(jami, n) {
+    var b = Math.floor(jami / n);
+    return { boshqa: b, siz: jami - b * (n - 1) };
+  }
+  function bolishIsmi(ism) { return String(ism == null ? '' : ism).replace(/\s+/g, ' ').trim(); }
+  // p: { jami (matn), n (2..11), rejim: 'teng' | 'qolda', sizMatn, ismlar: [matn], summalar: [matn] }.
+  // Natija: { siz, boshqalar: [{ shaxs, summa }], jami, qoldi: 0 } yoki { xato, maydon: 'jami' | 'siz' | 'ism<i>' | 'summa<i>' | 'yigindi' }.
+  // Tekshiruv tartibi: jami, ismlar (bo'sh, takror), summalar (qo'lda: butun, >= 1), sizning ulush (>= 1), yig'indi (qo'lda).
+  function bolishTekshir(p) {
+    var jt = summaTekshir(p.jami);
+    if (jt.xato) return { xato: 'Jami summa: ' + jt.xato.charAt(0).toLowerCase() + jt.xato.slice(1), maydon: 'jami' };
+    var jami = jt.summa, n = p.n, k = n - 1;
+    if (!(n >= BOLISH.engKam && n <= BOLISH.eng)) return { xato: 'Kishilar soni 2 dan 11 gacha bo\'lsin', maydon: 'jami' };
+    var ismlar = [], korilgan = {}, i;
+    for (i = 0; i < k; i++) {
+      var ism = bolishIsmi((p.ismlar || [])[i]);
+      if (!ism) return { xato: 'Ismni kiriting', maydon: 'ism' + i };
+      if (korilgan[nomKaliti(ism)]) return { xato: 'Ismlar har xil bo\'lsin', maydon: 'ism' + i };
+      korilgan[nomKaliti(ism)] = true; ismlar.push(ism);
+    }
+    var siz, summalar = [];
+    if (p.rejim === 'qolda') {
+      var yigindi = 0;
+      for (i = 0; i < k; i++) {
+        var t = summaTekshir((p.summalar || [])[i]);
+        if (t.xato || t.summa < 1) return { xato: 'Har bir odam summasi kamida 1 so\'m bo\'lsin', maydon: 'summa' + i };
+        summalar.push(t.summa); yigindi += t.summa;
+      }
+      var st = summaTekshir(p.sizMatn);
+      if (st.xato || st.summa < 1) return { xato: 'Sizning ulushingiz kamida 1 so\'m bo\'lsin. Butunlay boshqalar uchun to\'langan bo\'lsa, Qarz bo\'limidan foydalaning', maydon: 'siz' };
+      siz = st.summa; yigindi += siz;
+      if (yigindi !== jami) return { xato: 'Yig\'indi jami summaga teng bo\'lsin (qoldi: ' + sumFormat(jami - yigindi) + ')', maydon: 'yigindi' };
+    } else {
+      var tg = bolishTeng(jami, n);
+      if (tg.boshqa < 1) return { xato: 'Har bir odam summasi kamida 1 so\'m bo\'lsin: jami summa kishilar sonidan kam', maydon: 'jami' };
+      if (tg.siz < 1) return { xato: 'Sizning ulushingiz kamida 1 so\'m bo\'lsin. Butunlay boshqalar uchun to\'langan bo\'lsa, Qarz bo\'limidan foydalaning', maydon: 'siz' };
+      siz = tg.siz;
+      for (i = 0; i < k; i++) summalar.push(tg.boshqa);
+    }
+    return { siz: siz, jami: jami, qoldi: 0, boshqalar: ismlar.map(function (x, j) { return { shaxs: x, summa: summalar[j] }; }) };
+  }
+  // Qo'lda rejimda hisoblagich: jami − (sizning ulush + boshqalar); to'ldirilmagan/yaroqsiz maydon 0 deb olinadi. null — jami yaroqsiz
+  function bolishQoldi(p) {
+    var jt = summaTekshir(p.jami);
+    if (jt.xato) return null;
+    function son(m) { var t = summaTekshir(m); return t.xato ? 0 : t.summa; }
+    var yig = son(p.sizMatn);
+    (p.summalar || []).slice(0, p.n - 1).forEach(function (m) { yig += son(m); });
+    return jt.summa - yig;
+  }
+  // Izohlar: xarajat — kiritilgan izoh yoki "Bo'lib to'langan: 5 kishi"; qarz — "<izoh yoki Bo'lib to'lash> (bo'lib to'lash)"
+  function bolishIzohlari(izoh, n) {
+    var t = String(izoh == null ? '' : izoh).trim();
+    return { xarajat: t || (BOLISH.izohXarajat + ': ' + n + ' kishi'), qarz: (t || BOLISH.izohQarz) + BOLISH.izohBelgi };
+  }
+  // Ism tavsiyalari: mavjud (o'chirilmagan) qarzlardagi shaxslar, eng ko'p ishlatilgani birinchi (teng bo'lsa — oxirgi ishlatilgani), eng ko'pi limit ta.
+  // Katta-kichik harf va apostrof turlariga befarq birlashtiriladi; ko'rsatiladigan imlo — oxirgi ishlatilgani.
+  function bolishTavsiyalari(qarzlar, limit) {
+    var x = {};
+    (qarzlar || []).forEach(function (q) {
+      if (!q || q.deleted === true || !bolishIsmi(q.shaxs)) return;
+      var k = nomKaliti(q.shaxs), e = x[k] || (x[k] = { nom: '', soni: 0, oxirgi: '' }), kalit = (q.sana || '') + ' ' + (q.vaqt || '');
+      e.soni++;
+      if (kalit >= e.oxirgi) { e.oxirgi = kalit; e.nom = bolishIsmi(q.shaxs); }
+    });
+    return Object.keys(x).map(function (k) { return x[k]; }).sort(function (a, b) { return b.soni - a.soni || (a.oxirgi < b.oxirgi ? 1 : a.oxirgi > b.oxirgi ? -1 : 0) || (a.nom < b.nom ? -1 : 1); }).slice(0, limit || 5).map(function (e) { return e.nom; });
+  }
+  // "Saqlansa: 1 xarajat 40 000 va 1 ta qarz yoziladi. Hisobdan jami 80 000 chiqadi." (jami — komissiya bilan, agar bor bo'lsa)
+  function bolishXulosa(siz, qarzSoni, hisobdanJami) {
+    return 'Saqlansa: 1 xarajat ' + raqamFormat(String(siz)) + ' va ' + qarzSoni + ' ta qarz yoziladi. Hisobdan jami ' + raqamFormat(String(hisobdanJami)) + ' chiqadi.';
+  }
+
   // ---- O'chirilganlar ekrani (TZ-sinxronlash.md 52-band) ----
   var OCHIRILGAN_KUN = 90, OCHIRILGAN_SAHIFA = 50;
   // O'chirilgan paytning (updated_at, ISO) mahalliy sanasi "YYYY-MM-DD"
@@ -2088,6 +2164,7 @@
     filtrOylari: filtrOylari, filtrYillari: filtrYillari, filtrQollash: filtrQollash, diagrammaOraliq: diagrammaOraliq,
     sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraniTekshir: zaxiraniTekshir,
     TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
+    BOLISH: BOLISH, bolishTeng: bolishTeng, bolishIsmi: bolishIsmi, bolishTekshir: bolishTekshir, bolishQoldi: bolishQoldi, bolishIzohlari: bolishIzohlari, bolishTavsiyalari: bolishTavsiyalari, bolishXulosa: bolishXulosa,
     OCHIRILGAN_KUN: OCHIRILGAN_KUN, OCHIRILGAN_SAHIFA: OCHIRILGAN_SAHIFA, ochirilganSana: ochirilganSana, qaytarishTosigi: qaytarishTosigi, ochirilganlarRoyxati: ochirilganlarRoyxati, qaytarishRejasi: qaytarishRejasi,
     tolovlarRoyxati: tolovlarRoyxati, tolovniBekorQil: tolovniBekorQil, tolovniQaytar: tolovniQaytar, tolovBekorMatni: tolovBekorMatni,
     uuidYarat: uuidYarat, uuidTogrimi: uuidTogrimi, uuidgaOtkazish: uuidgaOtkazish, malumotniYangilash: malumotniYangilash, tolovlarniBirlashtir: tolovlarniBirlashtir,

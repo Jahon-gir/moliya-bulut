@@ -1786,3 +1786,37 @@ Komissiya — oddiy `xarajat` yozuvi: xarajatning sana, vaqt va hisobi bilan, ka
 ### 53.7. Qabul qilingan taxminlar
 - O'tkazma tahririda komissiyani "Yo'q" qilib saqlash kabi, xarajat tahririda "Yo'q" qilingan komissiya O'chirilganlar ro'yxatida o'z qatori bilan ko'rinadi (otasi tirik; 52.2).
 - Xarajatning kategoriyasi o'zgarishi komissiyaga ta'sir qilmaydi.
+
+## 54. Bo'lib to'lash (0.57.0)
+
+Foydalanuvchi do'stlari uchun ham to'lagan bo'lsa (masalan 5 kishi baliq yedi, 80 000 ni foydalanuvchi o'zi va yana bir do'sti uchun to'ladi), ilova BIR saqlashda: foydalanuvchining ulushini oddiy XARAJAT, qolganlarning ulushini har biri uchun alohida "Men berdim" QARZ qilib yozadi. Hisobdan jami to'langan summa chiqadi. **Server va sxema o'zgarmaydi (SQL kerak emas).** "Bir necha hisobdan to'lash" bu PR'da YO'Q.
+
+### 54.1. Forma (faqat YANGI xarajatning oxirgi qadami "Izoh va saqlash", komissiya qismi ostida)
+- Tahrirlash formasida, daromad, o'tkazma va qarz turlarida bu qism YO'Q. Tezkor saqlash (oxirgi qadamga kirmasdan) uni ishlatmaydi: oddiy xarajat saqlanadi (qism faqat oxirgi qadam ochiq paytida kuchda). Gap, ovoz va chek kartasidagi "Tahrirlash" ochgan wizardda qism bor; AI uni o'zi to'ldirmaydi.
+- **"Boshqalar uchun ham to'ladim"** toggle (`role="switch"`, ≥ 56 px, izoh "Ularning ulushi qarz bo'lib yoziladi"), boshlang'ich o'chiq; saqlangach wizard tozalanadi, shuning uchun keyingi safar yana o'chiq (eslab qolinmaydi).
+- Yoqilganda: "Jami summa" (xarajat summa maydoni = jami TO'LANGAN summa); "Siz bilan nechta kishi" stepper (2–11, boshlang'ich 2; n = siz + boshqalar, boshqalar soni n−1 ≤ 10; "−"/"+" tugmalari 44 px); chiplar "Teng bo'lish" (boshlang'ich) va "Qo'lda"; jadval: "Siz (xarajatingiz)" va har boshqa odam uchun ism maydoni (placeholder "Ismi", majburiy) va summa; oxirgi ishlatilgan qarz ismlari chiplari (mavjud o'chirilmagan qarzlardagi shaxslar, eng ko'p ishlatilgani birinchi, 5 tagacha, `Calc.bolishTavsiyalari`; yangi saqlash joyi yo'q); bosilsa birinchi bo'sh ism maydoni to'ladi; kulrang xulosa "Saqlansa: 1 xarajat <siz ulushi> va <k> ta qarz yoziladi. Hisobdan jami <jami> chiqadi." (jami — komissiya bilan, agar tanlangan bo'lsa).
+- **Teng bo'lish:** har boshqa odamga `floor(jami / n)`; foydalanuvchi ulushi = jami − boshqalar yig'indisi, ya'ni **yaxlitlash qoldig'i foydalanuvchiga tushadi** (100 000 / 3: boshqalarga 33 333 dan, sizga 33 334). Summalar faqat ko'rsatiladi.
+- **Qo'lda:** sizning ulush va har boshqa odam summasi tahrirlanadi (boshlang'ich — teng qiymatlar); "Qoldi: X" hisoblagichi (jami − yig'indi): 0 bo'lsa yashil "Qoldi: 0 ✓", kam bo'lsa sariq, ortiq bo'lsa qizil. Yig'indi jamiga teng bo'lmaguncha "Saqlash" tugmasi FAOL EMAS (xira) va blok ichida sababi yoziladi.
+- **Tekshiruvlar** (`Calc.bolishTekshir`, sof; xato maydon ostida, hech narsa saqlanmaydi): jami > 0; har ism bo'sh emas; ismlar takrorlanmaydi (katta-kichik harf, apostrof turlari va bo'shliqlarga befarq — `Calc.nomKaliti`; "Ismlar har xil bo'lsin"); har boshqa odam summasi ≥ 1 so'm; sizning ulush ≥ 1 so'm (butunlay boshqalar uchun to'langan bo'lsa Qarz bo'limidan foydalaning); qo'lda yig'indi = jami.
+
+### 54.2. Saqlash
+`Data.otkazmaniSaqlash(yozuv, kom, qarzlar)` (40/53-banddagi mavjud funksiyaga ixtiyoriy 3-parametr): xarajat, (komissiya, kategoriya) va yangi qarzlar BITTA IndexedDB tranzaksiyasida (`qarzniYoz`, saqlash bilan bir xil qoida); biri yozilmasa hech biri yozilmaydi; sinxron navbatiga oddiy yozuv/qarz sifatida tushadi (yuborish tartibi 15-band o'zgarmagan).
+- **Xarajat:** summa = sizning ulush; kategoriya, hisob (to'langan), sana, vaqt; izoh = kiritilgan izoh, bo'sh bo'lsa "Bo'lib to'langan: <n> kishi".
+- **Har boshqa odam:** 1 qarz: `yonalish = 'berdim'`, shaxs = ism (ortiqcha bo'shliqlar bitta bo'shliqqa, 18.3), summa = ulushi, hisob = shu to'langan hisob, sana va vaqt = xarajatniki, muddat bo'sh, izoh = "<izoh yoki Bo'lib to'lash> (bo'lib to'lash)". Qarz `Calc.qarzniTekshir` (18.3) bilan tekshiriladi. Qarz summasi hisobdan chiqadi (mavjud "berdim"), shuning uchun hisobdan jami = sizning ulush + qarzlar yig'indisi = jami to'langan summa (ikki marta hisoblanmaydi).
+- **Komissiya (53):** asos = JAMI to'langan summa (masalan 80 000 ning 1% = 800); komissiya yozuvi foydalanuvchining XARAJATIGA bog'lanadi (`bog_id`), chunki bank komissiyasini foydalanuvchi to'laydi. "Hisobdan jami chiqadi" = jami + komissiya.
+- **§50:** bitta tekshiruv, hisobdan JAMI chiqadigan summa (jami + komissiya) bo'yicha, bitta oyna ("kerak" = jami); bloklansa hech narsa yozilmaydi va forma (ismlar, summalar) saqlanib qoladi.
+- **Keyin:** mavjud 20.5 xatti-harakati (Tarixga o'tiladi) va xabar "1 xarajat va <k> ta qarz yozildi" (komissiya bo'lsa oxirida "(komissiya 800)"). Qarzlar ekrani, Tarix, hisob qoldig'i va hisobot `malumot` dan hisoblanadi: darhol yangilanadi.
+
+### 54.3. Cheklov (ochiq)
+**Xarajat va qarzlar bir-biriga BOG'LANMAYDI** (yangi ustun yo'q): saqlangach har biri alohida tahrirlanadi va o'chiriladi (xarajat o'chirilsa qarzlar qoladi va aksincha). Qarz izohidagi "(bo'lib to'lash)" matni ularning kelib chiqishini ko'rsatadi. Do'st qarzini qaytarsa — oddiy qarz to'lovi (51-band).
+
+### 54.4. Qabul qilingan taxminlar
+- Yaxlitlash qoldig'i foydalanuvchiga tushadi (yuqorida); jami kishilar sonidan kam bo'lsa (masalan 10 so'm / 11 kishi) teng bo'lish rad etiladi.
+- Komissiya asosi jami summa; foydalanuvchi ulushidan emas.
+- Qo'lda rejimga o'tganda boshlang'ich qiymatlar joriy teng ulushlar; n o'zgarsa qo'lda summalar saqlanib qoladi (yangi qatorlar bo'sh), foydalanuvchi "Qoldi" ni ko'rib tuzatadi.
+- Ism tavsiyalari faqat o'chirilmagan qarzlardan olinadi; o'xshash ism (katta-kichik harf) bitta chip, ko'rsatiladigan imlo oxirgi ishlatilgani.
+
+### 54.5. Sinov
+- `tests.html?faqat=bo'lib to'lash` (7 ta): teng bo'lish (80 000/2, 100 000/3, 10/3, n = 11, chegaralar), qo'lda va tekshiruvlar, izoh/xulosa/tavsiyalar, saqlash (1 xarajat + 2 qarz bitta tranzaksiyada, 'berdim', hisob, qoldiq aniq jami, qarzlar ro'yxati, atomarlik), komissiya va §50 jami bo'yicha, ilova kodi, sinxron (soxta server: navbat, serverda 2 qarz, B qurilmada ham). To'liq `tests.html` o'tgan.
+- `tools/bolish-brauzer-sinovi.js`: haqiqiy ilova, uydirma ism, 360 px yorug'/qorong'i (88 tekshiruv): toggle, stepper, chiplar, jadval, hisoblagich va "Saqlash" faol/nofaol, xatolar, komissiya bilan, saqlash, Qarzlar ekrani, yana o'chiq, boshqa turlarda va tahrirda yo'qligi, tezkor saqlash, §50.
+- **Tekshirilmagan:** haqiqiy telefon (klaviatura ochiqligi ko'rinishi), haqiqiy Supabase.

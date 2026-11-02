@@ -1712,3 +1712,39 @@ html[data-tema="qorongi"] .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(
 .och-meta-qator { display: flex; }
 .och-izoh1 { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
 .och-sana { flex: none; white-space: pre; }
+
+/* ===== 0.57.0: bo'lib to'lash (TZ-sinxronlash.md 54-band) ===== */
+.yashirin-belgi { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+.bolish-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; font: inherit; text-align: left; color: var(--matn); background: var(--karta); border: 1px solid var(--chiziq); border-radius: 14px; cursor: pointer; }
+.bolish-toggle:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 2px; }
+.bolish-toggle-matn { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bolish-toggle-matn .xira { font-size: 13px; }
+.bolish-switch { position: relative; flex: none; width: 48px; height: 28px; border-radius: 14px; background: var(--chiziq); transition: background .15s; }
+.bolish-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.bolish-toggle[aria-checked="true"] .bolish-switch { background: var(--sana-yashil); }
+.bolish-toggle[aria-checked="true"] .bolish-switch::after { transform: translateX(20px); }
+.bolish-ich { margin-top: 10px; padding: 12px; background: var(--karta); border: 1px solid var(--chiziq); border-radius: 14px; }
+.bolish-jami { margin-bottom: 4px; }
+.bolish-stepper-qator { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; }
+.bolish-stepper { display: inline-flex; align-items: center; gap: 4px; }
+.bolish-st-tugma { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; color: var(--matn); background: none; border: 1px solid var(--chiziq); border-radius: 22px; cursor: pointer; }
+.bolish-st-tugma:disabled { opacity: .4; cursor: default; }
+.bolish-son { min-width: 32px; text-align: center; font-size: 18px; }
+.bolish-chiplar, .bolish-tavsiya { margin: 6px 0; }
+.bolish-tavsiya .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bolish-jadval { margin-top: 8px; }
+.bolish-qator { display: flex; align-items: center; gap: 8px; min-height: 52px; border-top: 1px solid var(--chiziq); padding: 4px 0; }
+.bolish-qator:first-child { border-top: 0; }
+.bolish-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bolish-ism { flex: 1 1 0; min-width: 0; min-height: 44px; }
+.bolish-summa { flex: none; min-width: 90px; text-align: right; }
+.bolish-maydon { flex: 0 0 120px; margin: 0; }
+.bolish-maydon input { min-height: 44px; text-align: right; }
+.bolish-siz .bolish-maydon { margin-left: auto; }
+.bolish-qoldi { margin-top: 6px; font-weight: 700; }
+.bolish-qoldi.toliq { color: var(--daromad); }
+.bolish-qoldi.kam { color: var(--izoh-ogoh); }
+.bolish-qoldi.ortiq { color: var(--xarajat); }
+.bolish-sabab { font-size: 13px; color: var(--izoh-ogoh); }
+.bolish-xulosa { margin-top: 8px; font-size: 13px; overflow-wrap: anywhere; }
+.qadam-pastki .asosiy-tugma:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }

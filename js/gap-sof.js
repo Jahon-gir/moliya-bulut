@@ -55,17 +55,19 @@ var GapSof = (function () {
     openai: 'Sizning modelingiz javob bermadi, gapni OpenAI o\'qidi (zaxira).'
   };
   var OVOZ_IZOHI = 'Ovozdan matnni Gemini yozgan.';
-  var CHEK_IZOHI = 'Chek rasmidagi matnni Gemini o\'qigan.';
+  // 56-band: chek natijasida belgi bosilsa chekni QAYSI provayder o'qigani ko'rsatiladi (server `manba`: "gemini" | "openai")
+  var CHEK_MANBA_MATNLARI = { gemini: 'Chek Gemini orqali o\'qildi', openai: 'Chek OpenAI orqali o\'qildi (zaxira)' };
   var MANBA_SARLAVHA = 'Tekshiring va saqlang';
   // Noma'lum yoki yaroqsiz qiymat -> '' (belgi ko'rinmaydi). Qiymat ham rang (model: yashil, openai: sariq) ham matnni tanlaydi.
-  function manbaNomi(m) { return m === 'model' || m === 'openai' ? m : ''; }
+  function manbaNomi(m) { return m === 'model' || m === 'openai' || m === 'gemini' ? m : ''; }
   // Izoh qutisidagi qatorlar: manba qatori, ovozdan kelgan bo'lsa ikkinchi qator. Manba noma'lum bo'lsa belgi yo'q, shuning uchun qator ham yo'q.
   function manbaIzohi(manba, ovozdan, chek) {
     var n = manbaNomi(manba);
     if (!n) return [];
+    if (chek) return CHEK_MANBA_MATNLARI[n] ? [CHEK_MANBA_MATNLARI[n]] : [];   // chek: faqat o'qigan provayder (56-band)
+    if (!MANBA_MATNLARI[n]) return [];
     var q = [MANBA_MATNLARI[n]];
     if (ovozdan) q.push(OVOZ_IZOHI);
-    if (chek) q.push(CHEK_IZOHI);
     return q;
   }
 
@@ -133,7 +135,7 @@ var GapSof = (function () {
   var RASM_SIFAT_POGONA = [0.8, 0.7, 0.6, 0.5];
   var RASM_KICHRAYTIRISH = 0.8;             // sig'masa o'lcham shuncha marta kichraytiriladi
   var RASM_KICHRAYTIRISH_MAX = 4;
-  var CHEK_KUTISH_MS = 100000;              // ikki bosqich (rasm o'qish + yozuv, Gemini 1 marta qayta urinishi bilan): 60 s yetmaydi; Edge Function chegarasidan (150 s) kam
+  var CHEK_KUTISH_MS = 135000;              // Gemini 2×20 s + qayta urinish + OpenAI zaxirasi 30 s + yozuv tizimi ≈ 117 s (TZ 56); Edge Function chegarasidan (150 s) kam
   // 38-band: galereya inputida accept atributi YO'Q (Chrome faqat rasm MIME turlari bo'lsa o'z tanlagichini ochadi); fayl turi kodda tekshiriladi
   var RASM_KENGAYTMALAR = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
   function rasmFaylimi(nom, tur) {   // tur bor: image/* bo'lsa; tur bo'sh (ba'zi Android fayl tanlagichlari): kengaytma bo'yicha. Ochilishi keyin tekshiriladi.
@@ -143,12 +145,37 @@ var GapSof = (function () {
     return !!m && RASM_KENGAYTMALAR.indexOf(m[1].toLowerCase()) >= 0;
   }
   var CHEK_BELGI = 'Chekdan o\'qildi · tekshiring';
+  var PDF_BELGI = 'PDF chekdan o\'qildi · tekshiring';
+  var MOS_QATOR = 'Mahsulotlar yig\'indisi jami bilan mos (chegirmalar hisobga olindi)';
+  // 55-band: PDF kirishi. Server chegarasi bilan bir xil (supabase/functions/yordamchi PDF_MAX_BAYT). Fayl hech qayerda saqlanmaydi.
+  var PDF_BAYT_MAX = 4 * 1024 * 1024;
+  var CHEK_IZOH_MAX = 1000;                 // chek izohi (raqamlangan ro'yxat); ilovadagi izoh chegarasi (Calc.IZOH_MAX) bilan bir xil
+  var IZOH_KORINISH_QATOR = 4;              // chek kartasida izohning dastlabki shuncha qatori ko'rinadi
+  function pdfFaylimi(nom, tur) {   // tur bor: faqat application/pdf; tur bo'sh (ba'zi Android tanlagichlari): kengaytma .pdf
+    var t = String(tur || '').toLowerCase();
+    if (t) return t === 'application/pdf';
+    return /\.pdf$/i.test(String(nom || ''));
+  }
+  // null (yaroqli) | 'PDF_FORMAT' (PDF emas yoki bo'sh) | 'PDF_KATTA' (4 MB dan katta). Xato bo'lsa serverga HECH NARSA ketmaydi.
+  function pdfTekshir(fayl) {
+    if (!fayl || !pdfFaylimi(fayl.name, fayl.type)) return 'PDF_FORMAT';
+    if (!(fayl.size > 0)) return 'PDF_FORMAT';
+    if (fayl.size > PDF_BAYT_MAX) return 'PDF_KATTA';
+    return null;
+  }
+  // Karta ichidagi izoh ko'rinishi: dastlabki n qator va qolgan qatorlar soni ("… yana N qator")
+  function izohKorinishi(izoh, n) {
+    var q = String(izoh == null ? '' : izoh).split('\n').filter(function (x) { return x.trim() !== ''; }), k = n || IZOH_KORINISH_QATOR;
+    return { qatorlar: q.slice(0, k), yana: Math.max(0, q.length - k) };
+  }
   var CHEK_XATOLAR = {
     RASM_KATTA: 'Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling.',
     RASM_FORMAT: 'Bu rasm turi qabul qilinmaydi. JPEG, PNG yoki WebP rasm tanlang.',
     CHEK_EMAS: 'Rasmda chek topilmadi.',
     RASM_OQILMADI: 'Rasmdagi matnni o\'qib bo\'lmadi. Chekni aniqroq suratga oling.',
-    AI_HAJM: 'Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling.'
+    AI_HAJM: 'Rasm juda katta. Yaqinroqdan yoki kichikroq rasm oling.',
+    PDF_FORMAT: 'Faqat PDF fayl tanlang',
+    PDF_KATTA: 'PDF juda katta (4 MB gacha)'
   };
   // Uzun tomoni max dan oshmasin, nisbat saqlanadi (kichik rasm kattalashtirilmaydi)
   function rasmOlchami(en, boy, max) {
@@ -191,7 +218,8 @@ var GapSof = (function () {
   var BAND_MATNI = 'Rasm o\'qish xizmati band. Bir daqiqadan keyin qayta urinib ko\'ring.';
   function chekXatoMatni(kod, debug) {
     var k = String(kod || '');
-    if (k === 'AI_PROVAYDER' && /^gemini_(429|500|502|503|504)$/.test(String(debug || ''))) return BAND_MATNI + '\n(kod: ' + k + ', sabab: ' + debug + ')';
+    // Gemini band; zaxira (OpenAI) ham bo'lmasa shu matn (56-band)
+    if (k === 'AI_PROVAYDER' && /^gemini_(429|500|502|503|504)(_openai_[a-z0-9_]+)?$/.test(String(debug || ''))) return BAND_MATNI + '\n(kod: ' + k + ', sabab: ' + debug + ')';
     if (CHEK_XATOLAR[k]) return CHEK_XATOLAR[k] + '\n(kod: ' + k + ')';
     return ovozXatoMatni(k, debug);
   }
@@ -306,7 +334,7 @@ var GapSof = (function () {
       manba: manbaNomi(qosh.manba), ovozdan: !!qosh.ovozdan, chek: !!qosh.chek, manbaOchiq: false,
       tur: t[0], qarzAmal: t[1], summa: summa, kategoriya: katTop ? katTop.id : '', hisob: h ? h.id : '', hisob2: h2 && (!h || h2.id !== h.id) ? h2.id : '',
       shaxs: typeof y.shaxs === 'string' ? birQator(y.shaxs).slice(0, NOM_MAX) : '', sana: sanaYaroqli(y.sana, bugun) ? y.sana : bugun,
-      izoh: birQator(y.izoh).slice(0, IZOH_MAX), vaqt: soatYaroqli(qosh.soat) ? qosh.soat : '', ogohlantirish: ogoh, xatolar: {}, saqlanmoqda: false
+      izoh: qosh.chek ? Calc.izohTozala(tozaMatn(y.izoh), CHEK_IZOH_MAX) : birQator(y.izoh).slice(0, IZOH_MAX), pdf: !!qosh.pdf, yigindiMos: !!qosh.yigindiMos, vaqt: soatYaroqli(qosh.soat) ? qosh.soat : '', ogohlantirish: ogoh, xatolar: {}, saqlanmoqda: false
     };
     // Chek: soat chekdan (sana ham chekdan o'qilgan bo'lsa). Bugungi sanada hozirdan keyingi soat qo'yilmaydi.
     if (qosh.chek && sanaYaroqli(y.sana, bugun) && soatYaroqli(y.vaqt) && !(y.sana === bugun && soatYaroqli(qosh.soat) && y.vaqt > qosh.soat)) karta.vaqt = y.vaqt;
@@ -403,8 +431,8 @@ var GapSof = (function () {
   return {
     GAP_MAX: GAP_MAX, HISOBLAGICH_BOSHI: HISOBLAGICH_BOSHI, ESKI_MAX: ESKI_MAX, ESKI_IZOH_MAX: ESKI_IZOH_MAX, IZOH_MAX: IZOH_MAX, KARTA_MAX: KARTA_MAX, KUTISH_MS: KUTISH_MS,
     MISOLLAR: MISOLLAR, TURLAR: TURLAR, QARZ_AMALLAR: QARZ_AMALLAR, UMUMIY_OGOHLANTIRISH: UMUMIY_OGOHLANTIRISH, YOZUV_YOQ_MATNI: YOZUV_YOQ_MATNI, TUSHUNARSIZ_MATNI: TUSHUNARSIZ_MATNI,
-    MANBA_SARLAVHA: MANBA_SARLAVHA, MANBA_MATNLARI: MANBA_MATNLARI, OVOZ_IZOHI: OVOZ_IZOHI, manbaNomi: manbaNomi, manbaIzohi: manbaIzohi, soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
-    CHEK_BELGI: CHEK_BELGI, CHEK_IZOHI: CHEK_IZOHI, CHEK_KUTISH_MS: CHEK_KUTISH_MS, RASM_UZUN_MAX: RASM_UZUN_MAX, RASM_SIFAT: RASM_SIFAT, RASM_BAYT_MAX: RASM_BAYT_MAX, CHEK_XATOLAR: CHEK_XATOLAR,
+    MANBA_SARLAVHA: MANBA_SARLAVHA, MANBA_MATNLARI: MANBA_MATNLARI, CHEK_MANBA_MATNLARI: CHEK_MANBA_MATNLARI, OVOZ_IZOHI: OVOZ_IZOHI, manbaNomi: manbaNomi, manbaIzohi: manbaIzohi, soatYaroqli: soatYaroqli, oxirgiHisobQoy: oxirgiHisobQoy, oxirgiYangila: oxirgiYangila, OVOZ_MAX_MS: OVOZ_MAX_MS, OVOZ_MIN_BAYT: OVOZ_MIN_BAYT, OVOZ_MAX_BAYT: OVOZ_MAX_BAYT, ovozFormatiTanla: ovozFormatiTanla, sekundMatni: sekundMatni,
+    CHEK_BELGI: CHEK_BELGI, PDF_BELGI: PDF_BELGI, MOS_QATOR: MOS_QATOR, PDF_BAYT_MAX: PDF_BAYT_MAX, CHEK_IZOH_MAX: CHEK_IZOH_MAX, IZOH_KORINISH_QATOR: IZOH_KORINISH_QATOR, pdfFaylimi: pdfFaylimi, pdfTekshir: pdfTekshir, izohKorinishi: izohKorinishi, CHEK_KUTISH_MS: CHEK_KUTISH_MS, RASM_UZUN_MAX: RASM_UZUN_MAX, RASM_SIFAT: RASM_SIFAT, RASM_BAYT_MAX: RASM_BAYT_MAX, CHEK_XATOLAR: CHEK_XATOLAR,
     rasmOlchami: rasmOlchami, rasmSiq: rasmSiq, rasmBosqichlari: rasmBosqichlari, rasmFaylimi: rasmFaylimi, BAND_MATNI: BAND_MATNI, rasmTanasi: rasmTanasi, chekXatoMatni: chekXatoMatni,
     wavYasa: wavYasa, monoQil: monoQil, OVOZ_WAV_HZ: OVOZ_WAV_HZ, mikXatoKodi: mikXatoKodi, ovozXatoMatni: ovozXatoMatni, matnQosh: matnQosh,
     xatoMatni: xatoMatni, sababMatni: sababMatni, hisobTuri: hisobTuri, summaFormat: summaFormat,

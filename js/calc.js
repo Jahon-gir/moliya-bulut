@@ -1264,10 +1264,10 @@
     return '﻿' + [csvQator(sarlavha)].concat(qatorlar.map(csvQator)).join('\r\n') + '\r\n';
   }
   // ---- Ko'p qatorli izoh (TZ-sinxronlash.md 48-band) ----
-  var IZOH_MAX = 500;   // izoh maydonining chegarasi (Gap/chek izohi 200 belgi bo'lib qoladi: GapSof.IZOH_MAX)
+  var IZOH_MAX = 1000;   // izoh maydonining chegarasi (TZ 55: 500 -> 1000, chek izohi sig'sin; AI/ovoz izohi 200 belgi bo'lib qoladi: GapSof.IZOH_MAX)
   // Saqlash uchun: \r\n va \r -> \n, qator oxiridagi bo'shliq olinadi, boshi/oxiri trim, ketma-ket 3 va undan ko'p bo'sh qator 2 tagacha qisqaradi.
   // max — uzunlik chegarasi (boshlang'ich IZOH_MAX); forma o'zi maxlength bilan cheklaydi, shuning uchun saqlashda Infinity beriladi
-  // (import qilingan 500 dan uzun izoh tahrirlanganda kesilib ma'lumot yo'qolmasin).
+  // (import qilingan chegaradan uzun izoh tahrirlanganda kesilib ma'lumot yo'qolmasin).
   function izohTozala(s, max) {
     var t = String(s == null ? '' : s).replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
     var m = max === undefined ? IZOH_MAX : max;

@@ -392,6 +392,27 @@ Gemini 429/500/502/503/504 qaytarsa funksiya bir marta ~1,8 s kutib qayta urinad
 ### 8.5. Chek aniqligi (0.43.3)
 Gemini endi rasmdan tuzilgan JSON (do'kon, sana, vaqt, jami, mahsulotlar) qaytaradi; summa, sana va izoh server tekshiruvidan o'tgan maydonlardan olinadi. `GEMINI_MODEL` strukturali JSON (`responseSchema`) qo'llaydigan model bo'lishi kerak (standart `gemini-2.5-flash`). Model sxemani rad etsa Logs da `rasm: gemini_400 …` chiqadi. **Funksiyani qayta joylash shart** (8.2 qadamlari).
 
+### 8.6. Soliq cheki PDF (0.58.0)
+
+"Gap bilan" -> kamera tugmasi -> **PDF yuklash** (birinchi qator). Funksiya `rasm` rejimida `application/pdf` ni ham qabul qiladi (4 MB gacha; rasm 2 MB). PDF Gemini'ga `inline_data` (`application/pdf`) sifatida beriladi. Yangi Secret kerak emas. **Funksiyani qayta joylash shart** (8.2 qadamlari). Mahsulotlar endi `{nom, miqdor, narx, chegirma}` bo'lib o'qiladi, net summani (narx − chegirma) server hisoblaydi, izoh raqamlangan ro'yxat ("1. Non x2=7800 … Jami=…", 1000 belgigacha). Logda PDF mazmuni, do'kon nomi, STIR, kassa raqami va summalar yo'q.
+
+### 8.7. OpenAI zaxirasi (0.58.0)
+
+Gemini 429/500/502/503/504 yoki tarmoq xatosi bilan javob bersa (va 8.4 dagi bir martalik qayta urinish ham o'tmasa) server shu so'rovni o'zi OpenAI'ga o'tkazadi. 400, 401/403, "chek emas" va ruxsat xatolarida o'tilmaydi. Kalit: mavjud `OPENAI_API_KEY` (yangi Secret shart emas). Ixtiyoriy Secrets:
+
+| Secret | Ma'nosi |
+|---|---|
+| `OPENAI_RASM_MODEL` | OpenAI'ning rasm/PDF o'qiydigan va `json_schema` qo'llaydigan modeli. Bo'lmasa: `AI_PROVAYDER=openai` va `AI_MODEL` `gpt-4o…`/`gpt-4.1…` bo'lsa shu; aks holda `gpt-4.1-mini` |
+| `RASM_ZAXIRA` | `yoq` bo'lsa OpenAI'ga o'tilmaydi (zaxira o'chiriladi). Boshqa qiymat yoki bo'sh = yoqilgan |
+
+Zaxira so'rovi ham limitga **1 ta** so'rov bo'lib sanaladi. **Funksiyani qayta joylash shart** (8.2).
+
+**Zaxirani Gemini limitini kutmasdan sinash.** Gemini'da noto'g'ri kalit odatda **400** qaytaradi, 400 da zaxiraga o'tilmaydi, shuning uchun kalitni almashtirish zaxirani ISHGA TUSHIRMAYDI. Buning o'rniga vaqtincha Secrets'ga `RASM_SINOV_GEMINI` = `429` (yoki `503`) qo'ying: shunda Gemini'ga so'rov yuborilmaydi, u "band" deb olinadi va zaxira (OpenAI) ishlaydi. Natija kartasidagi belgi bosilsa "Chek OpenAI orqali o'qildi (zaxira)" chiqishi kerak. **Sinovdan keyin `RASM_SINOV_GEMINI` ni O'CHIRING.** `OPENAI_API_KEY` bo'lmasa yoki `RASM_ZAXIRA` = `yoq` bo'lsa zaxira ishlamaydi (Gemini xatosi chiqadi).
+
+### 8.8. Kompyuterda sinash
+
+`node --test supabase/functions/yordamchi/test.mjs` (soxta Gemini va OpenAI bilan; haqiqiy kalit va tarmoq ishlatilmaydi).
+
 ## 9. Bildirishnoma (Web Push): 013, 014 va funksiya `bildirishnoma` (ilova 0.49.0)
 
 Menyu → **Eslatmalar** ekrani shu qismga tayanadi. Bu bosqichda faqat sozlash, qurilmani ulash va **"Sinab ko'rish"** ishlaydi; eslatmalarni vaqtida yuborish keyingi bosqichda. Bu qadamlarni bajarmaguncha ilova baribir ishlayveradi, faqat Eslatmalar ekranida yoqishda xato ko'rinadi (`SOZLANMAGAN` yoki `PUSH_SERVER`). Tartib muhim.

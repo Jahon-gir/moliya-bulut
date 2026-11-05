@@ -1295,6 +1295,7 @@ html.pin-qulf .gap-tugma, html.pin-qulf .gp-ekran { visibility: hidden; }
 .gp-manba-belgi { width: 26px; height: 26px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid; }
 .gp-manba-belgi svg { width: 14px; height: 14px; }
 .gp-manba-model { color: var(--gp-man-matn); background: var(--gp-man-fon); border-color: var(--gp-man-chegara); }
+.gp-manba-gemini { color: var(--gp-man-matn); background: var(--gp-man-fon); border-color: var(--gp-man-chegara); }
 .gp-manba-openai { color: var(--gp-ogoh-matn); background: var(--gp-ogoh-fon); border-color: var(--gp-ogoh-chegara); }
 .gp-manba-izoh { margin: 0 0 12px; padding: 8px 10px; font-size: 12px; line-height: 1.4; color: var(--matn); background: var(--gp-man-izoh-fon); border: 1px solid var(--chiziq); border-radius: 8px; overflow-wrap: anywhere; }
 .gp-manba-izoh[hidden] { display: none; }
@@ -1748,3 +1749,16 @@ html[data-tema="qorongi"] .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(
 .bolish-sabab { font-size: 13px; color: var(--izoh-ogoh); }
 .bolish-xulosa { margin-top: 8px; font-size: 13px; overflow-wrap: anywhere; }
 .qadam-pastki .asosiy-tugma:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+/* 55-band: PDF yuklash qatori (menyuning birinchi bandi, accent tusli) */
+.gp-menyu-pdf { background: var(--gp-kok-fon); border: 1px solid var(--gp-kok-chegara); min-height: 52px; }
+.gp-menyu-pdf:hover { background: var(--gp-kok-fon); filter: brightness(.97); }
+.gp-menyu-pdf svg { color: var(--gp-kok-matn); }
+.gp-menyu-matn { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.gp-menyu-matn strong { font-size: 15px; font-weight: 600; color: var(--gp-kok-matn); }
+.gp-menyu-matn small { font-size: 12px; color: var(--xira); }
+/* 55-band: mahsulotlar yig'indisi mos (yashil qator) va izoh ko'rinishi */
+.gp-mos { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 12px; padding: 8px 10px; font-size: 13px; line-height: 1.35; color: var(--gp-man-matn); background: var(--gp-man-fon); border: 1px solid var(--gp-man-chegara); border-radius: 10px; overflow-wrap: anywhere; }
+.gp-mos-ikon { flex: none; display: inline-flex; margin-top: 1px; }
+.gp-izoh-matn { padding: 10px 12px; font-size: 14px; line-height: 1.45; color: var(--matn); background: var(--gp-man-izoh-fon); border: 1px solid var(--chiziq); border-radius: 12px; overflow-wrap: anywhere; }
+.gp-izoh-yana { margin-top: 4px; font-size: 13px; color: var(--xira); }

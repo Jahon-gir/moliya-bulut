@@ -72,7 +72,7 @@ var Sigdir = (function () {
 
   // Izoh maydoni (TZ 48): <textarea rows="1">, balandligi matnga qarab o'sadi (ko'pi bilan 5 qator, keyin maydon ichida aylanadi).
   // Enter yangi qator ochadi: formani saqlamaydi va keyingi qadamga o'tkazmaydi (Enter hodisasi tashqariga chiqmaydi).
-  // Ostida: chapda "Enter: yangi qator", o'ngda "38 / 500" (chegaraga 50 belgi qolganda sariq, to'lganda qizil).
+  // Ostida: chapda "Enter: yangi qator", o'ngda "38 / 1000" (chegaraga 50 belgi qolganda sariq, to'lganda qizil).
   var IZOH_QATOR_KOP = 5, IZOH_OGOH_QOLDI = 50;
   function avtoBalandlik(ta) {
     var cs = window.getComputedStyle(ta);

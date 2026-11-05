@@ -18,6 +18,7 @@ var Gap = (function () {
     vaqt: GapSof.KUTISH_MS,
     yozgich: null,                       // mikrofon (31-band); null bo'lsa haqiqiy MediaRecorder (pastda), tests.html da almashtiriladi
     rasmTayyorla: null,                  // chek rasmi (36-band): fayl -> Promise<{ rasm: base64, mime }>; null bo'lsa haqiqiy canvas (pastda), tests.html da almashtiriladi
+    pdfTayyorla: null,                   // soliq cheki PDF (55-band): fayl -> Promise<{ rasm: base64, mime: 'application/pdf' }>; null bo'lsa FileReader (pastda)
     ovozMax: GapSof.OVOZ_MAX_MS          // yozish chegarasi (ms)
   };
   function sozla(o) { Object.keys(o || {}).forEach(function (k) { dep[k] = o[k]; }); }
@@ -286,6 +287,9 @@ var Gap = (function () {
     }).then(function (x) { if (o) o.yop(); return x; }, function (err) { if (o) o.yop(); throw err; });
   };
   function rasmTayyorla(fayl) { return (dep.rasmTayyorla || haqiqiyRasm)(fayl); }
+  // PDF (55-band): o'zgartirilmasdan base64 qilinadi (mavjud `rasm` rejimi), hech qayerga saqlanmaydi; URL.createObjectURL ishlatilmaydi
+  var haqiqiyPdf = function (fayl) { return blobBase64(fayl).then(function (a) { return { rasm: a, mime: 'application/pdf' }; }); };
+  function pdfTayyorla(fayl) { return (dep.pdfTayyorla || haqiqiyPdf)(fayl); }
 
   function chekHolat() { return holat && holat.chek ? holat.chek : null; }
   function chekBandmi() { var c = chekHolat(); return !!c && c.bosqich !== 'bosh'; }
@@ -314,16 +318,17 @@ var Gap = (function () {
   }
   function chekXato(kod, debug) { xatoKorsat(GapSof.chekXatoMatni(kod, debug)); }
 
-  function chekBoshla(fayl) {
+  function chekBoshla(fayl, pdf) {
     var c = chekHolat();
     if (!c || c.bosqich !== 'bosh' || holat.band || !fayl) return;
     if (holat.mik && holat.mik.bosqich !== 'bosh') { xatoKorsat(holat.mik.bosqich === 'yozilmoqda' ? 'Avval yozishni to\'xtating.' : 'Ovoz matnga aylanmoqda, biroz kuting.'); return; }
     if (!dep.onlayn()) { chekXato('NETWORK_OFFLINE'); return; }
+    if (pdf) { var pk = GapSof.pdfTekshir(fayl); if (pk) { chekXato(pk); return; } }   // PDF emas / bo'sh / 4 MB dan katta: serverga hech narsa ketmaydi
     var sessiya = holat.sessiya, h = holat, n = ++c.n, ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
     h.xato = ''; var x = document.getElementById('gap-xato'), mt = document.getElementById('gap-matn'); if (x) x.textContent = ''; if (mt) mt.classList.remove('xatoli');
     c.bosqich = 'tayyorlanmoqda'; c.ac = ac; chekYangila();
     var eskirgan = function () { return !holat || holat.sessiya !== sessiya || c.n !== n; };
-    Promise.resolve().then(function () { return rasmTayyorla(fayl); }).then(function (r) {
+    Promise.resolve().then(function () { return pdf ? pdfTayyorla(fayl) : rasmTayyorla(fayl); }).then(function (r) {
       fayl = null;   // fayl havolasi qo'yib yuboriladi
       if (eskirgan()) return null;
       c.bosqich = 'oqilmoqda';
@@ -335,7 +340,7 @@ var Gap = (function () {
       var royxat = GapSof.yozuvlarniOl(j).slice(0, 1);
       if (!royxat.length) { chekXato('RASM_OQILMADI'); return; }
       var m = ui.malumot(), bugun = dep.bugun();
-      var qosh = { soat: dep.hozir().vaqt, oxirgi: oxirgiOl(), manba: j && j.manba, chek: true };
+      var qosh = { soat: dep.hozir().vaqt, oxirgi: oxirgiOl(), manba: j && j.manba, chek: true, pdf: !!pdf, yigindiMos: !!j && j.yigindi_mos === true };   // manba: chekni o'qigan provayder (56-band)
       h.kartalar = royxat.map(function (y) { return GapSof.kartaYasash(y, m, bugun, qosh); });
       h.indeks = 0; h.bosqich = 'karta'; mikBekor();
       chiz();
@@ -372,15 +377,17 @@ var Gap = (function () {
   }
   // Ikki ALOHIDA input (37-band): kamera — capture bilan, galereya — capture'siz va accept'siz. Ikkalasi DOM'da, display:none emas
   // (ko'rinmas, lekin joyida: MIUI/Chrome da yashirin inputda tanlagich bo'sh chiqishi mumkin). click() faqat foydalanuvchi bosishi ichida chaqiriladi.
-  function faylInput(id, kamera) {
+  function faylInput(id, kamera, pdf) {
     var i = document.createElement('input');
     i.type = 'file'; i.id = id; i.className = 'gp-fayl-yashirin'; i.tabIndex = -1; i.setAttribute('aria-hidden', 'true');
     if (kamera) { i.accept = 'image/*'; i.setAttribute('capture', 'environment'); }
+    // PDF (55-band): accept MIME + kengaytma. Aralash accept Android Chrome'da rasm tanlagichini (Photo Picker) emas, umumiy fayl tanlagichini ochadi (37–38-band tajribasi: aynan shu PDF uchun kerak)
+    if (pdf) i.accept = 'application/pdf,.pdf';
     // galereya: accept YO'Q va capture YO'Q -> Android tizim tanlagichi (Galereya/Fayllar); fayl turi rasmniOch da tekshiriladi (38-band)
     i.addEventListener('change', function () {
       var f = i.files && i.files[0];
       menyuYop();
-      if (f) chekBoshla(f);   // qiymat keyingi ochilishda tozalanadi (tanlangan fayl havolasi o'qilguncha buzilmasin)
+      if (f) chekBoshla(f, !!pdf);   // qiymat keyingi ochilishda tozalanadi (tanlangan fayl havolasi o'qilguncha buzilmasin)
     });
     return i;
   }
@@ -390,13 +397,18 @@ var Gap = (function () {
     kb.setAttribute('aria-haspopup', 'menu'); kb.setAttribute('aria-expanded', 'false'); kb.setAttribute('aria-controls', 'gap-kamera-menyu');
     kb.appendChild(Ikonlar.chiz('camera', 22));
     var mn = e('div', undefined, 'gp-menyu'); mn.id = 'gap-kamera-menyu'; mn.setAttribute('role', 'menu'); mn.setAttribute('aria-label', 'Chek rasmi'); mn.hidden = true;
-    var kamIn = faylInput('gap-rasm-kamera', true), galIn = faylInput('gap-rasm-galereya', false);
+    var kamIn = faylInput('gap-rasm-kamera', true), galIn = faylInput('gap-rasm-galereya', false), pdfIn = faylInput('gap-pdf-fayl', false, true);
+    // BIRINCHI qator: PDF yuklash (accent tusli, kichik izoh bilan). click() foydalanuvchi bosishi ichida.
+    var pb = tugma('gp-menyu-band gp-menyu-pdf', undefined, function () { try { pdfIn.value = ''; } catch (x) { /* ahamiyatsiz */ } pdfIn.click(); }); pb.id = 'gap-pdf-tugma';
+    pb.setAttribute('role', 'menuitem'); pb.appendChild(Ikonlar.chiz('file-type-pdf', 22));
+    var pm = e('span', undefined, 'gp-menyu-matn'); pm.appendChild(e('strong', 'PDF yuklash')); pm.appendChild(e('small', 'Soliq saytidan olingan chek')); pb.appendChild(pm);
+    mn.appendChild(pb);
     [['camera', 'Suratga olish', kamIn], ['photo', 'Galereyadan tanlash', galIn]].forEach(function (v) {
       var b = tugma('gp-menyu-band', undefined, function () { try { v[2].value = ''; } catch (x) { /* ahamiyatsiz */ } v[2].click(); });   // bir xil rasmni qayta tanlash ham ishlaydi
       b.setAttribute('role', 'menuitem'); b.appendChild(Ikonlar.chiz(v[0], 20)); b.appendChild(e('span', v[1]));
       mn.appendChild(b);
     });
-    quti.appendChild(kb); quti.appendChild(mn); quti.appendChild(kamIn); quti.appendChild(galIn);
+    quti.appendChild(kb); quti.appendChild(mn); quti.appendChild(kamIn); quti.appendChild(galIn); quti.appendChild(pdfIn);
     return quti;
   }
 
@@ -563,8 +575,8 @@ var Gap = (function () {
 
     if (k.chek) {   // chekdan o'qilgan karta (36-band): tepada kichik ko'k belgi
       var cb = e('div', undefined, 'gp-chek-belgi'); cb.id = 'gap-chek-belgi';
-      var cik = e('span', undefined, 'gp-chek-belgi-ikon'); cik.setAttribute('aria-hidden', 'true'); cik.appendChild(Ikonlar.chiz('receipt', 16));
-      cb.appendChild(cik); cb.appendChild(e('span', GapSof.CHEK_BELGI));
+      var cik = e('span', undefined, 'gp-chek-belgi-ikon'); cik.setAttribute('aria-hidden', 'true'); cik.appendChild(Ikonlar.chiz(k.pdf ? 'file-type-pdf' : 'receipt', 16));
+      cb.appendChild(cik); cb.appendChild(e('span', k.pdf ? GapSof.PDF_BELGI : GapSof.CHEK_BELGI));
       b.appendChild(cb);
     }
     if (holat.kartalar.length > 1) {
@@ -607,6 +619,11 @@ var Gap = (function () {
 
     function qosh(nom, mm) { maydonlar[nom] = mm; if (k.xatolar[nom]) { mm.xato.textContent = k.xatolar[nom]; mm.input.classList.add('xatoli'); mm.input.setAttribute('aria-invalid', 'true'); } if (nom !== 'sana' && nom !== 'vaqt') forma.appendChild(mm.quti); }
     qosh('summa', summaMaydoni(k)); maydonlar.summa.input.addEventListener('input', function () { ozgardi('summa')(k.summa); });
+    if (k.chek && k.yigindiMos) {   // 55-band: mahsulotlar yig'indisi jami bilan mos -> kichik yashil qator (mos bo'lmasa serverning sariq ogohlantirishi)
+      var mos = e('div', undefined, 'gp-mos'); mos.id = 'gap-mos'; mos.setAttribute('role', 'note');
+      var mi = e('span', undefined, 'gp-mos-ikon'); mi.setAttribute('aria-hidden', 'true'); mi.appendChild(Ikonlar.chiz('circle-check', 16));
+      mos.appendChild(mi); mos.appendChild(e('span', GapSof.MOS_QATOR)); forma.appendChild(mos);
+    }
 
     var hisoblar = m.hisoblar.filter(function (h) { return !h.arxivlangan && h.deleted !== true; }).map(function (h) { return [h.id, h.nom]; });
     if (k.tur === 'xarajat' || k.tur === 'daromad') {
@@ -630,7 +647,15 @@ var Gap = (function () {
     var qator = e('div', undefined, 'gp-qator');
     qosh('sana', sana); qosh('vaqt', soat);
     qator.appendChild(sana.quti); qator.appendChild(soat.quti); forma.appendChild(qator);
-    qosh('izoh', izohMaydoni('gk-izoh', 'Izoh', k.izoh, function (v) { k.izoh = v; }));
+    if (k.chek) {   // chek kartasi (55-band): izohning dastlabki qatorlari; to'liq izoh "Tahrirlash" ochgan formada
+      var iq = e('div', undefined, 'maydon gp-izoh-korinish'); iq.id = 'gap-izoh-korinish';
+      iq.appendChild(e('span', 'Izoh', 'belgi'));
+      var kor = GapSof.izohKorinishi(k.izoh), qutiI = e('div', undefined, 'gp-izoh-matn'); qutiI.id = 'gap-izoh-matn';
+      kor.qatorlar.forEach(function (t, i) { qutiI.appendChild(e('div', t, i === 0 ? 'gp-izoh-bosh' : '')); });
+      iq.appendChild(qutiI);
+      if (kor.yana > 0) { var yq = e('div', '… yana ' + kor.yana + ' qator', 'gp-izoh-yana'); yq.id = 'gap-izoh-yana'; iq.appendChild(yq); }
+      forma.appendChild(iq);
+    } else qosh('izoh', izohMaydoni('gk-izoh', 'Izoh', k.izoh, function (v) { k.izoh = v; }));
 
     var umumiy = e('div', k.xatolar.umumiy || '', 'xato-matn'); umumiy.setAttribute('role', 'alert'); forma.appendChild(umumiy);
     var saqla = e('button', 'Saqlash', 'asosiy-tugma'); saqla.type = 'submit'; saqla.id = 'gap-saqlash';

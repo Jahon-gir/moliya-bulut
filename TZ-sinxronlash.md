@@ -1919,3 +1919,42 @@ Haqiqiy Gemini va OpenAI (kalitsiz va tarmoqsiz), haqiqiy 429, OpenAI modelining
 
 ### 56.9. Zaxirani Gemini limitini kutmasdan sinash
 **Diqqat:** `GEMINI_API_KEY` ni noto'g'ri qiymatga almashtirish zaxirani ISHGA TUSHIRMAYDI: Google noto'g'ri kalitga odatda 400 qaytaradi, 400 da (kalit xatosi) zaxiraga o'tilmaydi (56.1). Shuning uchun vaqtincha sinov Secret'i: `RASM_SINOV_GEMINI` = `429` (yoki 500/502/503/504). Qiymat bunday bo'lsa funksiya Gemini'ga UMUMAN so'rov yubormaydi, shu holatni Gemini xatosi deb oladi va zaxira (OpenAI) ishga tushadi; boshqa qiymat e'tiborsiz. Telefonda: Secret'ni qo'ying (funksiyani qayta joylash shart emas) → chek (rasm yoki PDF) yuboring → karta belgisi bosilsa "Chek OpenAI orqali o'qildi (zaxira)" → **Secret'ni o'chiring**. Bu sinov Secret'i so'rovdagi ro'yxatdan tashqari kichik qo'shimcha (faqat Secret qo'yilganda ishlaydi); kerak bo'lmasa olib tashlash mumkin.
+
+## 57. Bo'lib to'lash: kim darhol qaytardi (0.59.0)
+
+Bo'lib to'lashda (54-band) ba'zi do'stlar o'z ulushini darhol (naqd yoki kartaga) qaytaradi. Endi formada har boshqa odam uchun holat tanlanadi va saqlashda shu odamning qarziga darhol BITTA to'lov qo'shiladi: qarz yopiq bo'lib yoziladi, keyin har qarzga alohida kirib to'lov qo'shish shart emas. **Server va sxema o'zgarmaydi (SQL kerak emas, qayta joylash ham kerak emas):** to'lov — mavjud `qarz.tolovlar` qatori (18.3/51), sinxron va zaxira avvalgidek. Yangi ekran yo'q.
+
+### 57.1. Forma (54.1 jadvali ichida)
+- **Holat tugmasi:** har boshqa odam qatorida summadan o'ngda, ko'rinadigan katak 40 × 40 px (yumaloq-kvadrat, radius 12 px), bosish maydoni 44 × 44 px; faqat ikon (hisob rangi belgisi yo'q). `aria-label`: "Holat: qarz" / "Holat: naqd berdi" / "Holat: kartaga o'tkazdi".
+- **Aylanma** (`Calc.bolishKeyingiHolat`): QARZ (boshlang'ich; Tabler `clock`, sariq: `--bg-warning`/`--text-warning`) → NAQD BERDI (`cash`, yashil: `--bg-success`/`--text-success`) → KARTAGA O'TKAZDI (`credit-card`, yashil) → QARZ. Naqd hisob yo'q bo'lsa NAQD o'tkazib yuboriladi: QARZ → KARTAGA → QARZ. Tokenlar `style.css` da yorug' va qorong'i rejim uchun yangi (`--bg-warning` va boshqalar loyihada avval yo'q edi; qiymatlar §50 oynasidagi sariq/yashil tuslar bilan bir xil).
+- **Izoh qatori (legend)** ro'yxat ostida, 12 px kulrang: ikon + "naqd berdi", "kartaga", "qarz". Naqd hisob yo'q bo'lsa ostida "Naqd hisob yo'q".
+- **Holat faqat xotirada** (`wiz.bolish.holatlar`, odam qatori tartib raqami bo'yicha): forma yopilsa yoki saqlansa unutiladi. Teng/qo'lda rejim va ism chiplari holatga tegmaydi; "−" bilan qator o'chsa uning holati ham ketadi, "+" bilan qo'shilgan qator QARZ bilan boshlanadi.
+- 360 px: ism maydoni torayadi (`min-width: 0`, ellipsis), tugma 44 px saqlanadi. Yangi ikon: `clock` (`js/ikonlar.js`; `cash`, `credit-card` avvaldan bor).
+
+### 57.2. Pul qaysi hisobga tushadi (`Calc.bolishTolovHisobi`, `Calc.bolishNaqdHisobi`)
+- **Kartaga o'tkazdi** → xarajat to'langan hisob (shu formadagi hisob).
+- **Naqd berdi** → foydalanuvchining NAQD turidagi hisobi (`tur = 'naqd'`), arxivlanmagan, o'chirilmagan. **Bir nechta bo'lsa qoida:** eng ko'p ishlatilgani — o'chirilmagan yozuvlar (`hisob_id`, o'tkazmada `qabul_hisob_id` ham), o'chirilmagan qarzlar va ularning o'chirilmagan to'lovlari (`hisob_id`) soni; teng bo'lsa eng eskisi (`yaratilgan` kichigi), keyin id. Yo'q bo'lsa — 57.1 dagi "Naqd hisob yo'q".
+- Xarajat hisobining o'zi naqd bo'lsa ham qoida o'zgarmaydi: ikkala holat bitta hisobga tushishi mumkin (xulosada bitta guruh).
+
+### 57.3. Xulosa matni (mavjud "Saqlansa: …" qatori, `Calc.bolishXulosa`)
+"Saqlansa: xarajat 57 835, 5 ta qarz. Darhol yopiladi: 3 ta (Naqd pulga +173 499). Ochiq qoladi: 2 ta (115 666)." Darhol yopiladiganlar hisob bo'yicha guruhlanadi (avval naqd holatidagilar, keyin kartaga: "Naqd pulga +57 833, Karta Aga +115 666"); nol bo'lgan qism ("Darhol yopiladi" yoki "Ochiq qoladi") yozilmaydi. Hisob nomiga "ga" qo'shimchasi qo'shiladi (imlo moslashtirilmaydi). **Avvalgi "Hisobdan jami X chiqadi." qismi shu shaklga almashdi**; komissiya bilan jami komissiya qismida ("Hisobdan jami chiqadi: …", 53-band) ko'rinadi.
+
+### 57.4. Saqlash (54.2 yo'li kengaytirildi, takrorlanmadi)
+- `Calc.bolishQarzlari` (sof): har boshqa odam uchun avvalgidek "berdim" qarz (`Calc.qarzniTekshir`, 18.3). Holat NAQD yoki KARTA bo'lsa shu qarzga BITTA to'lov: summa = odam ulushi (to'liq), sana va vaqt = xarajatniki, hisob = 57.2. To'lov MAVJUD `Calc.tolovniTekshir` bilan tekshiriladi (to'lov qolgan qarzdan oshmaydi; vaqt hozirdan keyin emas va qarz vaqtidan oldin emas). `yopilgan` — `Calc.qarzniYangilash` (51.4). Xato bo'lsa hech narsa yozilmaydi, xato o'sha odam qatorida.
+- **To'lov vaqti = qarz vaqti:** mavjud tekshiruv faqat "oldin" ni rad etadi (`sanaVaqtKaliti(to'lov) < sanaVaqtKaliti(qarz)`), TENG vaqt qabul qilinadi — tekshiruv o'zgartirilmadi (sinovda tasdiqlangan).
+- Xarajat, (komissiya, kategoriya), qarzlar va ularning to'lovlari `Data.otkazmaniSaqlash(yozuv, kom, qarzlar)` bilan BITTA IndexedDB tranzaksiyasida (to'lovlar qarz qatorining ichida, `qarzniYoz` → `tolovlarniBirlashtir`); biri yozilmasa hech biri yozilmaydi. `js/data.js` o'zgarmagan.
+- **§50:** avvalgidek BITTA tekshiruv, xarajat hisobiga, faqat hisobdan CHIQADIGAN jami (xarajat + qarzlar + komissiya) bo'yicha. Kiruvchi to'lovlar (naqd yoki kartaga qaytish) tekshirilmaydi va chiqimni kamaytirib hisoblanmaydi: avval to'lov to'liq chiqadi, keyin qaytadi. Masalan kartada 300 000 bo'lsa 347 000 lik bo'lib to'lash "Taqiqlash" da bloklanadi, 2 kishi kartaga qaytargan bo'lsa ham. Tekshiruv shunday sodda qoldirildi.
+- **Xabar** (`Calc.bolishXabari`): "1 xarajat, 5 ta qarz (3 tasi yopildi) yozildi" (komissiya bo'lsa oxirida "(komissiya …)"); hech biri yopilmasa avvalgi "1 xarajat va 5 ta qarz yozildi".
+
+### 57.5. Ko'rinish (mavjud mantiq)
+Yopilgan qarzlar "Yopilgan qarzlar"da, to'lovlari qarz tafsilotidagi to'lovlar ro'yxatida (51.2), ochiqlari Qarzlar ekranining odam qatorlarida. Hisob qoldiqlari yozuvlardan: karta −347 000 (+ kartaga qaytganlar), naqd + naqd qaytganlar. Qaytgan pul daromad emas: hisobot, byudjet va diagrammaga kirmaydi (qarz amali).
+
+### 57.6. Sinov
+- `tests.html?faqat=bo'lib to'lash` (14 ta; 7 tasi yangi, `?faqat=bo'lib to'lash holati`): aylanma (naqd hisob bor/yo'q), naqd hisob tanlash qoidasi, xulosa matni aralashmalarda (faqat qarz, faqat yopiq, naqd + karta, bir hisob), xabar; `bolishQarzlari` (to'lov to'liq, vaqt = qarz vaqti qabul, oldin — rad, naqd yo'q xatosi, kelajak vaqti); saqlash — 6 kishi 347 000, 3 naqd + 2 qarz: 1 xarajat 57 835, 5 qarz, 3 to'lov naqdga, 3 yopiq, 2 ochiq, karta −347 000, naqd +173 499, hisobotda faqat 57 835; majburiy xatoda hech narsa (to'lov ham) yozilmaydi; kartaga qaytgan + komissiya (karta −347 000 − 3 470 + 115 666); §50 chiqim jami bo'yicha; ilova kodi. To'liq `tests.html` o'tgan (773 / 773).
+- `tools/bolish-holat-brauzer-sinovi.js`: haqiqiy ilova, uydirma ism, 360 px yorug'/qorong'i (70 tekshiruv): tugma o'lchami va joyi, aria-label, ranglar, aylanma, legend, xulosa yangilanishi, qator o'chishi/qo'shilishi, qo'lda rejim, uzun ism ellipsis, saqlash va baza, qoldiqlar, Qarzlar ekrani, kartaga holati, "Naqd hisob yo'q". Mavjud `tools/bolish-brauzer-sinovi.js` (xulosa matnlari yangi shaklga yangilandi, 88) va `tools/manfiy-brauzer-sinovi.js` (130) o'tdi.
+- **Tekshirilmagan:** haqiqiy telefon, haqiqiy Supabase sinxroni (to'lovlar avvaldan sinxron qilinadi, kod o'zgarmagan).
+
+### 57.7. Qabul qilingan taxminlar
+- Legend naqd hisob yo'q bo'lganda ham uchala belgini ko'rsatadi, ostida "Naqd hisob yo'q".
+- Hisob nomiga "ga" qo'shimchasi to'g'ridan-to'g'ri qo'shiladi ("Karta Aga").
+- To'lovning hisobi saqlash paytida aniqlanadi (forma ochiq turganida naqd hisob o'zgarsa, saqlash paytidagisi olinadi).

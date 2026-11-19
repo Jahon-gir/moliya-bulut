@@ -1748,6 +1748,18 @@ html[data-tema="qorongi"] .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(
 .bolish-qoldi.ortiq { color: var(--xarajat); }
 .bolish-sabab { font-size: 13px; color: var(--izoh-ogoh); }
 .bolish-xulosa { margin-top: 8px; font-size: 13px; overflow-wrap: anywhere; }
+.bolish-qator .bolish-ism { text-overflow: ellipsis; }
+/* Bo'lib to'lash: kim darhol qaytardi (TZ-sinxronlash.md 57-band). Tugma: bosish maydoni 44 px, ko'rinadigan katak 40 x 40 */
+:root { --bg-warning: #fff1c2; --text-warning: #9a6700; --bg-success: #dff5e9; --text-success: #1b7f3b; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="yorug"]) { --bg-warning: rgba(245, 197, 66, .18); --text-warning: #f5c542; --bg-success: rgba(95, 208, 138, .18); --text-success: #5fd08a; } }
+:root[data-tema="qorongi"] { --bg-warning: rgba(245, 197, 66, .18); --text-warning: #f5c542; --bg-success: rgba(95, 208, 138, .18); --text-success: #5fd08a; }
+.bolish-holat { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: 0 -2px 0 0; padding: 0; background: none; border: 0; border-radius: 14px; cursor: pointer; }
+.bolish-holat:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 0; }
+.bolish-holat-ich { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; color: var(--text-warning); background: var(--bg-warning); }
+.bolish-holat[data-holat="naqd"] .bolish-holat-ich, .bolish-holat[data-holat="karta"] .bolish-holat-ich { color: var(--text-success); background: var(--bg-success); }
+.bolish-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 12px; color: var(--xira); }
+.bolish-legend-band { display: inline-flex; align-items: center; gap: 4px; }
+.bolish-naqd-yoq { margin-top: 2px; font-size: 12px; color: var(--xira); }
 .qadam-pastki .asosiy-tugma:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 
 /* 55-band: PDF yuklash qatori (menyuning birinchi bandi, accent tusli) */

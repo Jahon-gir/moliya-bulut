@@ -615,9 +615,86 @@
     });
     return Object.keys(x).map(function (k) { return x[k]; }).sort(function (a, b) { return b.soni - a.soni || (a.oxirgi < b.oxirgi ? 1 : a.oxirgi > b.oxirgi ? -1 : 0) || (a.nom < b.nom ? -1 : 1); }).slice(0, limit || 5).map(function (e) { return e.nom; });
   }
-  // "Saqlansa: 1 xarajat 40 000 va 1 ta qarz yoziladi. Hisobdan jami 80 000 chiqadi." (jami — komissiya bilan, agar bor bo'lsa)
-  function bolishXulosa(siz, qarzSoni, hisobdanJami) {
-    return 'Saqlansa: 1 xarajat ' + raqamFormat(String(siz)) + ' va ' + qarzSoni + ' ta qarz yoziladi. Hisobdan jami ' + raqamFormat(String(hisobdanJami)) + ' chiqadi.';
+  // ---- Bo'lib to'lash: kim darhol qaytardi (TZ-sinxronlash.md 57-band) ----
+  // Har boshqa odam qatorida holat: 'qarz' (boshlang'ich) -> 'naqd' (naqd berdi) -> 'karta' (kartaga o'tkazdi) -> 'qarz'.
+  // Naqd hisob bo'lmasa 'naqd' o'tkazib yuboriladi: 'qarz' -> 'karta' -> 'qarz'.
+  var BOLISH_HOLAT_NOMI = { qarz: 'qarz', naqd: 'naqd berdi', karta: 'kartaga o\'tkazdi' };
+  function bolishKeyingiHolat(holat, naqdBor) {
+    if (holat === 'naqd') return 'karta';
+    if (holat === 'karta') return 'qarz';
+    return naqdBor ? 'naqd' : 'karta';
+  }
+  // "Naqd berdi" pulining hisobi: tur = 'naqd', arxivlanmagan, o'chirilmagan. Bir nechta bo'lsa — eng ko'p ishlatilgani
+  // (o'chirilmagan yozuvlar: hisob_id va qabul_hisob_id; qarzlar va ularning o'chirilmagan to'lovlari: hisob_id); teng bo'lsa eng eskisi
+  // (`yaratilgan` kichigi), keyin id. Yo'q bo'lsa null.
+  function bolishNaqdHisobi(hisoblar, yozuvlar, qarzlar) {
+    var nomzod = (hisoblar || []).filter(function (h) { return h && h.tur === 'naqd' && !h.arxivlangan && h.deleted !== true; });
+    if (!nomzod.length) return null;
+    var son = {};
+    nomzod.forEach(function (h) { son[h.id] = 0; });
+    function sana(id) { if (id !== undefined && id !== null && son.hasOwnProperty(id)) son[id]++; }
+    (yozuvlar || []).forEach(function (y) { if (y && y.deleted !== true) { sana(y.hisob_id); if (y.qabul_hisob_id !== y.hisob_id) sana(y.qabul_hisob_id); } });
+    (qarzlar || []).forEach(function (q) {
+      if (!q || q.deleted === true) return;
+      sana(q.hisob_id);
+      (q.tolovlar || []).forEach(function (t) { if (t && t.deleted !== true) sana(t.hisob_id); });
+    });
+    return nomzod.slice().sort(function (a, b) {
+      return son[b.id] - son[a.id] || (String(a.yaratilgan || '') < String(b.yaratilgan || '') ? -1 : String(a.yaratilgan || '') > String(b.yaratilgan || '') ? 1 : 0) || (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0);
+    })[0];
+  }
+  // To'lov hisobi: 'karta' — xarajat to'langan hisob, 'naqd' — naqd hisob (yo'q bo'lsa null), 'qarz' — null (to'lov yo'q)
+  function bolishTolovHisobi(holat, xarajatHisobId, naqdHisobId) {
+    if (holat === 'karta') return xarajatHisobId || null;
+    if (holat === 'naqd') return naqdHisobId || null;
+    return null;
+  }
+  // Xulosa: "Saqlansa: xarajat 57 835, 5 ta qarz. Darhol yopiladi: 3 ta (Naqd pulga +173 499). Ochiq qoladi: 2 ta (115 666)."
+  // boshqalar: [{ summa, holat, hisob: { id, nom } | null }] (hisob — to'lov tushadigan hisob; 'qarz' holatida e'tiborsiz).
+  // Darhol yopiladiganlar hisob bo'yicha guruhlanadi (avval naqd holatidagilar, keyin kartaga), bir hisobga tushsa bitta guruh. Nol qismlar yozilmaydi.
+  function bolishXulosa(siz, boshqalar) {
+    boshqalar = boshqalar || [];
+    var matn = 'Saqlansa: xarajat ' + raqamFormat(String(siz)) + ', ' + boshqalar.length + ' ta qarz.';
+    var guruh = [], gid = {}, yopiq = 0, ochiq = 0, ochiqSumma = 0;
+    ['naqd', 'karta'].forEach(function (holat) {
+      boshqalar.forEach(function (b) {
+        if (b.holat !== holat || !b.hisob) return;
+        yopiq++;
+        var g = gid[b.hisob.id];
+        if (!g) { g = gid[b.hisob.id] = { nom: b.hisob.nom, summa: 0 }; guruh.push(g); }
+        g.summa += b.summa;
+      });
+    });
+    boshqalar.forEach(function (b) { if (!((b.holat === 'naqd' || b.holat === 'karta') && b.hisob)) { ochiq++; ochiqSumma += b.summa; } });
+    if (yopiq) matn += ' Darhol yopiladi: ' + yopiq + ' ta (' + guruh.map(function (g) { return g.nom + 'ga +' + raqamFormat(String(g.summa)); }).join(', ') + ').';
+    if (ochiq) matn += ' Ochiq qoladi: ' + ochiq + ' ta (' + raqamFormat(String(ochiqSumma)) + ').';
+    return matn;
+  }
+  // Saqlash uchun qarzlar (sof): har boshqa odam — 'berdim' qarz (qarzniTekshir, 18.3); holati 'naqd'/'karta' bo'lsa shu qarzga BITTA to'lov
+  // (summa = to'liq ulush, sana va vaqt = xarajatniki, hisob = bolishTolovHisobi) mavjud tolovniTekshir bilan qo'shiladi, `yopilgan` qarzniYangilash bilan.
+  // p: { boshqalar: [{ shaxs, summa }], holatlar: [], hisob_id, sana, vaqt, izoh, naqdHisobId, hozir, idFn, yaratilgan }.
+  // Natija: { qarzlar } yoki { xato, maydon: 'ism<i>' } (birinchi xato; hech narsa yozilmasin).
+  function bolishQarzlari(p) {
+    var chiq = [];
+    for (var i = 0; i < p.boshqalar.length; i++) {
+      var b = p.boshqalar[i];
+      var qr = qarzniTekshir({ yonalish: 'berdim', shaxs: b.shaxs, summa: String(b.summa), hisob: p.hisob_id, sana: p.sana, vaqt: p.vaqt, muddat: '', izoh: p.izoh }, p.hozir);
+      if (qr.xato) return { xato: b.shaxs + ': ' + qr.xato, maydon: 'ism' + i };
+      var q = Object.assign({ id: p.idFn(), yaratilgan: p.yaratilgan, tolovlar: [] }, qr.qarz);
+      var holat = (p.holatlar || [])[i];
+      if (holat === 'naqd' || holat === 'karta') {
+        var hid = bolishTolovHisobi(holat, p.hisob_id, p.naqdHisobId);
+        var tr = hid ? tolovniTekshir(q, { summa: String(q.summa), hisob: hid, sana: q.sana, vaqt: q.vaqt }, p.hozir) : { xato: 'Naqd hisob yo\'q' };
+        if (tr.xato) return { xato: b.shaxs + ': ' + tr.xato, maydon: 'ism' + i };
+        q = Object.assign({}, q, { tolovlar: [Object.assign({ id: p.idFn(), yaratilgan: p.yaratilgan }, tr.tolov)] });
+      }
+      chiq.push(qarzniYangilash(q));
+    }
+    return { qarzlar: chiq };
+  }
+  // Saqlangandan keyingi xabar: "1 xarajat, 5 ta qarz (3 tasi yopildi) yozildi"; hech biri yopilmasa avvalgi "1 xarajat va 5 ta qarz yozildi"
+  function bolishXabari(qarzSoni, yopildi) {
+    return yopildi ? '1 xarajat, ' + qarzSoni + ' ta qarz (' + yopildi + ' tasi yopildi) yozildi' : '1 xarajat va ' + qarzSoni + ' ta qarz yozildi';
   }
 
   // ---- O'chirilganlar ekrani (TZ-sinxronlash.md 52-band) ----
@@ -2165,6 +2242,7 @@
     sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraniTekshir: zaxiraniTekshir,
     TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
     BOLISH: BOLISH, bolishTeng: bolishTeng, bolishIsmi: bolishIsmi, bolishTekshir: bolishTekshir, bolishQoldi: bolishQoldi, bolishIzohlari: bolishIzohlari, bolishTavsiyalari: bolishTavsiyalari, bolishXulosa: bolishXulosa,
+    BOLISH_HOLAT_NOMI: BOLISH_HOLAT_NOMI, bolishKeyingiHolat: bolishKeyingiHolat, bolishNaqdHisobi: bolishNaqdHisobi, bolishTolovHisobi: bolishTolovHisobi, bolishXabari: bolishXabari, bolishQarzlari: bolishQarzlari,
     OCHIRILGAN_KUN: OCHIRILGAN_KUN, OCHIRILGAN_SAHIFA: OCHIRILGAN_SAHIFA, ochirilganSana: ochirilganSana, qaytarishTosigi: qaytarishTosigi, ochirilganlarRoyxati: ochirilganlarRoyxati, qaytarishRejasi: qaytarishRejasi,
     tolovlarRoyxati: tolovlarRoyxati, tolovniBekorQil: tolovniBekorQil, tolovniQaytar: tolovniQaytar, tolovBekorMatni: tolovBekorMatni,
     uuidYarat: uuidYarat, uuidTogrimi: uuidTogrimi, uuidgaOtkazish: uuidgaOtkazish, malumotniYangilash: malumotniYangilash, tolovlarniBirlashtir: tolovlarniBirlashtir,

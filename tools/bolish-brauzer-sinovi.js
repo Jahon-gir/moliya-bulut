@@ -63,12 +63,12 @@ async function senariy(brauzer, tema) {
   teng(await p.evaluate(() => [...document.querySelectorAll('.bolish-ism-chip')].map((c) => c.textContent)), ['Ali', 'Vali'], 'oxirgi qarz ismlari (eng ko\'pi birinchi)');
   teng(await satrlar(), ['siz|40 000', 'ism:|40 000'], 'jadval: Siz + 1 odam, teng 40 000');
   teng(await p.evaluate(() => [document.querySelector('.bolish-siz .bolish-nom').textContent, document.querySelector('#bolish-ism-0').placeholder, Math.round(document.querySelector('#bolish-ism-0').getBoundingClientRect().height) >= 44]), ['Siz (xarajatingiz)', 'Ismi', true], 'qator nomi, placeholder, ≥ 44 px');
-  teng(await xulosa(), 'Saqlansa: 1 xarajat 40 000 va 1 ta qarz yoziladi. Hisobdan jami 80 000 chiqadi.', 'xulosa');
+  teng(await xulosa(), 'Saqlansa: xarajat 40 000, 1 ta qarz. Ochiq qoladi: 1 ta (40 000).', 'xulosa (57-band shakli)');
   teng(await p.evaluate(() => [...document.querySelectorAll('.bolish-st-tugma')].every((b) => b.getBoundingClientRect().width >= 44 && b.getBoundingClientRect().height >= 44)), true, 'stepper tugmalari ≥ 44 px');
   await p.click('.bolish-ism-chip[data-ism="Ali"]'); teng(await p.inputValue('#bolish-ism-0'), 'Ali', 'chip ismni to\'ldirdi');
   await p.click('#bolish-kop');
   teng([await p.textContent('#bolish-son'), await satrlar()], ['3', ['siz|26 668', 'ism:Ali|26 666', 'ism:|26 666']], 'n = 3: 80 000 / 3, qoldiq sizga');
-  teng(await xulosa(), 'Saqlansa: 1 xarajat 26 668 va 2 ta qarz yoziladi. Hisobdan jami 80 000 chiqadi.', 'xulosa n=3');
+  teng(await xulosa(), 'Saqlansa: xarajat 26 668, 2 ta qarz. Ochiq qoladi: 2 ta (53 332).', 'xulosa n=3');
   for (let i = 0; i < 8; i++) await p.click('#bolish-kop');
   teng([await p.textContent('#bolish-son'), await p.isDisabled('#bolish-kop'), (await satrlar()).length], ['11', true, 11], 'n = 11: "+" o\'chirilgan, 10 ta boshqa odam');
   for (let i = 0; i < 9; i++) await p.click('#bolish-kam');
@@ -84,7 +84,7 @@ async function senariy(brauzer, tema) {
   await rasm('3-qolda-qoldi');
   await p.fill('#bolish-siz', '30 000'); await p.fill('#bolish-summa-0', '50 000');
   teng([bo(await p.textContent('.bolish-qoldi')), await p.isDisabled('#w-saqlash')], ['Qoldi: 0 ✓', false], 'yig\'indi teng: "Saqlash" faol');
-  teng(await xulosa(), 'Saqlansa: 1 xarajat 30 000 va 1 ta qarz yoziladi. Hisobdan jami 80 000 chiqadi.', 'qo\'lda xulosa');
+  teng(await xulosa(), 'Saqlansa: xarajat 30 000, 1 ta qarz. Ochiq qoladi: 1 ta (50 000).', 'qo\'lda xulosa');
   // tekshiruv xatolari
   await p.click('#bolish-ism-0', { clickCount: 3 }); await p.fill('#bolish-ism-0', '');
   await p.click('#w-saqlash'); await p.waitForTimeout(150);
@@ -96,7 +96,7 @@ async function senariy(brauzer, tema) {
 
   // ======== 3) Komissiya bilan birga, saqlash ========
   await p.click('.kom-chiplar [data-kom="p1"]');
-  teng(await xulosa(), 'Saqlansa: 1 xarajat 40 000 va 1 ta qarz yoziladi. Hisobdan jami 80 800 chiqadi.', 'xulosa komissiya bilan (jami + 800)');
+  teng(await xulosa(), 'Saqlansa: xarajat 40 000, 1 ta qarz. Ochiq qoladi: 1 ta (40 000).', 'xulosa komissiya bilan (jami komissiya qismida)');
   await p.fill('#w-izoh', 'Baliq');
   await olchov('komissiya bilan'); await rasm('4-komissiya');
   await p.click('#w-saqlash'); await p.waitForSelector('.kun');

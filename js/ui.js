@@ -936,7 +936,7 @@
   // ---- Bo'lib to'lash (TZ-sinxronlash.md 54-band): faqat YANGI xarajatning oxirgi qadamida ----
   // Holat wizard bilan birga xotirada (wiz.bolish); saqlanganda wizard tozalanadi, shuning uchun keyingi safar yana o'chiq.
   function bolishHolati() {
-    if (!wiz.bolish) wiz.bolish = { yoq: false, n: 2, rejim: 'teng', sizMatn: '', ismlar: [], summalar: [], holatlar: [], xato: null };
+    if (!wiz.bolish) wiz.bolish = { yoq: false, n: 2, rejim: 'teng', sizMatn: '', ismlar: [], summalar: [], holatlar: [], tushdi: [], oxirgiTushdi: null, hammasi: false, xato: null };
     return wiz.bolish;
   }
   function bolishFaolmi() {
@@ -946,10 +946,17 @@
     var b = wiz.bolish;
     return { jami: wiz.summa, n: b.n, rejim: b.rejim, sizMatn: b.sizMatn, ismlar: b.ismlar, summalar: b.summalar };
   }
-  // 57-band: i-odam holati ('qarz' | 'naqd' | 'karta'); faqat xotirada (forma yopilsa unutiladi)
-  function bolishHolatOl(i) { var h = (wiz.bolish.holatlar || [])[i]; return h === 'naqd' || h === 'karta' ? h : 'qarz'; }
-  function bolishNaqdOl() { return Calc.bolishNaqdHisobi(malumot.hisoblar, malumot.yozuvlar, malumot.qarzlar); }
-  var BOLISH_HOLAT_IKON = { qarz: 'clock', naqd: 'cash', karta: 'credit-card' };
+  // 57-band (57.8): i-odam holati ('qarz' | 'berdi') va pul tushgan hisob (wiz.bolish.tushdi[i]); faqat xotirada (forma yopilsa unutiladi)
+  function bolishHolatOl(i) { return (wiz.bolish.holatlar || [])[i] === 'berdi' ? 'berdi' : 'qarz'; }
+  var BOLISH_HOLAT_IKON = { qarz: 'clock', berdi: 'circle-check' };
+  // Shu qurilmada oxirgi bo'lib to'lashda tanlangan "tushdi" hisobi (faqat hisob id; serverga, sinxronga va zaxiraga tushmaydi)
+  var BOLISH_TUSHDI_KALITI = 'moliya-bolish-tushdi-oxirgi';
+  function bolishTushdiEslabOl() { try { return localStorage.getItem(BOLISH_TUSHDI_KALITI) || null; } catch (e) { return null; } }
+  function bolishTushdiEslabYoz(id) { try { if (id) localStorage.setItem(BOLISH_TUSHDI_KALITI, String(id)); } catch (e) { /* eslab qolish ixtiyoriy */ } }
+  function bolishTushdiBoshlangichi() {
+    return Calc.bolishTushdiBoshlangich({ formada: wiz.bolish.oxirgiTushdi, eslab: bolishTushdiEslabOl(), hisoblar: malumot.hisoblar, yozuvlar: malumot.yozuvlar, qarzlar: malumot.qarzlar, xarajatHisobId: wiz.hisob });
+  }
+  function bolishHisobOl(id) { return id ? malumot.hisoblar.filter(function (x) { return x.id === id; })[0] || null : null; }
   function bolishHolatTugmasi(t, holat) {
     t.textContent = '';
     t.setAttribute('data-holat', holat);
@@ -968,7 +975,7 @@
     var b = bolishHolati(), quti = el('div', undefined, 'maydon bolish-qism');
     quti.setAttribute('role', 'group');
     quti.setAttribute('aria-label', 'Bo\'lib to\'lash');
-    var tavsiya = Calc.bolishTavsiyalari(malumot.qarzlar, 5), naqd = bolishNaqdOl();
+    var tavsiya = Calc.bolishTavsiyalari(malumot.qarzlar, 5);
     var qoldiEl, xatoEl, xulosaEl, sababEl, sizEl, summaInputlar = [], ismInputlar = [], tengEl = [];
     function jamiSon() { return Calc.summaTekshir(wiz.summa).summa || 0; }
     function render() {
@@ -994,7 +1001,7 @@
       var sq = el('div', undefined, 'bolish-stepper-qator');
       sq.appendChild(el('span', 'Siz bilan nechta kishi'));
       var st = el('div', undefined, 'bolish-stepper');
-      var kam = tugma(undefined, 'bolish-st-tugma', function () { if (b.n > Calc.BOLISH.engKam) { b.n--; b.holatlar = (b.holatlar || []).slice(0, b.n - 1); b.xato = null; render(); } });   // o'chgan qatorning holati ham ketadi (57-band)
+      var kam = tugma(undefined, 'bolish-st-tugma', function () { if (b.n > Calc.BOLISH.engKam) { b.n--; b.holatlar = (b.holatlar || []).slice(0, b.n - 1); b.tushdi = (b.tushdi || []).slice(0, b.n - 1); b.xato = null; render(); } });   // o'chgan qatorning holati ham ketadi (57-band)
       kam.id = 'bolish-kam'; kam.setAttribute('aria-label', 'Kishilar sonini kamaytirish'); kam.appendChild(svgBelgi('minus', 20)); kam.disabled = b.n <= Calc.BOLISH.engKam;
       var son = el('strong', String(b.n), 'bolish-son'); son.id = 'bolish-son'; son.setAttribute('aria-live', 'polite');
       var kop = tugma(undefined, 'bolish-st-tugma', function () { if (b.n < Calc.BOLISH.eng) { b.n++; b.xato = null; render(); } });
@@ -1057,29 +1064,43 @@
           sm.input.addEventListener('input', function () { b.summalar[i] = sm.input.value; b.xato = null; xatoYangila(); yangila(); });
           summaInputlar.push(sm.input); r.appendChild(sm.quti);
         }
-        // 57-band: holat tugmasi (qarz -> naqd berdi -> kartaga o'tkazdi -> qarz; naqd hisob bo'lmasa naqd o'tkazib yuboriladi)
+        // 57-band: holat tugmasi, ikki holat: qarz <-> berdi. Berdi bo'lganda boshlang'ich "tushdi" hisobi (57.8 zanjiri) qo'yiladi
         var ht = tugma(undefined, 'bolish-holat', function () {
           if (!b.holatlar) b.holatlar = [];
-          b.holatlar[i] = Calc.bolishKeyingiHolat(bolishHolatOl(i), !!naqd);
-          bolishHolatTugmasi(ht, b.holatlar[i]); yangila();
+          if (!b.tushdi) b.tushdi = [];
+          b.holatlar[i] = Calc.bolishKeyingiHolat(bolishHolatOl(i));
+          if (b.holatlar[i] === 'berdi') b.tushdi[i] = bolishTushdiBoshlangichi();
+          render();
+          var f = document.getElementById('bolish-holat-' + i); if (f) f.focus();
         });
         ht.id = 'bolish-holat-' + i;
         bolishHolatTugmasi(ht, bolishHolatOl(i));
         r.appendChild(ht);
         jad.appendChild(r);
+        // Berdi: ostida "tushdi: <hisob nomi> ⌄" — bosilsa hisob tanlash oynasi
+        if (bolishHolatOl(i) === 'berdi') {
+          var th = bolishHisobOl((b.tushdi || [])[i]), nom = th ? th.nom : 'Hisobni tanlang';
+          var tq = tugma(undefined, 'bolish-tushdi', function () { bolishTushdiOynasi(i); });
+          tq.id = 'bolish-tushdi-' + i;
+          tq.setAttribute('aria-label', (i + 1) + '-odam puli tushgan hisob: ' + nom + '. O\'zgartirish');
+          tq.appendChild(el('span', 'tushdi:', 'bolish-tushdi-belgi'));
+          tq.appendChild(el('strong', nom, 'bolish-tushdi-nom'));
+          tq.appendChild(Ikonlar.chiz('chevron-down', 16));
+          jad.appendChild(tq);
+        }
       })(i);
       ich.appendChild(jad);
-      // Izoh qatori (legend): naqd berdi, kartaga, qarz; naqd hisob bo'lmasa ostida "Naqd hisob yo'q"
+      // Izoh qatori (legend): berdi, qarz va "Hisob nomini bosib o'zgartirasiz"
       var lg = el('div', undefined, 'bolish-legend');
-      [['naqd', 'naqd berdi'], ['karta', 'kartaga'], ['qarz', 'qarz']].forEach(function (x) {
+      [['berdi', 'berdi'], ['qarz', 'qarz']].forEach(function (x) {
         var e = el('span', undefined, 'bolish-legend-band');
         e.setAttribute('data-holat', x[0]);
         e.appendChild(Ikonlar.chiz(BOLISH_HOLAT_IKON[x[0]], 14));
         e.appendChild(document.createTextNode(x[1]));
         lg.appendChild(e);
       });
+      lg.appendChild(el('span', 'Hisob nomini bosib o\'zgartirasiz', 'bolish-legend-izoh'));
       ich.appendChild(lg);
-      if (!naqd) ich.appendChild(el('div', 'Naqd hisob yo\'q', 'bolish-naqd-yoq'));
       if (!teng) { qoldiEl = el('div', undefined, 'bolish-qoldi'); qoldiEl.setAttribute('aria-live', 'polite'); ich.appendChild(qoldiEl); }
       xatoEl = el('div', undefined, 'xato-matn bolish-xato'); ich.appendChild(xatoEl);
       sababEl = el('div', undefined, 'bolish-sabab'); ich.appendChild(sababEl);
@@ -1117,10 +1138,46 @@
     function bolishXulosaQatorlari() {
       var tg = Calc.bolishTeng(jamiSon(), b.n), chiq = [];
       for (var i = 0; i < b.n - 1; i++) {
-        var holat = bolishHolatOl(i), hid = Calc.bolishTolovHisobi(holat, wiz.hisob, naqd ? naqd.id : null), h = hid ? malumot.hisoblar.filter(function (x) { return x.id === hid; })[0] : null;
+        var holat = bolishHolatOl(i), h = holat === 'berdi' ? bolishHisobOl((b.tushdi || [])[i]) : null;
         chiq.push({ summa: b.rejim === 'qolda' ? (Calc.summaTekshir(b.summalar[i]).summa || 0) : tg.boshqa, holat: holat, hisob: h ? { id: h.id, nom: h.nom } : null });
       }
       return chiq;
+    }
+    // "Pul qaysi hisobga tushdi?" oynasi (§44 uslubi): arxivlanmagan hisoblar, tanlangani accent fon va check; pastda "Hammasi shu hisobga"
+    function bolishTushdiOynasi(i) {
+      var joriy = (b.tushdi || [])[i];
+      pastkiOyna('Pul qaysi hisobga tushdi?', function (oyna, yop) {
+        var guruh = el('div', undefined, 'tartib-royxat');
+        guruh.setAttribute('role', 'radiogroup');
+        guruh.setAttribute('aria-label', 'Pul tushgan hisob');
+        faolHisoblar().forEach(function (h) {
+          var tanlangan = h.id === joriy;
+          var q = tugma(undefined, 'tanlov-qator tartib-qator bolish-hisob-qator' + (tanlangan ? ' tanlangan' : ''), function () {
+            b.tushdi = Calc.bolishTushdiTanla(b.holatlar, b.tushdi, i, h.id, !!b.hammasi);
+            b.oxirgiTushdi = h.id;
+            yop(false); render();
+            var f = document.getElementById('bolish-tushdi-' + i); if (f) f.focus();
+          });
+          q.setAttribute('role', 'radio'); q.setAttribute('aria-checked', String(tanlangan)); q.setAttribute('data-hisob', h.id);
+          q.appendChild(hisobBadge(h, 36));
+          q.appendChild(el('strong', h.nom, 'bolish-hisob-nom'));
+          var radio = el('span', undefined, 'tartib-radio');
+          if (tanlangan) radio.appendChild(Ikonlar.chiz('check', 16));
+          q.appendChild(radio);
+          guruh.appendChild(q);
+        });
+        oyna.appendChild(guruh);
+        var bel = tugma(undefined, 'bolish-hammasi', function () {
+          b.hammasi = !b.hammasi; bel.setAttribute('aria-checked', String(b.hammasi));
+          kv.textContent = ''; if (b.hammasi) kv.appendChild(Ikonlar.chiz('check', 14));
+        });
+        bel.id = 'bolish-hammasi'; bel.setAttribute('role', 'checkbox'); bel.setAttribute('aria-checked', String(!!b.hammasi));
+        var kv = el('span', undefined, 'bolish-hammasi-kv');
+        if (b.hammasi) kv.appendChild(Ikonlar.chiz('check', 14));
+        bel.appendChild(kv);
+        bel.appendChild(el('span', 'Hammasi shu hisobga (berganlar uchun)'));
+        oyna.appendChild(bel);
+      }, 'tanlov-oynasi tartib-oynasi bolish-tushdi-oynasi');
     }
     render();
     return { quti: quti, yangila: yangila, xatoYangila: xatoYangila };
@@ -1225,18 +1282,23 @@
       return;
     }
     var eslash = komBor ? Calc.komissiyaEslabQolish(kt, wiz.komissiya) : null;
-    var tayyor = natija.yozuv, qarzlar = null, jamiTolangan = tayyor.summa;
+    var tayyor = natija.yozuv, qarzlar = null, jamiTolangan = tayyor.summa, tushdiEslash = null;
     // Bo'lib to'lash (54-band): xarajat = sizning ulush, har boshqa odam uchun alohida "Men berdim" qarz (§18.3 tekshiruvi), hammasi bitta tranzaksiyada
     if (bolishFaolmi()) {
       var bt = Calc.bolishTekshir(bolishParametrlari()), bx = null;
       if (bt.xato) bx = { matn: bt.xato, maydon: bt.maydon };
       else {
-        var iz = Calc.bolishIzohlari(tayyor.izoh, wiz.bolish.n), naqdH = bolishNaqdOl();
-        // 57-band: darhol qaytarganlar qarziga BITTA to'lov (Calc.bolishQarzlari: mavjud qarzniTekshir/tolovniTekshir)
-        var bq = Calc.bolishQarzlari({ boshqalar: bt.boshqalar, holatlar: wiz.bolish.holatlar, hisob_id: tayyor.hisob_id, sana: tayyor.sana, vaqt: tayyor.vaqt, izoh: iz.qarz,
-          naqdHisobId: naqdH ? naqdH.id : null, hozir: Calc.hozir(), idFn: Data.yangiId, yaratilgan: new Date().toISOString() });
+        var iz = Calc.bolishIzohlari(tayyor.izoh, wiz.bolish.n);
+        // 57-band: darhol qaytarganlar (berdi) qarziga BITTA to'lov, hisob — shu odam uchun tanlangan "tushdi" (Calc.bolishQarzlari: mavjud qarzniTekshir/tolovniTekshir)
+        var bq = Calc.bolishQarzlari({ boshqalar: bt.boshqalar, holatlar: wiz.bolish.holatlar, tushdi: wiz.bolish.tushdi, hisob_id: tayyor.hisob_id, sana: tayyor.sana, vaqt: tayyor.vaqt, izoh: iz.qarz,
+          hozir: Calc.hozir(), idFn: Data.yangiId, yaratilgan: new Date().toISOString() });
         if (bq.xato) bx = { matn: bq.xato, maydon: bq.maydon };
-        else qarzlar = bq.qarzlar;
+        else {
+          qarzlar = bq.qarzlar;
+          // saqlangach eslab qolinadigan "tushdi": formada oxirgi tanlangani, bo'lmasa oxirgi "berdi" odamniki (57.8 (b))
+          for (var ti = 0; ti < bt.boshqalar.length; ti++) if (bolishHolatOl(ti) === 'berdi') tushdiEslash = (wiz.bolish.tushdi || [])[ti];
+          if (tushdiEslash && wiz.bolish.oxirgiTushdi) tushdiEslash = wiz.bolish.oxirgiTushdi;
+        }
         if (!bx) { tayyor = Object.assign({}, tayyor, { summa: bt.siz, izoh: iz.xarajat }); jamiTolangan = bt.jami; }
       }
       if (bx) { wiz.bolish.xato = bx; wizardChiz(); return; }
@@ -1252,6 +1314,7 @@
       }
       return yozuvniSaqlash(tayyor, kt.yoq ? null : { summa: kt.summa, izoh: kt.izoh }, qarzlar).then(function (yozuv) {
         if (eslash !== null) komEslabYoz(yozuv.hisob_id, eslash, yozuv.tur);
+        if (tushdiEslash) bolishTushdiEslabYoz(tushdiEslash);
         wiz = null;            // saqlangach shakl tozalanadi
         qoshishRejimi = 'yozuv';
         tarixOy = yozuv.sana.slice(0, 7);   // Tarixda yangi yozuvning oyi ochiladi

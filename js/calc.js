@@ -615,18 +615,18 @@
     });
     return Object.keys(x).map(function (k) { return x[k]; }).sort(function (a, b) { return b.soni - a.soni || (a.oxirgi < b.oxirgi ? 1 : a.oxirgi > b.oxirgi ? -1 : 0) || (a.nom < b.nom ? -1 : 1); }).slice(0, limit || 5).map(function (e) { return e.nom; });
   }
-  // ---- Bo'lib to'lash: kim darhol qaytardi (TZ-sinxronlash.md 57-band) ----
-  // Har boshqa odam qatorida holat: 'qarz' (boshlang'ich) -> 'naqd' (naqd berdi) -> 'karta' (kartaga o'tkazdi) -> 'qarz'.
-  // Naqd hisob bo'lmasa 'naqd' o'tkazib yuboriladi: 'qarz' -> 'karta' -> 'qarz'.
-  var BOLISH_HOLAT_NOMI = { qarz: 'qarz', naqd: 'naqd berdi', karta: 'kartaga o\'tkazdi' };
-  function bolishKeyingiHolat(holat, naqdBor) {
-    if (holat === 'naqd') return 'karta';
-    if (holat === 'karta') return 'qarz';
-    return naqdBor ? 'naqd' : 'karta';
+  // ---- Bo'lib to'lash: kim darhol qaytardi (TZ-sinxronlash.md 57-band; 57.8 — qaytgan pul hisobini tanlash, 0.59.1) ----
+  // Har boshqa odam qatorida IKKI holat: 'qarz' (boshlang'ich) <-> 'berdi'. Berdi bo'lsa pul tushgan hisobni foydalanuvchi o'zi tanlaydi.
+  var BOLISH_HOLAT_NOMI = { qarz: 'qarz', berdi: 'berdi' };
+  function bolishKeyingiHolat(holat) { return holat === 'berdi' ? 'qarz' : 'berdi'; }
+  // Hisob "tushdi" sifatida yaroqlimi: bor, o'chirilmagan, arxivlanmagan
+  function bolishHisobYaroqli(hisoblar, id) {
+    if (id === undefined || id === null || id === '') return null;
+    return (hisoblar || []).filter(function (h) { return h && h.id === id && h.deleted !== true && !h.arxivlangan; })[0] || null;
   }
-  // "Naqd berdi" pulining hisobi: tur = 'naqd', arxivlanmagan, o'chirilmagan. Bir nechta bo'lsa — eng ko'p ishlatilgani
-  // (o'chirilmagan yozuvlar: hisob_id va qabul_hisob_id; qarzlar va ularning o'chirilmagan to'lovlari: hisob_id); teng bo'lsa eng eskisi
-  // (`yaratilgan` kichigi), keyin id. Yo'q bo'lsa null.
+  // 'naqd' turidagi eng ko'p ishlatilgan hisob (boshlang'ich tanlov zanjirining (c) bosqichi).
+  // Ishlatilish: o'chirilmagan yozuvlar (hisob_id va qabul_hisob_id), o'chirilmagan qarzlar va ularning o'chirilmagan to'lovlari (hisob_id);
+  // teng bo'lsa eng eskisi (`yaratilgan` kichigi), keyin id. Yo'q bo'lsa null.
   function bolishNaqdHisobi(hisoblar, yozuvlar, qarzlar) {
     var nomzod = (hisoblar || []).filter(function (h) { return h && h.tur === 'naqd' && !h.arxivlangan && h.deleted !== true; });
     if (!nomzod.length) return null;
@@ -643,36 +643,45 @@
       return son[b.id] - son[a.id] || (String(a.yaratilgan || '') < String(b.yaratilgan || '') ? -1 : String(a.yaratilgan || '') > String(b.yaratilgan || '') ? 1 : 0) || (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0);
     })[0];
   }
-  // To'lov hisobi: 'karta' — xarajat to'langan hisob, 'naqd' — naqd hisob (yo'q bo'lsa null), 'qarz' — null (to'lov yo'q)
-  function bolishTolovHisobi(holat, xarajatHisobId, naqdHisobId) {
-    if (holat === 'karta') return xarajatHisobId || null;
-    if (holat === 'naqd') return naqdHisobId || null;
-    return null;
+  // Odam 'berdi' ga o'tkazilganda boshlang'ich "tushdi" hisobi (id): (a) shu forma ochiq paytida oxirgi tanlangan;
+  // (b) shu qurilmada oxirgi bo'lib to'lashda tanlangan (localStorage); (c) 'naqd' turidagi eng ko'p ishlatilgani; (d) xarajat to'langan hisob.
+  // (a) va (b) o'chirilgan yoki arxivlangan bo'lsa e'tiborsiz. p: { formada, eslab, hisoblar, yozuvlar, qarzlar, xarajatHisobId }
+  function bolishTushdiBoshlangich(p) {
+    var a = bolishHisobYaroqli(p.hisoblar, p.formada); if (a) return a.id;
+    var b = bolishHisobYaroqli(p.hisoblar, p.eslab); if (b) return b.id;
+    var c = bolishNaqdHisobi(p.hisoblar, p.yozuvlar, p.qarzlar); if (c) return c.id;
+    return p.xarajatHisobId || null;
   }
-  // Xulosa: "Saqlansa: xarajat 57 835, 5 ta qarz. Darhol yopiladi: 3 ta (Naqd pulga +173 499). Ochiq qoladi: 2 ta (115 666)."
-  // boshqalar: [{ summa, holat, hisob: { id, nom } | null }] (hisob — to'lov tushadigan hisob; 'qarz' holatida e'tiborsiz).
-  // Darhol yopiladiganlar hisob bo'yicha guruhlanadi (avval naqd holatidagilar, keyin kartaga), bir hisobga tushsa bitta guruh. Nol qismlar yozilmaydi.
+  // Oynada hisob tanlandi: i-odamning hisobi; "Hammasi shu hisobga" belgilangan bo'lsa hamma 'berdi' holatidagi odamlarniki. Yangi massiv qaytadi.
+  function bolishTushdiTanla(holatlar, tushdi, i, hisobId, hammasi) {
+    var chiq = (tushdi || []).slice();
+    if (hammasi) (holatlar || []).forEach(function (h, j) { if (h === 'berdi') chiq[j] = hisobId; });
+    chiq[i] = hisobId;
+    return chiq;
+  }
+  // Xulosa: "Saqlansa: xarajat 57 835, 5 ta qarz. Darhol yopiladi: 3 ta (Naqd pul hisobiga +115 666, Karta B hisobiga +57 833). Ochiq qoladi: 2 ta (115 666)."
+  // boshqalar: [{ summa, holat, hisob: { id, nom } | null }]. Darhol yopiladiganlar hisob bo'yicha guruhlanadi, summa bo'yicha kattadan kichikka
+  // (teng bo'lsa birinchi uchragani oldin); nomga qo'shimcha yopishtirilmaydi: doim "<nom> hisobiga". Nol qismlar yozilmaydi.
   function bolishXulosa(siz, boshqalar) {
     boshqalar = boshqalar || [];
     var matn = 'Saqlansa: xarajat ' + raqamFormat(String(siz)) + ', ' + boshqalar.length + ' ta qarz.';
     var guruh = [], gid = {}, yopiq = 0, ochiq = 0, ochiqSumma = 0;
-    ['naqd', 'karta'].forEach(function (holat) {
-      boshqalar.forEach(function (b) {
-        if (b.holat !== holat || !b.hisob) return;
+    boshqalar.forEach(function (b) {
+      if (b.holat === 'berdi' && b.hisob) {
         yopiq++;
         var g = gid[b.hisob.id];
-        if (!g) { g = gid[b.hisob.id] = { nom: b.hisob.nom, summa: 0 }; guruh.push(g); }
+        if (!g) { g = gid[b.hisob.id] = { nom: b.hisob.nom, summa: 0, tartib: guruh.length }; guruh.push(g); }
         g.summa += b.summa;
-      });
+      } else { ochiq++; ochiqSumma += b.summa; }
     });
-    boshqalar.forEach(function (b) { if (!((b.holat === 'naqd' || b.holat === 'karta') && b.hisob)) { ochiq++; ochiqSumma += b.summa; } });
-    if (yopiq) matn += ' Darhol yopiladi: ' + yopiq + ' ta (' + guruh.map(function (g) { return g.nom + 'ga +' + raqamFormat(String(g.summa)); }).join(', ') + ').';
+    guruh.sort(function (a, b) { return b.summa - a.summa || a.tartib - b.tartib; });
+    if (yopiq) matn += ' Darhol yopiladi: ' + yopiq + ' ta (' + guruh.map(function (g) { return g.nom + ' hisobiga +' + raqamFormat(String(g.summa)); }).join(', ') + ').';
     if (ochiq) matn += ' Ochiq qoladi: ' + ochiq + ' ta (' + raqamFormat(String(ochiqSumma)) + ').';
     return matn;
   }
-  // Saqlash uchun qarzlar (sof): har boshqa odam — 'berdim' qarz (qarzniTekshir, 18.3); holati 'naqd'/'karta' bo'lsa shu qarzga BITTA to'lov
-  // (summa = to'liq ulush, sana va vaqt = xarajatniki, hisob = bolishTolovHisobi) mavjud tolovniTekshir bilan qo'shiladi, `yopilgan` qarzniYangilash bilan.
-  // p: { boshqalar: [{ shaxs, summa }], holatlar: [], hisob_id, sana, vaqt, izoh, naqdHisobId, hozir, idFn, yaratilgan }.
+  // Saqlash uchun qarzlar (sof): har boshqa odam — 'berdim' qarz (qarzniTekshir, 18.3); holati 'berdi' bo'lsa shu qarzga BITTA to'lov
+  // (summa = to'liq ulush, sana va vaqt = xarajatniki, hisob = shu odam uchun tanlangan "tushdi" hisobi) mavjud tolovniTekshir bilan, `yopilgan` qarzniYangilash bilan.
+  // p: { boshqalar: [{ shaxs, summa }], holatlar: [], tushdi: [hisob id], hisob_id, sana, vaqt, izoh, hozir, idFn, yaratilgan }.
   // Natija: { qarzlar } yoki { xato, maydon: 'ism<i>' } (birinchi xato; hech narsa yozilmasin).
   function bolishQarzlari(p) {
     var chiq = [];
@@ -681,10 +690,9 @@
       var qr = qarzniTekshir({ yonalish: 'berdim', shaxs: b.shaxs, summa: String(b.summa), hisob: p.hisob_id, sana: p.sana, vaqt: p.vaqt, muddat: '', izoh: p.izoh }, p.hozir);
       if (qr.xato) return { xato: b.shaxs + ': ' + qr.xato, maydon: 'ism' + i };
       var q = Object.assign({ id: p.idFn(), yaratilgan: p.yaratilgan, tolovlar: [] }, qr.qarz);
-      var holat = (p.holatlar || [])[i];
-      if (holat === 'naqd' || holat === 'karta') {
-        var hid = bolishTolovHisobi(holat, p.hisob_id, p.naqdHisobId);
-        var tr = hid ? tolovniTekshir(q, { summa: String(q.summa), hisob: hid, sana: q.sana, vaqt: q.vaqt }, p.hozir) : { xato: 'Naqd hisob yo\'q' };
+      if ((p.holatlar || [])[i] === 'berdi') {
+        var hid = (p.tushdi || [])[i];
+        var tr = hid ? tolovniTekshir(q, { summa: String(q.summa), hisob: hid, sana: q.sana, vaqt: q.vaqt }, p.hozir) : { xato: 'Pul tushgan hisobni tanlang' };
         if (tr.xato) return { xato: b.shaxs + ': ' + tr.xato, maydon: 'ism' + i };
         q = Object.assign({}, q, { tolovlar: [Object.assign({ id: p.idFn(), yaratilgan: p.yaratilgan }, tr.tolov)] });
       }
@@ -2242,7 +2250,7 @@
     sanaYaroqli: sanaYaroqli, zaxiraYasash: zaxiraYasash, zaxiraniTekshir: zaxiraniTekshir,
     TEMALAR: TEMALAR, temaTogrimi: temaTogrimi,
     BOLISH: BOLISH, bolishTeng: bolishTeng, bolishIsmi: bolishIsmi, bolishTekshir: bolishTekshir, bolishQoldi: bolishQoldi, bolishIzohlari: bolishIzohlari, bolishTavsiyalari: bolishTavsiyalari, bolishXulosa: bolishXulosa,
-    BOLISH_HOLAT_NOMI: BOLISH_HOLAT_NOMI, bolishKeyingiHolat: bolishKeyingiHolat, bolishNaqdHisobi: bolishNaqdHisobi, bolishTolovHisobi: bolishTolovHisobi, bolishXabari: bolishXabari, bolishQarzlari: bolishQarzlari,
+    BOLISH_HOLAT_NOMI: BOLISH_HOLAT_NOMI, bolishKeyingiHolat: bolishKeyingiHolat, bolishNaqdHisobi: bolishNaqdHisobi, bolishHisobYaroqli: bolishHisobYaroqli, bolishTushdiBoshlangich: bolishTushdiBoshlangich, bolishTushdiTanla: bolishTushdiTanla, bolishXabari: bolishXabari, bolishQarzlari: bolishQarzlari,
     OCHIRILGAN_KUN: OCHIRILGAN_KUN, OCHIRILGAN_SAHIFA: OCHIRILGAN_SAHIFA, ochirilganSana: ochirilganSana, qaytarishTosigi: qaytarishTosigi, ochirilganlarRoyxati: ochirilganlarRoyxati, qaytarishRejasi: qaytarishRejasi,
     tolovlarRoyxati: tolovlarRoyxati, tolovniBekorQil: tolovniBekorQil, tolovniQaytar: tolovniQaytar, tolovBekorMatni: tolovBekorMatni,
     uuidYarat: uuidYarat, uuidTogrimi: uuidTogrimi, uuidgaOtkazish: uuidgaOtkazish, malumotniYangilash: malumotniYangilash, tolovlarniBirlashtir: tolovlarniBirlashtir,

@@ -1756,10 +1756,22 @@ html[data-tema="qorongi"] .manfiy-ikon.taqiq { color: #ff8a80; background: rgba(
 .bolish-holat { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: 0 -2px 0 0; padding: 0; background: none; border: 0; border-radius: 14px; cursor: pointer; }
 .bolish-holat:focus-visible { outline: 3px solid var(--asosiy); outline-offset: 0; }
 .bolish-holat-ich { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; color: var(--text-warning); background: var(--bg-warning); }
-.bolish-holat[data-holat="naqd"] .bolish-holat-ich, .bolish-holat[data-holat="karta"] .bolish-holat-ich { color: var(--text-success); background: var(--bg-success); }
+.bolish-holat[data-holat="berdi"] .bolish-holat-ich { color: var(--text-success); background: var(--bg-success); }
 .bolish-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 12px; color: var(--xira); }
 .bolish-legend-band { display: inline-flex; align-items: center; gap: 4px; }
-.bolish-naqd-yoq { margin-top: 2px; font-size: 12px; color: var(--xira); }
+.bolish-legend-izoh { flex-basis: 100%; }
+/* 57.8: "tushdi: <hisob> ⌄" qatori va hisob tanlash oynasi */
+.bolish-tushdi { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; margin: -4px 0 0; padding: 0 4px 4px; font: inherit; font-size: 13px; text-align: left; color: var(--asosiy); background: none; border: 0; cursor: pointer; }
+.bolish-tushdi:focus-visible { outline: 2px solid var(--asosiy); outline-offset: 2px; }
+.bolish-tushdi svg { flex: none; }
+.bolish-tushdi-belgi { flex: none; color: var(--xira); }
+.bolish-tushdi-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bolish-hisob-qator { gap: 12px; }
+.bolish-hisob-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.bolish-hammasi { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 8px; padding: 0 4px; font: inherit; font-size: 14px; text-align: left; color: var(--matn); background: none; border: 0; border-top: 1px solid var(--chiziq); cursor: pointer; }
+.bolish-hammasi:focus-visible { outline: 2px solid var(--asosiy); outline-offset: 2px; }
+.bolish-hammasi-kv { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px; box-sizing: border-box; color: var(--asosiy-matn); border: 2px solid var(--chiziq); border-radius: 6px; }
+.bolish-hammasi[aria-checked="true"] .bolish-hammasi-kv { background: var(--asosiy); border-color: var(--asosiy); }
 .qadam-pastki .asosiy-tugma:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 
 /* 55-band: PDF yuklash qatori (menyuning birinchi bandi, accent tusli) */

@@ -15,35 +15,35 @@
   <h1>Testlar</h1>
   <div id="jami">Ishlayapti…</div>
   <ul id="natija"></ul>
-  <script src="js/ilova.js?v=0.59.0"></script>
-  <script src="js/tema.js?v=0.59.0"></script>
-  <script src="js/ikonlar.js?v=0.59.0"></script>
-  <script src="js/belgilar.js?v=0.59.0"></script>
-  <script src="js/calc.js?v=0.59.0"></script>
-  <script src="js/xlsx.js?v=0.59.0"></script>
-  <script src="js/xlsx-oqi.js?v=0.59.0"></script>
-  <script src="js/import-sof.js?v=0.59.0"></script>
-  <script src="js/sinxron-sof.js?v=0.59.0"></script>
-  <script src="js/data.js?v=0.59.0"></script>
-  <script src="js/sigdir.js?v=0.59.0"></script>
-  <script src="js/diagramma.js?v=0.59.0"></script>
-  <script src="js/pin.js?v=0.59.0"></script>
-  <script src="js/vendor/supabase-postgrest.min.js?v=0.59.0"></script>
-  <script src="js/kirish.js?v=0.59.0"></script>
-  <script src="js/yuklash.js?v=0.59.0"></script>
-  <script src="js/salom.js?v=0.59.0"></script>
-  <script src="js/sinxron.js?v=0.59.0"></script>
-  <script src="js/pwa.js?v=0.59.0"></script>
-  <script src="js/eslatma-sof.js?v=0.59.0"></script>
-  <script src="js/eslatma.js?v=0.59.0"></script>
-  <script src="js/stat-sof.js?v=0.59.0"></script>
-  <script src="js/stat.js?v=0.59.0"></script>
-  <script src="js/chat-sof.js?v=0.59.0"></script>
-  <script src="js/yordamchi-sof.js?v=0.59.0"></script>
-  <script src="js/yordamchi-karta.js?v=0.59.0"></script>
-  <script src="js/yordamchi.js?v=0.59.0"></script>
-  <script src="js/gap-sof.js?v=0.59.0"></script>
-  <script src="js/gap.js?v=0.59.0"></script>
+  <script src="js/ilova.js?v=0.59.1"></script>
+  <script src="js/tema.js?v=0.59.1"></script>
+  <script src="js/ikonlar.js?v=0.59.1"></script>
+  <script src="js/belgilar.js?v=0.59.1"></script>
+  <script src="js/calc.js?v=0.59.1"></script>
+  <script src="js/xlsx.js?v=0.59.1"></script>
+  <script src="js/xlsx-oqi.js?v=0.59.1"></script>
+  <script src="js/import-sof.js?v=0.59.1"></script>
+  <script src="js/sinxron-sof.js?v=0.59.1"></script>
+  <script src="js/data.js?v=0.59.1"></script>
+  <script src="js/sigdir.js?v=0.59.1"></script>
+  <script src="js/diagramma.js?v=0.59.1"></script>
+  <script src="js/pin.js?v=0.59.1"></script>
+  <script src="js/vendor/supabase-postgrest.min.js?v=0.59.1"></script>
+  <script src="js/kirish.js?v=0.59.1"></script>
+  <script src="js/yuklash.js?v=0.59.1"></script>
+  <script src="js/salom.js?v=0.59.1"></script>
+  <script src="js/sinxron.js?v=0.59.1"></script>
+  <script src="js/pwa.js?v=0.59.1"></script>
+  <script src="js/eslatma-sof.js?v=0.59.1"></script>
+  <script src="js/eslatma.js?v=0.59.1"></script>
+  <script src="js/stat-sof.js?v=0.59.1"></script>
+  <script src="js/stat.js?v=0.59.1"></script>
+  <script src="js/chat-sof.js?v=0.59.1"></script>
+  <script src="js/yordamchi-sof.js?v=0.59.1"></script>
+  <script src="js/yordamchi-karta.js?v=0.59.1"></script>
+  <script src="js/yordamchi.js?v=0.59.1"></script>
+  <script src="js/gap-sof.js?v=0.59.1"></script>
+  <script src="js/gap.js?v=0.59.1"></script>
   <script>
     (function () {
       var testlar = [];
@@ -2226,7 +2226,7 @@
         var a = Kirish.manzilTahlili('?code=abc123&x=1', ''); teng(a.qaytdi, true); teng(a.kod, true); teng(a.xato, '');
         var b = Kirish.manzilTahlili('?error=access_denied&error_description=User+denied+access', ''); teng(b.qaytdi, true); teng(b.kod, false); teng(b.xato, 'User denied access');
         var c = Kirish.manzilTahlili('', '#error=server_error&error_description=bad%20thing'); teng(c.qaytdi, true); teng(c.xato, 'bad thing');
-        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.59.0', '').qaytdi, false);
+        var d = Kirish.manzilTahlili('', ''); teng(d.qaytdi, false); teng(d.kod, false); teng(Kirish.manzilTahlili('?v=0.59.1', '').qaytdi, false);
         teng(Kirish.manzilTahlili('?code=%E0%A4%A', '').kod, true);   // buzuq kodlash tashlab yuborilmaydi
       });
       test('Kirish: foydalanuvchi ismi va emaili (Google ma\'lumotidan); ism yo\'q bo\'lsa emaildan', function () {
@@ -6591,7 +6591,7 @@ function xfix(opts) {
           teng(/localStorage\.setItem\(KOM_ESLAB_KALITLARI\[/.test(ui) && /KOM_ESLAB_KALITI = 'moliya-komissiya-oxirgi'/.test(ui) && /Shu hisob uchun oxirgi tanlov eslab qolinadi/.test(ui), true);
           teng(/tahrir\.bog_id && tahrir\.tur === 'xarajat'/.test(ui), true, 'komissiya qatorini bosish o\'tkazma tahririni ochadi');
           teng(/\['bog_id', 'yozuvlar'\]/.test(t[2]) && /otaTartib = \['hisoblar', 'kategoriyalar', 'qarzlar', 'yozuvlar'\]/.test(t[2]), true, 'bog\'liqlik (FK) xatosi ota yozuvni ham yuboradi');
-          teng(/\.kom-ichki/.test(t[3]) && /\.kom-jami/.test(t[3]), true); teng(/<meta name="versiya" content="0\.59\.0">/.test(t[1]), true);
+          teng(/\.kom-ichki/.test(t[3]) && /\.kom-jami/.test(t[3]), true); teng(/<meta name="versiya" content="0\.59\.1">/.test(t[1]), true);
         });
       });
       // ---- 0.46.1: kategoriyalarni birlashtirish va komissiya kategoriyasini topish (TZ-sinxronlash.md 41-band) ----
@@ -6712,7 +6712,7 @@ function xfix(opts) {
           teng(/x\.tur === k\.tur && !x\.arxivlangan && x\.id !== k\.id/.test(ui), true, 'nomzodlar');
           teng(/ta yozuv "' \+ nishon\.nom \+ '" ga o\\'tadi, "' \+ k\.nom \+ '" kategoriyasi o\\'chiriladi\./.test(ui) && /Bu amalni qaytarib bo\\'lmaydi\./.test(ui) && /Natija kategoriya nomi/.test(ui), true);
           var blok = ui.slice(ui.indexOf('function kategoriyaBirlashtirishTasdiq'), ui.indexOf('function kategoriyaniSaqlash')); teng(/Bekor qilish/.test(blok) && !/fn: function/.test(blok), true, 'undo (xabar tugmasi) yo\'q');
-          teng(/\.birlashtirish-tugma \{[^}]*min-height: 44px/.test(t[1]), true); teng(/<meta name="versiya" content="0\.59\.0">/.test(t[2]), true);
+          teng(/\.birlashtirish-tugma \{[^}]*min-height: 44px/.test(t[1]), true); teng(/<meta name="versiya" content="0\.59\.1">/.test(t[2]), true);
         });
       });
       // ---- 0.46.1: Qarz komissiyasi (TZ-sinxronlash.md 42-band) ----
@@ -6858,7 +6858,7 @@ function xfix(opts) {
           teng(/yonalish === 'oldim' && komHolat\.chip !== 'yoq'/.test(ui) && /Data\.qarzniKomissiyaBilanSaqlash\(yangi, kom\)/.test(ui), true, 'faqat oldim, bitta tranzaksiya');
           teng(/e\.turi === 'qarz' \? e\.satr\.qarz_id : null/.test(ui) && /'q:' \+ qarzOl\(e\)/.test(ui), true, 'tarix ichki qator'); teng(/'Hisobga tushgan'/.test(ui) && /'Qaytariladigan jami'/.test(ui) && /'Komissiya \(' \+/.test(ui), true, 'tafsilot');
           teng(/Data\.qarzniKomissiyasiBilanOchirish\(q\.id\)/.test(ui) && /Data\.qarzniKomissiyasiBilanQaytarish\(q, o\.komissiyalar\)/.test(ui), true, 'o\'chirish va bekor qilish'); teng(/tahrir\.qarz_bog_id && tahrir\.tur === 'xarajat'/.test(ui) && /return qarzShakli\(bogliQarz\)/.test(ui), true);
-          teng(/\.kom-juft \{/.test(t[1]), true); teng(/<meta name="versiya" content="0\.59\.0">/.test(t[2]), true);
+          teng(/\.kom-juft \{/.test(t[1]), true); teng(/<meta name="versiya" content="0\.59\.1">/.test(t[2]), true);
         });
       });
       // ---- 0.47.0: Qarzlar tartibi (TZ-sinxronlash.md 44-band) ----
@@ -6925,10 +6925,10 @@ function xfix(opts) {
           ['arrows-sort', 'calendar-plus', 'calendar-due', 'sort-descending-numbers', 'check'].forEach(function (k) { teng(Ikonlar.yollar(k) !== null && Ikonlar.yollar(k).length > 0, true, k); });
           teng(Calc.yerelKalitmi({ kalit: 'qarz-tartibi' }), false, 'sozlamalar to\'plamiga yozilmaydi');
           teng(/qarz-tartibi|QARZ_TARTIB/.test(t[4]) || /moliya-qarz-tartibi/.test(t[5]), false, 'baza, zaxira va sinxron kodi unga tegmaydi');
-          teng(/<meta name="versiya" content="0\.59\.0">/.test(t[3]), true);
+          teng(/<meta name="versiya" content="0\.59\.1">/.test(t[3]), true);
         });
       });
-      // ---- 0.59.0: Qarzlar ekrani — odam qatorlari, jami, filtr, qidiruv (TZ-sinxronlash.md 45-band) ----
+      // ---- 0.59.1: Qarzlar ekrani — odam qatorlari, jami, filtr, qidiruv (TZ-sinxronlash.md 45-band) ----
       var OQ = [
         qtZ('a1', 'berdim', 'Ali', 100000, '2026-10-01', '2026-10-09'), qtZ('a2', 'berdim', 'Ali', 50000, '2026-10-08', '2026-10-10'),
         qtZ('v1', 'berdim', 'Vali', 300000, '2026-10-05', '2026-10-16'), qtZ('b1', 'berdim', 'Bek', 10000, '2026-10-09', '2026-10-17'),
@@ -7027,7 +7027,7 @@ function xfix(opts) {
           teng(/Calc\.qarzHolatiniAlmashtir\(qarzHolati, x\[0\]\)/.test(ui) && /if \(o\.togridan\) ochish\(function \(\) \{ return qarzEkrani\(o\.qarzId\)/.test(ui) && /return odamEkrani\(o\.kalit\)/.test(ui), true, 'tab va qator');
           teng(/if \(!o\) \{ stek\.pop\(\); return bolimlar\.qarzlar\(\); \}/.test(ui) && /qarzShakli\(null, null, o\.yonalish, o\.shaxs\)/.test(ui) && /'Yangi qarz', 'asosiy-tugma'/.test(ui) && /'Qarzlar \(' \+ QARZ_TARTIB_MATNI\[tartib\]/.test(ui), true, 'odam ekrani');
           teng(/\.qarz-chip, [^{]*\{[^}]*min-height: 44px/.test(t[1]) && /\.qarz-chip-ich \{[^}]*height: 36px/.test(t[1]) && /\.odam-avatar \{/.test(t[1]) && /\.qj-summa \{ font-size: 20px/.test(t[1]), true, 'uslub');
-          teng(/<meta name="versiya" content="0\.59\.0">/.test(t[2]), true);
+          teng(/<meta name="versiya" content="0\.59\.1">/.test(t[2]), true);
         });
       });
       // ---- Eslatmalar (TZ 46-band): sof funksiyalar ----
@@ -7361,7 +7361,7 @@ function xfix(opts) {
           teng(/'js\/eslatma-sof\.js' \+ v/.test(sw) && /'js\/eslatma\.js' \+ v/.test(sw) && /'sw-push\.js' \+ v/.test(sw), true, 'royxat');
           teng(/indexedDB|IDBDatabase|IDBFactory|openDatabase|localStorage|fetch\(/i.test(swp), false, 'sw-push.js bazaga/tarmoqqa tegmaydi');
           teng(/\.eslatma-vaqt \{[^}]*min-height: 44px/.test(t[3]) && /\.eslatma-chip \{[^}]*min-height: 44px/.test(t[3]) && /\.eslatma-sinov \{[^}]*min-height: 48px/.test(t[3]) && /\.almashtirgich \{[^}]*height: 44px/.test(t[3]), true, 'tugmalar >= 44 px');
-          teng(/<meta name="versiya" content="0\.59\.0">/.test(t[4]) && /js\/eslatma-sof\.js\?v=0\.59\.0/.test(t[4]) && /js\/eslatma\.js\?v=0\.59\.0/.test(t[4]), true, 'index.html');
+          teng(/<meta name="versiya" content="0\.59\.1">/.test(t[4]) && /js\/eslatma-sof\.js\?v=0\.59\.1/.test(t[4]) && /js\/eslatma\.js\?v=0\.59\.1/.test(t[4]), true, 'index.html');
           teng(t[4].indexOf('eslatma-sof.js') < t[4].indexOf('eslatma.js') && t[4].indexOf('kirish.js') < t[4].indexOf('eslatma-sof.js') && t[4].indexOf('yuklash.js') < t[4].indexOf('eslatma-sof.js') && t[4].indexOf('ikonlar.js') < t[4].indexOf('eslatma-sof.js') && t[4].indexOf('eslatma.js') < t[4].indexOf('js/ui.js'), true, 'tartib');
           var kod = (t[5] + t[6]).replace(/\/\/[^\n]*/g, '');
           teng(/indexedDB|Data\.saqlash|Data\.hammasi/.test(kod), false, 'IndexedDB ga tegmaydi'); teng(/service_role|console\./.test(kod), false);
@@ -8112,103 +8112,106 @@ function xfix(opts) {
           .then(function () { return Sinxron.birinchi('olish'); }).then(function (n) { teng(n.ok, true, n.xato); return jonli(); })
           .then(function (m) { teng(m.yozuvlar.length, 1); teng(m.qarzlar.length, 2); teng(m.qarzlar.map(function (q) { return q.shaxs; }).sort().join(), 'Ali,Vali'); });
       });
-      // --- Bo'lib to'lash: kim darhol qaytardi (TZ-sinxronlash.md 57-band) ---
+      // --- Bo'lib to'lash: kim darhol qaytardi (TZ-sinxronlash.md 57-band; 57.8 — 0.59.1 da ikki holat va "tushdi" hisobi) ---
+      // 0.59.0 dagi uch holatli (naqd/karta) va "Naqd hisob yo'q" testlari 57.8 qoidasiga moslab almashtirildi: holat endi qarz <-> berdi, hisobni foydalanuvchi tanlaydi.
       function tengJ(a, b, izoh) { teng(JSON.stringify(a), JSON.stringify(b), izoh); }
-      test('bo\'lib to\'lash holati: aylanma qarz -> naqd -> karta -> qarz; naqd hisob yo\'q bo\'lsa qarz -> karta -> qarz; nomlar', function () {
+      test('bo\'lib to\'lash holati: ikki holatli aylanma qarz <-> berdi, nomlar', function () {
         var K = Calc.bolishKeyingiHolat;
-        tengJ([K('qarz', true), K('naqd', true), K('karta', true)], ['naqd', 'karta', 'qarz']);
-        tengJ([K('qarz', false), K('karta', false)], ['karta', 'qarz'], 'naqd o\'tkazib yuboriladi');
-        teng(K(undefined, true), 'naqd', 'boshlang\'ich (yo\'q) = qarz');
-        tengJ([Calc.BOLISH_HOLAT_NOMI.qarz, Calc.BOLISH_HOLAT_NOMI.naqd, Calc.BOLISH_HOLAT_NOMI.karta], ['qarz', 'naqd berdi', 'kartaga o\'tkazdi']);
-        tengJ([Calc.bolishTolovHisobi('karta', 'k1', 'n1'), Calc.bolishTolovHisobi('naqd', 'k1', 'n1'), Calc.bolishTolovHisobi('qarz', 'k1', 'n1'), Calc.bolishTolovHisobi('naqd', 'k1', null)], ['k1', 'n1', null, null]);
+        tengJ([K('qarz'), K('berdi'), K(undefined), K('naqd')], ['berdi', 'qarz', 'berdi', 'berdi'], 'eski/yaroqsiz qiymat = qarz');
+        tengJ([Calc.BOLISH_HOLAT_NOMI.qarz, Calc.BOLISH_HOLAT_NOMI.berdi], ['qarz', 'berdi']);
+        teng(Calc.bolishTolovHisobi, undefined, 'eski naqd/karta qoidasi olib tashlangan');
       });
-      test('bo\'lib to\'lash holati: naqd hisob tanlash — tur naqd, arxivlanmagan, eng ko\'p ishlatilgani, teng bo\'lsa eng eskisi', function () {
-        var H = [{ id: 'k', tur: 'karta', yaratilgan: '2026-01-01' }, { id: 'n1', tur: 'naqd', yaratilgan: '2026-03-01' }, { id: 'n2', tur: 'naqd', yaratilgan: '2026-02-01' }, { id: 'n3', tur: 'naqd', yaratilgan: '2025-01-01', arxivlangan: true }];
-        teng(Calc.bolishNaqdHisobi(H, [], []).id, 'n2', 'teng (0) — eng eskisi; arxivlangan tashlanadi');
-        teng(Calc.bolishNaqdHisobi(H, [{ hisob_id: 'n1' }, { hisob_id: 'n2', deleted: true }], []).id, 'n1', 'eng ko\'p ishlatilgani; o\'chirilgan yozuv sanalmaydi');
-        teng(Calc.bolishNaqdHisobi(H, [{ hisob_id: 'n1' }], [{ hisob_id: 'n2', tolovlar: [{ hisob_id: 'n2' }] }]).id, 'n2', 'qarz va to\'lov ham sanaladi');
-        teng(Calc.bolishNaqdHisobi(H, [{ tur: 'otkazma', hisob_id: 'k', qabul_hisob_id: 'n1' }], []).id, 'n1', 'o\'tkazma qabul tomoni');
-        teng(Calc.bolishNaqdHisobi([H[0], H[3]], [], []), null, 'faqat arxivlangan naqd — yo\'q'); teng(Calc.bolishNaqdHisobi([], [], []), null);
-        teng(Calc.bolishNaqdHisobi([{ id: 'n4', tur: 'naqd', deleted: true }], [], []), null, 'o\'chirilgan hisob');
+      test('bo\'lib to\'lash holati: boshlang\'ich "tushdi" zanjiri (a) forma -> (b) eslab -> (c) naqd turi -> (d) xarajat hisobi; o\'chirilgan/arxivlangan e\'tiborsiz', function () {
+        var H = [{ id: 'k', tur: 'karta', yaratilgan: '2026-01-01' }, { id: 'f', tur: 'karta' }, { id: 'e', tur: 'bank' }, { id: 'n1', tur: 'naqd', yaratilgan: '2026-03-01' }, { id: 'n2', tur: 'naqd', yaratilgan: '2026-02-01' },
+          { id: 'ar', tur: 'karta', arxivlangan: true }, { id: 'del', tur: 'karta', deleted: true }];
+        var B = function (o) { return Calc.bolishTushdiBoshlangich(Object.assign({ formada: null, eslab: null, hisoblar: H, yozuvlar: [], qarzlar: [], xarajatHisobId: 'k' }, o)); };
+        teng(B({ formada: 'f', eslab: 'e' }), 'f', '(a)'); teng(B({ eslab: 'e' }), 'e', '(b)'); teng(B({}), 'n2', '(c) teng ishlatilgan — eng eskisi');
+        teng(B({ yozuvlar: [{ hisob_id: 'n1' }] }), 'n1', '(c) eng ko\'p ishlatilgani');
+        teng(B({ hisoblar: H.filter(function (h) { return h.tur !== 'naqd'; }) }), 'k', '(d) naqd turi yo\'q — xarajat hisobi');
+        teng(B({ formada: 'ar', eslab: 'del' }), 'n2', 'arxivlangan (a) va o\'chirilgan (b) e\'tiborsiz'); teng(B({ formada: 'yoq', eslab: 'yoq2' }), 'n2', 'bazada yo\'q id e\'tiborsiz');
+        teng(Calc.bolishHisobYaroqli(H, 'ar'), null); teng(Calc.bolishHisobYaroqli(H, 'f').id, 'f');
       });
-      test('bo\'lib to\'lash holati: xulosa matni turli aralashmalarda (nol qismlar yo\'q, bir hisob guruhi) va xabar', function () {
+      test('bo\'lib to\'lash holati: "Hammasi shu hisobga" — belgilansa hamma berdi odamlarniki, aks holda faqat shu odamniki', function () {
+        var hol = ['berdi', 'qarz', 'berdi', 'berdi'], t = ['a', undefined, 'a', 'b'];
+        tengJ(Calc.bolishTushdiTanla(hol, t, 2, 'x', false), ['a', null, 'x', 'b'], 'faqat 3-odam');
+        tengJ(Calc.bolishTushdiTanla(hol, t, 0, 'x', true), ['x', null, 'x', 'x'], 'qarzdagi odamga tegilmaydi');
+        tengJ(t, ['a', null, 'a', 'b'], 'asl massiv o\'zgarmaydi');
+      });
+      test('bo\'lib to\'lash holati: xulosa — hisob bo\'yicha guruh, kattadan kichikka, "<nom> hisobiga" (qo\'shimcha yopishmaydi), nol qismlar yo\'q; xabar', function () {
         var N = { id: 'n', nom: 'Naqd pul' }, K = { id: 'k', nom: 'Karta A' }, X = Calc.bolishXulosa;
         var b = function (holat, h, s) { return { summa: s || 57833, holat: holat, hisob: h }; };
-        teng(X(57835, [b('naqd', N), b('naqd', N), b('naqd', N), b('qarz', null), b('qarz', null)]), 'Saqlansa: xarajat 57 835, 5 ta qarz. Darhol yopiladi: 3 ta (Naqd pulga +173 499). Ochiq qoladi: 2 ta (115 666).');
-        teng(X(57835, [b('karta', K), b('naqd', N), b('qarz', null), b('karta', K), b('qarz', null)]), 'Saqlansa: xarajat 57 835, 5 ta qarz. Darhol yopiladi: 3 ta (Naqd pulga +57 833, Karta Aga +115 666). Ochiq qoladi: 2 ta (115 666).', 'naqd birinchi, keyin karta');
-        teng(X(40000, [b('naqd', N, 20000), b('karta', K, 20000)]), 'Saqlansa: xarajat 40 000, 2 ta qarz. Darhol yopiladi: 2 ta (Naqd pulga +20 000, Karta Aga +20 000).', 'ochiq yo\'q');
-        teng(X(40000, [b('naqd', N, 20000), b('karta', N, 20000)]), 'Saqlansa: xarajat 40 000, 2 ta qarz. Darhol yopiladi: 2 ta (Naqd pulga +40 000).', 'xarajat hisobi naqd: bitta guruh');
-        teng(X(40000, [b('qarz', null, 20000), b('qarz', null, 20000)]), 'Saqlansa: xarajat 40 000, 2 ta qarz. Ochiq qoladi: 2 ta (40 000).');
+        teng(X(57835, [b('berdi', K), b('berdi', N), b('berdi', N), b('qarz', null), b('qarz', null)]), 'Saqlansa: xarajat 57 835, 5 ta qarz. Darhol yopiladi: 3 ta (Naqd pul hisobiga +115 666, Karta A hisobiga +57 833). Ochiq qoladi: 2 ta (115 666).', 'kattasi oldin');
+        teng(X(40000, [b('berdi', K, 20000), b('berdi', N, 20000)]), 'Saqlansa: xarajat 40 000, 2 ta qarz. Darhol yopiladi: 2 ta (Karta A hisobiga +20 000, Naqd pul hisobiga +20 000).', 'teng summa: birinchi uchragani oldin; ochiq yo\'q');
+        teng(X(40000, [b('qarz', null, 20000), b('qarz', null, 20000)]), 'Saqlansa: xarajat 40 000, 2 ta qarz. Ochiq qoladi: 2 ta (40 000).', 'yopiq yo\'q');
+        teng(/Aga|pulga/.test(X(1, [b('berdi', K), b('berdi', N)])), false, '"Karta Aga" xatosi yo\'q');
         teng(Calc.bolishXabari(5, 3), '1 xarajat, 5 ta qarz (3 tasi yopildi) yozildi'); teng(Calc.bolishXabari(2, 0), '1 xarajat va 2 ta qarz yozildi');
       });
-      test('bo\'lib to\'lash holati: bolishQarzlari — to\'lov to\'liq ulush, vaqt = qarz vaqti (teng qabul), hisob, yopilgan; xatolar', function () {
-        var n = 0, P = function (o) { return Object.assign({ boshqalar: [{ shaxs: 'Ali', summa: 57833 }, { shaxs: 'Vali', summa: 57833 }], holatlar: ['naqd', 'karta'], hisob_id: 'k', sana: '2026-10-05', vaqt: '10:30', izoh: 'Kafe (bo\'lib to\'lash)', naqdHisobId: 'n', hozir: { sana: '2026-10-29', vaqt: '12:00' }, idFn: function () { return 'id' + (++n); }, yaratilgan: '2026-10-05T05:30:00.000Z' }, o); };
+      test('bo\'lib to\'lash holati: bolishQarzlari — to\'lov tanlangan "tushdi" hisobiga, to\'liq ulush, vaqt = qarz vaqti (teng qabul), yopilgan; xatolar', function () {
+        var n = 0, P = function (o) { return Object.assign({ boshqalar: [{ shaxs: 'Ali', summa: 57833 }, { shaxs: 'Vali', summa: 57833 }], holatlar: ['berdi', 'berdi'], tushdi: ['n', 'b'], hisob_id: 'k', sana: '2026-10-05', vaqt: '10:30', izoh: 'Kafe (bo\'lib to\'lash)', hozir: { sana: '2026-10-29', vaqt: '12:00' }, idFn: function () { return 'id' + (++n); }, yaratilgan: '2026-10-05T05:30:00.000Z' }, o); };
         var r = Calc.bolishQarzlari(P()); teng(r.xato, undefined);
         tengJ(r.qarzlar.map(function (q) { return [q.shaxs, q.yonalish, q.hisob_id, q.tolovlar.length, q.tolovlar[0].hisob_id, q.tolovlar[0].summa, q.tolovlar[0].sana + ' ' + q.tolovlar[0].vaqt, q.yopilgan, Calc.qarzQolgan(q)]; }),
-          [['Ali', 'berdim', 'k', 1, 'n', 57833, '2026-10-05 10:30', true, 0], ['Vali', 'berdim', 'k', 1, 'k', 57833, '2026-10-05 10:30', true, 0]]);
+          [['Ali', 'berdim', 'k', 1, 'n', 57833, '2026-10-05 10:30', true, 0], ['Vali', 'berdim', 'k', 1, 'b', 57833, '2026-10-05 10:30', true, 0]]);
         teng(!!r.qarzlar[0].tolovlar[0].id && r.qarzlar[0].tolovlar[0].id !== r.qarzlar[0].id, true, 'to\'lovda o\'z id');
-        var q = Calc.bolishQarzlari(P({ holatlar: [] })).qarzlar; teng(q.every(function (x) { return x.tolovlar.length === 0 && x.yopilgan === false; }), true, 'holat yo\'q = qarz');
-        teng(Calc.tolovniTekshir({ summa: 100, sana: '2026-10-05', vaqt: '10:30', tolovlar: [] }, { summa: '100', hisob: 'n', sana: '2026-10-05', vaqt: '10:30' }, { sana: '2026-10-29', vaqt: '12:00' }).xato, undefined, 'mavjud tekshiruv: to\'lov vaqti = qarz vaqti qabul qilinadi');
-        teng(!!Calc.tolovniTekshir({ summa: 100, sana: '2026-10-05', vaqt: '10:30', tolovlar: [] }, { summa: '100', hisob: 'n', sana: '2026-10-05', vaqt: '10:29' }, { sana: '2026-10-29', vaqt: '12:00' }).xato, true, 'oldin — rad');
-        var x = Calc.bolishQarzlari(P({ naqdHisobId: null })); teng(x.xato, 'Ali: Naqd hisob yo\'q'); teng(x.maydon, 'ism0');
+        var q = Calc.bolishQarzlari(P({ holatlar: [], tushdi: ['n', 'b'] })).qarzlar; teng(q.every(function (x) { return x.tolovlar.length === 0 && x.yopilgan === false; }), true, 'holat yo\'q = qarz (tushdi e\'tiborsiz)');
+        teng(Calc.tolovniTekshir({ summa: 100, sana: '2026-10-05', vaqt: '10:30', tolovlar: [] }, { summa: '100', hisob: 'n', sana: '2026-10-05', vaqt: '10:30' }, { sana: '2026-10-29', vaqt: '12:00' }).xato, undefined, 'to\'lov vaqti = qarz vaqti qabul');
+        var x = Calc.bolishQarzlari(P({ tushdi: [null, 'b'] })); teng(x.xato, 'Ali: Pul tushgan hisobni tanlang'); teng(x.maydon, 'ism0');
         teng(Calc.bolishQarzlari(P({ sana: '2026-10-30' })).maydon, 'ism0', 'kelajak vaqti — qarzniTekshir xatosi');
       });
-      function bolishNaqdHisob() { return Data.saqlash('hisoblar', { yaratilgan: new Date().toISOString(), nom: 'Naqd pul', tur: 'naqd', belgi: 'naqd', rang: '#2EA84F', oxirgi4: '', boshlangich_qoldiq: 0, arxivlangan: false }).then(function () { return Data.hammasi('hisoblar'); }).then(function (h) { return h.filter(function (x) { return x.nom === 'Naqd pul'; })[0]; }); }
-      function bolishOlti(h, naqdId, holatlar) {
+      // Foydalanuvchi holati: "Naqd pul" nomli hisob, lekin turi 'karta' (naqd turidagi hisob YO'Q)
+      function bolishNaqdNomliHisob() { return Data.saqlash('hisoblar', { yaratilgan: new Date().toISOString(), nom: 'Naqd hamyon', tur: 'karta', belgi: 'naqd', rang: '#2EA84F', oxirgi4: '', boshlangich_qoldiq: 0, arxivlangan: false }).then(function () { return Data.hammasi('hisoblar'); }).then(function (h) { return h.filter(function (x) { return x.nom === 'Naqd hamyon'; })[0]; }); }
+      function bolishOlti(h, holatlar, tushdi) {
         var bt = Calc.bolishTekshir({ jami: '347 000', n: 6, rejim: 'teng', sizMatn: '', ismlar: ['Ali', 'Vali', 'Sobir', 'Dilshod', 'Karim'], summalar: [] });
-        var r = Calc.bolishQarzlari({ boshqalar: bt.boshqalar, holatlar: holatlar, hisob_id: h.a.id, sana: '2026-10-05', vaqt: '10:30', izoh: 'Kafe (bo\'lib to\'lash)', naqdHisobId: naqdId, hozir: Calc.hozir(), idFn: Data.yangiId, yaratilgan: new Date().toISOString() });
+        var r = Calc.bolishQarzlari({ boshqalar: bt.boshqalar, holatlar: holatlar, tushdi: tushdi, hisob_id: h.a.id, sana: '2026-10-05', vaqt: '10:30', izoh: 'Kafe (bo\'lib to\'lash)', hozir: Calc.hozir(), idFn: Data.yangiId, yaratilgan: new Date().toISOString() });
         return { bt: bt, qarzlar: r.qarzlar };
       }
       function bolishQoldiq(m, id) { return Calc.hisobQoldigi(m.hisoblar.filter(function (z) { return z.id === id; })[0], m.yozuvlar, m.qarzlar); }
-      test('bo\'lib to\'lash holati: saqlash — 6 kishi 347 000, 3 naqd + 2 qarz: 1 xarajat 57 835, 5 qarz, 3 to\'lov naqdga, 3 yopiq, 2 ochiq; karta −347 000, naqd +173 499; bitta tranzaksiya', function () {
+      test('bo\'lib to\'lash holati: saqlash — 6 kishi 347 000, aralash (2 ta "Naqd hamyon" ga, 1 ta Karta B ga, 2 qarz); \"Naqd hamyon\" turi karta; qoldiqlar aniq; bitta tranzaksiya', function () {
         return komSinov(function () {
           var h, n, kat, o;
-          return komHisoblar().then(function (a) { h = a; return bolishNaqdHisob(); }).then(function (x) { n = x; return xkKategoriya(); }).then(function (k) {
-            kat = k; o = bolishOlti(h, n.id, ['naqd', 'qarz', 'naqd', 'qarz', 'naqd']); teng(o.bt.siz, 57835);
+          return komHisoblar().then(function (a) { h = a; return bolishNaqdNomliHisob(); }).then(function (x) { n = x; return xkKategoriya(); }).then(function (k) {
+            kat = k;
+            o = bolishOlti(h, ['berdi', 'qarz', 'berdi', 'qarz', 'berdi'], [n.id, null, h.b.id, null, n.id]); teng(o.bt.siz, 57835);
             return Data.otkazmaniSaqlash(xkXarajat(h, k, o.bt.siz, { izoh: 'Kafe' }), null, o.qarzlar);
           }).then(function () { return Data.hammasiniOqish(); }).then(function (m) {
+            teng(m.hisoblar.some(function (x) { return x.tur === 'naqd' && x.deleted !== true && !x.arxivlangan && x.nom !== 'Naqd pul'; }), false, 'qo\'shimcha naqd turi yo\'q');
             teng(m.yozuvlar.length, 1); teng(m.yozuvlar[0].summa, 57835); teng(m.qarzlar.length, 5);
-            var tl = []; m.qarzlar.forEach(function (q) { q.tolovlar.forEach(function (t) { tl.push(t); }); });
-            teng(tl.length, 3); teng(tl.every(function (t) { return t.hisob_id === n.id && t.summa === 57833 && t.sana === '2026-10-05' && t.vaqt === '10:30' && t.deleted === false && !!t.updated_at; }), true, 'to\'lovlar naqd hisobga, xarajat vaqti');
+            var tl = {}; m.qarzlar.forEach(function (q) { q.tolovlar.forEach(function (t) { tl[q.shaxs] = t.hisob_id; teng(t.summa === q.summa && t.sana === '2026-10-05' && t.vaqt === '10:30' && t.deleted === false && !!t.updated_at, true, q.shaxs); }); });
+            tengJ([tl.Ali === n.id, tl.Sobir === h.b.id, tl.Karim === n.id, Object.keys(tl).length], [true, true, true, 3], 'to\'lovlar tanlangan hisoblarga');
             var jq = Calc.jonlilar('qarzlar', m.qarzlar);
-            teng(jq.filter(Calc.qarzYopilganmi).map(function (q) { return q.shaxs; }).sort().join(), 'Ali,Karim,Sobir'); teng(jq.filter(function (q) { return !Calc.qarzYopilganmi(q); }).length, 2);
-            teng(m.qarzlar.filter(function (q) { return q.yopilgan === true; }).length, 3, '`yopilgan` maydoni ham');
-            teng(bolishQoldiq(m, h.a.id), 1000000 - 347000, 'karta −347 000'); teng(bolishQoldiq(m, n.id), 173499, 'naqd +173 499');
-            teng(Calc.qarzlarJami(jq).olishKerak, 115666, 'ochiq 2 ta');
-            var g = Calc.qarzlarShaxsBoyicha(jq, '2026-10-29'); teng(g.ochiq.map(function (x) { return x.shaxs; }).sort().join(), 'Dilshod,Vali');
-            var c = Calc.davrChegarasi('oy', '2026-10-15'), hb = Calc.hisobot(m.yozuvlar, c.dan, c.gacha, ''); teng(hb.xarajat, 57835, 'hisobotda faqat sizning ulush'); teng(hb.daromad, 0, 'qaytgan pul daromad emas');
+            teng(jq.filter(Calc.qarzYopilganmi).map(function (q) { return q.shaxs; }).sort().join(), 'Ali,Karim,Sobir'); teng(Calc.qarzlarJami(jq).olishKerak, 115666, 'ochiq 2 ta');
+            teng(bolishQoldiq(m, h.a.id), 1000000 - 347000, 'Karta A −347 000'); teng(bolishQoldiq(m, n.id), 115666, 'Naqd hamyon +115 666'); teng(bolishQoldiq(m, h.b.id), 57833, 'Karta B +57 833');
+            var c = Calc.davrChegarasi('oy', '2026-10-15'), hb = Calc.hisobot(m.yozuvlar, c.dan, c.gacha, ''); teng(hb.xarajat, 57835); teng(hb.daromad, 0, 'qaytgan pul daromad emas');
           })
-          // majburiy xato: 2-qarz buzuq (klonlanmaydi) — xarajat, qarzlar va to'lovlar ham yozilmaydi
-          .then(function () { var o2 = bolishOlti(h, n.id, ['naqd', 'naqd', 'naqd', 'naqd', 'naqd']); o2.qarzlar[1] = Object.assign({}, o2.qarzlar[1], { buzuq: function () {} });
+          .then(function () { var o2 = bolishOlti(h, ['berdi', 'berdi', 'berdi', 'berdi', 'berdi'], [n.id, n.id, n.id, n.id, n.id]); o2.qarzlar[1] = Object.assign({}, o2.qarzlar[1], { buzuq: function () {} });
             return Data.otkazmaniSaqlash(xkXarajat(h, kat, o2.bt.siz, { izoh: 'ikkinchi' }), null, o2.qarzlar).then(function () { throw new Error('xato bermadi'); }, function (e) { teng(/xato bermadi/.test(e.message), false); return Data.hammasiniOqish(); }); })
-          .then(function (m) { teng(m.yozuvlar.length, 1, 'xarajat yozilmadi'); teng(m.qarzlar.length, 5, 'qarz yozilmadi'); teng(bolishQoldiq(m, n.id), 173499, 'naqd o\'zgarmadi'); });
+          .then(function (m) { teng(m.yozuvlar.length, 1, 'xarajat yozilmadi'); teng(m.qarzlar.length, 5, 'qarz yozilmadi'); teng(bolishQoldiq(m, n.id), 115666, 'hisob o\'zgarmadi'); });
         });
       });
-      test('bo\'lib to\'lash holati: kartaga qaytgan (to\'lov xarajat hisobiga, karta −347 000 + qaytgan), komissiya bilan, §50 faqat chiqim jami bo\'yicha', function () {
+      test('bo\'lib to\'lash holati: xarajat hisobiga qaytgan + komissiya; §50 faqat chiqim jami bo\'yicha', function () {
         return komSinov(function () {
-          var h, n, o;
-          return komHisoblar().then(function (a) { h = a; return bolishNaqdHisob(); }).then(function (x) { n = x; return xkKategoriya(); }).then(function (k) {
-            o = bolishOlti(h, n.id, ['karta', 'karta', 'naqd', 'qarz', 'qarz']);
+          var h, o;
+          return komHisoblar().then(function (a) { h = a; return xkKategoriya(); }).then(function (k) {
+            o = bolishOlti(h, ['berdi', 'berdi', 'qarz', 'qarz', 'qarz'], [h.a.id, h.a.id]);
             var kom = Calc.komissiyaTekshir({ chip: 'p1' }, 347000, 'xarajat'); teng(kom.summa, 3470);
             return Data.otkazmaniSaqlash(xkXarajat(h, k, o.bt.siz, { izoh: 'Kafe' }), { summa: kom.summa, izoh: kom.izoh }, o.qarzlar);
           }).then(function () { return Data.hammasiniOqish(); }).then(function (m) {
-            var tl = []; m.qarzlar.forEach(function (q) { q.tolovlar.forEach(function (t) { tl.push(t.hisob_id); }); });
-            teng(tl.filter(function (x) { return x === h.a.id; }).length, 2, '2 to\'lov karta (xarajat) hisobiga'); teng(tl.filter(function (x) { return x === n.id; }).length, 1);
-            teng(bolishQoldiq(m, h.a.id), 1000000 - 347000 - 3470 + 2 * 57833, 'karta: −347 000 − komissiya + kartaga qaytgan'); teng(bolishQoldiq(m, n.id), 57833);
-            // §50: chiqim jami (347 000 + 3 470) tekshiriladi; kiruvchi qaytish chiqimni kamaytirmaydi
-            var amal = { tur: 'xarajat', hisob_id: 'h1', summa: 347000, komissiya: 3470 };
-            var r = Calc.manfiyTekshir({ hisob: { id: 'h1', boshlangich_qoldiq: 300000 }, rejim: 'taqiqlash', yozuvlar: [], qarzlar: [], amal: amal }); teng(r.holat, 'taqiqlash', 'qaytish hisobga olinmaydi'); teng(r.kerak, 350470);
+            teng(bolishQoldiq(m, h.a.id), 1000000 - 347000 - 3470 + 2 * 57833, 'karta: −347 000 − komissiya + qaytgan');
+            var r = Calc.manfiyTekshir({ hisob: { id: 'h1', boshlangich_qoldiq: 300000 }, rejim: 'taqiqlash', yozuvlar: [], qarzlar: [], amal: { tur: 'xarajat', hisob_id: 'h1', summa: 347000, komissiya: 3470 } }); teng(r.holat, 'taqiqlash', 'qaytish hisobga olinmaydi'); teng(r.kerak, 350470);
           });
         });
       });
-      test('bo\'lib to\'lash holati: ilova kodi — tugma, aria-label, legend, "Naqd hisob yo\'q", 40/44 px, §50 o\'zgarmagan, holat saqlanmaydi', function () {
-        return Promise.all(['js/ui.js', 'style.css', 'js/ikonlar.js'].map(matnOl)).then(function (t) {
+      test('bo\'lib to\'lash holati: ilova kodi — ikki holat, "tushdi" qatori, oyna, "Hammasi shu hisobga", localStorage kaliti, §50 o\'zgarmagan, naqd/karta qoldig\'i yo\'q', function () {
+        return Promise.all(['js/ui.js', 'style.css', 'js/ikonlar.js', 'js/data.js', 'js/sinxron-sof.js'].map(matnOl)).then(function (t) {
           var ui = t[0];
-          teng(/'Holat: ' \+ Calc\.BOLISH_HOLAT_NOMI\[holat\]/.test(ui) && /Naqd hisob yo\\'q/.test(ui) && /\['naqd', 'naqd berdi'\], \['karta', 'kartaga'\], \['qarz', 'qarz'\]/.test(ui), true);
-          teng(/Calc\.bolishQarzlari\(\{/.test(ui) && (ui.match(/manfiyTekshiruvi\(\{ tur: tayyor\.tur/g) || []).length === 1 && /summa: jamiTolangan, komissiya/.test(ui), true, '§50 bitta, chiqim jami');
-          teng(/holatlar = \(b\.holatlar \|\| \[\]\)\.slice\(0, b\.n - 1\)/.test(ui), true, 'o\'chgan qator holati ketadi'); teng(/localStorage[^\n]*holat/.test(ui), false, 'holat saqlanmaydi');
-          teng(/\.bolish-holat \{[^}]*width: 44px; height: 44px/.test(t[1]) && /\.bolish-holat-ich \{[^}]*width: 40px; height: 40px/.test(t[1]) && /--bg-warning/.test(t[1]) && /--text-success/.test(t[1]), true);
-          teng(/'clock':/.test(t[2]) && /'cash':/.test(t[2]) && /'credit-card':/.test(t[2]), true);
+          teng(/'Holat: ' \+ Calc\.BOLISH_HOLAT_NOMI\[holat\]/.test(ui) && /BOLISH_HOLAT_IKON = \{ qarz: 'clock', berdi: 'circle-check' \}/.test(ui) && /'tushdi:'/.test(ui) && /chevron-down/.test(ui), true, 'tugma va "tushdi"');
+          teng(/pastkiOyna\('Pul qaysi hisobga tushdi\?'/.test(ui) && /Hammasi shu hisobga \(berganlar uchun\)/.test(ui) && /Hisob nomini bosib o\\'zgartirasiz/.test(ui) && /faolHisoblar\(\)\.forEach/.test(ui), true, 'oyna');
+          teng(/Naqd hisob yo\\'q/.test(ui) || /'naqd berdi'/.test(ui) || /kartaga o\\'tkazdi/.test(ui), false, 'eski uch holat va izoh olib tashlandi');
+          teng(/var BOLISH_TUSHDI_KALITI = 'moliya-bolish-tushdi-oxirgi'/.test(ui) && /bolishTushdiEslabYoz\(tushdiEslash\)/.test(ui), true, 'localStorage kaliti, saqlangach yangilanadi');
+          teng(/moliya-bolish-tushdi/.test(t[3]) || /moliya-bolish-tushdi/.test(t[4]), false, 'baza va sinxron kodi unga tegmaydi');
+          teng(/b\.tushdi = \(b\.tushdi \|\| \[\]\)\.slice\(0, b\.n - 1\)/.test(ui), true, 'o\'chgan qator hisobi ham ketadi');
+          teng((ui.match(/manfiyTekshiruvi\(\{ tur: tayyor\.tur/g) || []).length === 1 && /summa: jamiTolangan, komissiya/.test(ui), true, '§50 bitta, chiqim jami');
+          teng(/\.bolish-holat \{[^}]*width: 44px; height: 44px/.test(t[1]) && /\.bolish-holat-ich \{[^}]*width: 40px; height: 40px/.test(t[1]) && /\.bolish-tushdi \{[^}]*min-height: 44px/.test(t[1]) && /\.bolish-tushdi-nom \{[^}]*text-overflow: ellipsis/.test(t[1]), true, 'o\'lchamlar');
+          teng(['clock', 'circle-check', 'chevron-down', 'check'].every(function (k) { return Ikonlar.yollar(k) !== null; }), true, 'ikonlar');
         });
       });
       // ?faqat=so'z: nomida shu so'z bor testlargina ishlaydi (ishlab chiqish vaqtida tezlik uchun; to'liq yurgizish uchun ?faqat= berilmaydi)
